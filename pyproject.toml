@@ -4,7 +4,13 @@ version = "0.1.0"
 description = "Batch-upload PDFs in a folder to Gemini Notebook (NotebookLM), generate per-PDF audio overviews, 30-question quizzes and infographics, rename and download the outputs."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["sqlalchemy>=2.0", "alembic>=1.13"]  # add with `uv add <package>` (never `pip install`)
+dependencies = [
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "notebooklm-py[browser]>=0.8.5",
+    "reportlab>=5.0.1",
+    "pypdf>=6.21.1",
+]  # add with `uv add <package>` (never `pip install`)
 
 [project.scripts]
 notebooklm-batch-studio = "notebooklm_batch_studio.entrypoints.cli:main"

@@ -69,7 +69,7 @@
 **命名**
 - NotebookLM 內：只加講次前綴，例如 `[03] Quiz 2-理解`、`[03] Audio`（改名失敗不算整份失敗，記 log 即可）。
 - 下載檔：`<課程代號>_<講次>_<主題>_<類型>[-序號]`，例如 `BIO101_03_細胞膜_Quiz2-理解.md`。
-- 檔案放 `DATA_DIR/courses/<課程代號>/<講次>_<主題>/`。
+- 檔案放 `DATA_DIR/output/courses/<課程代號>/<講次>_<主題>/`。
 
 **排隊、上限、續跑**
 - 所有生成動作進入工作佇列（SQLite），每項狀態：`pending / running / done / failed / skipped / quota_wait`。
@@ -105,7 +105,7 @@
 
 ## 4. 介面 / API
 
-`course.toml` 範例（放在 `DATA_DIR/courses/BIO101/course.toml`）：
+`course.toml` 範例（放在 `DATA_DIR/input/courses/BIO101/course.toml`）：
 
 ```toml
 name = "BIO101 普通生物學"        # 也是 notebook 名稱的來源：預設 = 資料夾名稱

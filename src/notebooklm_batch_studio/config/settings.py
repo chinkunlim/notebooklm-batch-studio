@@ -3,7 +3,7 @@
 Loads settings once at startup into an immutable `AppConfig` so every other layer
 receives plain values instead of touching `os.environ`.
 
-Data lives OUTSIDE the project folder: `DATA_DIR` (default `../../projects-data/notebooklm-batch-studio`) holds
+Data lives OUTSIDE the project folder: `DATA_DIR` holds
 input/, output/, needs_review/, state/, db/ and logs/. The project folder only holds code,
 docs and small test fixtures. A relative `DATA_DIR` is resolved from the project folder (never
 from the current working directory), so the project and its data can be moved together.
@@ -71,6 +71,7 @@ class AppConfig:
         ollama_base_url: Local Ollama endpoint (always 127.0.0.1, never localhost / 0.0.0.0).
         data_dir: Root folder for all data, outside the project folder.
         database_url: SQLAlchemy URL; SQLite file `<data_dir>/db/app.db` by default.
+        notebooklm_home: Folder holding NotebookLM credentials and session states.
     """
 
     app_env: str = "development"
@@ -80,6 +81,7 @@ class AppConfig:
     ollama_base_url: str = "http://127.0.0.1:11434"
     data_dir: Path = resolve_data_dir(DEFAULT_DATA_DIR)
     database_url: str = "sqlite://"
+    notebooklm_home: Path = Path("~/.config/notebooklm-batch-studio").expanduser()
 
     @property
     def input_dir(self) -> Path:
@@ -126,6 +128,33 @@ class AppConfig:
         """
         return self.data_dir / "logs"
 
+    @property
+    def db_dir(self) -> Path:
+        """Folder for SQLite database files.
+
+        Returns:
+            `<data_dir>/db`.
+        """
+        return self.data_dir / "db"
+
+    @property
+    def courses_input_dir(self) -> Path:
+        """Folder for incoming course materials.
+
+        Returns:
+            `<data_dir>/input/courses`.
+        """
+        return self.input_dir / "courses"
+
+    @property
+    def courses_output_dir(self) -> Path:
+        """Folder for generated course output packages.
+
+        Returns:
+            `<data_dir>/output/courses`.
+        """
+        return self.output_dir / "courses"
+
 
 def _csv(value: str) -> tuple[str, ...]:
     """Split a comma-separated setting.
@@ -162,6 +191,10 @@ def load_config() -> AppConfig:
     """
     load_dotenv_file(PROJECT_ROOT / ".env")
     data_dir = resolve_data_dir(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR))
+    notebooklm_home = Path(
+        os.environ.get("NOTEBOOKLM_HOME", "~/.config/notebooklm-batch-studio")
+    ).expanduser()
+    os.environ["NOTEBOOKLM_HOME"] = str(notebooklm_home)
     return AppConfig(
         app_env=os.environ.get("APP_ENV", "development").strip(),
         log_level=os.environ.get("LOG_LEVEL", "INFO").strip().upper(),
@@ -170,4 +203,5 @@ def load_config() -> AppConfig:
         ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/"),
         data_dir=data_dir,
         database_url=os.environ.get("DATABASE_URL", "").strip() or f"sqlite:///{data_dir / 'db' / 'app.db'}",
+        notebooklm_home=notebooklm_home,
     )

@@ -51,6 +51,7 @@ notebooklm-batch-studio/
 │   │   │   └── SKILL.md
 │   │   └── catalog.json                    # [Skills 目錄] 各 skill 的分層 (core/stack/optional)、觸發時機與指令
 │   ├── tasks/                              # [任務卡] 建立、接手、交接、完成 (agentctl task)
+│   │   └── TASK-001-phase-1a-notebooklm-technical-sp.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
@@ -102,7 +103,9 @@ notebooklm-batch-studio/
 │   │   └── TESTING_AND_QUALITY.md          # 測試金字塔與 DoD 驗收清單
 │   └── TEMPLATE_FEEDBACK.md
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
-│   └── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
+│   ├── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
+│   ├── generate_sample_pdf.py
+│   └── spike_notebooklm.py
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── notebooklm_batch_studio/
 │       ├── adapters/

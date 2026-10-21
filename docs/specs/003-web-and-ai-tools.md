@@ -25,7 +25,7 @@
 | 會改資料的動作 | 加入／移除課程、開始生成、重做、變更設定與 prompt、登入 NotebookLM |
 | AI 工具 | Open WebUI（OpenAPI 工具伺服器）；Claude Code、Antigravity、OpenCode、Cursor（MCP） |
 | 本機模型 | 不需要（不接 Ollama） |
-| 資料 | 下載檔在 `DATA_DIR/courses/`；佇列與紀錄在 SQLite |
+| 資料 | 下載檔在 `DATA_DIR/output/courses/`；原始講義在 `DATA_DIR/input/courses/`；佇列與紀錄在 SQLite |
 | 介面 | 完整網頁 |
 | 啟動 | 需要時手動開 |
 | 埠號 | `8767` |
