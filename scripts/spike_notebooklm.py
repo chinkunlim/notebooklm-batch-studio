@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 from notebooklm import NotebookLMClient
-from notebooklm.auth import load_auth_from_storage
 from notebooklm.paths import get_storage_path
 
 from notebooklm_batch_studio.config.logging_setup import setup_logging
@@ -85,9 +84,7 @@ async def run_spike_pipeline(config: AppConfig, include_audio: bool = False) -> 
     output_test_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("Connecting to NotebookLM client from storage: %s", storage_path)
-    auth_tokens = load_auth_from_storage(storage_path)
-
-    async with NotebookLMClient(auth=auth_tokens, storage_path=storage_path) as client:
+    async with NotebookLMClient.from_storage(path=str(storage_path)) as client:
         # Step 1: Create a temporary test notebook
         nb_name = f"[Spike] Cell Biology {int(time.time())}"
         logger.info("Creating test notebook: %s", nb_name)
@@ -117,12 +114,12 @@ async def run_spike_pipeline(config: AppConfig, include_audio: bool = False) -> 
                 instructions="Generate rigorous multiple choice questions for cell membrane transport.",
             )
             logger.info("Quiz task submitted: %s, waiting for completion...", quiz_status)
-            quiz_artifact = await client.artifacts.wait_for_completion(nb_id, quiz_status.task_id)
+            await client.artifacts.wait_for_completion(nb_id, quiz_status.task_id)
             quiz_duration = time.time() - t_quiz
 
-            # Download or extract quiz
+            # Download quiz to JSON
             quiz_file = output_test_dir / "spike_quiz.json"
-            await client.artifacts.download_quiz(nb_id, quiz_artifact.id, str(quiz_file))
+            await client.artifacts.download_quiz(nb_id, str(quiz_file))
             with open(quiz_file, "r", encoding="utf-8") as qf:
                 quiz_data = json.load(qf)
 
@@ -144,11 +141,11 @@ async def run_spike_pipeline(config: AppConfig, include_audio: bool = False) -> 
                 source_ids=[source_id],
                 instructions="Extract vocabulary and core biochemical definitions.",
             )
-            fc_artifact = await client.artifacts.wait_for_completion(nb_id, fc_status.task_id)
+            await client.artifacts.wait_for_completion(nb_id, fc_status.task_id)
             fc_duration = time.time() - t_fc
 
             fc_file = output_test_dir / "spike_flashcards.json"
-            await client.artifacts.download_flashcards(nb_id, fc_artifact.id, str(fc_file))
+            await client.artifacts.download_flashcards(nb_id, str(fc_file))
             with open(fc_file, "r", encoding="utf-8") as ff:
                 fc_data = json.load(ff)
 
@@ -164,29 +161,32 @@ async def run_spike_pipeline(config: AppConfig, include_audio: bool = False) -> 
             # Step 5: Test Mind Map Generation
             logger.info("Testing Mind Map generation with source_id: %s", source_id)
             t_mm = time.time()
-            mm_result = await client.artifacts.generate_mind_map(
+            await client.artifacts.generate_mind_map(
                 notebook_id=nb_id,
                 source_ids=[source_id],
                 instructions="Create a detailed hierarchical breakdown of passive and active transport.",
             )
             mm_duration = time.time() - t_mm
             mm_file = output_test_dir / "spike_mindmap.json"
-            mm_tree = await client.mind_maps.get_tree(nb_id, mm_result.id)
-            with open(mm_file, "w", encoding="utf-8") as mmf:
-                json.dump(mm_tree if isinstance(mm_tree, dict) else {"tree": str(mm_tree)}, mmf, indent=2)
+            await client.artifacts.download_mind_map(nb_id, str(mm_file))
 
             results["mind_map"] = {
                 "status": "success",
                 "duration_s": round(mm_duration, 2),
                 "file": str(mm_file),
             }
-            logger.info("Mind map generated in %.2fs", mm_duration)
+            logger.info("Mind map generated and downloaded in %.2fs", mm_duration)
 
             # Step 6: Test Renaming Artifact inside NotebookLM
             try:
-                await client.artifacts.rename(nb_id, quiz_artifact.id, "[03] Quiz 1-基礎")
-                results["renaming"] = {"status": "success", "note": "Renamed quiz artifact in NotebookLM"}
-                logger.info("Artifact renamed successfully to '[03] Quiz 1-基礎'")
+                quizzes = await client.artifacts.list_quizzes(nb_id)
+                if quizzes:
+                    target_quiz_id = quizzes[0].id
+                    await client.artifacts.rename(nb_id, target_quiz_id, "[03] Quiz 1-基礎")
+                    results["renaming"] = {"status": "success", "note": "Renamed quiz artifact in NotebookLM"}
+                    logger.info("Artifact renamed successfully to '[03] Quiz 1-基礎'")
+                else:
+                    results["renaming"] = {"status": "skipped", "note": "No quizzes found to rename"}
             except Exception as rename_err:
                 results["renaming"] = {"status": "unsupported_or_failed", "error": str(rename_err)}
                 logger.warning("Artifact renaming not supported or failed: %s", rename_err)
@@ -200,10 +200,10 @@ async def run_spike_pipeline(config: AppConfig, include_audio: bool = False) -> 
                     source_ids=[source_id],
                     instructions="Discuss the differences between passive and active transport in detail.",
                 )
-                audio_artifact = await client.artifacts.wait_for_completion(nb_id, audio_status.task_id)
+                await client.artifacts.wait_for_completion(nb_id, audio_status.task_id)
                 audio_duration = time.time() - t_audio
                 audio_file = output_test_dir / "spike_audio.mp3"
-                await client.artifacts.download_audio(nb_id, audio_artifact.id, str(audio_file))
+                await client.artifacts.download_audio(nb_id, str(audio_file))
                 results["audio"] = {
                     "status": "success",
                     "duration_s": round(audio_duration, 2),
