@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "notebooklm-batch-studio: CLI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "notebooklm_batch_studio.entrypoints.cli",
+      "args": [
+        "--name",
+        "Debug"
+      ],
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    }
+  ]
+}
