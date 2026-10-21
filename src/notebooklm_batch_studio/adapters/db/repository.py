@@ -40,6 +40,7 @@ def _to_domain_lecture(record: LectureRecord) -> Lecture:
         topic=record.topic,
         filename=record.filename,
         sha256=record.sha256,
+        source_id=record.source_id,
     )
 
 
@@ -124,6 +125,7 @@ class CourseRepository:
                     topic=lecture.topic,
                     filename=lecture.filename,
                     sha256=lecture.sha256,
+                    source_id=lecture.source_id,
                 )
             )
 
@@ -207,6 +209,20 @@ class CourseRepository:
         if record:
             record.notebook_id = notebook_id
             record.updated_at = utc_now()
+            self.session.flush()
+
+    def update_lecture_source_id(self, code: str, lecture_no: int, source_id: str) -> None:
+        """Update the NotebookLM source ID for a lecture.
+
+        Args:
+            code: Course code.
+            lecture_no: Sequence number of the lecture.
+            source_id: Uploaded source ID from NotebookLM.
+        """
+        stmt = select(LectureRecord).where(LectureRecord.course_code == code, LectureRecord.no == lecture_no)
+        record = self.session.scalars(stmt).first()
+        if record:
+            record.source_id = source_id
             self.session.flush()
 
 

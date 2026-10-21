@@ -74,6 +74,7 @@ class LectureRecord(Base):
     topic: Mapped[str] = mapped_column(String(255), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 

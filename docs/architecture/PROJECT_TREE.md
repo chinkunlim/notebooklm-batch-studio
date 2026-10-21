@@ -53,7 +53,8 @@ notebooklm-batch-studio/
 │   ├── tasks/                              # [任務卡] 建立、接手、交接、完成 (agentctl task)
 │   │   ├── TASK-001-phase-1a-notebooklm-technical-sp.json
 │   │   ├── TASK-002-phase-1b-domain-parallel-queue.json
-│   │   └── TASK-003-phase-1c-notebooklm-adapter-conv.json
+│   │   ├── TASK-003-phase-1c-notebooklm-adapter-conv.json
+│   │   └── TASK-004-phase-1d-cli-batch-orchestrator-.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
@@ -73,6 +74,7 @@ notebooklm-batch-studio/
 ├── alembic/
 │   ├── versions/
 │   │   ├── 20260101_0001_create_greetings.py
+│   │   ├── 20261022_0645db844501_add_source_id_to_lectures.py
 │   │   └── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
 │   ├── DB.md
 │   ├── env.py
@@ -112,12 +114,6 @@ notebooklm-batch-studio/
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── notebooklm_batch_studio/
 │       ├── adapters/
-│       │   ├── converters/
-│       │   │   ├── __init__.py
-│       │   │   ├── flashcard_converter.py
-│       │   │   ├── mindmap_converter.py
-│       │   │   ├── pdf_renderer.py
-│       │   │   └── quiz_converter.py
 │       │   ├── db/
 │       │   │   ├── __init__.py
 │       │   │   ├── base.py
@@ -141,9 +137,18 @@ notebooklm-batch-studio/
 │       │   ├── __init__.py
 │       │   └── cli.py
 │       ├── services/
+│       │   ├── converters/
+│       │   │   ├── __init__.py
+│       │   │   ├── flashcard_converter.py
+│       │   │   ├── mindmap_converter.py
+│       │   │   ├── pdf_renderer.py
+│       │   │   └── quiz_converter.py
 │       │   ├── __init__.py
 │       │   ├── course_parser.py
 │       │   ├── greeting.py
+│       │   ├── orchestrator.py
+│       │   ├── reporter.py
+│       │   ├── watcher.py
 │       │   └── worker_pool.py
 │       └── __init__.py
 ├── tests/                                  # 【測試層】單元與整合測試
@@ -157,7 +162,8 @@ notebooklm-batch-studio/
 │   ├── test_db.py
 │   ├── test_domain_and_queue.py
 │   ├── test_greeting.py
-│   └── test_notebooklm_adapter.py
+│   ├── test_notebooklm_adapter.py
+│   └── test_services_and_cli.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取

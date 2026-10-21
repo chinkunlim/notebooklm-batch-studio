@@ -13,8 +13,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from notebooklm_batch_studio.adapters.converters.pdf_renderer import render_quiz_pdf
 from notebooklm_batch_studio.domain.models import Choice, Question, Quiz
+from notebooklm_batch_studio.services.converters.pdf_renderer import render_quiz_pdf
 
 logger = logging.getLogger(__name__)
 

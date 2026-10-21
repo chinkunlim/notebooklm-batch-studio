@@ -13,31 +13,31 @@ import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from notebooklm_batch_studio.adapters.converters.flashcard_converter import (
+from notebooklm_batch_studio.services.converters.flashcard_converter import (
     parse_notebooklm_flashcards,
     to_anki_csv,
 )
-from notebooklm_batch_studio.adapters.converters.flashcard_converter import (
+from notebooklm_batch_studio.services.converters.flashcard_converter import (
     to_json as flashcards_to_json,
 )
-from notebooklm_batch_studio.adapters.converters.mindmap_converter import (
+from notebooklm_batch_studio.services.converters.mindmap_converter import (
     parse_notebooklm_mindmap,
     to_opml,
 )
-from notebooklm_batch_studio.adapters.converters.mindmap_converter import (
+from notebooklm_batch_studio.services.converters.mindmap_converter import (
     to_json as mindmap_to_json,
 )
-from notebooklm_batch_studio.adapters.converters.mindmap_converter import (
+from notebooklm_batch_studio.services.converters.mindmap_converter import (
     to_markdown as mindmap_to_markdown,
 )
-from notebooklm_batch_studio.adapters.converters.quiz_converter import (
+from notebooklm_batch_studio.services.converters.quiz_converter import (
     merge_and_deduplicate_quizzes,
     parse_notebooklm_quiz,
     to_answer_markdown,
     to_exam_markdown,
     to_pdf,
 )
-from notebooklm_batch_studio.adapters.converters.quiz_converter import (
+from notebooklm_batch_studio.services.converters.quiz_converter import (
     to_json as quiz_to_json,
 )
 

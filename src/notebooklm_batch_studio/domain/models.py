@@ -144,12 +144,14 @@ class Lecture:
         topic: Topic name inferred from filename or course.toml.
         filename: Name of the PDF file.
         sha256: SHA-256 hash of the PDF content for deduplication.
+        source_id: Associated NotebookLM source ID once uploaded.
     """
 
     no: int
     topic: str
     filename: str
     sha256: str
+    source_id: str | None = None
 
 
 @dataclass(frozen=True)

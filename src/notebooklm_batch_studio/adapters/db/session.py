@@ -48,11 +48,11 @@ def make_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 @contextmanager
-def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:
+def session_scope(target: sessionmaker[Session] | Engine) -> Iterator[Session]:
     """Open a session, commit on success, roll back on error, always close.
 
     Args:
-        factory: Session factory from `make_session_factory()`.
+        target: Session factory from `make_session_factory()` or an `Engine`.
 
     Yields:
         An open session.
@@ -60,6 +60,11 @@ def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:
     Raises:
         Exception: Any error from the block is re-raised after rollback.
     """
+    if isinstance(target, Engine):
+        factory = make_session_factory(target)
+    else:
+        factory = target
+
     session = factory()
     try:
         yield session

@@ -154,6 +154,16 @@ class CourseRepositoryProtocol(Protocol):
         """
         ...
 
+    def update_lecture_source_id(self, code: str, lecture_no: int, source_id: str) -> None:
+        """Update the NotebookLM source ID for a lecture.
+
+        Args:
+            code: Course code.
+            lecture_no: Sequence number of the lecture.
+            source_id: Uploaded source ID from NotebookLM.
+        """
+        ...
+
 
 class NotebookLMClientProtocol(Protocol):
     """Abstract interface for Google NotebookLM operations and artifact generation."""

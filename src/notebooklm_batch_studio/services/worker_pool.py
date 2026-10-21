@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
 from typing import Awaitable, Callable, ContextManager
 
@@ -156,6 +157,29 @@ class WorkerPool:
         self._workers.clear()
         self._probe_task = None
         logger.info("WorkerPool stopped.")
+
+    async def run_until_empty(self, idle_timeout: float = 2.0) -> None:
+        """Run workers until no pending or running jobs remain, then stop.
+
+        Args:
+            idle_timeout: Seconds to wait after queue becomes empty before shutting down.
+        """
+        await self.start()
+        idle_start: float | None = None
+        while self._running:
+            await asyncio.sleep(0.5)
+            with self.queue_provider() as repo:
+                counts = repo.count_by_status()
+            pending = counts.get(JobStatus.PENDING, 0)
+            running = counts.get(JobStatus.RUNNING, 0)
+            if pending == 0 and running == 0:
+                if idle_start is None:
+                    idle_start = time.time()
+                elif time.time() - idle_start >= idle_timeout:
+                    break
+            else:
+                idle_start = None
+        await self.stop()
 
     async def _process_job(self, worker_id: str, job: ArtifactJob) -> None:
         """Execute a single claimed job and record success or failure.
