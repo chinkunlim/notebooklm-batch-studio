@@ -12,3 +12,4 @@
 
 | ADR | 標題 | 狀態 | 日期 | 相關程式 |
 |---|---|---|---|---|
+| [ADR-001](001-notebooklm-access.md) | 以 notebooklm-py 為主、Playwright 補位操作 NotebookLM | Accepted | 2026-10-21 | （尚未實作） |

@@ -10,3 +10,7 @@
 
 | 規格 | 狀態 | 說明 |
 |---|---|---|
+| [001-batch-generation](001-batch-generation.md) | Draft | 資料夾 → notebook、每份 PDF 複習包、產出組合、prompt、命名、佇列與每日上限 |
+| [002-export-downloads](002-export-downloads.md) | Draft | 下載與轉檔（quiz / mind map / flashcards）＋技術驗證 |
+| [003-web-and-ai-tools](003-web-and-ai-tools.md) | Draft | 本機網頁、OpenAPI（Open WebUI）、MCP 工具 |
+| [004-phase2-self-test](004-phase2-self-test.md) | Draft | 第二階段：本機做題、錯題本、間隔複習（範圍） |

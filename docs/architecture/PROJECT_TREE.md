@@ -75,6 +75,7 @@ notebooklm-batch-studio/
 │   └── script.py.mako
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
+│   │   ├── 001-notebooklm-access.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -84,6 +85,10 @@ notebooklm-batch-studio/
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
+│   │   ├── 001-batch-generation.md
+│   │   ├── 002-export-downloads.md
+│   │   ├── 003-web-and-ai-tools.md
+│   │   ├── 004-phase2-self-test.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
