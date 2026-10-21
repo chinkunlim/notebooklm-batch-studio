@@ -1,21 +1,28 @@
 {
   "id": "TASK-002",
   "title": "Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue)",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "",
+  "done_items": "Phase 1B 完成：實作不可變領域模型、SQLite 佇列與課程資料表、Alembic 遷移、課程目錄智慧推導、2~3 Worker 平行排程池與 Quota 隔離狀態機，單元測試 100% 綠燈",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-10-21 17:12 UTC",
-  "updated_at": "2026-10-21 17:12 UTC",
+  "updated_at": "2026-10-21 17:20 UTC",
   "history": [
     {
       "timestamp": "2026-10-21 17:12 UTC",
       "action": "created_and_claimed",
       "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-10-21 17:20 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Phase 1B 完成：實作不可變領域模型、SQLite 佇列與課程資料表、Alembic 遷移、課程目錄智慧推導、2~3 Worker 平行排程池與 Quota 隔離狀態機，單元測試 100% 綠燈"
     }
-  ]
+  ],
+  "summary": "Phase 1B 完成：實作不可變領域模型、SQLite 佇列與課程資料表、Alembic 遷移、課程目錄智慧推導、2~3 Worker 平行排程池與 Quota 隔離狀態機，單元測試 100% 綠燈"
 }
