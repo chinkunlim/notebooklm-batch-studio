@@ -1,0 +1,382 @@
+"""Quiz converter: transforms NotebookLM raw quiz outputs into Markdown, PDF, and JSON.
+
+Supports merging multiple 10-question extracts, deduplicating question stems,
+generating student exam papers (題目卷.md, no answers) and teacher/study answer keys
+(答案卷.md, full rationale per option and hints), plus printable PDFs via ReportLab.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import re
+from pathlib import Path
+from typing import Any
+
+from notebooklm_batch_studio.adapters.converters.pdf_renderer import render_quiz_pdf
+from notebooklm_batch_studio.domain.models import Choice, Question, Quiz
+
+logger = logging.getLogger(__name__)
+
+CHOICE_LABELS = ["A", "B", "C", "D"]
+
+
+def _parse_question_dict(
+    q_dict: dict[str, Any],
+    id_prefix: str,
+    idx: int,
+    source_pdf: str,
+) -> Question | None:
+    """Parse a single raw question dictionary into a Question entity.
+
+    Args:
+        q_dict: Raw question dictionary.
+        id_prefix: Question ID prefix (e.g. 'BIO101-03-Q1').
+        idx: 1-based question index.
+        source_pdf: Original PDF filename.
+
+    Returns:
+        Populated Question entity, or None if invalid.
+    """
+    stem = str(q_dict.get("question", "")).strip()
+    if not stem:
+        return None
+
+    raw_options = q_dict.get("answerOptions", [])
+    choices: list[Choice] = []
+    answer_index = 0
+
+    for opt_idx, opt in enumerate(raw_options):
+        if not isinstance(opt, dict):
+            continue
+        opt_text = str(opt.get("text", "")).strip()
+        is_corr = bool(opt.get("isCorrect", False))
+        rationale = str(opt.get("rationale", "")).strip()
+        if is_corr:
+            answer_index = opt_idx
+        choices.append(Choice(text=opt_text, is_correct=is_corr, rationale=rationale))
+
+    hint = str(q_dict.get("hint", "")).strip()
+    explanation = choices[answer_index].rationale if choices and answer_index < len(choices) else ""
+    q_id = f"{id_prefix}-{idx:03d}"
+
+    return Question(
+        id=q_id,
+        question=stem,
+        choices=choices,
+        answer_index=answer_index,
+        explanation=explanation,
+        hint=hint,
+        source=source_pdf,
+    )
+
+
+def parse_notebooklm_quiz(
+    raw_data: dict[str, Any] | list[Any],
+    course_code: str,
+    lecture_no: int,
+    variant: str = "1-基礎",
+    source_pdf: str = "",
+    title: str = "",
+) -> Quiz:
+    """Parse raw NotebookLM quiz JSON into a domain Quiz entity.
+
+    Args:
+        raw_data: Raw JSON dictionary or question list extracted from NotebookLM.
+        course_code: Course identifier (e.g. BIO101).
+        lecture_no: Sequence number of the lecture.
+        variant: Quiz difficulty or variant label (e.g. 1-基礎, 2-理解, 3-模擬考).
+        source_pdf: Source PDF file name.
+        title: Optional custom quiz title.
+
+    Returns:
+        Domain Quiz entity populated with parsed questions.
+    """
+    if isinstance(raw_data, dict):
+        raw_title = str(raw_data.get("title", ""))
+        quiz_title = title or raw_title or f"[{lecture_no:02d}] Quiz {variant}"
+        questions_raw = raw_data.get("questions", [])
+    elif isinstance(raw_data, list):
+        quiz_title = title or f"[{lecture_no:02d}] Quiz {variant}"
+        questions_raw = raw_data
+    else:
+        questions_raw = []
+        quiz_title = title or f"[{lecture_no:02d}] Quiz {variant}"
+
+    parsed: list[Question] = []
+    v_prefix = variant[:1] if variant else "1"
+    id_prefix = f"{course_code}-{lecture_no:02d}-Q{v_prefix}"
+
+    for idx, q_dict in enumerate(questions_raw, start=1):
+        if isinstance(q_dict, dict):
+            q_entity = _parse_question_dict(q_dict, id_prefix, idx, source_pdf)
+            if q_entity:
+                parsed.append(q_entity)
+
+    return Quiz(
+        course_code=course_code,
+        lecture_no=lecture_no,
+        variant=variant,
+        title=quiz_title,
+        source_pdf=source_pdf,
+        prompt_version="1.0",
+        questions=parsed,
+    )
+
+
+def _normalize_stem(text: str) -> str:
+    """Normalize question stem for duplicate comparison.
+
+    Args:
+        text: Question stem text.
+
+    Returns:
+        Normalized string with punctuation and whitespace removed.
+    """
+    return re.sub(r"[\s\W_]+", "", text).lower()
+
+
+def _collect_unique_questions(quizzes: list[Quiz]) -> list[Question]:
+    """Collect questions across quiz batches while filtering out duplicates.
+
+    Args:
+        quizzes: List of Quiz batches.
+
+    Returns:
+        Deduplicated list of questions.
+    """
+    seen_stems: set[str] = set()
+    deduped: list[Question] = []
+    for qz in quizzes:
+        for q in qz.questions:
+            norm = _normalize_stem(q.question)
+            if norm and norm not in seen_stems:
+                seen_stems.add(norm)
+                deduped.append(q)
+    return deduped
+
+
+def merge_and_deduplicate_quizzes(
+    quizzes: list[Quiz],
+    target_count: int = 30,
+) -> tuple[Quiz, bool]:
+    """Merge multiple Quiz batches, remove duplicate questions, and check target count.
+
+    Args:
+        quizzes: List of Quiz instances to combine.
+        target_count: Target number of questions (default 30).
+
+    Returns:
+        A tuple of (merged_quiz, is_complete). If question count is less than target_count,
+        is_complete will be False.
+    """
+    if not quizzes:
+        empty = Quiz(
+            course_code="UNKNOWN",
+            lecture_no=0,
+            variant="1",
+            title="Empty Quiz",
+            source_pdf="",
+            prompt_version="1.0",
+            questions=[],
+        )
+        return empty, False
+
+    base = quizzes[0]
+    deduped = _collect_unique_questions(quizzes)
+    v_pfx = base.variant[:1] if base.variant else "1"
+
+    reindexed = [
+        Question(
+            id=f"{base.course_code}-{base.lecture_no:02d}-Q{v_pfx}-{idx:03d}",
+            question=orig.question,
+            choices=orig.choices,
+            answer_index=orig.answer_index,
+            explanation=orig.explanation,
+            source=orig.source,
+            hint=orig.hint,
+        )
+        for idx, orig in enumerate(deduped[:target_count], start=1)
+    ]
+
+    is_complete = len(reindexed) >= target_count
+    merged = Quiz(
+        course_code=base.course_code,
+        lecture_no=base.lecture_no,
+        variant=base.variant,
+        title=base.title,
+        source_pdf=base.source_pdf,
+        prompt_version=base.prompt_version,
+        questions=reindexed,
+    )
+    return merged, is_complete
+
+
+def to_exam_markdown(quiz: Quiz) -> str:
+    """Format Quiz as a student practice paper (題目卷.md) without answers or rationales.
+
+    Args:
+        quiz: Domain Quiz entity.
+
+    Returns:
+        Markdown string suitable for student self-testing.
+    """
+    lines: list[str] = [
+        f"# {quiz.title} — 題目卷",
+        "",
+        f"- **課程代碼**: `{quiz.course_code}`",
+        f"- **講次編號**: 第 {quiz.lecture_no:02d} 講",
+        f"- **測驗版本**: {quiz.variant}",
+        f"- **題數**: 共 {len(quiz.questions)} 題",
+        f"- **出處講義**: `{quiz.source_pdf}`",
+        "",
+        "> 💡 **作答說明**：本試卷為自主測驗練習卷，請選出最適當選項。"
+        " 完成後可對照《答案與詳解卷》核對成績與深度解析。",
+        "",
+        "---",
+        "",
+    ]
+
+    for idx, q in enumerate(quiz.questions, start=1):
+        lines.append(f"### 第 {idx} 題")
+        lines.append("")
+        lines.append(q.question)
+        lines.append("")
+        for opt_idx, choice in enumerate(q.choices):
+            letter = CHOICE_LABELS[opt_idx] if opt_idx < len(CHOICE_LABELS) else f"({opt_idx + 1})"
+            lines.append(f"- **({letter})** {choice.text}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _format_single_answer(idx: int, q: Question) -> list[str]:
+    """Format a single question with answers and option rationales for answer key.
+
+    Args:
+        idx: 1-based question number.
+        q: Question domain entity.
+
+    Returns:
+        List of formatted markdown lines.
+    """
+    correct_letter = CHOICE_LABELS[q.answer_index] if q.answer_index < len(CHOICE_LABELS) else "未知"
+    correct_text = q.choices[q.answer_index].text if 0 <= q.answer_index < len(q.choices) else ""
+
+    lines: list[str] = [f"### 第 {idx} 題", "", q.question, ""]
+    for opt_idx, choice in enumerate(q.choices):
+        letter = CHOICE_LABELS[opt_idx] if opt_idx < len(CHOICE_LABELS) else f"({opt_idx + 1})"
+        mark = " ✅" if opt_idx == q.answer_index else ""
+        lines.append(f"- **({letter})** {choice.text}{mark}")
+    lines.append("")
+    lines.append(f"- **【正確解答】**: **({correct_letter})** {correct_text}")
+    lines.append("")
+    lines.append("- **【各選項詳解】**:")
+    for opt_idx, choice in enumerate(q.choices):
+        letter = CHOICE_LABELS[opt_idx] if opt_idx < len(CHOICE_LABELS) else f"({opt_idx + 1})"
+        prefix = "正解說明" if opt_idx == q.answer_index else "錯誤分析"
+        lines.append(f"  - **({letter})** [{prefix}]: {choice.rationale or '詳見教材章節說明'}")
+    if q.hint:
+        lines.append("")
+        lines.append(f"- **【解題思路與提示】**: {q.hint}")
+    lines.extend(["", "---", ""])
+    return lines
+
+
+def to_answer_markdown(quiz: Quiz) -> str:
+    """Format Quiz as a teacher/study answer key (答案卷.md) with answers and rationales.
+
+    Args:
+        quiz: Domain Quiz entity.
+
+    Returns:
+        Markdown string containing answer keys, option rationales, and hints.
+    """
+    lines: list[str] = [
+        f"# {quiz.title} — 答案與詳解卷",
+        "",
+        f"- **課程代碼**: `{quiz.course_code}`",
+        f"- **講次編號**: 第 {quiz.lecture_no:02d} 講",
+        f"- **測驗版本**: {quiz.variant}",
+        f"- **題數**: 共 {len(quiz.questions)} 題",
+        f"- **出處講義**: `{quiz.source_pdf}`",
+        "",
+        "> 📖 **學習指引**：檢視每題解析，特別注意錯誤選項之盲點剖析與思考指引。",
+        "",
+        "---",
+        "",
+    ]
+
+    for idx, q in enumerate(quiz.questions, start=1):
+        lines.extend(_format_single_answer(idx, q))
+
+    return "\n".join(lines)
+
+
+def _serialize_question(q: Question) -> dict[str, Any]:
+    """Serialize a single Question entity into a dictionary.
+
+    Args:
+        q: Domain Question entity.
+
+    Returns:
+        Dictionary representation.
+    """
+    return {
+        "id": q.id,
+        "question": q.question,
+        "choices": [
+            {
+                "text": c.text,
+                "is_correct": c.is_correct,
+                "rationale": c.rationale,
+            }
+            for c in q.choices
+        ],
+        "answer_index": q.answer_index,
+        "explanation": q.explanation,
+        "hint": q.hint,
+        "source": q.source,
+    }
+
+
+def to_json(quiz: Quiz) -> str:
+    """Serialize domain Quiz entity into standard JSON format.
+
+    Args:
+        quiz: Domain Quiz entity.
+
+    Returns:
+        JSON string representation.
+    """
+    quiz_dict = {
+        "course_code": quiz.course_code,
+        "lecture_no": quiz.lecture_no,
+        "variant": quiz.variant,
+        "title": quiz.title,
+        "source_pdf": quiz.source_pdf,
+        "prompt_version": quiz.prompt_version,
+        "questions_count": len(quiz.questions),
+        "questions": [_serialize_question(q) for q in quiz.questions],
+    }
+    return json.dumps(quiz_dict, ensure_ascii=False, indent=2)
+
+
+def to_pdf(
+    quiz: Quiz,
+    output_path: str | Path,
+    is_answer_key: bool = False,
+    title: str | None = None,
+) -> Path:
+    """Generate a clean printable A4 PDF using ReportLab.
+
+    Args:
+        quiz: Domain Quiz entity.
+        output_path: Target filesystem path for the PDF.
+        is_answer_key: True to render answer key & rationale; False for student test paper.
+        title: Optional custom document title.
+
+    Returns:
+        Path of the generated PDF file.
+    """
+    return render_quiz_pdf(quiz, output_path, is_answer_key=is_answer_key, title=title)

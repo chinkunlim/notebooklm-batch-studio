@@ -52,7 +52,8 @@ notebooklm-batch-studio/
 │   │   └── catalog.json                    # [Skills 目錄] 各 skill 的分層 (core/stack/optional)、觸發時機與指令
 │   ├── tasks/                              # [任務卡] 建立、接手、交接、完成 (agentctl task)
 │   │   ├── TASK-001-phase-1a-notebooklm-technical-sp.json
-│   │   └── TASK-002-phase-1b-domain-parallel-queue.json
+│   │   ├── TASK-002-phase-1b-domain-parallel-queue.json
+│   │   └── TASK-003-phase-1c-notebooklm-adapter-conv.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
@@ -111,12 +112,21 @@ notebooklm-batch-studio/
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── notebooklm_batch_studio/
 │       ├── adapters/
+│       │   ├── converters/
+│       │   │   ├── __init__.py
+│       │   │   ├── flashcard_converter.py
+│       │   │   ├── mindmap_converter.py
+│       │   │   ├── pdf_renderer.py
+│       │   │   └── quiz_converter.py
 │       │   ├── db/
 │       │   │   ├── __init__.py
 │       │   │   ├── base.py
 │       │   │   ├── models.py
 │       │   │   ├── repository.py
 │       │   │   └── session.py
+│       │   ├── notebooklm/
+│       │   │   ├── __init__.py
+│       │   │   └── client.py
 │       │   └── __init__.py
 │       ├── config/
 │       │   ├── __init__.py
@@ -137,11 +147,17 @@ notebooklm-batch-studio/
 │       │   └── worker_pool.py
 │       └── __init__.py
 ├── tests/                                  # 【測試層】單元與整合測試
+│   ├── fixtures/
+│   │   ├── sample_flashcards.json
+│   │   ├── sample_mindmap.json
+│   │   └── sample_quiz.json
 │   ├── __init__.py
+│   ├── test_converters.py
 │   ├── test_course_parser.py
 │   ├── test_db.py
 │   ├── test_domain_and_queue.py
-│   └── test_greeting.py
+│   ├── test_greeting.py
+│   └── test_notebooklm_adapter.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取

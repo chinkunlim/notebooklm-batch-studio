@@ -153,3 +153,150 @@ class CourseRepositoryProtocol(Protocol):
             notebook_id: Google NotebookLM notebook ID.
         """
         ...
+
+
+class NotebookLMClientProtocol(Protocol):
+    """Abstract interface for Google NotebookLM operations and artifact generation."""
+
+    def check_auth(self) -> bool:
+        """Check whether local authentication session is valid.
+
+        Returns:
+            True if session is valid and active, False otherwise.
+        """
+        ...
+
+    async def create_notebook(self, title: str) -> str:
+        """Create a new notebook in NotebookLM.
+
+        Args:
+            title: The title of the new notebook.
+
+        Returns:
+            The created notebook identifier string.
+        """
+        ...
+
+    async def upload_source(self, notebook_id: str, file_path: str) -> str:
+        """Upload a PDF source file to a notebook.
+
+        Args:
+            notebook_id: The notebook identifier.
+            file_path: Filesystem path to the local PDF file.
+
+        Returns:
+            The uploaded source identifier string.
+        """
+        ...
+
+    async def wait_source_ready(self, notebook_id: str, source_id: str, timeout_seconds: int = 180) -> None:
+        """Wait until an uploaded source is fully indexed and ready for generation.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_id: The source identifier.
+            timeout_seconds: Maximum time to wait in seconds.
+        """
+        ...
+
+    async def generate_quiz(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
+        """Request generation of a quiz from selected sources.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: List of source identifiers to generate from.
+            prompt: Optional instructional prompt for the quiz generation.
+
+        Returns:
+            Task identifier or artifact identifier for the quiz.
+        """
+        ...
+
+    async def download_quiz(self, notebook_id: str, output_path: str) -> None:
+        """Download generated quiz JSON to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem path where JSON should be saved.
+        """
+        ...
+
+    async def generate_flashcards(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None
+    ) -> str:
+        """Request generation of flashcards from selected sources.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: List of source identifiers to generate from.
+            prompt: Optional instructional prompt for flashcards generation.
+
+        Returns:
+            Task identifier or artifact identifier for the flashcards.
+        """
+        ...
+
+    async def download_flashcards(self, notebook_id: str, output_path: str) -> None:
+        """Download generated flashcards JSON to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem path where JSON should be saved.
+        """
+        ...
+
+    async def generate_mind_map(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None
+    ) -> str:
+        """Request generation of a mind map from selected sources.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: List of source identifiers to generate from.
+            prompt: Optional instructional prompt for mind map generation.
+
+        Returns:
+            Task identifier or artifact identifier for the mind map.
+        """
+        ...
+
+    async def download_mind_map(self, notebook_id: str, output_path: str) -> None:
+        """Download generated mind map JSON to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem path where JSON should be saved.
+        """
+        ...
+
+    async def generate_audio(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
+        """Request generation of Deep Dive Audio overview.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: List of source identifiers to generate from.
+            prompt: Optional customization prompt for audio discussion.
+
+        Returns:
+            Task identifier or status string for audio generation.
+        """
+        ...
+
+    async def download_audio(self, notebook_id: str, output_path: str) -> None:
+        """Download generated Audio MP3 file to local storage.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem path where MP3 should be saved.
+        """
+        ...
+
+    async def rename_artifact(self, notebook_id: str, artifact_id: str, title: str) -> None:
+        """Rename an artifact within NotebookLM for readability.
+
+        Args:
+            notebook_id: The notebook identifier.
+            artifact_id: The artifact identifier to rename.
+            title: The new title string (e.g. '[03] Quiz 1-基礎').
+        """
+        ...
