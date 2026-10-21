@@ -5,20 +5,28 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-10-21 16:48 UTC`
+- **最後更新時間**: `2026-10-21 17:12 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `818e488 docs(specs): add specs 001-004 and ADR-001 for NotebookLM batch generation [agent:claude-code]`
+- **最新 Git Commit**: `f9ebade docs(adr): document empirical verification results for NotebookLM single-source selection and artifact downloads (TASK-001) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-001**<br/>Phase 1A: 環境校驗與 NotebookLM 技術驗證 (Technical Spike) | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
+| **TASK-002**<br/>Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue) | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-10-21 17:12 UTC] 建立任務 `TASK-002`: Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue) (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-10-21 17:10 UTC] 完成任務 `TASK-001` — Phase 1A: 環境校驗與 NotebookLM 技術驗證 (Technical Spike) (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Phase 1A 完成：成功實測 NotebookLM 單一來源選取生成、Quiz/Flashcards/Mind Map 結構擷取與產出更名，實測數據回寫 ADR-001
 
 ### [2026-10-21 16:48 UTC] 建立任務 `TASK-001`: Phase 1A: 環境校驗與 NotebookLM 技術驗證 (Technical Spike) (by `antigravity`)
 - **狀態**: `in_progress`

@@ -1,0 +1,46 @@
+"""Domain exceptions: specialized error types for business and provider logic."""
+
+from __future__ import annotations
+
+
+class StudioError(Exception):
+    """Base exception for all domain and service errors in NotebookLM Batch Studio."""
+
+
+class QuotaExceededError(StudioError):
+    """Raised when an operation exceeds Google NotebookLM's rate limit or daily quota.
+
+    Attributes:
+        artifact_type: The type of artifact that reached its quota.
+        retry_after_seconds: Recommended cooldown period in seconds, if known.
+    """
+
+    def __init__(
+        self, message: str, artifact_type: str | None = None, retry_after_seconds: int = 3600
+    ) -> None:
+        """Initialize QuotaExceededError.
+
+        Args:
+            message: Explanation of the quota limit encountered.
+            artifact_type: The artifact type string (e.g. 'audio').
+            retry_after_seconds: Suggested backoff duration in seconds.
+        """
+        super().__init__(message)
+        self.artifact_type = artifact_type
+        self.retry_after_seconds = retry_after_seconds
+
+
+class AuthExpiredError(StudioError):
+    """Raised when NotebookLM authentication credentials have expired or are missing."""
+
+
+class IncompleteArtifactError(StudioError):
+    """Raised when an extracted artifact fails validation (e.g., missing choices or empty tree)."""
+
+
+class CourseNotFoundError(StudioError):
+    """Raised when an operation targets a course code that does not exist."""
+
+
+class DuplicateCourseError(StudioError):
+    """Raised when attempting to add a course that already exists with conflicting settings."""

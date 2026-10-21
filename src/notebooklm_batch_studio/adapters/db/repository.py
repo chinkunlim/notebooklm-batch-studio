@@ -1,22 +1,447 @@
-"""Greeting repository: stores and reads greetings, returning domain objects."""
+"""Database repositories: encapsulate data access, converting ORM records to domain entities."""
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from datetime import timedelta
+
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from notebooklm_batch_studio.adapters.db.models import GreetingRecord
-from notebooklm_batch_studio.domain.models import GreetingResult
+from notebooklm_batch_studio.adapters.db.models import (
+    ArtifactJobRecord,
+    CourseRecord,
+    GreetingRecord,
+    LectureRecord,
+    QuotaRecord,
+    utc_now,
+)
+from notebooklm_batch_studio.domain.models import (
+    ArtifactJob,
+    ArtifactType,
+    Course,
+    GreetingResult,
+    JobStatus,
+    Lecture,
+    ProfileName,
+)
+
+
+def _to_domain_lecture(record: LectureRecord) -> Lecture:
+    """Convert a LectureRecord ORM instance to a pure domain Lecture object.
+
+    Args:
+        record: Database lecture record.
+
+    Returns:
+        Immutable domain Lecture entity.
+    """
+    return Lecture(
+        no=record.no,
+        topic=record.topic,
+        filename=record.filename,
+        sha256=record.sha256,
+    )
+
+
+def _to_domain_course(record: CourseRecord, lectures: list[Lecture]) -> Course:
+    """Convert a CourseRecord ORM instance to a pure domain Course object.
+
+    Args:
+        record: Database course record.
+        lectures: Associated domain lecture objects.
+
+    Returns:
+        Immutable domain Course entity.
+    """
+    return Course(
+        code=record.code,
+        name=record.name,
+        source_dir=record.source_dir,
+        notebook_id=record.notebook_id,
+        profile=(
+            ProfileName(record.profile)
+            if record.profile in ProfileName._value2member_map_
+            else ProfileName.FULL
+        ),
+        language=record.language,
+        exam_date=record.exam_date,
+        watch=record.watch,
+        mock_exam_questions=record.mock_exam_questions,
+        lectures=lectures,
+    )
+
+
+def _to_domain_job(record: ArtifactJobRecord) -> ArtifactJob:
+    """Convert an ArtifactJobRecord ORM instance to a pure domain ArtifactJob object.
+
+    Args:
+        record: Database job record.
+
+    Returns:
+        Immutable domain ArtifactJob entity.
+    """
+    return ArtifactJob(
+        id=record.id,
+        course_code=record.course_code,
+        lecture_no=record.lecture_no,
+        artifact_type=ArtifactType(record.artifact_type),
+        status=JobStatus(record.status),
+        attempts=record.attempts,
+        worker_id=record.worker_id,
+        error_message=record.error_message,
+        output_file=record.output_file,
+        quota_blocked_at=record.quota_blocked_at,
+        cooldown_until=record.cooldown_until,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
+
+
+class CourseRepository:
+    """Database access for courses and lecture source mappings."""
+
+    def __init__(self, session: Session) -> None:
+        """Bind repository to an active database session.
+
+        Args:
+            session: SQLAlchemy session.
+        """
+        self.session = session
+
+    def _update_lectures(self, code: str, lectures: list[Lecture]) -> None:
+        """Replace all lectures for a course with updated records.
+
+        Args:
+            code: Course code.
+            lectures: List of lecture entities to persist.
+        """
+        self.session.execute(delete(LectureRecord).where(LectureRecord.course_code == code))
+        for lecture in lectures:
+            self.session.add(
+                LectureRecord(
+                    course_code=code,
+                    no=lecture.no,
+                    topic=lecture.topic,
+                    filename=lecture.filename,
+                    sha256=lecture.sha256,
+                )
+            )
+
+    def save_course(self, course: Course) -> None:
+        """Insert or update a course entity and its lectures.
+
+        Args:
+            course: Domain course entity to persist.
+        """
+        existing = self.session.get(CourseRecord, course.code)
+        if existing is None:
+            existing = CourseRecord(
+                code=course.code,
+                name=course.name,
+                source_dir=course.source_dir,
+                notebook_id=course.notebook_id,
+                profile=course.profile.value,
+                language=course.language,
+                exam_date=course.exam_date,
+                watch=course.watch,
+                mock_exam_questions=course.mock_exam_questions,
+            )
+            self.session.add(existing)
+        else:
+            existing.name = course.name
+            existing.source_dir = course.source_dir
+            if course.notebook_id:
+                existing.notebook_id = course.notebook_id
+            existing.profile = course.profile.value
+            existing.language = course.language
+            existing.exam_date = course.exam_date
+            existing.watch = course.watch
+            existing.mock_exam_questions = course.mock_exam_questions
+            existing.updated_at = utc_now()
+
+        self._update_lectures(course.code, course.lectures)
+        self.session.flush()
+
+    def get_course(self, code: str) -> Course | None:
+        """Retrieve a course by its code identifier.
+
+        Args:
+            code: The unique course code (e.g. BIO101).
+
+        Returns:
+            The domain Course entity, or None if not found.
+        """
+        record = self.session.get(CourseRecord, code)
+        if record is None:
+            return None
+        stmt = select(LectureRecord).where(LectureRecord.course_code == code).order_by(LectureRecord.no.asc())
+        lectures = [_to_domain_lecture(r) for r in self.session.scalars(stmt)]
+        return _to_domain_course(record, lectures)
+
+    def list_courses(self) -> list[Course]:
+        """List all courses registered in the system.
+
+        Returns:
+            List of domain Course entities.
+        """
+        records = self.session.scalars(select(CourseRecord).order_by(CourseRecord.code.asc())).all()
+        result: list[Course] = []
+        for r in records:
+            stmt = (
+                select(LectureRecord)
+                .where(LectureRecord.course_code == r.code)
+                .order_by(LectureRecord.no.asc())
+            )
+            lectures = [_to_domain_lecture(lec) for lec in self.session.scalars(stmt)]
+            result.append(_to_domain_course(r, lectures))
+        return result
+
+    def update_notebook_id(self, code: str, notebook_id: str) -> None:
+        """Update the linked NotebookLM notebook ID for a course.
+
+        Args:
+            code: Course code.
+            notebook_id: Google NotebookLM notebook ID.
+        """
+        record = self.session.get(CourseRecord, code)
+        if record:
+            record.notebook_id = notebook_id
+            record.updated_at = utc_now()
+            self.session.flush()
+
+
+class QueueRepository:
+    """Database access for the parallel task queue and quota tracking."""
+
+    def __init__(self, session: Session) -> None:
+        """Bind repository to an active database session.
+
+        Args:
+            session: SQLAlchemy session.
+        """
+        self.session = session
+
+    def enqueue_jobs(self, jobs: list[ArtifactJob]) -> int:
+        """Add new artifact jobs to the queue, skipping duplicates already present.
+
+        Args:
+            jobs: List of domain ArtifactJob entities to enqueue.
+
+        Returns:
+            Number of newly added jobs.
+        """
+        added_count = 0
+        for job in jobs:
+            stmt = select(ArtifactJobRecord).where(
+                ArtifactJobRecord.course_code == job.course_code,
+                ArtifactJobRecord.lecture_no == job.lecture_no,
+                ArtifactJobRecord.artifact_type == job.artifact_type.value,
+            )
+            existing = self.session.scalars(stmt).first()
+            if existing is None:
+                record = ArtifactJobRecord(
+                    id=job.id,
+                    course_code=job.course_code,
+                    lecture_no=job.lecture_no,
+                    artifact_type=job.artifact_type.value,
+                    status=job.status.value,
+                    attempts=job.attempts,
+                    worker_id=job.worker_id,
+                    error_message=job.error_message,
+                    output_file=job.output_file,
+                )
+                self.session.add(record)
+                added_count += 1
+        self.session.flush()
+        return added_count
+
+    def claim_next_job(
+        self, worker_id: str, excluded_types: set[ArtifactType] | None = None
+    ) -> ArtifactJob | None:
+        """Atomically claim the next eligible PENDING job for a worker.
+
+        Args:
+            worker_id: Identifier of the worker claiming the job.
+            excluded_types: Artifact types that are currently blocked by quota limits.
+
+        Returns:
+            The claimed domain ArtifactJob, or None if no eligible job is waiting.
+        """
+        stmt = select(ArtifactJobRecord).where(ArtifactJobRecord.status == JobStatus.PENDING.value)
+        if excluded_types:
+            excluded_str = [t.value for t in excluded_types]
+            stmt = stmt.where(ArtifactJobRecord.artifact_type.not_in(excluded_str))
+
+        # Order by lecture number (sequential order per course) then creation time
+        stmt = stmt.order_by(
+            ArtifactJobRecord.lecture_no.asc().nulls_last(),
+            ArtifactJobRecord.created_at.asc(),
+        )
+        record = self.session.scalars(stmt).first()
+
+        if record is None:
+            return None
+
+        record.status = JobStatus.RUNNING.value
+        record.worker_id = worker_id
+        record.attempts += 1
+        record.updated_at = utc_now()
+        self.session.flush()
+        return _to_domain_job(record)
+
+    def complete_job(self, job_id: str, output_file: str) -> None:
+        """Mark a job as successfully completed.
+
+        Args:
+            job_id: Task UUID.
+            output_file: Path of the generated output file.
+        """
+        record = self.session.get(ArtifactJobRecord, job_id)
+        if record:
+            record.status = JobStatus.DONE.value
+            record.output_file = output_file
+            record.error_message = None
+            record.worker_id = None
+            record.updated_at = utc_now()
+            self.session.flush()
+
+    def fail_job(self, job_id: str, error_message: str, max_attempts: int = 3) -> None:
+        """Handle a job failure, retrying if under max_attempts or marking FAILED.
+
+        Args:
+            job_id: Task UUID.
+            error_message: Detailed failure explanation.
+            max_attempts: Maximum retry threshold before permanent failure.
+        """
+        record = self.session.get(ArtifactJobRecord, job_id)
+        if record:
+            record.error_message = error_message
+            record.worker_id = None
+            record.updated_at = utc_now()
+            if record.attempts < max_attempts:
+                record.status = JobStatus.PENDING.value
+            else:
+                record.status = JobStatus.FAILED.value
+            self.session.flush()
+
+    def block_job_quota(self, job_id: str, artifact_type: ArtifactType, cooldown_seconds: int = 3600) -> None:
+        """Mark a job as waiting for quota refresh and set cooldown timer.
+
+        Args:
+            job_id: Task UUID.
+            artifact_type: The artifact type that hit quota.
+            cooldown_seconds: Duration before quota probe should attempt wake up.
+        """
+        now = utc_now()
+        cooldown_time = now + timedelta(seconds=cooldown_seconds)
+        record = self.session.get(ArtifactJobRecord, job_id)
+        if record:
+            record.status = JobStatus.QUOTA_WAIT.value
+            record.quota_blocked_at = now
+            record.cooldown_until = cooldown_time
+            record.worker_id = None
+            record.updated_at = now
+
+        # Update quota record table
+        quota = self.session.get(QuotaRecord, artifact_type.value)
+        if quota is None:
+            quota = QuotaRecord(
+                artifact_type=artifact_type.value,
+                used_today=1,
+                last_blocked_at=now,
+                cooldown_until=cooldown_time,
+            )
+            self.session.add(quota)
+        else:
+            quota.last_blocked_at = now
+            quota.cooldown_until = cooldown_time
+
+        self.session.flush()
+
+    def refresh_quota_wait(self, artifact_type: ArtifactType | None = None) -> int:
+        """Reset jobs in QUOTA_WAIT state back to PENDING when cooldown has passed.
+
+        Args:
+            artifact_type: Specific artifact type to reset, or None for all eligible.
+
+        Returns:
+            Number of jobs awakened back to PENDING.
+        """
+        now = utc_now()
+        stmt = select(ArtifactJobRecord).where(ArtifactJobRecord.status == JobStatus.QUOTA_WAIT.value)
+        if artifact_type is not None:
+            stmt = stmt.where(ArtifactJobRecord.artifact_type == artifact_type.value)
+        else:
+            stmt = stmt.where(ArtifactJobRecord.cooldown_until <= now)
+
+        records = self.session.scalars(stmt).all()
+        for r in records:
+            r.status = JobStatus.PENDING.value
+            r.worker_id = None
+            r.updated_at = now
+        self.session.flush()
+        return len(records)
+
+    def list_jobs(self, course_code: str | None = None, status: JobStatus | None = None) -> list[ArtifactJob]:
+        """Query jobs filtered by course or status.
+
+        Args:
+            course_code: Filter by course identifier.
+            status: Filter by job state.
+
+        Returns:
+            List of matching domain ArtifactJob entities.
+        """
+        stmt = select(ArtifactJobRecord)
+        if course_code:
+            stmt = stmt.where(ArtifactJobRecord.course_code == course_code)
+        if status:
+            stmt = stmt.where(ArtifactJobRecord.status == status.value)
+        stmt = stmt.order_by(ArtifactJobRecord.created_at.asc())
+        return [_to_domain_job(r) for r in self.session.scalars(stmt)]
+
+    def get_job(self, job_id: str) -> ArtifactJob | None:
+        """Retrieve a specific job by its ID.
+
+        Args:
+            job_id: Task UUID.
+
+        Returns:
+            Domain ArtifactJob entity or None.
+        """
+        record = self.session.get(ArtifactJobRecord, job_id)
+        return _to_domain_job(record) if record else None
+
+    def count_by_status(self, course_code: str | None = None) -> dict[JobStatus, int]:
+        """Compute the breakdown of jobs across all statuses.
+
+        Args:
+            course_code: Optional course filter.
+
+        Returns:
+            Mapping from JobStatus to integer count.
+        """
+        stmt = select(ArtifactJobRecord.status, func.count(ArtifactJobRecord.id))
+        if course_code:
+            stmt = stmt.where(ArtifactJobRecord.course_code == course_code)
+        stmt = stmt.group_by(ArtifactJobRecord.status)
+        counts = {status: 0 for status in JobStatus}
+        for status_str, count in self.session.execute(stmt):
+            try:
+                counts[JobStatus(status_str)] = count
+            except ValueError:
+                pass
+        return counts
 
 
 class GreetingRepository:
-    """Database access for greetings (the only place that touches `GreetingRecord`)."""
+    """Database access for greetings (for backward-compatibility)."""
 
     def __init__(self, session: Session) -> None:
-        """Bind the repository to an open session.
+        """Bind repository to an active session.
 
         Args:
-            session: Session from `session_scope()`.
+            session: SQLAlchemy session.
         """
         self.session = session
 
@@ -40,7 +465,7 @@ class GreetingRepository:
 
         Args:
             limit: Maximum number of rows.
-            environment: Environment name copied into the returned domain objects.
+            environment: Environment name copied into domain objects.
 
         Returns:
             Greetings as domain objects.

@@ -1,0 +1,21 @@
+{
+  "id": "TASK-002",
+  "title": "Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue)",
+  "status": "in_progress",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-10-21 17:12 UTC",
+  "updated_at": "2026-10-21 17:12 UTC",
+  "history": [
+    {
+      "timestamp": "2026-10-21 17:12 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    }
+  ]
+}

@@ -7,6 +7,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 
 ### Added
 - feat(spike): scaffold notebooklm spike script, sample pdf generator, and standard DATA_DIR paths (TASK-001) (`TASK-001`, by `@antigravity`)
+- feat(domain,queue): implement course domain models, sqlite queue repository, course parser, and parallel worker pool (TASK-002) (`TASK-002`, by `@antigravity`)
 
 ### Documentation
 - docs(specs): add specs 001-004 and ADR-001 for NotebookLM batch generation (by `@claude-code`)

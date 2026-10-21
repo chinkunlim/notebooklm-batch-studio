@@ -51,7 +51,8 @@ notebooklm-batch-studio/
 │   │   │   └── SKILL.md
 │   │   └── catalog.json                    # [Skills 目錄] 各 skill 的分層 (core/stack/optional)、觸發時機與指令
 │   ├── tasks/                              # [任務卡] 建立、接手、交接、完成 (agentctl task)
-│   │   └── TASK-001-phase-1a-notebooklm-technical-sp.json
+│   │   ├── TASK-001-phase-1a-notebooklm-technical-sp.json
+│   │   └── TASK-002-phase-1b-domain-parallel-queue.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
@@ -70,7 +71,8 @@ notebooklm-batch-studio/
 │       └── 00-project-constitution.md
 ├── alembic/
 │   ├── versions/
-│   │   └── 20260101_0001_create_greetings.py
+│   │   ├── 20260101_0001_create_greetings.py
+│   │   └── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
 │   ├── DB.md
 │   ├── env.py
 │   └── script.py.mako
@@ -122,17 +124,23 @@ notebooklm-batch-studio/
 │       │   └── settings.py
 │       ├── domain/
 │       │   ├── __init__.py
-│       │   └── models.py
+│       │   ├── exceptions.py
+│       │   ├── models.py
+│       │   └── repositories.py
 │       ├── entrypoints/
 │       │   ├── __init__.py
 │       │   └── cli.py
 │       ├── services/
 │       │   ├── __init__.py
-│       │   └── greeting.py
+│       │   ├── course_parser.py
+│       │   ├── greeting.py
+│       │   └── worker_pool.py
 │       └── __init__.py
 ├── tests/                                  # 【測試層】單元與整合測試
 │   ├── __init__.py
+│   ├── test_course_parser.py
 │   ├── test_db.py
+│   ├── test_domain_and_queue.py
 │   └── test_greeting.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
