@@ -82,6 +82,10 @@ class AppConfig:
     data_dir: Path = resolve_data_dir(DEFAULT_DATA_DIR)
     database_url: str = "sqlite://"
     notebooklm_home: Path = Path("~/.config/notebooklm-batch-studio").expanduser()
+    http_host: str = "127.0.0.1"
+    http_port: int = 8767
+    http_allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost")
+    http_allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8767", "http://127.0.0.1:8080")
 
     @property
     def input_dir(self) -> Path:
@@ -204,4 +208,10 @@ def load_config() -> AppConfig:
         data_dir=data_dir,
         database_url=os.environ.get("DATABASE_URL", "").strip() or f"sqlite:///{data_dir / 'db' / 'app.db'}",
         notebooklm_home=notebooklm_home,
+        http_host=os.environ.get("HTTP_HOST", "127.0.0.1").strip(),
+        http_port=int(os.environ.get("HTTP_PORT", "8767")),
+        http_allowed_hosts=_csv(os.environ.get("HTTP_ALLOWED_HOSTS", "127.0.0.1, localhost")),
+        http_allowed_origins=_csv(
+            os.environ.get("HTTP_ALLOWED_ORIGINS", "http://127.0.0.1:8767, http://127.0.0.1:8080")
+        ),
     )

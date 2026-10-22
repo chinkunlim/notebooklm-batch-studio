@@ -6,10 +6,12 @@ and the parallel WorkerPool to provide an end-to-end processing pipeline.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
@@ -18,6 +20,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactType,
     Course,
     JobStatus,
+    ProfileName,
     Quiz,
 )
 from notebooklm_batch_studio.domain.repositories import (
@@ -397,6 +400,355 @@ class BatchStudioService:
             (j.lecture_no, j.artifact_type.value): j.status for j in jobs
         }
         return self.reporter.generate_summary(course, status_map)
+
+    def get_courses_summary(self) -> list[dict[str, Any]]:
+        """List summary information for all registered courses with queue progress.
+
+        Returns:
+            List of dictionary records containing course metadata, lecture count,
+            notebook link, and job status counters.
+        """
+        courses = self.course_repo.list_courses()
+        summaries: list[dict[str, Any]] = []
+        for c in courses:
+            counts = self.queue_repo.count_by_status(course_code=c.code)
+            raw_counts = {st.value: counts.get(st, 0) for st in JobStatus}
+            total_jobs = sum(raw_counts.values())
+            done_jobs = raw_counts.get(JobStatus.DONE.value, 0)
+            notebook_url = (
+                f"https://notebooklm.google.com/notebook/{c.notebook_id}" if c.notebook_id else None
+            )
+            summaries.append(
+                {
+                    "code": c.code,
+                    "name": c.name,
+                    "profile": c.profile,
+                    "lecture_count": len(c.lectures),
+                    "notebook_id": c.notebook_id,
+                    "notebook_url": notebook_url,
+                    "total_jobs": total_jobs,
+                    "done_jobs": done_jobs,
+                    "progress_percent": round((done_jobs / total_jobs * 100), 1) if total_jobs > 0 else 0.0,
+                    "counts": raw_counts,
+                }
+            )
+        return summaries
+
+    def get_course_detail(self, course_code: str) -> dict[str, Any]:
+        """Retrieve detailed progress, lectures, and artifact job records for a course.
+
+        Args:
+            course_code: Course identifier (e.g. 'BIO101').
+
+        Returns:
+            Dictionary containing complete course profile, lecture list, artifact jobs,
+            and relative summary links.
+
+        Raises:
+            CourseNotFoundError: If course code is not registered.
+        """
+        course = self.course_repo.get_course(course_code)
+        if course is None:
+            raise CourseNotFoundError(f"Course not found: {course_code}")
+
+        jobs = self.queue_repo.list_jobs(course_code=course_code)
+        counts = self.queue_repo.count_by_status(course_code=course_code)
+        raw_counts = {st.value: counts.get(st, 0) for st in JobStatus}
+        total_jobs = sum(raw_counts.values())
+        done_jobs = raw_counts.get(JobStatus.DONE.value, 0)
+
+        lectures_data = [
+            {
+                "no": lec.no,
+                "topic": lec.topic,
+                "filename": lec.filename,
+                "source_id": lec.source_id,
+                "pdf_hash": lec.sha256,
+            }
+            for lec in course.lectures
+        ]
+
+        jobs_data = [
+            {
+                "id": j.id,
+                "lecture_no": j.lecture_no,
+                "artifact_type": j.artifact_type.value,
+                "status": j.status.value,
+                "output_file": j.output_file,
+                "error_message": j.error_message,
+                "attempts": j.attempts,
+                "created_at": j.created_at.isoformat() if j.created_at else None,
+                "updated_at": j.updated_at.isoformat() if j.updated_at else None,
+            }
+            for j in jobs
+        ]
+
+        notebook_url = (
+            f"https://notebooklm.google.com/notebook/{course.notebook_id}" if course.notebook_id else None
+        )
+
+        return {
+            "code": course.code,
+            "name": course.name,
+            "profile": course.profile,
+            "notebook_id": course.notebook_id,
+            "notebook_url": notebook_url,
+            "source_dir": course.source_dir,
+            "mock_exam_questions": course.mock_exam_questions,
+            "total_jobs": total_jobs,
+            "done_jobs": done_jobs,
+            "progress_percent": round((done_jobs / total_jobs * 100), 1) if total_jobs > 0 else 0.0,
+            "counts": raw_counts,
+            "lectures": lectures_data,
+            "jobs": jobs_data,
+        }
+
+    def preview_course_folders(self, folder_paths: list[str]) -> list[dict[str, Any]]:
+        """Inspect candidate folders and preview lecture extraction without saving to database.
+
+        Args:
+            folder_paths: List of directory paths on the local filesystem.
+
+        Returns:
+            List of preview structures detailing course codes, lecture count, detected files,
+            and estimated artifact workload.
+        """
+        results: list[dict[str, Any]] = []
+        for raw in folder_paths:
+            path = Path(raw).expanduser().resolve()
+            if not path.exists() or not path.is_dir():
+                results.append(
+                    {
+                        "folder_path": str(path),
+                        "is_valid": False,
+                        "error": f"Folder does not exist or is not a directory: {raw}",
+                    }
+                )
+                continue
+
+            try:
+                course = scan_course_directory(path)
+                lecture_count = len(course.lectures)
+                estimated_jobs = lecture_count * 6 + 2 if lecture_count > 0 else 0
+                estimated_days = max(1, round(estimated_jobs / 100 + 0.49))
+                results.append(
+                    {
+                        "folder_path": str(path),
+                        "is_valid": True,
+                        "error": None,
+                        "course_code": course.code,
+                        "course_name": course.name,
+                        "lecture_count": lecture_count,
+                        "estimated_jobs": estimated_jobs,
+                        "estimated_days": estimated_days,
+                        "lectures": [
+                            {"no": lec.no, "topic": lec.topic, "filename": lec.filename}
+                            for lec in course.lectures
+                        ],
+                    }
+                )
+            except Exception as err:
+                results.append(
+                    {
+                        "folder_path": str(path),
+                        "is_valid": False,
+                        "error": str(err),
+                    }
+                )
+        return results
+
+    def add_course_folders(self, folder_paths: list[str], profile: str = "full") -> list[dict[str, Any]]:
+        """Register course directories and enqueue artifact generation tasks.
+
+        Args:
+            folder_paths: List of filesystem paths to course lecture folders.
+            profile: Generation profile ('full', 'quiz-only', 'exam-prep').
+
+        Returns:
+            List of dictionaries describing newly registered courses and enqueued job counts.
+        """
+        registered: list[dict[str, Any]] = []
+        prof_enum = ProfileName(profile)
+        for raw in folder_paths:
+            path = Path(raw).expanduser().resolve()
+            course = scan_course_directory(path)
+            course = dataclasses.replace(course, profile=prof_enum)
+            self.course_repo.save_course(course)
+            enqueued = self.enqueue_course_artifacts(course.code)
+            registered.append(
+                {
+                    "code": course.code,
+                    "name": course.name,
+                    "profile": course.profile.value,
+                    "lecture_count": len(course.lectures),
+                    "enqueued_jobs": enqueued,
+                }
+            )
+        return registered
+
+    def get_quiz_content(
+        self, course_code: str, lecture_no: int, variant: str, with_answers: bool = False
+    ) -> dict[str, Any]:
+        """Locate and read generated quiz content for a specific lecture.
+
+        Args:
+            course_code: Course code identifier.
+            lecture_no: Sequence number of the lecture.
+            variant: Quiz variant ('1-基礎', '2-理解', '3-模擬考', 'quiz_1', 'quiz_2', 'quiz_3').
+            with_answers: If False, returns questions-only markdown; if True, includes answer key.
+
+        Returns:
+            Dictionary containing quiz metadata, question count, and content text.
+
+        Raises:
+            CourseNotFoundError: If course does not exist.
+            FileNotFoundError: If the quiz files have not yet been produced.
+        """
+        course = self.course_repo.get_course(course_code)
+        if course is None:
+            raise CourseNotFoundError(f"Course not found: {course_code}")
+
+        lec = next((item for item in course.lectures if item.no == lecture_no), None)
+        lec_topic = lec.topic if lec else "lecture"
+        lec_dir_name = f"{lecture_no:02d}_{lec_topic}"
+        quiz_dir = self.config.courses_output_dir / course.code / lec_dir_name
+
+        md_filename = "答案卷.md" if with_answers else "題目卷.md"
+        md_file = quiz_dir / md_filename
+        json_file = quiz_dir / "quiz.json"
+
+        if not md_file.exists():
+            raise FileNotFoundError(f"Quiz artifact not found for {course_code} L{lecture_no} ({variant})")
+
+        return {
+            "course_code": course_code,
+            "lecture_no": lecture_no,
+            "variant": variant,
+            "with_answers": with_answers,
+            "markdown": md_file.read_text(encoding="utf-8"),
+            "json_data": json.loads(json_file.read_text(encoding="utf-8")) if json_file.exists() else None,
+        }
+
+    def list_artifact_files(self, course_code: str, lecture_no: int | None = None) -> list[dict[str, Any]]:
+        """List generated deliverable files present on disk for a course.
+
+        Args:
+            course_code: Course identifier.
+            lecture_no: Optional lecture filter.
+
+        Returns:
+            List of file metadata records including filename, relative path, and byte size.
+        """
+        course_out = self.config.courses_output_dir / course_code
+        if not course_out.exists():
+            return []
+
+        files: list[dict[str, Any]] = []
+        prefix = f"{lecture_no:02d}_" if lecture_no is not None else ""
+
+        for path in sorted(course_out.rglob("*")):
+            if path.is_file() and not path.name.startswith("."):
+                rel = path.relative_to(course_out)
+                parts = rel.parts
+                if lecture_no is not None:
+                    if not parts[0].startswith(prefix):
+                        continue
+                files.append(
+                    {
+                        "filename": path.name,
+                        "relative_path": str(rel),
+                        "size_bytes": path.stat().st_size,
+                        "download_url": f"/api/artifacts/{course_code}/download/{rel}",
+                    }
+                )
+        return files
+
+    def retry_job(self, job_id: str) -> bool:
+        """Reset a failed or cancelled task back to pending.
+
+        Args:
+            job_id: Task UUID.
+
+        Returns:
+            True if task was reset, False if job not found.
+        """
+        return self.queue_repo.retry_job(job_id)
+
+    def resume_quota_wait(self) -> int:
+        """Wake all quota-blocked tasks back to pending.
+
+        Returns:
+            Number of awakened jobs.
+        """
+        return self.queue_repo.refresh_quota_wait()
+
+    def set_course_profile(self, course_code: str, profile: str) -> dict[str, Any]:
+        """Update active profile for a course and enqueue missing jobs.
+
+        Args:
+            course_code: Course identifier.
+            profile: New profile name.
+
+        Returns:
+            Updated course summary.
+        """
+        course = self.course_repo.get_course(course_code)
+        if course is None:
+            raise CourseNotFoundError(f"Course not found: {course_code}")
+
+        prof_enum = ProfileName(profile)
+        self.course_repo.update_profile(course_code, prof_enum.value)
+        course = dataclasses.replace(course, profile=prof_enum)
+        new_jobs = generate_jobs_for_course(course)
+        enqueued = self.queue_repo.enqueue_jobs(new_jobs)
+        return {
+            "course_code": course_code,
+            "profile": prof_enum.value,
+            "new_jobs_enqueued": enqueued,
+        }
+
+    def check_auth_status(self) -> dict[str, Any]:
+        """Check NotebookLM credential readiness.
+
+        Returns:
+            Dictionary indicating whether login state file is valid.
+        """
+        storage_path = str(self.config.notebooklm_home / "profiles" / "default" / "storage_state.json")
+        has_auth = False
+        if hasattr(self.notebooklm_client, "check_auth"):
+            has_auth = bool(self.notebooklm_client.check_auth())
+        else:
+            has_auth = Path(storage_path).exists()
+        return {
+            "authenticated": has_auth,
+            "storage_path": storage_path,
+        }
+
+    def is_queue_running(self) -> bool:
+        """Check if queue execution is currently active.
+
+        Returns:
+            True if running, False if idle or paused.
+        """
+        return getattr(self, "_is_queue_running", False)
+
+    def pause_queue(self) -> bool:
+        """Pause active queue processing.
+
+        Returns:
+            True.
+        """
+        self._is_queue_running = False
+        return True
+
+    def start_queue(self) -> bool:
+        """Start active queue processing.
+
+        Returns:
+            True.
+        """
+        self._is_queue_running = True
+        return True
 
 
 def _save_quiz_files(out_dir: Path, quiz: Quiz) -> str:

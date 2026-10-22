@@ -262,6 +262,40 @@ def _dispatch_command(args: argparse.Namespace, config: AppConfig) -> int:
         return _handle_batch(config, args.paths, args.workers)
     if args.command == "watch":
         return _handle_watch(config)
+    if args.command == "web":
+        return _handle_web(config)
+    if args.command == "mcp":
+        return _handle_mcp(config)
+    return 0
+
+
+def _handle_web(config: AppConfig) -> int:
+    """Start local web dashboard and REST API server.
+
+    Args:
+        config: Application configuration.
+
+    Returns:
+        Exit code integer.
+    """
+    from notebooklm_batch_studio.entrypoints.api import main as web_main
+
+    web_main()
+    return 0
+
+
+def _handle_mcp(config: AppConfig) -> int:
+    """Start MCP stdio server for Agent pairings.
+
+    Args:
+        config: Application configuration.
+
+    Returns:
+        Exit code integer.
+    """
+    from notebooklm_batch_studio.entrypoints.mcp_server import main as mcp_main
+
+    mcp_main()
     return 0
 
 
@@ -293,6 +327,8 @@ def main(argv: list[str] | None = None) -> int:
     batch_parser.add_argument("--workers", type=int, default=2, help="平行 Worker 數量")
 
     subparsers.add_parser("watch", help="啟動資料夾監控守護")
+    subparsers.add_parser("web", help="啟動本機網頁管理伺服器 (127.0.0.1:8767)")
+    subparsers.add_parser("mcp", help="啟動 MCP stdio 伺服器")
 
     args = parser.parse_args(argv)
     config = load_config()

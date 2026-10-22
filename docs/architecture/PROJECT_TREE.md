@@ -54,12 +54,15 @@ notebooklm-batch-studio/
 │   │   ├── TASK-001-phase-1a-notebooklm-technical-sp.json
 │   │   ├── TASK-002-phase-1b-domain-parallel-queue.json
 │   │   ├── TASK-003-phase-1c-notebooklm-adapter-conv.json
-│   │   └── TASK-004-phase-1d-cli-batch-orchestrator-.json
+│   │   ├── TASK-004-phase-1d-cli-batch-orchestrator-.json
+│   │   └── TASK-005-phase-1e-openapi-mcp-web-ui-fast.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
+│   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
-│   └── rules/
-│       └── 00-project-constitution.mdc
+│   ├── rules/
+│   │   └── 00-project-constitution.mdc
+│   └── mcp.json
 ├── .github/                                # 【自動化護欄層】CI、PR 範本與 Copilot 入口
 │   ├── workflows/                          # CI/CD 自動化檢查工作流程
 │   │   └── ci.yml                          # 金鑰掃描、目錄樹檢查、程式審查與離線測試
@@ -67,6 +70,7 @@ notebooklm-batch-studio/
 ├── .vscode/
 │   ├── extensions.json
 │   ├── launch.json
+│   ├── mcp.json
 │   └── settings.json
 ├── .windsurf/                              # [Agent 轉接] Windsurf 規則 (自動產生)
 │   └── rules/
@@ -134,8 +138,20 @@ notebooklm-batch-studio/
 │       │   ├── models.py
 │       │   └── repositories.py
 │       ├── entrypoints/
+│       │   ├── http/
+│       │   │   ├── __init__.py
+│       │   │   ├── artifacts.py
+│       │   │   ├── courses.py
+│       │   │   ├── queue.py
+│       │   │   └── system.py
+│       │   ├── static/
+│       │   │   └── index.html
 │       │   ├── __init__.py
-│       │   └── cli.py
+│       │   ├── api.py
+│       │   ├── cli.py
+│       │   ├── mcp_server.py
+│       │   ├── schemas.py
+│       │   └── web_template.py
 │       ├── services/
 │       │   ├── converters/
 │       │   │   ├── __init__.py
@@ -157,6 +173,7 @@ notebooklm-batch-studio/
 │   │   ├── sample_mindmap.json
 │   │   └── sample_quiz.json
 │   ├── __init__.py
+│   ├── test_api_and_mcp.py
 │   ├── test_converters.py
 │   ├── test_course_parser.py
 │   ├── test_db.py
@@ -167,12 +184,14 @@ notebooklm-batch-studio/
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取
+├── .mcp.json                               # [AI 工具] Claude Code 的專案 MCP 設定（uv run <名稱>-mcp）
 ├── .python-version                         # [Python 版本釘選] 供 uv / pyenv / mise 自動讀取
 ├── AGENTS.md                               # [AI 協作憲法・唯一規則來源] 所有 AI Agent 共用的開發原則與 Skills 路由
 ├── alembic.ini
 ├── CHANGELOG.md                            # [版本歷史] commit 寫入 Unreleased；agentctl finish --tag 發布版本
 ├── CLAUDE.md                               # [Agent 轉接檔] Claude Code 入口，匯入 AGENTS.md (自動產生)
 ├── GEMINI.md                               # [Agent 轉接檔] Gemini CLI 入口，指向 AGENTS.md (自動產生)
+├── opencode.json                           # [AI 工具] OpenCode 的專案設定（MCP）
 ├── pyproject.toml                          # [PEP 621 單一真相來源] Python 中繼資料、依賴分組、pytest 與 ruff 設定
 └── README.md                               # [唯一 README] 專案入口、快速開始與文件索引
 ```

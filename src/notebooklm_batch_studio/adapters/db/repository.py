@@ -225,6 +225,19 @@ class CourseRepository:
             record.source_id = source_id
             self.session.flush()
 
+    def update_profile(self, code: str, profile: str) -> None:
+        """Update the active profile for a course.
+
+        Args:
+            code: Course code.
+            profile: New profile string.
+        """
+        record = self.session.get(CourseRecord, code)
+        if record:
+            record.profile = profile
+            record.updated_at = utc_now()
+            self.session.flush()
+
 
 class QueueRepository:
     """Database access for the parallel task queue and quota tracking."""
@@ -427,6 +440,25 @@ class QueueRepository:
         """
         record = self.session.get(ArtifactJobRecord, job_id)
         return _to_domain_job(record) if record else None
+
+    def retry_job(self, job_id: str) -> bool:
+        """Reset a job back to PENDING status to allow re-execution.
+
+        Args:
+            job_id: Task UUID.
+
+        Returns:
+            True if the job was found and reset, False otherwise.
+        """
+        record = self.session.get(ArtifactJobRecord, job_id)
+        if record is None:
+            return False
+        record.status = JobStatus.PENDING.value
+        record.worker_id = None
+        record.error_message = None
+        record.updated_at = utc_now()
+        self.session.flush()
+        return True
 
     def count_by_status(self, course_code: str | None = None) -> dict[JobStatus, int]:
         """Compute the breakdown of jobs across all statuses.

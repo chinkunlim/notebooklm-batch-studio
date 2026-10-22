@@ -12,10 +12,17 @@ dependencies = [
     "pypdf>=6.21.1",
     "tomli>=2.5.0",
     "watchdog>=4.0.0",
+    "fastapi>=0.158.1",
+    "uvicorn>=0.54.0",
+    "mcp>=2.3.0",
+    "pydantic>=2.14.1",
+    "starlette>=1.9.0",
 ]  # add with `uv add <package>` (never `pip install`)
 
 [project.scripts]
 notebooklm-batch-studio = "notebooklm_batch_studio.entrypoints.cli:main"
+notebooklm-batch-studio-web = "notebooklm_batch_studio.entrypoints.api:main"
+notebooklm-batch-studio-mcp = "notebooklm_batch_studio.entrypoints.mcp_server:main"
 
 [dependency-groups]
 dev = [

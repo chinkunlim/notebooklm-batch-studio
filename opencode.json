@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "notebooklm-batch-studio": {
+        "command": "uv",
+        "args": ["run", "notebooklm-batch-studio-mcp"]
+      }
+    }
+  }
+}

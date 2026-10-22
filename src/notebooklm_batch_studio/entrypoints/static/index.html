@@ -1,0 +1,423 @@
+<!--
+用途：NotebookLM Batch Studio 本機管理介面與課程儀表板 (Single Page Application)。
+提供課程瀏覽、資料夾預覽與加入、工作佇列進度檢視與成果下載。
+-->
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NotebookLM Batch Studio</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .badge-neutral { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
+    .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    button, .btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button:hover, .btn:hover { background: var(--surface-hover); border-color: var(--primary); }
+    button.primary, .btn.primary { background: var(--primary); color: #0f172a; border-color: var(--primary); }
+    button.primary:hover, .btn.primary:hover { background: var(--primary-hover); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .card:hover { border-color: var(--primary); }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .card-title { font-size: 1.125rem; font-weight: 600; }
+    .card-subtitle { font-size: 0.8rem; color: var(--text-muted); }
+    .progress-bar-bg {
+      background: #0f172a;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .progress-bar-fill {
+      background: var(--primary);
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .status-counts {
+      display: flex;
+      gap: 12px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 650px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    input[type="text"], select, textarea {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.875rem; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-weight: 600; }
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--text-muted);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>NotebookLM Batch Studio</h1>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">本機課程自動化學習產出套裝 (127.0.0.1:8767)</span>
+    </div>
+    <div class="controls">
+      <span id="authBadge" class="badge badge-neutral">檢查認證中...</span>
+      <span id="queueBadge" class="badge badge-neutral">佇列閒置</span>
+      <button onclick="resumeQuota()" title="喚醒因配額暫停的項目">⚡ 喚醒配額</button>
+      <button class="primary" onclick="openAddModal()">➕ 加入課程資料夾</button>
+      <a href="/docs" target="_blank" class="btn">📖 OpenAPI 文件</a>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2 style="font-size: 1.2rem; margin-bottom: 12px;">📚 已註冊課程</h2>
+      <div id="courseContainer" class="grid">
+        <div class="empty-state">載入課程中...</div>
+      </div>
+    </section>
+
+    <!-- Course Detail Section (dynamically shown) -->
+    <section id="courseDetailSection" style="display: none; margin-top: 32px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 id="detailTitle" style="font-size: 1.25rem;">課程詳細進度</h2>
+        <button onclick="closeDetail()">✖ 關閉詳細資訊</button>
+      </div>
+      <div id="detailContent" class="card"></div>
+    </section>
+  </main>
+
+  <!-- Add Course Modal -->
+  <div id="addModal" class="modal-overlay">
+    <div class="modal">
+      <h3 style="font-size: 1.2rem;">加入課程資料夾</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        輸入本機課程講義 PDF 資料夾路徑（例如：<code>../../projects-data/notebooklm-batch-studio/input/courses/BIO101</code>）。
+      </p>
+      <div>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">資料夾路徑（每行一個）：</label>
+        <textarea id="folderPaths" rows="3" placeholder="/path/to/course_folder"></textarea>
+      </div>
+      <div>
+        <label style="font-size: 0.8rem; color: var(--text-muted);">產出組合 Profile：</label>
+        <select id="courseProfile">
+          <option value="full" selected>full (完整 8 項產出 + 全課模擬考/心智圖)</option>
+          <option value="quiz-only">quiz-only (3 種測驗卷)</option>
+          <option value="exam-prep">exam-prep (測驗 + 讀書指南 + 模擬考)</option>
+        </select>
+      </div>
+      <div id="previewResults" style="display: none; background: #0f172a; padding: 12px; border-radius: var(--radius); font-size: 0.85rem;"></div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button onclick="previewFolders()">🔍 預覽掃描</button>
+        <button class="primary" id="btnConfirmAdd" onclick="confirmAddFolders()" disabled>✅ 確認加入</button>
+        <button onclick="closeAddModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        const authBadge = document.getElementById('authBadge');
+        if (data.auth && data.auth.authenticated) {
+          authBadge.className = 'badge badge-success';
+          authBadge.textContent = 'NotebookLM 已登入';
+        } else {
+          authBadge.className = 'badge badge-danger';
+          authBadge.textContent = 'NotebookLM 未登入';
+        }
+        const queueBadge = document.getElementById('queueBadge');
+        if (data.queue_running) {
+          queueBadge.className = 'badge badge-warning';
+          queueBadge.textContent = '佇列執行中';
+        } else {
+          queueBadge.className = 'badge badge-neutral';
+          queueBadge.textContent = '佇列閒置';
+        }
+      } catch (e) {
+        console.error('Status fetch failed:', e);
+      }
+    }
+
+    async function fetchCourses() {
+      try {
+        const res = await fetch('/api/courses');
+        const courses = await res.json();
+        const container = document.getElementById('courseContainer');
+        if (!courses || courses.length === 0) {
+          container.innerHTML = '<div class="empty-state">尚未加入任何課程。點擊右上角「➕ 加入課程資料夾」開始。</div>';
+          return;
+        }
+        container.innerHTML = courses.map(c => `
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">${c.code} — ${c.name}</div>
+                <div class="card-subtitle">講次：${c.lecture_count} 講 | 組合：${c.profile}</div>
+              </div>
+              <span class="badge ${c.done_jobs === c.total_jobs && c.total_jobs > 0 ? 'badge-success' : 'badge-neutral'}">
+                ${c.progress_percent}%
+              </span>
+            </div>
+            <div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${c.progress_percent}%"></div>
+              </div>
+            </div>
+            <div class="status-counts">
+              <span>完成: ${c.done_jobs}/${c.total_jobs}</span>
+              ${c.counts.quota_wait ? '<span style="color:var(--warning)">配額等待: ' + c.counts.quota_wait + '</span>' : ''}
+              ${c.counts.failed ? '<span style="color:var(--danger)">失敗: ' + c.counts.failed + '</span>' : ''}
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+              <button onclick="viewCourseDetail('${c.code}')">🔍 詳細進度</button>
+              ${c.notebook_url ? `<a href="${c.notebook_url}" target="_blank" class="btn" style="font-size:0.8rem">🔗 NotebookLM</a>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load courses:', e);
+      }
+    }
+
+    async function viewCourseDetail(code) {
+      const section = document.getElementById('courseDetailSection');
+      const content = document.getElementById('detailContent');
+      document.getElementById('detailTitle').textContent = `課程 [${code}] 詳細產出進度`;
+      section.style.display = 'block';
+      content.innerHTML = '載入詳細資料中...';
+      try {
+        const res = await fetch(`/api/courses/${code}`);
+        const data = await res.json();
+        const jobsByLec = {};
+        (data.jobs || []).forEach(j => {
+          const key = j.lecture_no !== null ? j.lecture_no : 'course';
+          if (!jobsByLec[key]) jobsByLec[key] = [];
+          jobsByLec[key].push(j);
+        });
+
+        let html = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <h3>${data.name} (${data.code})</h3>
+              <p style="color:var(--text-muted); font-size:0.85rem">來源資料夾：<code>${data.source_dir}</code></p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <a href="/api/courses/${code}/artifacts" class="btn" target="_blank">📦 查看產出檔案清單</a>
+            </div>
+          </div>
+          <table style="margin-top:16px;">
+            <thead>
+              <tr>
+                <th>講次</th>
+                <th>主題</th>
+                <th>產出項目狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        (data.lectures || []).forEach(lec => {
+          const items = jobsByLec[lec.no] || [];
+          const badges = items.map(j => {
+            let cls = 'badge-neutral';
+            if (j.status === 'done') cls = 'badge-success';
+            if (j.status === 'quota_wait') cls = 'badge-warning';
+            if (j.status === 'failed') cls = 'badge-danger';
+            return `<span class="badge ${cls}" style="margin:2px;" title="${j.status}">${j.artifact_type}</span>`;
+          }).join(' ');
+
+          html += `
+            <tr>
+              <td>L${String(lec.no).padStart(2, '0')}</td>
+              <td>${lec.topic}</td>
+              <td>${badges || '<span style="color:var(--text-muted)">無產出任務</span>'}</td>
+            </tr>
+          `;
+        });
+        html += `</tbody></table>`;
+        content.innerHTML = html;
+        section.scrollIntoView({ behavior: 'smooth' });
+      } catch (e) {
+        content.innerHTML = `<span style="color:var(--danger)">載入失敗: ${e.message}</span>`;
+      }
+    }
+
+    function closeDetail() {
+      document.getElementById('courseDetailSection').style.display = 'none';
+    }
+
+    async function resumeQuota() {
+      try {
+        const res = await fetch('/api/queue/resume', { method: 'POST' });
+        const data = await res.json();
+        alert(`已喚醒 ${data.data || 0} 個配額等待任務！`);
+        fetchCourses();
+      } catch (e) {
+        alert('喚醒失敗: ' + e.message);
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('addModal').style.display = 'flex';
+    }
+    function closeAddModal() {
+      document.getElementById('addModal').style.display = 'none';
+      document.getElementById('previewResults').style.display = 'none';
+      document.getElementById('btnConfirmAdd').disabled = true;
+    }
+
+    async function previewFolders() {
+      const raw = document.getElementById('folderPaths').value;
+      const folders = raw.split('\\n').map(s => s.trim()).filter(Boolean);
+      if (folders.length === 0) {
+        alert('請先輸入資料夾路徑！');
+        return;
+      }
+      try {
+        const res = await fetch('/api/courses/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folders })
+        });
+        const results = await res.json();
+        const box = document.getElementById('previewResults');
+        box.style.display = 'block';
+        box.innerHTML = results.map(r => `
+          <div style="margin-bottom:8px;">
+            <strong>${r.is_valid ? '✅ ' + r.course_code + ' (' + r.course_name + ')' : '❌ 無效資料夾'}</strong>
+            <div>${r.is_valid ? '掃描到 ' + r.lecture_count + ' 講次，預估 ' + r.estimated_jobs + ' 項任務 (約 ' + r.estimated_days + ' 天)' : r.error}</div>
+          </div>
+        `).join('');
+        document.getElementById('btnConfirmAdd').disabled = !results.some(r => r.is_valid);
+      } catch (e) {
+        alert('預覽失敗: ' + e.message);
+      }
+    }
+
+    async function confirmAddFolders() {
+      const raw = document.getElementById('folderPaths').value;
+      const folders = raw.split('\\n').map(s => s.trim()).filter(Boolean);
+      const profile = document.getElementById('courseProfile').value;
+      try {
+        const res = await fetch('/api/courses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folders, profile })
+        });
+        const data = await res.json();
+        alert('成功加入課程！');
+        closeAddModal();
+        fetchCourses();
+      } catch (e) {
+        alert('加入失敗: ' + e.message);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchStatus();
+      fetchCourses();
+      setInterval(fetchStatus, 5000);
+    });
+  </script>
+</body>
+</html>

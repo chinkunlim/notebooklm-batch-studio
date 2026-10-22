@@ -103,6 +103,17 @@ class QueueRepositoryProtocol(Protocol):
         """
         ...
 
+    def retry_job(self, job_id: str) -> bool:
+        """Reset a job back to PENDING status to allow re-execution.
+
+        Args:
+            job_id: Task UUID.
+
+        Returns:
+            True if the job was found and reset, False otherwise.
+        """
+        ...
+
     def count_by_status(self, course_code: str | None = None) -> dict[JobStatus, int]:
         """Get summary count per status.
 
@@ -161,6 +172,15 @@ class CourseRepositoryProtocol(Protocol):
             code: Course code.
             lecture_no: Sequence number of the lecture.
             source_id: Uploaded source ID from NotebookLM.
+        """
+        ...
+
+    def update_profile(self, code: str, profile: str) -> None:
+        """Update the artifact generation profile for a course.
+
+        Args:
+            code: Course code.
+            profile: New profile name (e.g. 'full', 'quiz-only', 'exam-prep').
         """
         ...
 

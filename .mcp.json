@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "notebooklm-batch-studio": {
+      "command": "uv",
+      "args": ["run", "notebooklm-batch-studio-mcp"]
+    }
+  }
+}
