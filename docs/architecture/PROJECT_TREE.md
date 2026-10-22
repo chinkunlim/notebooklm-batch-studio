@@ -55,7 +55,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-002-phase-1b-domain-parallel-queue.json
 │   │   ├── TASK-003-phase-1c-notebooklm-adapter-conv.json
 │   │   ├── TASK-004-phase-1d-cli-batch-orchestrator-.json
-│   │   └── TASK-005-phase-1e-openapi-mcp-web-ui-fast.json
+│   │   ├── TASK-005-phase-1e-openapi-mcp-web-ui-fast.json
+│   │   └── TASK-006-update-all-documentation-and-arc.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則

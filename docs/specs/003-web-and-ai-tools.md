@@ -1,6 +1,6 @@
 # SPEC-003：本機網頁與 AI 工具串接（Open WebUI、MCP）
 
-- **狀態**：Draft
+- **狀態**：Implemented (Phase 1, TASK-005)
 - **日期**：2026-10-21
 - **相關任務 / ADR**：ADR-001
 

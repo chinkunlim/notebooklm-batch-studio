@@ -15,6 +15,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 ### Documentation
 - docs(specs): add specs 001-004 and ADR-001 for NotebookLM batch generation (by `@claude-code`)
 - docs(adr): document empirical verification results for NotebookLM single-source selection and artifact downloads (TASK-001) (`TASK-001`, by `@antigravity`)
+- docs: update README, ARCHITECTURE, and SPECS to reflect Phase 1 implementation (TASK-006) (by `@antigravity`)
 
 ## [0.1.0] - 2026-10-21
 ### Added

@@ -1,6 +1,6 @@
 # SPEC-002：下載與轉檔（包含 NotebookLM 不給下載的產出）
 
-- **狀態**：Draft
+- **狀態**：Implemented (Phase 1, TASK-001, TASK-003)
 - **日期**：2026-10-21
 - **相關任務 / ADR**：ADR-001
 

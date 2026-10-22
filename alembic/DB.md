@@ -1,7 +1,7 @@
 # 資料庫（SQLAlchemy + Alembic + SQLite）
 
 - 連線位置：預設是資料資料夾內的 `<DATA_DIR>/db/app.db`（`DATA_DIR` 在 `.env`，位於專案資料夾之外）；要用其他資料庫時，在 `.env` 設定 `DATABASE_URL`。
-- 資料表定義：`src/<pkg>/adapters/db/models.py`；存取資料只透過 `repository.py`，回傳 domain 物件。
+- 資料表定義：`src/notebooklm_batch_studio/adapters/db/models.py`；存取資料只透過 `repository.py`，回傳 domain 物件。
 - 交易：一律用 `session_scope()`，成功自動 commit、錯誤自動 rollback。
 
 改資料表的流程：

@@ -1,6 +1,6 @@
 # SPEC-001：批次生成（資料夾 → Notebook → 每份 PDF 的複習包）
 
-- **狀態**：Draft
+- **狀態**：Implemented (Phase 1, TASK-002, TASK-004)
 - **日期**：2026-10-21
 - **相關任務 / ADR**：ADR-001
 
