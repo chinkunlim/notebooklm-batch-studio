@@ -163,6 +163,8 @@ class Lecture:
     filename: str
     sha256: str
     source_id: str | None = None
+    upload_status: str = "pending"
+    error_message: str | None = None
 
 
 @dataclass(frozen=True)
@@ -295,6 +297,7 @@ class ArtifactJob:
     worker_id: str | None = None
     error_message: str | None = None
     output_file: str | None = None
+    custom_prompt: str | None = None
     quota_blocked_at: datetime | None = None
     cooldown_until: datetime | None = None
     created_at: datetime | None = None

@@ -80,7 +80,8 @@ notebooklm-batch-studio/
 │   ├── versions/
 │   │   ├── 20260101_0001_create_greetings.py
 │   │   ├── 20261022_0645db844501_add_source_id_to_lectures.py
-│   │   └── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
+│   │   ├── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
+│   │   └── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
 │   ├── DB.md
 │   ├── env.py
 │   └── script.py.mako
@@ -128,6 +129,9 @@ notebooklm-batch-studio/
 │       │   ├── notebooklm/
 │       │   │   ├── __init__.py
 │       │   │   └── client.py
+│       │   ├── ollama/
+│       │   │   ├── __init__.py
+│       │   │   └── client.py
 │       │   └── __init__.py
 │       ├── config/
 │       │   ├── __init__.py
@@ -165,6 +169,7 @@ notebooklm-batch-studio/
 │       │   ├── course_parser.py
 │       │   ├── greeting.py
 │       │   ├── orchestrator.py
+│       │   ├── prompt_generator.py
 │       │   ├── reporter.py
 │       │   ├── watcher.py
 │       │   └── worker_pool.py

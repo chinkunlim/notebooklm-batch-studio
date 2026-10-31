@@ -13,6 +13,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(api,mcp,web): implement FastAPI web UI, OpenAPI routes, and MCP server (TASK-005) (by `@antigravity`)
 - feat: enhance course folder and chapter regex parsing (by `@antigravity`)
 - feat: support in-app English renaming, 9 artifact types, and dual-column Web dashboard matrix (by `@antigravity`)
+- feat(adapters/domain): add adapters/domain module (by `@antigravity`)
 
 ### Fixed
 - fix(web): switch default HTTP port from 8767 to 8768 to prevent collision with literature-parser (by `@antigravity`)

@@ -41,6 +41,8 @@ def _to_domain_lecture(record: LectureRecord) -> Lecture:
         filename=record.filename,
         sha256=record.sha256,
         source_id=record.source_id,
+        upload_status=getattr(record, "upload_status", "pending") or "pending",
+        error_message=getattr(record, "error_message", None),
     )
 
 
@@ -91,6 +93,7 @@ def _to_domain_job(record: ArtifactJobRecord) -> ArtifactJob:
         worker_id=record.worker_id,
         error_message=record.error_message,
         output_file=record.output_file,
+        custom_prompt=getattr(record, "custom_prompt", None),
         quota_blocked_at=record.quota_blocked_at,
         cooldown_until=record.cooldown_until,
         created_at=record.created_at,
@@ -126,8 +129,37 @@ class CourseRepository:
                     filename=lecture.filename,
                     sha256=lecture.sha256,
                     source_id=lecture.source_id,
+                    upload_status=lecture.upload_status,
+                    error_message=lecture.error_message,
                 )
             )
+
+    def update_lecture_upload_status(
+        self,
+        code: str,
+        lecture_no: int,
+        status: str,
+        source_id: str | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        """Update upload state, source ID, and error message for a lecture PDF.
+
+        Args:
+            code: Course code.
+            lecture_no: Sequence number of the lecture.
+            status: Status string (pending, uploading, parsing, ready, failed).
+            source_id: Optional NotebookLM source ID when ready.
+            error_message: Optional failure explanation.
+        """
+        stmt = select(LectureRecord).where(LectureRecord.course_code == code, LectureRecord.no == lecture_no)
+        record = self.session.scalars(stmt).first()
+        if record:
+            record.upload_status = status
+            if source_id:
+                record.source_id = source_id
+            record.error_message = error_message
+            self.session.flush()
+            self.session.commit()
 
     def save_course(self, course: Course) -> None:
         """Insert or update a course entity and its lectures.
@@ -282,6 +314,7 @@ class QueueRepository:
                     worker_id=job.worker_id,
                     error_message=job.error_message,
                     output_file=job.output_file,
+                    custom_prompt=job.custom_prompt,
                 )
                 self.session.add(record)
                 added_count += 1
@@ -466,6 +499,25 @@ class QueueRepository:
         record.status = JobStatus.PENDING.value
         record.worker_id = None
         record.error_message = None
+        record.updated_at = utc_now()
+        self.session.flush()
+        self.session.commit()
+        return True
+
+    def update_job_prompt(self, job_id: str, prompt: str) -> bool:
+        """Update the custom generation prompt for a specific job.
+
+        Args:
+            job_id: Task UUID.
+            prompt: New custom prompt string.
+
+        Returns:
+            True if job was found and updated, False otherwise.
+        """
+        record = self.session.get(ArtifactJobRecord, job_id)
+        if record is None:
+            return False
+        record.custom_prompt = prompt
         record.updated_at = utc_now()
         self.session.flush()
         self.session.commit()

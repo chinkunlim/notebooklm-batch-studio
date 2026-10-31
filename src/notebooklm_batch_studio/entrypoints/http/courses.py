@@ -140,3 +140,60 @@ async def setup_course_notebook(code: str, request: Request) -> dict[str, Any]:
         return {"code": course.code, "name": course.name, "notebook_id": course.notebook_id}
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.post(
+    "/api/courses/{code}/refine_prompts", tags=["Courses"], operation_id="refine_course_prompts"
+)
+def refine_course_prompts(code: str, request: Request) -> dict[str, Any]:
+    """Refine all task prompts for a course using Ollama gemma4 and master style blueprint.
+
+    Args:
+        code: Course identifier.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Summary detailing count of updated prompts.
+
+    Raises:
+        HTTPException: 404 if course not found.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        updated = service.refine_course_prompts_with_ollama(code)
+        return {"code": code, "updated_prompts": updated}
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.post(
+    "/api/courses/{code}/lectures/{no}/retry_upload",
+    tags=["Courses"],
+    operation_id="retry_lecture_upload",
+)
+async def retry_lecture_upload(code: str, no: int, request: Request) -> dict[str, Any]:
+    """Retry uploading a single failed lecture PDF to NotebookLM.
+
+    Args:
+        code: Course identifier.
+        no: Sequence number of the lecture.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Status result.
+
+    Raises:
+        HTTPException: 404 if course not found.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        course = await service.setup_notebook_and_sources(code)
+        lec = next((item for item in course.lectures if item.no == no), None)
+        return {
+            "code": code,
+            "no": no,
+            "upload_status": lec.upload_status if lec else "unknown",
+            "source_id": lec.source_id if lec else None,
+        }
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

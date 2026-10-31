@@ -17,6 +17,7 @@ from notebooklm_batch_studio.domain.models import (
     ProfileName,
 )
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
+from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -56,13 +57,19 @@ def _get_types_for_profile(profile: ProfileName) -> list[ArtifactType]:
     return []
 
 
-def _make_job(course_code: str, lecture_no: int | None, art_type: ArtifactType) -> ArtifactJob:
+def _make_job(
+    course_code: str,
+    lecture_no: int | None,
+    art_type: ArtifactType,
+    custom_prompt: str | None = None,
+) -> ArtifactJob:
     """Create a new pending ArtifactJob with a fresh UUID.
 
     Args:
         course_code: Course code.
         lecture_no: Sequence number or None for course-level.
         art_type: Artifact type.
+        custom_prompt: Optional tailored prompt.
 
     Returns:
         ArtifactJob domain object.
@@ -73,6 +80,7 @@ def _make_job(course_code: str, lecture_no: int | None, art_type: ArtifactType) 
         lecture_no=lecture_no,
         artifact_type=art_type,
         status=JobStatus.PENDING,
+        custom_prompt=custom_prompt,
     )
 
 
@@ -90,6 +98,7 @@ def generate_jobs_for_course(course: Course) -> list[ArtifactJob]:
     """
     jobs: list[ArtifactJob] = []
 
+    prompt_gen = PromptGenerator()
     # If granular custom selection is provided
     if course.selected_chapter_artifacts or course.selected_course_artifacts:
         chapter_types: list[ArtifactType] = []
@@ -107,10 +116,14 @@ def generate_jobs_for_course(course: Course) -> list[ArtifactJob]:
                 logger.warning("Unknown course artifact type: %s", name)
 
         for lec in course.lectures:
-            jobs.extend(_make_job(course.code, lec.no, art_type) for art_type in chapter_types)
+            for art_type in chapter_types:
+                p = prompt_gen.get_base_blueprint_prompt(art_type, lec.topic, course.name, course.language)
+                jobs.append(_make_job(course.code, lec.no, art_type, custom_prompt=p))
 
+        course_scope = f"{course.code} 全範圍整合"
         for course_art in course_types:
-            jobs.append(_make_job(course.code, None, course_art))
+            p = prompt_gen.get_base_blueprint_prompt(course_art, course_scope, course.name, course.language)
+            jobs.append(_make_job(course.code, None, course_art, custom_prompt=p))
 
         logger.info(
             "Generated %d granular jobs for course %s (chapter_types=%d, course_types=%d)",
@@ -124,11 +137,16 @@ def generate_jobs_for_course(course: Course) -> list[ArtifactJob]:
     # Fallback to predefined profile
     types_for_lecture = _get_types_for_profile(course.profile)
     for lec in course.lectures:
-        jobs.extend(_make_job(course.code, lec.no, art_type) for art_type in types_for_lecture)
+        for art_type in types_for_lecture:
+            p = prompt_gen.get_base_blueprint_prompt(art_type, lec.topic, course.name, course.language)
+            jobs.append(_make_job(course.code, lec.no, art_type, custom_prompt=p))
 
     if course.profile in (ProfileName.FULL, ProfileName.EXAM_PREP):
         for course_art in (ArtifactType.COURSE_MOCK_EXAM, ArtifactType.COURSE_MIND_MAP):
-            jobs.append(_make_job(course.code, None, course_art))
+            p = prompt_gen.get_base_blueprint_prompt(
+                course_art, f"{course.code} 全範圍整合", course.name, course.language
+            )
+            jobs.append(_make_job(course.code, None, course_art, custom_prompt=p))
 
     logger.info("Generated %d jobs for course %s (profile=%s)", len(jobs), course.code, course.profile.value)
     return jobs
@@ -163,8 +181,28 @@ class WorkerPool:
         self.probe_interval_seconds = probe_interval_seconds
         self.blocked_quota_types: set[ArtifactType] = set()
         self._running = False
+        self._paused = False
         self._workers: list[asyncio.Task[None]] = []
         self._probe_task: asyncio.Task[None] | None = None
+
+    def pause(self) -> None:
+        """Gracefully pause queue: running jobs finish, but no new jobs are claimed."""
+        self._paused = True
+        logger.info("WorkerPool paused gracefully.")
+
+    def resume(self) -> None:
+        """Resume claiming pending jobs from queue."""
+        self._paused = False
+        logger.info("WorkerPool resumed.")
+
+    @property
+    def is_paused(self) -> bool:
+        """Whether worker pool is in paused state.
+
+        Returns:
+            True if paused, False otherwise.
+        """
+        return self._paused
 
     async def start(self) -> None:
         """Launch worker tasks and quota probe scheduler."""
@@ -254,6 +292,10 @@ class WorkerPool:
         """
         logger.info("Worker %s started", worker_id)
         while self._running:
+            if self._paused:
+                await asyncio.sleep(0.05)
+                continue
+
             job: ArtifactJob | None = None
             with self.queue_provider() as repo:
                 job = repo.claim_next_job(worker_id=worker_id, excluded_types=self.blocked_quota_types)

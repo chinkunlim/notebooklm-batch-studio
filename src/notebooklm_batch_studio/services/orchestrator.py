@@ -30,6 +30,7 @@ from notebooklm_batch_studio.domain.repositories import (
 )
 from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
+from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 from notebooklm_batch_studio.services.reporter import CourseReporter
 from notebooklm_batch_studio.services.worker_pool import (
     QueueSessionProvider,
@@ -120,11 +121,35 @@ class BatchStudioService:
         for lec in course.lectures:
             if not lec.source_id:
                 pdf_file = Path(course.source_dir) / lec.filename
-                if pdf_file.exists():
+                if not pdf_file.exists():
+                    self.course_repo.update_lecture_upload_status(
+                        course_code, lec.no, "failed", error_message=f"File not found: {lec.filename}"
+                    )
+                    continue
+
+                try:
+                    self.course_repo.update_lecture_upload_status(course_code, lec.no, "uploading")
                     source_id = await self.notebooklm_client.upload_source(notebook_id, str(pdf_file))
+                    self.course_repo.update_lecture_upload_status(
+                        course_code, lec.no, "parsing", source_id=source_id
+                    )
                     await self.notebooklm_client.wait_source_ready(notebook_id, source_id)
-                    self.course_repo.update_lecture_source_id(course_code, lec.no, source_id)
-                    logger.info("Uploaded lecture %d (%s) -> source %s", lec.no, lec.filename, source_id)
+                    self.course_repo.update_lecture_upload_status(
+                        course_code, lec.no, "ready", source_id=source_id
+                    )
+                    logger.info(
+                        "Uploaded lecture %d (%s) -> source %s (ready)", lec.no, lec.filename, source_id
+                    )
+                except Exception as upload_err:
+                    self.course_repo.update_lecture_upload_status(
+                        course_code, lec.no, "failed", error_message=str(upload_err)
+                    )
+                    logger.exception("Failed to upload lecture %d (%s): %s", lec.no, lec.filename, upload_err)
+                    raise
+            else:
+                self.course_repo.update_lecture_upload_status(
+                    course_code, lec.no, "ready", source_id=lec.source_id
+                )
 
         updated = self.course_repo.get_course(course_code)
         return updated or course
@@ -261,6 +286,8 @@ class BatchStudioService:
                 "filename": lec.filename,
                 "source_id": lec.source_id,
                 "pdf_hash": lec.sha256,
+                "upload_status": lec.upload_status,
+                "error_message": lec.error_message,
             }
             for lec in course.lectures
         ]
@@ -271,6 +298,7 @@ class BatchStudioService:
                 "lecture_no": j.lecture_no,
                 "artifact_type": j.artifact_type.value,
                 "status": j.status.value,
+                "custom_prompt": j.custom_prompt,
                 "output_file": j.output_file,
                 "error_message": j.error_message,
                 "attempts": j.attempts,
@@ -554,26 +582,36 @@ class BatchStudioService:
         """Check if queue execution is currently active.
 
         Returns:
-            True if running, False if idle or paused.
+            True if running and not paused, False otherwise.
         """
         if self.worker_pool is not None:
-            return self.worker_pool._running
+            return self.worker_pool._running and not self.worker_pool.is_paused
         return self._is_queue_running
 
     def pause_queue(self) -> bool:
-        """Pause active queue processing.
+        """Pause active queue processing gracefully.
 
         Returns:
             True upon pause request.
         """
         self._is_queue_running = False
-        try:
-            loop = asyncio.get_running_loop()
-            if self.worker_pool and self.worker_pool._running and not loop.is_closed():
-                loop.create_task(self.worker_pool.stop())
-                logger.info("WorkerPool pause scheduled.")
-        except RuntimeError:
-            pass
+        if self.worker_pool:
+            self.worker_pool.pause()
+            logger.info("WorkerPool paused gracefully.")
+        return True
+
+    def resume_queue(self) -> bool:
+        """Resume active queue processing.
+
+        Returns:
+            True upon resume request.
+        """
+        self._is_queue_running = True
+        if self.worker_pool:
+            self.worker_pool.resume()
+            logger.info("WorkerPool resumed.")
+        else:
+            self.start_queue()
         return True
 
     def start_queue(self) -> bool:
@@ -583,6 +621,10 @@ class BatchStudioService:
             True upon start request.
         """
         self._is_queue_running = True
+        if self.worker_pool and self.worker_pool.is_paused:
+            self.worker_pool.resume()
+            return True
+
         try:
             loop = asyncio.get_running_loop()
             if not loop.is_closed():
@@ -598,3 +640,44 @@ class BatchStudioService:
         except RuntimeError:
             pass
         return True
+
+    def update_job_prompt(self, job_id: str, prompt: str) -> bool:
+        """Update customized prompt for an artifact generation job.
+
+        Args:
+            job_id: Task UUID.
+            prompt: Customized prompt string.
+
+        Returns:
+            True if updated, False otherwise.
+        """
+        return self.queue_repo.update_job_prompt(job_id, prompt)
+
+    def refine_course_prompts_with_ollama(self, course_code: str) -> int:
+        """Refine all jobs' prompts for a course using Ollama gemma4.
+
+        Args:
+            course_code: Course identifier.
+
+        Returns:
+            Count of successfully refined prompts.
+        """
+        course = self.course_repo.get_course(course_code)
+        if course is None:
+            raise CourseNotFoundError(f"Course not found: {course_code}")
+
+        prompt_gen = PromptGenerator()
+        jobs = self.queue_repo.list_jobs(course_code=course_code)
+        updated_count = 0
+        for j in jobs:
+            topic = "全範圍整合"
+            if j.lecture_no is not None:
+                lec = next((item for item in course.lectures if item.no == j.lecture_no), None)
+                if lec:
+                    topic = lec.topic
+            refined = prompt_gen.generate_refined_prompt(
+                j.artifact_type, topic, course.name, course.language, use_ollama=True
+            )
+            if refined and self.queue_repo.update_job_prompt(j.id, refined):
+                updated_count += 1
+        return updated_count

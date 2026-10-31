@@ -25,6 +25,7 @@ from notebooklm_batch_studio.domain.models import (
     get_lecture_prefix,
 )
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
+from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 from notebooklm_batch_studio.services.worker_pool import WorkerPool, generate_jobs_for_course
 
 
@@ -351,3 +352,113 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
             {j.artifact_type for j in course_jobs},
             {ArtifactType.COURSE_MOCK_EXAM, ArtifactType.COURSE_MIND_MAP},
         )
+
+    async def test_worker_pool_graceful_pause_and_resume(self) -> None:
+        """Verify graceful pause: running tasks complete, pending tasks freeze until resumed."""
+        with self.session_factory() as session:
+            repo = QueueRepository(session)
+            repo.enqueue_jobs(
+                [
+                    ArtifactJob(
+                        id="p-1", course_code="CS101", lecture_no=1, artifact_type=ArtifactType.QUIZ_1
+                    ),
+                    ArtifactJob(
+                        id="p-2", course_code="CS101", lecture_no=2, artifact_type=ArtifactType.QUIZ_2
+                    ),
+                ]
+            )
+            session.commit()
+
+        executed: list[str] = []
+        job_1_started = asyncio.Event()
+
+        async def slow_executor(job: ArtifactJob) -> str:
+            executed.append(job.id)
+            job_1_started.set()
+            await asyncio.sleep(0.05)
+            return f"/mock/{job.id}.json"
+
+        @contextmanager
+        def queue_provider() -> Generator[QueueRepositoryProtocol, None, None]:
+            with self.session_factory() as session:
+                yield QueueRepository(session)
+                session.commit()
+
+        pool = WorkerPool(queue_provider, slow_executor, concurrency=1)
+        await pool.start()
+        # Wait until job 1 has started processing
+        await job_1_started.wait()
+        # Pause while job 1 is in-flight
+        pool.pause()
+        self.assertTrue(pool.is_paused)
+
+        # Allow current job to finish
+        await asyncio.sleep(0.1)
+
+        # p-1 should have been executed, p-2 should still be pending because pool is paused
+        self.assertEqual(executed, ["p-1"])
+        with self.session_factory() as session:
+            repo = QueueRepository(session)
+            j2 = repo.get_job("p-2")
+            assert j2 is not None
+            self.assertEqual(j2.status, JobStatus.PENDING)
+
+        # Now resume
+        pool.resume()
+        self.assertFalse(pool.is_paused)
+        await asyncio.sleep(0.15)
+        await pool.stop()
+
+        # Both jobs executed
+        self.assertEqual(executed, ["p-1", "p-2"])
+
+    def test_lecture_upload_status_tracking(self) -> None:
+        """Verify Lecture upload_status and error_message transitions in CourseRepository."""
+        with self.session_factory() as session:
+            repo = CourseRepository(session)
+            course = Course(
+                code="115-1",
+                name="心理學研究法",
+                source_dir="/mock/dir",
+                lectures=[Lecture(no=1, topic="Intro", filename="Ch01.pdf", sha256="abc1")],
+            )
+            repo.save_course(course)
+
+            # Initial state is pending
+            loaded = repo.get_course("115-1")
+            assert loaded is not None
+            self.assertEqual(loaded.lectures[0].upload_status, "pending")
+
+            # Update to uploading, parsing, ready
+            repo.update_lecture_upload_status("115-1", 1, "uploading")
+            loaded = repo.get_course("115-1")
+            assert loaded is not None
+            self.assertEqual(loaded.lectures[0].upload_status, "uploading")
+
+            repo.update_lecture_upload_status("115-1", 1, "ready", source_id="src-mock-123")
+            loaded = repo.get_course("115-1")
+            assert loaded is not None
+            self.assertEqual(loaded.lectures[0].upload_status, "ready")
+            self.assertEqual(loaded.lectures[0].source_id, "src-mock-123")
+
+    def test_prompt_generator_master_blueprint(self) -> None:
+        """Verify Master Style Blueprint generates high-standard academic prompts."""
+        gen = PromptGenerator()
+        q1_prompt = gen.get_base_blueprint_prompt(
+            ArtifactType.QUIZ_1, "科學研究導論", "心理學研究法", language="zh-TW"
+        )
+        self.assertIn("研究所/大學高年級水準", q1_prompt)
+        self.assertIn("標準繁體中文 (zh-TW)", q1_prompt)
+        self.assertIn("測驗 1 - 基礎記憶與核心定義", q1_prompt)
+
+        exam_prompt = gen.get_base_blueprint_prompt(
+            ArtifactType.COURSE_MOCK_EXAM, "全範圍整合", "心理學研究法", language="zh-TW"
+        )
+        self.assertIn("50 題", exam_prompt)
+        self.assertIn("跨章節整合", exam_prompt)
+
+        # English variant
+        en_prompt = gen.get_base_blueprint_prompt(
+            ArtifactType.QUIZ_2, "Research Methods", "Research Methods", language="en"
+        )
+        self.assertIn("strictly in formal academic English", en_prompt)

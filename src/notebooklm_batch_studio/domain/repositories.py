@@ -12,6 +12,30 @@ from notebooklm_batch_studio.domain.models import (
 )
 
 
+class OllamaClientProtocol(Protocol):
+    """Abstract interface for local Ollama text generation."""
+
+    def is_available(self) -> bool:
+        """Check whether Ollama endpoint is reachable.
+
+        Returns:
+            True if service is ready, False otherwise.
+        """
+        ...
+
+    def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+        """Generate text completion from model.
+
+        Args:
+            prompt: User prompt content.
+            system_prompt: Optional system prompt context.
+
+        Returns:
+            Generated text response.
+        """
+        ...
+
+
 class QueueRepositoryProtocol(Protocol):
     """Abstract interface for task queue persistence and state transitions."""
 
@@ -114,6 +138,18 @@ class QueueRepositoryProtocol(Protocol):
         """
         ...
 
+    def update_job_prompt(self, job_id: str, prompt: str) -> bool:
+        """Update the custom generation prompt for a specific job.
+
+        Args:
+            job_id: Task UUID.
+            prompt: New custom prompt string.
+
+        Returns:
+            True if job was found and updated, False otherwise.
+        """
+        ...
+
     def count_by_status(self, course_code: str | None = None) -> dict[JobStatus, int]:
         """Get summary count per status.
 
@@ -181,6 +217,25 @@ class CourseRepositoryProtocol(Protocol):
         Args:
             code: Course code.
             profile: New profile name (e.g. 'full', 'quiz-only', 'exam-prep').
+        """
+        ...
+
+    def update_lecture_upload_status(
+        self,
+        code: str,
+        lecture_no: int,
+        status: str,
+        source_id: str | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        """Update upload state, source ID, and error message for a lecture PDF.
+
+        Args:
+            code: Course code.
+            lecture_no: Sequence number of the lecture.
+            status: Status string (pending, uploading, parsing, ready, failed).
+            source_id: Optional NotebookLM source ID when ready.
+            error_message: Optional failure explanation.
         """
         ...
 

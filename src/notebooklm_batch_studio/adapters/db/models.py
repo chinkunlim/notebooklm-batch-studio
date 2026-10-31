@@ -75,6 +75,8 @@ class LectureRecord(Base):
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     source_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    upload_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 
@@ -108,6 +110,7 @@ class ArtifactJobRecord(Base):
     worker_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_file: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    custom_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     quota_blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cooldown_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True

@@ -1,0 +1,197 @@
+"""Prompt generator for academic consistency and topic-specific artifact synthesis.
+
+Implements the Master Style Blueprint for university senior and graduate level standards,
+leveraging local Ollama (gemma4) via domain protocol with offline rule-based fallback.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from notebooklm_batch_studio.domain.models import ArtifactType
+from notebooklm_batch_studio.domain.repositories import OllamaClientProtocol
+
+logger = logging.getLogger(__name__)
+
+# Master Style Blueprint: System rules applied across all chapters to maintain style consistency
+MASTER_STYLE_SYSTEM_PROMPT = """你是一位具備頂尖心理學與量化研究法教學經驗的大學教授。
+你的任務是根據特定的章節主題與產出物類型，為 Google NotebookLM 撰寫精準、具學術水準的提示詞。
+核心規範：
+1. 難度定位：一律設定為大學高年級至研究所碩士班水準，著重於觀念辨析、方法學取捨與效度威脅。
+2. 語言規範：一律使用繁體中文 (zh-TW)，專有名詞在首次出現時須以括號附註英文原名。
+3. 風格一致性：格式結構需嚴謹統一，禁止出現過度口語或風格斷層的語調。
+4. 選項規範（針對測驗）：四個選項長度相仿、各具理論誘答力，禁止使用「以上皆是」或「以上皆非」。
+請直接輸出給 NotebookLM 的具體指示 Prompt，長度約 150~250 字，不要有多餘客套話。"""
+
+
+def _get_chapter_prompts(base_rules: str) -> dict[str, str]:
+    """Build blueprint prompts for lecture-level artifacts.
+
+    Args:
+        base_rules: Common academic instructions prefix.
+
+    Returns:
+        Mapping from artifact type value to prompt text.
+    """
+    return {
+        ArtifactType.QUIZ_1.value: (
+            f"{base_rules}請根據本講義生成 10 題【測驗 1 - 基礎記憶與核心定義】單選題。"
+            "著重於研究假設、變項定義（操作型定義）、基本假說與概念辨析。"
+            "每題提供 4 個長度相仿且具誘答力的選項，標明正確答案並附詳細學術解析與講義依據。"
+        ),
+        ArtifactType.QUIZ_2.value: (
+            f"{base_rules}請根據本講義生成 10 題【測驗 2 - 理解應用與研究設計】單選題。"
+            "題幹必須融入具體實驗、問卷或觀察情境，考核研究方法抉擇、抽樣限制與潛在混淆變項。"
+            "每題提供 4 個長度相仿之選項，標明答案並提供深度學術解析。"
+        ),
+        ArtifactType.QUIZ_3.value: (
+            f"{base_rules}請根據本講義生成 10 題【測驗 3 - 模擬實戰與效度威脅】高階單選題。"
+            "聚焦於統計結論效度、內外在效度威脅、研究倫理情境判斷與反思題。"
+            "選項應具備高度理論辨析度，詳細說明正確理由與各干擾選項之錯誤根因。"
+        ),
+        ArtifactType.FLASHCARDS.value: (
+            f"{base_rules}請萃取 30~50 個核心研究法與統計專有名詞重點閃卡 (Flashcards)。"
+            "正面為專有名詞與簡短核心情境提問，背面為精確學術定義、實驗範例與方法學陷阱提示。"
+        ),
+        ArtifactType.MIND_MAP.value: (
+            f"{base_rules}請為本講義梳理完整的多層級【知識架構心智圖 (Mind Map)】。"
+            "包含：核心研究問題 ➔ 理論背景 ➔ 研究方法與變項操作 ➔ 效度威脅與倫理 ➔ 結論延伸。"
+        ),
+        ArtifactType.STUDY_GUIDE.value: (
+            f"{base_rules}請撰寫本章【精讀讀書指南 (Study Guide)】。"
+            "包含章節學習目標、核心概念精要、方法學優缺點比較矩陣與 3 個延伸研討思考題。"
+        ),
+        ArtifactType.SLIDE_DECK.value: (
+            f"{base_rules}請生成結構嚴謹的【專題報告投影片大綱 (Slide Deck)】。"
+            "依序包含：研究背景動機、核心概念架構、研究方法設計、實證分析與學術批判。"
+        ),
+        ArtifactType.INFOGRAPHIC.value: (
+            f"{base_rules}請輸出適合轉化為資訊圖表 (Infographic) 的結構化視覺文本摘要。"
+            "包含研究流程圖步驟、核心數據指標、概念對比圖表與關鍵警示提醒。"
+        ),
+        ArtifactType.DATA_TABLE.value: (
+            f"{base_rules}請生成全方位【概念與方法比較分析資料表 (Data Table)】。"
+            "使用 Markdown 格式呈現各研究方法之適用情境、優點、局限性與典型範例。"
+        ),
+        ArtifactType.VIDEO.value: (
+            f"{base_rules}請撰寫適合劇院影音或學術 Podcast 導讀之劇本講稿 (Video Script)。"
+            "以專業學者對談口吻，生動引導閱聽者掌握本章研究方法之精髓與爭議點。"
+        ),
+    }
+
+
+def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, str]:
+    """Build blueprint prompts for course-wide aggregated artifacts.
+
+    Args:
+        course_name: Course title.
+        lang_instruction: Language constraint clause.
+
+    Returns:
+        Mapping from course artifact type value to prompt text.
+    """
+    return {
+        ArtifactType.COURSE_MOCK_EXAM.value: (
+            f"本課程為【{course_name}】全範圍綜合期末考。難度設定為研究所入學考水準。"
+            f"{lang_instruction}請生成 50 題跨章節整合單選題，涵蓋核心脈絡與綜合研究設計分析。"
+            "每題附詳細學術解析、診斷提示與各選項辨析。"
+        ),
+        ArtifactType.COURSE_MIND_MAP.value: (
+            f"本課程為【{course_name}】。{lang_instruction}請繪製貫穿全部講義之【全課程總架構心智圖】。"
+            "展示從科學研究本質、假說建立、研究設計、變項測量至效度與倫理之知識地圖。"
+        ),
+        ArtifactType.COURSE_STUDY_GUIDE.value: (
+            f"本課程為【{course_name}】。{lang_instruction}請彙編【全課程總結讀書指南】。"
+            "整合各章核心關聯、全書方法學對照比較與期末核心考點精華整理。"
+        ),
+        ArtifactType.COURSE_AUDIO.value: (
+            f"本課程為【{course_name}】。{lang_instruction}請產出全課程總回顧語音導讀腳本。"
+            "貫穿全學期講授之心理學研究方法體系，串聯各章關鍵概念與研究思維精華。"
+        ),
+    }
+
+
+class PromptGenerator:
+    """Generates standardized academic prompts for NotebookLM artifacts."""
+
+    def __init__(self, ollama_client: OllamaClientProtocol | None = None) -> None:
+        """Initialize the prompt generator.
+
+        Args:
+            ollama_client: Optional Ollama client instance.
+        """
+        self.ollama = ollama_client
+
+    def get_base_blueprint_prompt(
+        self,
+        artifact_type: ArtifactType | str,
+        topic: str,
+        course_name: str,
+        language: str = "zh-TW",
+    ) -> str:
+        """Generate deterministic rule-based blueprint prompt for artifact.
+
+        Args:
+            artifact_type: The artifact type enum or string value.
+            topic: Chapter topic or course range description.
+            course_name: Full course title.
+            language: Target language (zh-TW, en, bilingual).
+
+        Returns:
+            Structured prompt string matching the master academic blueprint.
+        """
+        type_val = artifact_type.value if isinstance(artifact_type, ArtifactType) else str(artifact_type)
+        lang_instruction = "請一律以標準繁體中文 (zh-TW) 輸出，重要心理學與統計學名詞於括號附註英文。"
+        if language == "en":
+            lang_instruction = "Please output strictly in formal academic English."
+        elif language == "bilingual":
+            lang_instruction = "請採用中英雙語對照輸出 (Traditional Chinese and English bilingual format)。"
+
+        base_rules = (
+            f"本講義主題為【{course_name} — {topic}】。難度設定為研究所/大學高年級水準。{lang_instruction} "
+        )
+
+        all_prompts = _get_chapter_prompts(base_rules)
+        all_prompts.update(_get_course_prompts(course_name, lang_instruction))
+
+        return all_prompts.get(type_val, f"{base_rules}請為【{topic}】生成高品質學術產出物。")
+
+    def generate_refined_prompt(
+        self,
+        artifact_type: ArtifactType | str,
+        topic: str,
+        course_name: str,
+        language: str = "zh-TW",
+        use_ollama: bool = True,
+    ) -> str:
+        """Generate customized prompt using Ollama gemma4 with blueprint fallback.
+
+        Args:
+            artifact_type: Artifact type enum or string.
+            topic: Chapter topic or scope.
+            course_name: Course title.
+            language: Target output language.
+            use_ollama: Whether to attempt Ollama enhancement.
+
+        Returns:
+            Refined prompt string.
+        """
+        base_prompt = self.get_base_blueprint_prompt(artifact_type, topic, course_name, language)
+        if not use_ollama or self.ollama is None:
+            return base_prompt
+
+        user_req = (
+            f"課程：{course_name}\n講義章節主題：{topic}\n產出物類型：{artifact_type}\n"
+            f"基礎母版指引：{base_prompt}\n"
+            "請根據上述資訊，潤飾並擴充一份語氣嚴謹、符合研究所高標準學術水準的具體 Prompt 指令。"
+        )
+
+        try:
+            enhanced = self.ollama.generate(prompt=user_req, system_prompt=MASTER_STYLE_SYSTEM_PROMPT)
+            if enhanced and len(enhanced) >= 40:
+                logger.info("Successfully generated refined prompt via Ollama gemma4 for %s", topic)
+                return enhanced
+        except Exception as err:
+            logger.warning("Ollama prompt refinement failed, using blueprint prompt: %s", err)
+
+        return base_prompt

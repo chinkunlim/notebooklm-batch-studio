@@ -69,7 +69,8 @@ def resume_queue(request: Request) -> GenericActionResponse:
     """
     service: BatchStudioService = request.app.state.service
     count = service.resume_quota_wait()
-    return GenericActionResponse(success=True, message=f"Awakened {count} jobs", data=count)
+    service.resume_queue()
+    return GenericActionResponse(success=True, message=f"Resumed queue and awakened {count} jobs", data=count)
 
 
 @queue_router.post(

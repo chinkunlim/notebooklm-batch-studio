@@ -149,15 +149,23 @@ class ArtifactRunner:
         elif art_type == ArtifactType.COURSE_MOCK_EXAM:
             res = await self._process_mock_exam(job, course, nb_id, source_ids, out_dir)
         elif art_type in (ArtifactType.STUDY_GUIDE, ArtifactType.COURSE_STUDY_GUIDE):
-            res = await self._process_study_guide(course, nb_id, source_ids, out_dir, is_course)
+            res = await self._process_study_guide(
+                course, nb_id, source_ids, out_dir, is_course, job.custom_prompt
+            )
         elif art_type in (ArtifactType.SLIDE_DECK, ArtifactType.COURSE_SLIDE_DECK):
-            res = await self._process_slide_deck(course, nb_id, source_ids, out_dir, is_course)
+            res = await self._process_slide_deck(
+                course, nb_id, source_ids, out_dir, is_course, job.custom_prompt
+            )
         elif art_type in (ArtifactType.INFOGRAPHIC, ArtifactType.COURSE_INFOGRAPHIC):
-            res = await self._process_infographic(course, nb_id, source_ids, out_dir, is_course)
+            res = await self._process_infographic(
+                course, nb_id, source_ids, out_dir, is_course, job.custom_prompt
+            )
         elif art_type in (ArtifactType.DATA_TABLE, ArtifactType.COURSE_DATA_TABLE):
-            res = await self._process_data_table(course, nb_id, source_ids, out_dir, is_course)
+            res = await self._process_data_table(
+                course, nb_id, source_ids, out_dir, is_course, job.custom_prompt
+            )
         elif art_type in (ArtifactType.VIDEO, ArtifactType.COURSE_VIDEO):
-            res = await self._process_video(course, nb_id, source_ids, out_dir, is_course)
+            res = await self._process_video(course, nb_id, source_ids, out_dir, is_course, job.custom_prompt)
         else:
             raise ValueError(f"Unsupported artifact type: {art_type}")
 
@@ -365,6 +373,7 @@ class ArtifactRunner:
         source_ids: list[str],
         out_dir: Path,
         is_course_wide: bool = False,
+        prompt: str | None = None,
     ) -> str:
         """Generate and save Study Guide Markdown.
 
@@ -374,11 +383,14 @@ class ArtifactRunner:
             source_ids: List of source identifiers to include.
             out_dir: Target output directory for files.
             is_course_wide: Whether generating course-wide or lecture study guide.
+            prompt: Optional tailored prompt.
 
         Returns:
             Path string of saved report file.
         """
-        await self.notebooklm_client.generate_report(nb_id, source_ids, language=course.language)
+        await self.notebooklm_client.generate_report(
+            nb_id, source_ids, prompt=prompt, language=course.language
+        )
         filename = "course_study_guide.md" if is_course_wide else "study_guide.md"
         guide_file = out_dir / filename
         await self.notebooklm_client.download_report(nb_id, str(guide_file))
@@ -391,6 +403,7 @@ class ArtifactRunner:
         source_ids: list[str],
         out_dir: Path,
         is_course_wide: bool = False,
+        prompt: str | None = None,
     ) -> str:
         """Generate and save presentation slide deck outline.
 
@@ -400,11 +413,14 @@ class ArtifactRunner:
             source_ids: List of source identifiers to include.
             out_dir: Target output directory for files.
             is_course_wide: Whether generating course-wide or lecture slide deck.
+            prompt: Optional tailored prompt.
 
         Returns:
             Path string of saved slide deck file.
         """
-        await self.notebooklm_client.generate_slide_deck(nb_id, source_ids, language=course.language)
+        await self.notebooklm_client.generate_slide_deck(
+            nb_id, source_ids, prompt=prompt, language=course.language
+        )
         filename = "course_slide_deck.md" if is_course_wide else "slide_deck.md"
         deck_file = out_dir / filename
         await self.notebooklm_client.download_slide_deck(nb_id, str(deck_file))
@@ -417,6 +433,7 @@ class ArtifactRunner:
         source_ids: list[str],
         out_dir: Path,
         is_course_wide: bool = False,
+        prompt: str | None = None,
     ) -> str:
         """Generate and save visual infographic.
 
@@ -426,11 +443,14 @@ class ArtifactRunner:
             source_ids: List of source identifiers to include.
             out_dir: Target output directory for files.
             is_course_wide: Whether generating course-wide or lecture infographic.
+            prompt: Optional tailored prompt.
 
         Returns:
             Path string of saved image file.
         """
-        await self.notebooklm_client.generate_infographic(nb_id, source_ids, language=course.language)
+        await self.notebooklm_client.generate_infographic(
+            nb_id, source_ids, prompt=prompt, language=course.language
+        )
         filename = "course_infographic.png" if is_course_wide else "infographic.png"
         img_file = out_dir / filename
         await self.notebooklm_client.download_infographic(nb_id, str(img_file))
@@ -443,6 +463,7 @@ class ArtifactRunner:
         source_ids: list[str],
         out_dir: Path,
         is_course_wide: bool = False,
+        prompt: str | None = None,
     ) -> str:
         """Generate and save comparison data table.
 
@@ -452,11 +473,14 @@ class ArtifactRunner:
             source_ids: List of source identifiers to include.
             out_dir: Target output directory for files.
             is_course_wide: Whether generating course-wide or lecture table.
+            prompt: Optional tailored prompt.
 
         Returns:
             Path string of saved markdown table file.
         """
-        await self.notebooklm_client.generate_data_table(nb_id, source_ids, language=course.language)
+        await self.notebooklm_client.generate_data_table(
+            nb_id, source_ids, prompt=prompt, language=course.language
+        )
         filename = "course_data_table.md" if is_course_wide else "data_table.md"
         table_file = out_dir / filename
         await self.notebooklm_client.download_data_table(nb_id, str(table_file))
@@ -469,6 +493,7 @@ class ArtifactRunner:
         source_ids: list[str],
         out_dir: Path,
         is_course_wide: bool = False,
+        prompt: str | None = None,
     ) -> str:
         """Generate and save video overview.
 
@@ -478,11 +503,14 @@ class ArtifactRunner:
             source_ids: List of source identifiers to include.
             out_dir: Target output directory for files.
             is_course_wide: Whether generating course-wide or lecture video.
+            prompt: Optional tailored prompt.
 
         Returns:
             Path string of saved video file.
         """
-        await self.notebooklm_client.generate_video(nb_id, source_ids, language=course.language)
+        await self.notebooklm_client.generate_video(
+            nb_id, source_ids, prompt=prompt, language=course.language
+        )
         filename = "course_video.mp4" if is_course_wide else "video.mp4"
         vid_file = out_dir / filename
         await self.notebooklm_client.download_video(nb_id, str(vid_file))
