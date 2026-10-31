@@ -20,6 +20,7 @@ from notebooklm import (
     AuthError,
     NotebookLMClient,
     RateLimitError,
+    ReportFormat,
 )
 
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
@@ -414,29 +415,63 @@ class NotebookLMAdapter:
 
     @_translate_errors
     async def generate_report(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        report_format: str = "briefing_doc",
     ) -> str:
-        """Request generation of a study guide or briefing report.
+        """Request generation of a report in NotebookLM.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
             language: Target language ('zh-TW', 'en', 'bilingual').
+            report_format: Format key (briefing_doc, study_guide, blog_post).
 
         Returns:
             Task or artifact identifier.
         """
         async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
             instructions = build_language_instruction(prompt, language)
-            logger.info("Generating study guide report in notebook %s", notebook_id)
-            status = await client.artifacts.generate_study_guide(
+            logger.info("Generating report (%s) in notebook %s", report_format, notebook_id)
+            fmt_enum = ReportFormat.BRIEFING_DOC
+            if report_format == "study_guide":
+                fmt_enum = ReportFormat.STUDY_GUIDE
+            elif report_format == "blog_post":
+                fmt_enum = ReportFormat.BLOG_POST
+            elif report_format == "concept_explanation":
+                fmt_enum = ReportFormat.CONCEPT_EXPLANATION
+
+            status = await client.artifacts.generate_report(
                 notebook_id=notebook_id,
+                report_format=fmt_enum,
                 source_ids=source_ids,
-                extra_instructions=instructions,
+                language="zh-TW" if language == "zh-TW" else "en",
+                custom_prompt=instructions,
             )
             task_id = getattr(status, "task_id", str(status))
             return str(task_id)
+
+    @_translate_errors
+    async def wait_for_completion(
+        self, notebook_id: str, task_id: str, timeout_seconds: int = 300
+    ) -> None:
+        """Wait for an artifact generation task to finish.
+
+        Args:
+            notebook_id: The notebook identifier.
+            task_id: Task identifier.
+            timeout_seconds: Maximum wait time.
+        """
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            await client.artifacts.wait_for_completion(
+                notebook_id=notebook_id,
+                task_id=task_id,
+                timeout=float(timeout_seconds),
+            )
 
     @_translate_errors
     async def download_report(
@@ -621,3 +656,71 @@ class NotebookLMAdapter:
         out.parent.mkdir(parents=True, exist_ok=True)
         async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
             await client.artifacts.download_video(notebook_id, str(out), artifact_id=artifact_id)
+
+    @_translate_errors
+    async def list_artifacts(self, notebook_id: str) -> list[dict[str, Any]]:
+        """List all remote artifacts present in a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            List of dictionary summaries of artifacts.
+        """
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            artifacts = await client.artifacts.list(notebook_id)
+            results: list[dict[str, Any]] = []
+            for a in artifacts:
+                kind_str = a.kind.value if hasattr(a.kind, "value") else str(a.kind)
+                results.append(
+                    {
+                        "id": str(a.id),
+                        "title": getattr(a, "title", None) or "Untitled",
+                        "kind": kind_str.lower(),
+                        "status": getattr(a, "status_str", "done"),
+                        "is_completed": getattr(a, "is_completed", True),
+                        "created_at": str(getattr(a, "created_at", "")),
+                    }
+                )
+            return results
+
+    @_translate_errors
+    async def download_artifact_by_kind(
+        self, notebook_id: str, artifact_id: str, kind: str, output_path: str
+    ) -> str:
+        """Download remote artifact using the method matching its kind.
+
+        Args:
+            notebook_id: Notebook identifier.
+            artifact_id: Artifact identifier.
+            kind: Artifact kind string.
+            output_path: Target path.
+
+        Returns:
+            Target output path string.
+        """
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            k = kind.lower()
+            if "quiz" in k or "exam" in k:
+                await client.artifacts.download_quiz(notebook_id, str(out), artifact_id=artifact_id)
+            elif "flashcard" in k:
+                await client.artifacts.download_flashcards(notebook_id, str(out), artifact_id=artifact_id)
+            elif "audio" in k:
+                await client.artifacts.download_audio(notebook_id, str(out), artifact_id=artifact_id)
+            elif "report" in k or "briefing" in k or "study_guide" in k:
+                await client.artifacts.download_report(notebook_id, str(out), artifact_id=artifact_id)
+            elif "slide" in k:
+                await client.artifacts.download_slide_deck(notebook_id, str(out), artifact_id=artifact_id)
+            elif "infographic" in k:
+                await client.artifacts.download_infographic(notebook_id, str(out), artifact_id=artifact_id)
+            elif "mind_map" in k or "mindmap" in k:
+                await client.artifacts.download_mind_map(notebook_id, str(out), artifact_id=artifact_id)
+            elif "data_table" in k or "table" in k:
+                await client.artifacts.download_data_table(notebook_id, str(out), artifact_id=artifact_id)
+            elif "video" in k:
+                await client.artifacts.download_video(notebook_id, str(out), artifact_id=artifact_id)
+            else:
+                await client.artifacts.download_report(notebook_id, str(out), artifact_id=artifact_id)
+            return str(out)

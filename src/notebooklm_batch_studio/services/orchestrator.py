@@ -32,6 +32,7 @@ from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 from notebooklm_batch_studio.services.reporter import CourseReporter
+from notebooklm_batch_studio.services.sync_service import RemoteSyncService
 from notebooklm_batch_studio.services.worker_pool import (
     QueueSessionProvider,
     WorkerPool,
@@ -681,3 +682,20 @@ class BatchStudioService:
             if refined and self.queue_repo.update_job_prompt(j.id, refined):
                 updated_count += 1
         return updated_count
+
+    async def sync_course_artifacts(self, course_code: str) -> dict[str, Any]:
+        """Synchronize remote NotebookLM artifacts back to local storage and database.
+
+        Args:
+            course_code: Course identifier.
+
+        Returns:
+            Dictionary summary with count and synced item metadata.
+        """
+        sync_service = RemoteSyncService(
+            notebooklm_client=self.notebooklm_client,
+            course_repo=self.course_repo,
+            queue_repo=self.queue_repo,
+            output_base_dir=self.config.output_dir,
+        )
+        return await sync_service.sync_course(course_code)

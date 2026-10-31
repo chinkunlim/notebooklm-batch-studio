@@ -111,6 +111,9 @@ class ArtifactJobRecord(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_file: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     custom_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    style_options: Mapped[str | None] = mapped_column(Text, nullable=True)
+    interactive_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    source_origin: Mapped[str] = mapped_column(String(30), nullable=False, default="auto")
     quota_blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cooldown_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True

@@ -231,37 +231,40 @@
           </div>
           <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem;" id="chapterArtifactsList">
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="audio" checked> 語音導讀 (Audio Overview) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時/配額</span>
+              <input type="checkbox" name="chap_art" value="audio" checked> Audio Overview (語音導讀) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時/配額</span>
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="quiz_1" checked> 測驗 1 - 基礎記憶 (10題)
+              <input type="checkbox" name="chap_art" value="quiz_academic" checked> Quiz - Academic (🎓 研究所/高年級精研版，30題)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="quiz_2" checked> 測驗 2 - 理解應用 (10題)
+              <input type="checkbox" name="chap_art" value="quiz_concept" checked> Quiz - Concept Drill (⚡ 概念考點刷題版，30題)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="quiz_3" checked> 測驗 3 - 模擬實戰 (10題)
+              <input type="checkbox" name="chap_art" value="flashcards" checked> Flashcards (重點名詞閃卡，Anki CSV)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="flashcards" checked> 重點名詞閃卡 (Flashcards, Anki CSV)
+              <input type="checkbox" name="chap_art" value="mind_map" checked> Mind Map (知識架構心智圖)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="mind_map" checked> 知識架構心智圖 (Mind Map)
+              <input type="checkbox" name="chap_art" value="reports_briefing" checked> Reports - Briefing Doc (📑 高階研究摘要報告)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="study_guide" checked> 章節讀書指南 (Study Guide)
+              <input type="checkbox" name="chap_art" value="reports_study_guide" checked> Reports - Study Guide (📖 研讀指南與檢驗題)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="slide_deck"> 投影片大綱 (Slide Deck)
+              <input type="checkbox" name="chap_art" value="reports_blog_post"> Reports - Blog Post (✍️ 知識精華專文)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="infographic"> 資訊圖表 (Infographic)
+              <input type="checkbox" name="chap_art" value="slide_deck"> Slide Deck (投影片大綱)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="data_table"> 比較分析資料表 (Data Table)
+              <input type="checkbox" name="chap_art" value="infographic"> Infographic (資訊圖表視覺文本)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="video"> 劇院影音導讀 (Video) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時</span>
+              <input type="checkbox" name="chap_art" value="data_table"> Data Table (比較分析資料表)
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="chap_art" value="video"> Video Overview (劇院影音導讀) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時</span>
             </label>
           </div>
         </div>
@@ -273,31 +276,83 @@
           </div>
           <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem;" id="courseArtifactsList">
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_mock_exam" checked> 全課跨章期末模擬考 (50題)
+              <input type="checkbox" name="course_art" value="course_quiz_academic" checked> Comprehensive Mock Exam - Academic (🎓 全課學術精研期末考 50題)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_mind_map" checked> 全課程總架構心智圖
+              <input type="checkbox" name="course_art" value="course_quiz_concept" checked> Comprehensive Mock Exam - Concept (⚡ 全課概念刷題考 50題)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_study_guide" checked> 全課總結讀書指南 (Synthesis Guide)
+              <input type="checkbox" name="course_art" value="course_mind_map" checked> Course Mind Map (全課程總架構心智圖)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_audio"> 全課綜合語音導讀 <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時/配額</span>
+              <input type="checkbox" name="course_art" value="course_reports_briefing" checked> Course Reports - Briefing Doc (全課高階摘要報告)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_slide_deck"> 全課程複習投影片大綱
+              <input type="checkbox" name="course_art" value="course_reports_study_guide" checked> Course Reports - Synthesis Study Guide (全課期末總複習指南)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_infographic"> 全課程總覽資訊圖表
+              <input type="checkbox" name="course_art" value="course_reports_blog_post"> Course Reports - Blog Post (全課程知識精華專文)
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_data_table"> 全課程概念對照資料表
+              <input type="checkbox" name="course_art" value="course_audio"> Course Audio Overview (全課綜合語音導讀) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時/配額</span>
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_video"> 全課程影音導讀 (Video) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時</span>
+              <input type="checkbox" name="course_art" value="course_slide_deck"> Summary Slide Deck (全課程複習投影片大綱)
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="course_art" value="course_infographic"> Comprehensive Infographic (全課程總覽資訊圖表)
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="course_art" value="course_data_table"> Master Data Table (全課程概念對照資料表)
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="course_art" value="course_video"> Course Video Overview (全課影音導讀) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時</span>
             </label>
           </div>
         </div>
+      </div>
+
+      <!-- Studio Advanced Params Accordion -->
+      <details style="background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-top: 10px; font-size: 0.82rem;">
+        <summary style="cursor: pointer; font-weight: 600; color: #38bdf8;">⚙️ Studio 進階參數設定 (可展開自訂風格、方向與長度)</summary>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+          <div>
+            <label style="color: var(--text-muted); display: block; margin-bottom: 2px;">資訊圖視覺風格 (Infographic Style)：</label>
+            <select id="advInfographicStyle" style="width: 100%; padding: 4px 6px; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border); border-radius: 4px;">
+              <option value="Scientific" selected>Scientific (科學嚴謹，預設推薦)</option>
+              <option value="Professional">Professional (商務專業)</option>
+              <option value="Bento Grid">Bento Grid (便當盒網格)</option>
+              <option value="Sketch Note">Sketch Note (手繪塗鴉筆記)</option>
+              <option value="Editorial">Editorial (社論出版品)</option>
+              <option value="Instructional">Instructional (教學說明書)</option>
+            </select>
+          </div>
+          <div>
+            <label style="color: var(--text-muted); display: block; margin-bottom: 2px;">資訊圖版面方向 (Orientation)：</label>
+            <select id="advInfographicOrient" style="width: 100%; padding: 4px 6px; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border); border-radius: 4px;">
+              <option value="Landscape" selected>Landscape (橫式，預設推薦)</option>
+              <option value="Portrait">Portrait (直式)</option>
+              <option value="Square">Square (正方形)</option>
+            </select>
+          </div>
+          <div>
+            <label style="color: var(--text-muted); display: block; margin-bottom: 2px;">投影片形式 (Slide Deck Format)：</label>
+            <select id="advSlideFormat" style="width: 100%; padding: 4px 6px; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border); border-radius: 4px;">
+              <option value="Detailed Deck" selected>Detailed Deck (完整研讀投影片，預設推薦)</option>
+              <option value="Presenter Slides">Presenter Slides (演講者簡報)</option>
+            </select>
+          </div>
+          <div>
+            <label style="color: var(--text-muted); display: block; margin-bottom: 2px;">語音導讀模式 (Audio Overview Format)：</label>
+            <select id="advAudioFormat" style="width: 100%; padding: 4px 6px; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border); border-radius: 4px;">
+              <option value="Deep Dive" selected>Deep Dive (雙主持人深度探討，預設推薦)</option>
+              <option value="Brief">Brief (快速精華摘要)</option>
+              <option value="Critique">Critique (批判性同儕審查)</option>
+              <option value="Debate">Debate (正反觀點辯論)</option>
+            </select>
+          </div>
+        </div>
+      </details>
       </div>
 
       <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
@@ -577,11 +632,12 @@
 
           const scopeLabel = j.lecture_no !== null ? `Ch${String(j.lecture_no).padStart(2, '0')}` : '全課整合';
           const promptPreview = (j.custom_prompt || '').substring(0, 35) + '...';
+          const syncBadge = j.source_origin === 'remote_sync' ? '<span class="badge" style="background:#0284c7; font-size:0.65rem; margin-left:4px;">🌐 遠端同步</span>' : '';
 
           return `
             <tr>
               <td><strong>${scopeLabel}</strong></td>
-              <td>${j.artifact_type}</td>
+              <td>${j.artifact_type} ${syncBadge}</td>
               <td>${stBadge}</td>
               <td style="font-size:0.8rem; color:var(--text-muted);">
                 <span title="${j.custom_prompt || ''}">${promptPreview}</span>
@@ -601,6 +657,7 @@
               <p style="color:var(--text-muted); font-size:0.85rem">來源資料夾：<code>${data.source_dir}</code></p>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn" style="background:#0284c7;" onclick="syncFromNotebookLM('${code}')">🔄 從 NotebookLM 同步網頁生成內容</button>
               <button class="btn" style="background:#8b5cf6;" onclick="refinePrompts('${code}')">✨ 由 Ollama gemma4 潤飾全部 Prompt</button>
               <button class="btn" onclick="setupCourse('${code}')">🚀 初始化筆記本與講義來源</button>
               <a href="/api/courses/${code}/artifacts" class="btn" target="_blank">📦 查看產出檔案</a>
@@ -661,6 +718,23 @@
       }
     }
 
+    async function syncFromNotebookLM(code) {
+      if (!confirm(`確定要從 NotebookLM 同步課程 [${code}] 遠端生成的內容回本地嗎？`)) return;
+      alert(`正在與 NotebookLM 遠端筆記本比對並下載產出物，請稍候...`);
+      try {
+        const res = await fetch(`/api/courses/${code}/sync`, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || '同步失敗');
+        }
+        const data = await res.json();
+        alert(`🎉 遠端同步完成！成功同步 ${data.synced_count} 項產出物！`);
+        viewCourseDetail(code);
+      } catch (e) {
+        alert('同步失敗: ' + e.message);
+      }
+    }
+
     function applyTemplate(name) {
       const chapBoxes = document.querySelectorAll('input[name="chap_art"]');
       const courseBoxes = document.querySelectorAll('input[name="course_art"]');
@@ -674,13 +748,13 @@
         chapBoxes.forEach(b => b.checked = false);
         courseBoxes.forEach(b => b.checked = true);
       } else if (name === 'dual') {
-        const dualCh = ['audio', 'quiz_1', 'quiz_2', 'quiz_3', 'flashcards', 'mind_map', 'study_guide'];
-        const dualCo = ['course_mock_exam', 'course_mind_map', 'course_study_guide', 'course_audio'];
+        const dualCh = ['audio', 'quiz_academic', 'quiz_concept', 'flashcards', 'mind_map', 'reports_briefing', 'reports_study_guide'];
+        const dualCo = ['course_quiz_academic', 'course_quiz_concept', 'course_mind_map', 'course_reports_briefing', 'course_audio'];
         chapBoxes.forEach(b => b.checked = dualCh.includes(b.value));
         courseBoxes.forEach(b => b.checked = dualCo.includes(b.value));
       } else if (name === 'quiz') {
-        const quizCh = ['quiz_1', 'quiz_2', 'quiz_3', 'flashcards'];
-        const quizCo = ['course_mock_exam'];
+        const quizCh = ['quiz_academic', 'quiz_concept', 'flashcards'];
+        const quizCo = ['course_quiz_academic', 'course_quiz_concept'];
         chapBoxes.forEach(b => b.checked = quizCh.includes(b.value));
         courseBoxes.forEach(b => b.checked = quizCo.includes(b.value));
       }

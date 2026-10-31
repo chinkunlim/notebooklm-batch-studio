@@ -197,3 +197,30 @@ async def retry_lecture_upload(code: str, no: int, request: Request) -> dict[str
         }
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.post(
+    "/api/courses/{code}/sync",
+    tags=["Courses"],
+    operation_id="sync_course_from_notebooklm",
+)
+async def sync_course_from_notebooklm(code: str, request: Request) -> dict[str, Any]:
+    """Synchronize remote artifacts created manually in NotebookLM back to local files.
+
+    Args:
+        code: Course identifier.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Summary detailing count and list of synced items.
+
+    Raises:
+        HTTPException: 404 if course not found, 500 on sync failure.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return await service.sync_course_artifacts(code)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Sync error: {exc}") from exc

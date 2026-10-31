@@ -94,6 +94,9 @@ def _to_domain_job(record: ArtifactJobRecord) -> ArtifactJob:
         error_message=record.error_message,
         output_file=record.output_file,
         custom_prompt=getattr(record, "custom_prompt", None),
+        style_options=getattr(record, "style_options", None),
+        interactive_path=getattr(record, "interactive_path", None),
+        source_origin=getattr(record, "source_origin", "auto"),
         quota_blocked_at=record.quota_blocked_at,
         cooldown_until=record.cooldown_until,
         created_at=record.created_at,
@@ -315,6 +318,9 @@ class QueueRepository:
                     error_message=job.error_message,
                     output_file=job.output_file,
                     custom_prompt=job.custom_prompt,
+                    style_options=job.style_options,
+                    interactive_path=job.interactive_path,
+                    source_origin=job.source_origin,
                 )
                 self.session.add(record)
                 added_count += 1
@@ -357,17 +363,20 @@ class QueueRepository:
         self.session.commit()
         return _to_domain_job(record)
 
-    def complete_job(self, job_id: str, output_file: str) -> None:
+    def complete_job(self, job_id: str, output_file: str, interactive_path: str | None = None) -> None:
         """Mark a job as successfully completed.
 
         Args:
             job_id: Task UUID.
             output_file: Path of the generated output file.
+            interactive_path: Optional path to interactive HTML output.
         """
         record = self.session.get(ArtifactJobRecord, job_id)
         if record:
             record.status = JobStatus.DONE.value
             record.output_file = output_file
+            if interactive_path:
+                record.interactive_path = interactive_path
             record.error_message = None
             record.worker_id = None
             record.updated_at = utc_now()

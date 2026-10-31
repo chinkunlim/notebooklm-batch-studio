@@ -81,6 +81,7 @@ notebooklm-batch-studio/
 │   │   ├── 20260101_0001_create_greetings.py
 │   │   ├── 20261022_0645db844501_add_source_id_to_lectures.py
 │   │   ├── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
+│   │   ├── 20261101_3dbb5819dc15_add_style_options_interactive_path_and_.py
 │   │   └── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
 │   ├── DB.md
 │   ├── env.py
@@ -171,6 +172,7 @@ notebooklm-batch-studio/
 │       │   ├── orchestrator.py
 │       │   ├── prompt_generator.py
 │       │   ├── reporter.py
+│       │   ├── sync_service.py
 │       │   ├── watcher.py
 │       │   └── worker_pool.py
 │       └── __init__.py

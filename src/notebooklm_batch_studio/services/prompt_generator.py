@@ -24,16 +24,26 @@ MASTER_STYLE_SYSTEM_PROMPT = """你是一位具備頂尖心理學與量化研究
 請直接輸出給 NotebookLM 的具體指示 Prompt，長度約 150~250 字，不要有多餘客套話。"""
 
 
-def _get_chapter_prompts(base_rules: str) -> dict[str, str]:
-    """Build blueprint prompts for lecture-level artifacts.
+def _get_quiz_prompts(base_rules: str) -> dict[str, str]:
+    """Build blueprint prompts for quiz artifacts.
 
     Args:
         base_rules: Common academic instructions prefix.
 
     Returns:
-        Mapping from artifact type value to prompt text.
+        Mapping of quiz artifact types to prompt text.
     """
     return {
+        ArtifactType.QUIZ_ACADEMIC.value: (
+            f"{base_rules}請根據本講義生成 30 題【高階學術精研測驗 (Academic Advanced Quiz)】單選題。"
+            "難度設定為研究所/大學高年級水準，著重於研究設計抉擇、效度威脅、方法學批判、統計推論陷阱與實務情境推理。"
+            "每題提供 4 個長度相仿且具學術誘答力之選項，標明正解並提供深度學術解析與講義依據。"
+        ),
+        ArtifactType.QUIZ_CONCEPT.value: (
+            f"{base_rules}請根據本講義生成 30 題【核心概念刷題測驗 (Concept Drill Quiz)】單選題。"
+            "著重於關鍵名詞定義、核心機制運作、高頻易混淆概念辨析、公式與流程步驟速測。"
+            "每題提供 4 個選項，題幹精簡明確，標明正解並附詳盡觀念診斷解析。"
+        ),
         ArtifactType.QUIZ_1.value: (
             f"{base_rules}請根據本講義生成 10 題【測驗 1 - 基礎記憶與核心定義】單選題。"
             "著重於研究假設、變項定義（操作型定義）、基本假說與概念辨析。"
@@ -49,35 +59,64 @@ def _get_chapter_prompts(base_rules: str) -> dict[str, str]:
             "聚焦於統計結論效度、內外在效度威脅、研究倫理情境判斷與反思題。"
             "選項應具備高度理論辨析度，詳細說明正確理由與各干擾選項之錯誤根因。"
         ),
-        ArtifactType.FLASHCARDS.value: (
-            f"{base_rules}請萃取 30~50 個核心研究法與統計專有名詞重點閃卡 (Flashcards)。"
-            "正面為專有名詞與簡短核心情境提問，背面為精確學術定義、實驗範例與方法學陷阱提示。"
-        ),
-        ArtifactType.MIND_MAP.value: (
-            f"{base_rules}請為本講義梳理完整的多層級【知識架構心智圖 (Mind Map)】。"
-            "包含：核心研究問題 ➔ 理論背景 ➔ 研究方法與變項操作 ➔ 效度威脅與倫理 ➔ 結論延伸。"
-        ),
-        ArtifactType.STUDY_GUIDE.value: (
-            f"{base_rules}請撰寫本章【精讀讀書指南 (Study Guide)】。"
-            "包含章節學習目標、核心概念精要、方法學優缺點比較矩陣與 3 個延伸研討思考題。"
-        ),
-        ArtifactType.SLIDE_DECK.value: (
-            f"{base_rules}請生成結構嚴謹的【專題報告投影片大綱 (Slide Deck)】。"
-            "依序包含：研究背景動機、核心概念架構、研究方法設計、實證分析與學術批判。"
-        ),
-        ArtifactType.INFOGRAPHIC.value: (
-            f"{base_rules}請輸出適合轉化為資訊圖表 (Infographic) 的結構化視覺文本摘要。"
-            "包含研究流程圖步驟、核心數據指標、概念對比圖表與關鍵警示提醒。"
-        ),
-        ArtifactType.DATA_TABLE.value: (
-            f"{base_rules}請生成全方位【概念與方法比較分析資料表 (Data Table)】。"
-            "使用 Markdown 格式呈現各研究方法之適用情境、優點、局限性與典型範例。"
-        ),
-        ArtifactType.VIDEO.value: (
-            f"{base_rules}請撰寫適合劇院影音或學術 Podcast 導讀之劇本講稿 (Video Script)。"
-            "以專業學者對談口吻，生動引導閱聽者掌握本章研究方法之精髓與爭議點。"
-        ),
     }
+
+
+def _get_chapter_prompts(base_rules: str) -> dict[str, str]:
+    """Build blueprint prompts for lecture-level artifacts.
+
+    Args:
+        base_rules: Common academic instructions prefix.
+
+    Returns:
+        Mapping from artifact type value to prompt text.
+    """
+    prompts = _get_quiz_prompts(base_rules)
+    prompts.update(
+        {
+            ArtifactType.FLASHCARDS.value: (
+                f"{base_rules}請萃取 30~50 個核心研究法與統計專有名詞重點閃卡 (Flashcards)。"
+                "正面為專有名詞與簡短核心情境提問，背面為精確學術定義、實驗範例與方法學陷阱提示。"
+            ),
+            ArtifactType.MIND_MAP.value: (
+                f"{base_rules}請為本講義梳理完整的多層級【知識架構心智圖 (Mind Map)】。"
+                "包含：核心研究問題 ➔ 理論背景 ➔ 研究方法與變項操作 ➔ 效度威脅與倫理 ➔ 結論延伸。"
+            ),
+            ArtifactType.STUDY_GUIDE.value: (
+                f"{base_rules}請撰寫本章【精讀讀書指南 (Study Guide)】。"
+                "包含章節學習目標、核心概念精要、方法學優缺點比較矩陣與 3 個延伸研討思考題。"
+            ),
+            ArtifactType.SLIDE_DECK.value: (
+                f"{base_rules}請生成結構嚴謹的【專題報告投影片大綱 (Slide Deck)】。"
+                "依序包含：研究背景動機、核心概念架構、研究方法設計、實證分析與學術批判。"
+            ),
+            ArtifactType.INFOGRAPHIC.value: (
+                f"{base_rules}請輸出適合轉化為資訊圖表 (Infographic) 的結構化視覺文本摘要。"
+                "包含研究流程圖步驟、核心數據指標、概念對比圖表與關鍵警示提醒。"
+            ),
+            ArtifactType.DATA_TABLE.value: (
+                f"{base_rules}請生成全方位【概念與方法比較分析資料表 (Data Table)】。"
+                "使用 Markdown 格式呈現各研究方法之適用情境、優點、局限性與典型範例。"
+            ),
+            ArtifactType.VIDEO.value: (
+                f"{base_rules}請撰寫適合劇院影音或學術 Podcast 導讀之劇本講稿 (Video Script)。"
+                "以專業學者對談口吻，生動引導閱聽者掌握本章研究方法之精髓與爭議點。"
+            ),
+            ArtifactType.REPORTS_BRIEFING.value: (
+                f"{base_rules}請根據本講義撰寫【高階研究摘要報告 (Briefing Doc)】。"
+                "包含 Executive Summary（執行摘要）、核心學術發現、重要論點引述、實證結論分析與關鍵洞察。"
+            ),
+            ArtifactType.REPORTS_STUDY_GUIDE.value: (
+                f"{base_rules}請根據本講義撰寫【綜合研讀指南 (Synthesis Study Guide)】。"
+                "包含核心知識點總覽、十題簡答檢驗題與解答、五項深度研討思考題，以及專有名詞辭典。"
+            ),
+            ArtifactType.REPORTS_BLOG_POST.value: (
+                f"{base_rules}請根據本講義撰寫【學術知識精華文章 (Blog Post)】。"
+                "以清晰流暢風格萃取本講義最具突破性之核心觀念，使用小標題與重點引言整理成高品質知識長文。"
+            ),
+        }
+    )
+    return prompts
 
 
 def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, str]:
@@ -96,6 +135,16 @@ def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, st
             f"{lang_instruction}請生成 50 題跨章節整合單選題，涵蓋核心脈絡與綜合研究設計分析。"
             "每題附詳細學術解析、診斷提示與各選項辨析。"
         ),
+        ArtifactType.COURSE_QUIZ_ACADEMIC.value: (
+            f"本課程為【{course_name}】全範圍學術精研期末考。難度設定為研究所入學考水準。"
+            f"{lang_instruction}請生成 50 題跨章節深度學術單選題，著重跨概念統整、方法批判與研究效度。"
+            "每題附完整解析與選項理論辨析。"
+        ),
+        ArtifactType.COURSE_QUIZ_CONCEPT.value: (
+            f"本課程為【{course_name}】全範圍核心觀念刷題考。"
+            f"{lang_instruction}請生成 50 題跨章節核心觀念刷題單選題，快速檢驗各章定義、機制與關鍵考點。"
+            "題幹精準簡潔，附重點診斷解析。"
+        ),
         ArtifactType.COURSE_MIND_MAP.value: (
             f"本課程為【{course_name}】。{lang_instruction}請繪製貫穿全部講義之【全課程總架構心智圖】。"
             "展示從科學研究本質、假說建立、研究設計、變項測量至效度與倫理之知識地圖。"
@@ -107,6 +156,20 @@ def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, st
         ArtifactType.COURSE_AUDIO.value: (
             f"本課程為【{course_name}】。{lang_instruction}請產出全課程總回顧語音導讀腳本。"
             "貫穿全學期講授之心理學研究方法體系，串聯各章關鍵概念與研究思維精華。"
+        ),
+        ArtifactType.COURSE_REPORTS_BRIEFING.value: (
+            f"本課程為【{course_name}】全範圍學術總結報告。{lang_instruction}"
+            "請撰寫全課程高階研究摘要報告 (Briefing Doc)。"
+            "整合全學期核心理論體系、關鍵實證發現與研究方法學總體評析。"
+        ),
+        ArtifactType.COURSE_REPORTS_STUDY_GUIDE.value: (
+            f"本課程為【{course_name}】全範圍期末總複習指南。{lang_instruction}"
+            "請撰寫綜合研讀指南 (Synthesis Study Guide)。"
+            "包含全書概念架構、跨章節檢驗題、綜合討論題與全課程專有名詞辭典。"
+        ),
+        ArtifactType.COURSE_REPORTS_BLOG_POST.value: (
+            f"本課程為【{course_name}】。{lang_instruction}請撰寫全課程知識精華文章 (Blog Post)。"
+            "以引人入勝的文章風格統整本門課最有啟發性的十項核心研究原則與思維精要。"
         ),
     }
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import unittest
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Generator
 
 from sqlalchemy import create_engine
@@ -16,16 +17,25 @@ from notebooklm_batch_studio.domain.exceptions import QuotaExceededError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
+    Choice,
     Course,
     JobStatus,
     Lecture,
     ProfileName,
+    Question,
+    Quiz,
     get_artifact_english_title,
     get_course_range_prefix,
     get_lecture_prefix,
 )
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
+from notebooklm_batch_studio.services.converters.quiz_converter import to_interactive_html
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
+from notebooklm_batch_studio.services.sync_service import (
+    RemoteSyncService,
+    infer_lecture_no_from_title,
+    map_remote_kind_to_artifact_type,
+)
 from notebooklm_batch_studio.services.worker_pool import WorkerPool, generate_jobs_for_course
 
 
@@ -462,3 +472,131 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
             ArtifactType.QUIZ_2, "Research Methods", "Research Methods", language="en"
         )
         self.assertIn("strictly in formal academic English", en_prompt)
+
+    def test_quiz_dual_styles_and_reports_prompts(self) -> None:
+        """Verify dual quiz styles (academic vs concept) and reports prompts and titles."""
+        gen = PromptGenerator()
+        acad_prompt = gen.get_base_blueprint_prompt(
+            ArtifactType.QUIZ_ACADEMIC, "推論統計", "心理學研究法", language="zh-TW"
+        )
+        self.assertIn("高階學術精研測驗", acad_prompt)
+        self.assertIn("30 題", acad_prompt)
+
+        concept_prompt = gen.get_base_blueprint_prompt(
+            ArtifactType.QUIZ_CONCEPT, "推論統計", "心理學研究法", language="zh-TW"
+        )
+        self.assertIn("核心概念刷題測驗", concept_prompt)
+        self.assertIn("30 題", concept_prompt)
+
+        report_prompt = gen.get_base_blueprint_prompt(
+            ArtifactType.REPORTS_BRIEFING, "推論統計", "心理學研究法", language="zh-TW"
+        )
+        self.assertIn("高階研究摘要報告 (Briefing Doc)", report_prompt)
+
+        # Titles
+        self.assertEqual(
+            get_artifact_english_title(ArtifactType.QUIZ_ACADEMIC, "Ch01"),
+            "[Ch01] Quiz - Academic Advanced",
+        )
+        self.assertEqual(
+            get_artifact_english_title(ArtifactType.QUIZ_CONCEPT, "Ch01"),
+            "[Ch01] Quiz - Concept Drill",
+        )
+        self.assertEqual(
+            get_artifact_english_title(ArtifactType.REPORTS_BRIEFING, "Ch01"),
+            "[Ch01] Reports - Briefing Doc",
+        )
+
+    def test_to_interactive_html(self) -> None:
+        """Verify self-contained interactive quiz web app generation."""
+        quiz = Quiz(
+            course_code="CS101",
+            lecture_no=1,
+            variant="學術精研",
+            title="CS101 - 學術精研測驗",
+            source_pdf="01.pdf",
+            prompt_version="v2",
+            questions=[
+                Question(
+                    id="Q1",
+                    question="何謂第一型錯誤 (Type I Error)?",
+                    choices=[
+                        Choice(text="虛無假說為真卻拒絕", is_correct=True),
+                        Choice(text="虛無假說為偽卻接受", is_correct=False),
+                        Choice(text="對立假說為真卻拒絕", is_correct=False),
+                        Choice(text="樣本數過大導致拒絕", is_correct=False),
+                    ],
+                    answer_index=0,
+                    explanation="Type I error 即為虛報 (false positive)。",
+                )
+            ],
+        )
+        html = to_interactive_html(quiz)
+        self.assertIn("<!DOCTYPE html>", html)
+        self.assertIn("何謂第一型錯誤", html)
+        self.assertIn("quiz-container", html)
+        self.assertIn("submitAll()", html)
+        self.assertIn("交卷評分", html)
+
+    async def test_remote_sync_helpers_and_service(self) -> None:
+        """Verify remote sync inference, kind mapping, and sync execution."""
+        self.assertEqual(infer_lecture_no_from_title("[Ch02] Quiz 1", 10), 2)
+        self.assertEqual(infer_lecture_no_from_title("Chapter 5 - Summary", 10), 5)
+        self.assertEqual(infer_lecture_no_from_title("Lecture 3 Notes", 10), 3)
+        self.assertIsNone(infer_lecture_no_from_title("Course Final Mock Exam", 10))
+
+        self.assertEqual(map_remote_kind_to_artifact_type("flashcards"), ArtifactType.FLASHCARDS)
+        self.assertEqual(map_remote_kind_to_artifact_type("mind_map"), ArtifactType.MIND_MAP)
+        self.assertEqual(map_remote_kind_to_artifact_type("audio"), ArtifactType.AUDIO)
+        self.assertEqual(map_remote_kind_to_artifact_type("briefing_doc"), ArtifactType.REPORTS_BRIEFING)
+
+        import tempfile
+        from unittest.mock import AsyncMock, MagicMock
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with self.session_factory() as session:
+                course_repo = CourseRepository(session)
+                queue_repo = QueueRepository(session)
+                course = Course(
+                    code="PSY200",
+                    name="心理測驗學",
+                    source_dir="/mock/dir",
+                    notebook_id="nb-psy-200",
+                    lectures=[Lecture(no=1, topic="Intro", filename="Ch01.pdf", sha256="abc1")],
+                )
+                course_repo.save_course(course)
+
+                mock_client = MagicMock()
+                mock_client.list_artifacts = AsyncMock(
+                    return_value=[
+                        {
+                            "id": "art-1",
+                            "title": "[Ch01] Manual Web Quiz",
+                            "kind": "quiz",
+                            "is_completed": True,
+                        },
+                        {
+                            "id": "art-2",
+                            "title": "Course Wide Summary",
+                            "kind": "briefing_doc",
+                            "is_completed": True,
+                        },
+                    ]
+                )
+                mock_client.download_artifact_by_kind = AsyncMock(
+                    side_effect=lambda notebook_id, artifact_id, kind, output_path: output_path
+                )
+
+                sync_svc = RemoteSyncService(
+                    notebooklm_client=mock_client,
+                    course_repo=course_repo,
+                    queue_repo=queue_repo,
+                    output_base_dir=Path(tmp_dir),
+                )
+                res = await sync_svc.sync_course("PSY200")
+                self.assertEqual(res["synced_count"], 2)
+                self.assertEqual(len(res["items"]), 2)
+
+                # Verify database records
+                jobs = queue_repo.list_jobs(course_code="PSY200")
+                self.assertEqual(len(jobs), 2)
+                self.assertTrue(all(j.source_origin == "remote_sync" for j in jobs))

@@ -362,6 +362,117 @@ def to_json(quiz: Quiz) -> str:
     return json.dumps(quiz_dict, ensure_ascii=False, indent=2)
 
 
+def _get_interactive_quiz_css() -> str:
+    """Return inline CSS rules for interactive quiz document.
+
+    Returns:
+        CSS stylesheet string.
+    """
+    css_lines = [
+        "<style>",
+        "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+        "background:#0f172a;color:#f8fafc;margin:0;padding:24px;}",
+        ".container{max-width:800px;margin:0 auto;}",
+        ".header{border-bottom:1px solid #334155;padding-bottom:16px;margin-bottom:24px;}",
+        ".q-card{background:#1e293b;border-radius:8px;padding:20px;margin-bottom:20px;",
+        "border:1px solid #334155;}",
+        ".q-title{font-size:1.1rem;font-weight:600;margin-bottom:14px;line-height:1.5;}",
+        ".choice{display:block;background:#0f172a;border:1px solid #475569;padding:10px 14px;"
+        "margin-bottom:8px;border-radius:6px;cursor:pointer;transition:all 0.2s;}",
+        ".choice:hover{border-color:#38bdf8;}",
+        ".choice.selected{border-color:#38bdf8;background:#1e3a8a;}",
+        ".choice.correct{border-color:#22c55e;background:#14532d;font-weight:600;}",
+        ".choice.wrong{border-color:#ef4444;background:#7f1d1d;}",
+        ".explanation{display:none;margin-top:14px;padding:12px;background:#0f172a;",
+        "border-left:4px solid #38bdf8;border-radius:4px;font-size:0.95rem;line-height:1.6;color:#cbd5e1;}",
+        ".score-bar{position:sticky;bottom:20px;background:#1e293b;padding:14px 20px;border-radius:8px;",
+        "border:1px solid #38bdf8;display:flex;justify-content:space-between;align-items:center;}",
+        ".btn{background:#2563eb;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;",
+        "font-weight:600;}",
+        "</style>",
+    ]
+    return "".join(css_lines)
+
+
+def _get_interactive_quiz_js(quiz_json: str) -> str:
+    """Return inline JavaScript for interactive scoring and answer revelation.
+
+    Args:
+        quiz_json: JSON-encoded quiz questions and metadata.
+
+    Returns:
+        JavaScript script tag string.
+    """
+    js_lines = [
+        f"<script>const data={quiz_json};const answers={{}};",
+        "const container=document.getElementById('quiz-container');",
+        "data.questions.forEach((q,qIdx)=>{const card=document.createElement('div');card.className='q-card';",
+        "let h=`<div class='q-title'>${qIdx+1}. ${q.question}</div>`;",
+        "q.choices.forEach((c,cIdx)=>{const l=String.fromCharCode(65+cIdx);",
+        "h+=`<div class='choice' id='c-${qIdx}-${cIdx}' onclick='selectChoice(${qIdx},${cIdx})'>`",
+        "+ `${l}. ${c}</div>`;});",
+        "h+=`<div class='explanation' id='exp-${qIdx}'><p style='color:#4ade80;margin:0 0 6px 0;'>`",
+        "+ `<strong>正確解答：${String.fromCharCode(65+q.answer_index)}</strong></p>`",
+        "+ `<p style='margin:0;'>${q.explanation}</p></div>`;",
+        "card.innerHTML=h;container.appendChild(card);});",
+        "function selectChoice(qIdx,cIdx){answers[qIdx]=cIdx;const q=data.questions[qIdx];",
+        "for(let i=0;i<q.choices.length;i++){const el=document.getElementById(`c-${qIdx}-${i}`);",
+        "el.classList.remove('selected','correct','wrong');if(i===cIdx)el.classList.add('selected');}",
+        "updateScoreBar();}",
+        "function updateScoreBar(){const len=Object.keys(answers).length;",
+        "document.getElementById('score-text').textContent=`已作答: ${len} / ${data.questions.length}`;}",
+        "function submitAll(){let correct=0;data.questions.forEach((q,qIdx)=>{const u=answers[qIdx];",
+        "document.getElementById(`exp-${qIdx}`).style.display='block';",
+        "for(let i=0;i<q.choices.length;i++){const el=document.getElementById(`c-${qIdx}-${i}`);",
+        "if(i===q.answer_index){el.classList.add('correct');}else if(i===u){el.classList.add('wrong');}}",
+        "if(u===q.answer_index)correct++;});",
+        "const resHtml=`<strong>測驗得分：${correct} / ${data.questions.length}</strong>`;",
+        "document.getElementById('score-text').innerHTML=resHtml;",
+        "window.scrollTo({top:0,behavior:'smooth'});}</script>",
+    ]
+    return "".join(js_lines)
+
+
+def to_interactive_html(quiz: Quiz) -> str:
+    """Generate self-contained interactive quiz web application.
+
+    Args:
+        quiz: Domain Quiz entity.
+
+    Returns:
+        Full HTML string with interactive testing capabilities.
+    """
+    quiz_data = {
+        "title": quiz.title,
+        "questions": [
+            {
+                "id": q.id,
+                "question": q.question,
+                "choices": [c.text for c in q.choices],
+                "answer_index": q.answer_index,
+                "explanation": q.explanation,
+            }
+            for q in quiz.questions
+        ],
+    }
+    quiz_json = json.dumps(quiz_data, ensure_ascii=False)
+    css = _get_interactive_quiz_css()
+    js = _get_interactive_quiz_js(quiz_json)
+    html_lines = [
+        "<!DOCTYPE html>",
+        f'<html lang="zh-TW"><head><meta charset="utf-8"><title>{quiz.title} — 互動測驗</title>',
+        f'<meta name="viewport" content="width=device-width, initial-scale=1">{css}</head>',
+        '<body><div class="container"><div class="header">',
+        f"<h1>{quiz.title}</h1>",
+        f'<p style="color:#94a3b8;">共 {len(quiz.questions)} 題・即時互動答題與學術解析</p></div>',
+        '<div id="quiz-container"></div><div class="score-bar">',
+        f'<div id="score-text">已作答: 0 / {len(quiz.questions)}</div>',
+        '<button class="btn" onclick="submitAll()">交卷評分 / 顯示全部解析</button></div></div>',
+        f"{js}</body></html>",
+    ]
+    return "".join(html_lines)
+
+
 def to_pdf(
     quiz: Quiz,
     output_path: str | Path,

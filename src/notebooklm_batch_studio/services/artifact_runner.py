@@ -44,6 +44,7 @@ from notebooklm_batch_studio.services.converters.quiz_converter import (
     parse_notebooklm_quiz,
     to_answer_markdown,
     to_exam_markdown,
+    to_interactive_html,
     to_pdf,
 )
 from notebooklm_batch_studio.services.converters.quiz_converter import (
@@ -54,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 
 def _save_quiz_files(out_dir: Path, quiz: Quiz) -> str:
-    """Save quiz markdown, JSON, and PDF files to target directory.
+    """Save quiz markdown, JSON, interactive HTML, and PDF files to target directory.
 
     Args:
         out_dir: Destination folder.
@@ -66,12 +67,14 @@ def _save_quiz_files(out_dir: Path, quiz: Quiz) -> str:
     exam_md = out_dir / "題目卷.md"
     ans_md = out_dir / "答案卷.md"
     final_json = out_dir / "quiz.json"
+    interactive_html = out_dir / "interactive_quiz.html"
     exam_pdf = out_dir / "題目卷.pdf"
     ans_pdf = out_dir / "答案卷.pdf"
 
     exam_md.write_text(to_exam_markdown(quiz), encoding="utf-8")
     ans_md.write_text(to_answer_markdown(quiz), encoding="utf-8")
     final_json.write_text(quiz_to_json(quiz), encoding="utf-8")
+    interactive_html.write_text(to_interactive_html(quiz), encoding="utf-8")
     to_pdf(quiz, exam_pdf, is_answer_key=False)
     to_pdf(quiz, ans_pdf, is_answer_key=True)
 
@@ -140,18 +143,37 @@ class ArtifactRunner:
         res: str
         if art_type in (ArtifactType.AUDIO, ArtifactType.COURSE_AUDIO):
             res = await self._process_audio(job, nb_id, source_ids, out_dir, is_course)
-        elif art_type in (ArtifactType.QUIZ_1, ArtifactType.QUIZ_2, ArtifactType.QUIZ_3):
+        elif art_type in (
+            ArtifactType.QUIZ_1,
+            ArtifactType.QUIZ_2,
+            ArtifactType.QUIZ_3,
+            ArtifactType.QUIZ_ACADEMIC,
+            ArtifactType.QUIZ_CONCEPT,
+        ):
             res = await self._process_quiz(job, course, nb_id, source_ids, out_dir)
         elif art_type == ArtifactType.FLASHCARDS:
             res = await self._process_flashcards(job, course, nb_id, source_ids, out_dir)
         elif art_type in (ArtifactType.MIND_MAP, ArtifactType.COURSE_MIND_MAP):
             res = await self._process_mindmap(job, nb_id, source_ids, out_dir)
-        elif art_type == ArtifactType.COURSE_MOCK_EXAM:
+        elif art_type in (
+            ArtifactType.COURSE_MOCK_EXAM,
+            ArtifactType.COURSE_QUIZ_ACADEMIC,
+            ArtifactType.COURSE_QUIZ_CONCEPT,
+        ):
             res = await self._process_mock_exam(job, course, nb_id, source_ids, out_dir)
         elif art_type in (ArtifactType.STUDY_GUIDE, ArtifactType.COURSE_STUDY_GUIDE):
             res = await self._process_study_guide(
                 course, nb_id, source_ids, out_dir, is_course, job.custom_prompt
             )
+        elif art_type in (
+            ArtifactType.REPORTS_BRIEFING,
+            ArtifactType.REPORTS_STUDY_GUIDE,
+            ArtifactType.REPORTS_BLOG_POST,
+            ArtifactType.COURSE_REPORTS_BRIEFING,
+            ArtifactType.COURSE_REPORTS_STUDY_GUIDE,
+            ArtifactType.COURSE_REPORTS_BLOG_POST,
+        ):
+            res = await self._process_report(job, course, nb_id, source_ids, out_dir, is_course)
         elif art_type in (ArtifactType.SLIDE_DECK, ArtifactType.COURSE_SLIDE_DECK):
             res = await self._process_slide_deck(
                 course, nb_id, source_ids, out_dir, is_course, job.custom_prompt
@@ -219,6 +241,8 @@ class ArtifactRunner:
             ArtifactType.QUIZ_1: "1-基礎",
             ArtifactType.QUIZ_2: "2-理解",
             ArtifactType.QUIZ_3: "3-模擬考",
+            ArtifactType.QUIZ_ACADEMIC: "學術精研",
+            ArtifactType.QUIZ_CONCEPT: "概念刷題",
         }
         variant = variant_map.get(job.artifact_type, "1-基礎")
         batches: list[Quiz] = []
@@ -338,6 +362,13 @@ class ArtifactRunner:
         """
         target_q = course.mock_exam_questions or 50
         batches: list[Quiz] = []
+        variant_title = (
+            f"[{course.code}] 全課程學術精研期末考"
+            if job.artifact_type == ArtifactType.COURSE_QUIZ_ACADEMIC
+            else f"[{course.code}] 全課程核心觀念刷題考"
+            if job.artifact_type == ArtifactType.COURSE_QUIZ_CONCEPT
+            else f"[{course.code}] 全課程期末模擬考"
+        )
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             for attempt in range(5):
@@ -356,7 +387,7 @@ class ArtifactRunner:
                             course_code=course.code,
                             lecture_no=0,
                             variant="模擬考",
-                            title=f"[{course.code}] 全課程期末模擬考",
+                            title=variant_title,
                         )
                     )
                 merged, is_complete = merge_and_deduplicate_quizzes(batches, target_count=target_q)
@@ -515,3 +546,63 @@ class ArtifactRunner:
         vid_file = out_dir / filename
         await self.notebooklm_client.download_video(nb_id, str(vid_file))
         return str(vid_file)
+
+    async def _process_report(
+        self,
+        job: ArtifactJob,
+        course: Course,
+        nb_id: str,
+        source_ids: list[str],
+        out_dir: Path,
+        is_course: bool,
+    ) -> str:
+        """Generate and save reports artifact (Briefing Doc, Study Guide, Blog Post).
+
+        Args:
+            job: The artifact job.
+            course: Course domain object.
+            nb_id: Notebook identifier.
+            source_ids: Sources to generate from.
+            out_dir: Target folder.
+            is_course: Whether this is course-wide.
+
+        Returns:
+            Output file path.
+        """
+        art_type = job.artifact_type
+        fmt = "briefing_doc"
+        if art_type in (ArtifactType.REPORTS_STUDY_GUIDE, ArtifactType.COURSE_REPORTS_STUDY_GUIDE):
+            fmt = "study_guide"
+        elif art_type in (ArtifactType.REPORTS_BLOG_POST, ArtifactType.COURSE_REPORTS_BLOG_POST):
+            fmt = "blog_post"
+
+        out_prefix = (
+            f"{course.code}_Course_{fmt}"
+            if is_course
+            else f"{course.code}_L{job.lecture_no}_{fmt}"
+        )
+        task_id = await self.notebooklm_client.generate_report(
+            notebook_id=nb_id,
+            source_ids=source_ids,
+            report_format=fmt,
+            prompt=job.custom_prompt,
+            language=course.language,
+        )
+        await self.notebooklm_client.wait_for_completion(nb_id, task_id)
+        out_path = out_dir / f"{out_prefix}.md"
+        await self.notebooklm_client.download_report(nb_id, str(out_path))
+
+        html_path = out_dir / f"{out_prefix}_interactive.html"
+        content_md = out_path.read_text(encoding="utf-8") if out_path.exists() else ""
+        html_wrapper = (
+            "<!DOCTYPE html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\">"
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+            f"<title>{out_prefix} — 互動研究報告</title>"
+            "<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+            "background:#0f172a;color:#f8fafc;padding:32px;line-height:1.7;max-width:850px;margin:0 auto;}"
+            "pre{background:#1e293b;padding:16px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;}"
+            "</style></head><body>"
+            f"<h1>{out_prefix}</h1><pre>{content_md}</pre></body></html>"
+        )
+        html_path.write_text(html_wrapper, encoding="utf-8")
+        return str(out_path)

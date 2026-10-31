@@ -15,9 +15,11 @@ class ArtifactType(str, Enum):
     """Supported artifact types generated per lecture or course."""
 
     AUDIO = "audio"
-    QUIZ_1 = "quiz_1"  # Basic / Memory
-    QUIZ_2 = "quiz_2"  # Comprehension & Application
-    QUIZ_3 = "quiz_3"  # Exam Simulation
+    QUIZ_1 = "quiz_1"  # Legacy: Basic / Memory
+    QUIZ_2 = "quiz_2"  # Legacy: Comprehension & Application
+    QUIZ_3 = "quiz_3"  # Legacy: Exam Simulation
+    QUIZ_ACADEMIC = "quiz_academic"  # Graduate / Senior Academic Advanced
+    QUIZ_CONCEPT = "quiz_concept"  # Concept Drill / Exam Practice
     INFOGRAPHIC = "infographic"
     MIND_MAP = "mind_map"
     FLASHCARDS = "flashcards"
@@ -25,9 +27,14 @@ class ArtifactType(str, Enum):
     SLIDE_DECK = "slide_deck"
     DATA_TABLE = "data_table"
     VIDEO = "video"
+    REPORTS_BRIEFING = "reports_briefing"
+    REPORTS_STUDY_GUIDE = "reports_study_guide"
+    REPORTS_BLOG_POST = "reports_blog_post"
 
     # Course-wide (Ch01-ChNN) aggregated artifacts
-    COURSE_MOCK_EXAM = "course_mock_exam"  # Course-wide mock exam
+    COURSE_MOCK_EXAM = "course_mock_exam"  # Legacy Course-wide mock exam
+    COURSE_QUIZ_ACADEMIC = "course_quiz_academic"  # Course-wide academic exam
+    COURSE_QUIZ_CONCEPT = "course_quiz_concept"  # Course-wide concept drill
     COURSE_MIND_MAP = "course_mind_map"  # Course-wide mind map
     COURSE_AUDIO = "course_audio"  # Course-wide audio overview
     COURSE_STUDY_GUIDE = "course_study_guide"  # Course-wide study guide
@@ -35,6 +42,9 @@ class ArtifactType(str, Enum):
     COURSE_INFOGRAPHIC = "course_infographic"  # Course-wide infographic
     COURSE_DATA_TABLE = "course_data_table"  # Course-wide data table
     COURSE_VIDEO = "course_video"  # Course-wide cinematic video
+    COURSE_REPORTS_BRIEFING = "course_reports_briefing"
+    COURSE_REPORTS_STUDY_GUIDE = "course_reports_study_guide"
+    COURSE_REPORTS_BLOG_POST = "course_reports_blog_post"
 
 
 class JobStatus(str, Enum):
@@ -248,6 +258,8 @@ def get_artifact_english_title(artifact_type: ArtifactType | str, prefix: str) -
         ArtifactType.QUIZ_1.value: "Quiz 1 - Fundamentals",
         ArtifactType.QUIZ_2.value: "Quiz 2 - Application",
         ArtifactType.QUIZ_3.value: "Quiz 3 - Practice Exam",
+        ArtifactType.QUIZ_ACADEMIC.value: "Quiz - Academic Advanced",
+        ArtifactType.QUIZ_CONCEPT.value: "Quiz - Concept Drill",
         ArtifactType.FLASHCARDS.value: "Flashcards",
         ArtifactType.MIND_MAP.value: "Mind Map",
         ArtifactType.STUDY_GUIDE.value: "Study Guide",
@@ -255,7 +267,12 @@ def get_artifact_english_title(artifact_type: ArtifactType | str, prefix: str) -
         ArtifactType.INFOGRAPHIC.value: "Infographic",
         ArtifactType.DATA_TABLE.value: "Data Table",
         ArtifactType.VIDEO.value: "Video Overview",
+        ArtifactType.REPORTS_BRIEFING.value: "Reports - Briefing Doc",
+        ArtifactType.REPORTS_STUDY_GUIDE.value: "Reports - Study Guide",
+        ArtifactType.REPORTS_BLOG_POST.value: "Reports - Blog Post",
         ArtifactType.COURSE_MOCK_EXAM.value: "Comprehensive Mock Exam",
+        ArtifactType.COURSE_QUIZ_ACADEMIC.value: "Comprehensive Mock Exam - Academic Advanced",
+        ArtifactType.COURSE_QUIZ_CONCEPT.value: "Comprehensive Mock Exam - Concept Drill",
         ArtifactType.COURSE_MIND_MAP.value: "Course Mind Map",
         ArtifactType.COURSE_STUDY_GUIDE.value: "Synthesis Study Guide",
         ArtifactType.COURSE_AUDIO.value: "Course Audio Overview",
@@ -263,6 +280,9 @@ def get_artifact_english_title(artifact_type: ArtifactType | str, prefix: str) -
         ArtifactType.COURSE_INFOGRAPHIC.value: "Comprehensive Infographic",
         ArtifactType.COURSE_DATA_TABLE.value: "Master Data Table",
         ArtifactType.COURSE_VIDEO.value: "Course Video Overview",
+        ArtifactType.COURSE_REPORTS_BRIEFING.value: "Course Reports - Briefing Doc",
+        ArtifactType.COURSE_REPORTS_STUDY_GUIDE.value: "Course Reports - Synthesis Study Guide",
+        ArtifactType.COURSE_REPORTS_BLOG_POST.value: "Course Reports - Blog Post",
     }
     label = title_map.get(type_val, type_val.replace("_", " ").title())
     return f"[{prefix}] {label}"
@@ -298,6 +318,9 @@ class ArtifactJob:
     error_message: str | None = None
     output_file: str | None = None
     custom_prompt: str | None = None
+    style_options: str | None = None
+    interactive_path: str | None = None
+    source_origin: str = "auto"
     quota_blocked_at: datetime | None = None
     cooldown_until: datetime | None = None
     created_at: datetime | None = None

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
@@ -64,12 +64,13 @@ class QueueRepositoryProtocol(Protocol):
         """
         ...
 
-    def complete_job(self, job_id: str, output_file: str) -> None:
+    def complete_job(self, job_id: str, output_file: str, interactive_path: str | None = None) -> None:
         """Mark a job as finished.
 
         Args:
             job_id: Task UUID.
             output_file: Path of the generated output file.
+            interactive_path: Optional path to interactive HTML output.
         """
         ...
 
@@ -387,7 +388,12 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def generate_report(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        report_format: str = "briefing_doc",
     ) -> str:
         """Request generation of a study guide or briefing report.
 
@@ -396,9 +402,22 @@ class NotebookLMClientProtocol(Protocol):
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
             language: Target language ('zh-TW', 'en', 'bilingual').
+            report_format: Format key (briefing_doc, study_guide, blog_post).
 
         Returns:
             Task or artifact identifier.
+        """
+        ...
+
+    async def wait_for_completion(
+        self, notebook_id: str, task_id: str, timeout_seconds: int = 300
+    ) -> None:
+        """Wait for an artifact generation task to finish.
+
+        Args:
+            notebook_id: The notebook identifier.
+            task_id: Task identifier.
+            timeout_seconds: Maximum wait time.
         """
         ...
 
@@ -535,5 +554,32 @@ class NotebookLMClientProtocol(Protocol):
 
         Returns:
             Artifact ID string, or None if not found.
+        """
+        ...
+
+    async def list_artifacts(self, notebook_id: str) -> list[dict[str, Any]]:
+        """List all remote artifacts present in a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            List of dictionary summaries of artifacts.
+        """
+        ...
+
+    async def download_artifact_by_kind(
+        self, notebook_id: str, artifact_id: str, kind: str, output_path: str
+    ) -> str:
+        """Download remote artifact using the method matching its kind.
+
+        Args:
+            notebook_id: Notebook identifier.
+            artifact_id: Artifact identifier.
+            kind: Artifact kind string.
+            output_path: Target path.
+
+        Returns:
+            Target output path string.
         """
         ...
