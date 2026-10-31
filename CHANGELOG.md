@@ -16,6 +16,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 
 ### Fixed
 - fix(web): switch default HTTP port from 8767 to 8768 to prevent collision with literature-parser (by `@antigravity`)
+- fix(web): wire up background worker pool, auto-setup NotebookLM and add queue controls (by `@antigravity`)
 
 ### Documentation
 - docs(specs): add specs 001-004 and ADR-001 for NotebookLM batch generation (by `@claude-code`)

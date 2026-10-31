@@ -6,9 +6,12 @@ and the parallel WorkerPool to provide an end-to-end processing pipeline.
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import json
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +31,11 @@ from notebooklm_batch_studio.domain.repositories import (
 from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.reporter import CourseReporter
-from notebooklm_batch_studio.services.worker_pool import generate_jobs_for_course
+from notebooklm_batch_studio.services.worker_pool import (
+    QueueSessionProvider,
+    WorkerPool,
+    generate_jobs_for_course,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +49,7 @@ class BatchStudioService:
         queue_repo: QueueRepositoryProtocol,
         notebooklm_client: NotebookLMClientProtocol,
         config: AppConfig | None = None,
+        queue_provider: QueueSessionProvider | None = None,
     ) -> None:
         """Initialize the batch studio service.
 
@@ -50,6 +58,7 @@ class BatchStudioService:
             queue_repo: Repository for task queue state.
             notebooklm_client: Protocol client for NotebookLM operations.
             config: Application configuration.
+            queue_provider: Factory returning scoped QueueRepository instances.
         """
         self.course_repo = course_repo
         self.queue_repo = queue_repo
@@ -57,6 +66,18 @@ class BatchStudioService:
         self.config = config or load_config()
         self.reporter = CourseReporter(self.config.courses_output_dir)
         self.runner = ArtifactRunner(self.notebooklm_client, self.config)
+        self.queue_provider = queue_provider or self._default_queue_provider
+        self.worker_pool: WorkerPool | None = None
+        self._is_queue_running = False
+
+    @contextmanager
+    def _default_queue_provider(self) -> Iterator[QueueRepositoryProtocol]:
+        """Default fallback queue provider yielding the bound queue repository.
+
+        Yields:
+            The bound QueueRepositoryProtocol instance.
+        """
+        yield self.queue_repo
 
     def register_course_folder(self, folder_path: Path | str) -> Course:
         """Scan a folder, detect course code and lectures, and persist to database.
@@ -138,10 +159,13 @@ class BatchStudioService:
         course = self.course_repo.get_course(job.course_code)
         if course is None:
             raise CourseNotFoundError(f"Course {job.course_code} not found")
-        if not course.notebook_id:
-            raise RuntimeError(f"Course {job.course_code} lacks NotebookLM notebook_id")
+        if not course.notebook_id or any(not lec.source_id for lec in course.lectures):
+            logger.info("Initializing NotebookLM notebook and sources for course %s", course.code)
+            course = await self.setup_notebook_and_sources(course.code)
 
         nb_id = course.notebook_id
+        if not nb_id:
+            raise RuntimeError(f"Course {job.course_code} lacks NotebookLM notebook_id")
 
         if job.lecture_no is not None:
             lec = next((item for item in course.lectures if item.no == job.lecture_no), None)
@@ -532,22 +556,45 @@ class BatchStudioService:
         Returns:
             True if running, False if idle or paused.
         """
-        return getattr(self, "_is_queue_running", False)
+        if self.worker_pool is not None:
+            return self.worker_pool._running
+        return self._is_queue_running
 
     def pause_queue(self) -> bool:
         """Pause active queue processing.
 
         Returns:
-            True.
+            True upon pause request.
         """
         self._is_queue_running = False
+        try:
+            loop = asyncio.get_running_loop()
+            if self.worker_pool and self.worker_pool._running and not loop.is_closed():
+                loop.create_task(self.worker_pool.stop())
+                logger.info("WorkerPool pause scheduled.")
+        except RuntimeError:
+            pass
         return True
 
     def start_queue(self) -> bool:
         """Start active queue processing.
 
         Returns:
-            True.
+            True upon start request.
         """
         self._is_queue_running = True
+        try:
+            loop = asyncio.get_running_loop()
+            if not loop.is_closed():
+                if self.worker_pool is None:
+                    self.worker_pool = WorkerPool(
+                        queue_provider=self.queue_provider,
+                        executor=self.execute_job,
+                        concurrency=2,
+                    )
+                if not self.worker_pool._running:
+                    loop.create_task(self.worker_pool.start())
+                    logger.info("WorkerPool background start scheduled.")
+        except RuntimeError:
+            pass
         return True

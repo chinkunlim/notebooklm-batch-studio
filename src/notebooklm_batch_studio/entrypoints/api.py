@@ -7,12 +7,14 @@ and serves a local browser management dashboard on 127.0.0.1:8768.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from typing import Any, cast
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
@@ -20,6 +22,7 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.entrypoints.http.artifacts import artifacts_router
 from notebooklm_batch_studio.entrypoints.http.courses import courses_router
 from notebooklm_batch_studio.entrypoints.http.queue import queue_router
@@ -78,16 +81,28 @@ def _resolve_service(service: BatchStudioService | None, cfg: AppConfig) -> Batc
         return service
 
     engine = create_db_engine(cfg.database_url)
-    with session_scope(engine) as session:
-        course_repo = CourseRepository(session)
-        queue_repo = QueueRepository(session)
-        adapter = NotebookLMAdapter(cfg)
-        return BatchStudioService(
-            course_repo=course_repo,
-            queue_repo=queue_repo,
-            notebooklm_client=adapter,
-            config=cfg,
-        )
+    session = Session(bind=engine, expire_on_commit=False)
+    course_repo = CourseRepository(session)
+    queue_repo = QueueRepository(session)
+    adapter = NotebookLMAdapter(cfg)
+
+    @contextmanager
+    def queue_provider() -> Iterator[QueueRepositoryProtocol]:
+        """Provide a scoped QueueRepository for background workers.
+
+        Yields:
+            QueueRepository bound to an active transaction.
+        """
+        with session_scope(engine) as s:
+            yield QueueRepository(s)
+
+    return BatchStudioService(
+        course_repo=course_repo,
+        queue_repo=queue_repo,
+        notebooklm_client=adapter,
+        config=cfg,
+        queue_provider=queue_provider,
+    )
 
 
 def create_app(

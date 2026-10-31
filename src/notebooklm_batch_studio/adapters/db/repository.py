@@ -163,6 +163,7 @@ class CourseRepository:
 
         self._update_lectures(course.code, course.lectures)
         self.session.flush()
+        self.session.commit()
 
     def get_course(self, code: str) -> Course | None:
         """Retrieve a course by its code identifier.
@@ -210,6 +211,7 @@ class CourseRepository:
             record.notebook_id = notebook_id
             record.updated_at = utc_now()
             self.session.flush()
+            self.session.commit()
 
     def update_lecture_source_id(self, code: str, lecture_no: int, source_id: str) -> None:
         """Update the NotebookLM source ID for a lecture.
@@ -224,6 +226,7 @@ class CourseRepository:
         if record:
             record.source_id = source_id
             self.session.flush()
+            self.session.commit()
 
     def update_profile(self, code: str, profile: str) -> None:
         """Update the active profile for a course.
@@ -237,6 +240,7 @@ class CourseRepository:
             record.profile = profile
             record.updated_at = utc_now()
             self.session.flush()
+            self.session.commit()
 
 
 class QueueRepository:
@@ -282,6 +286,7 @@ class QueueRepository:
                 self.session.add(record)
                 added_count += 1
         self.session.flush()
+        self.session.commit()
         return added_count
 
     def claim_next_job(
@@ -316,6 +321,7 @@ class QueueRepository:
         record.attempts += 1
         record.updated_at = utc_now()
         self.session.flush()
+        self.session.commit()
         return _to_domain_job(record)
 
     def complete_job(self, job_id: str, output_file: str) -> None:
@@ -333,6 +339,7 @@ class QueueRepository:
             record.worker_id = None
             record.updated_at = utc_now()
             self.session.flush()
+            self.session.commit()
 
     def fail_job(self, job_id: str, error_message: str, max_attempts: int = 3) -> None:
         """Handle a job failure, retrying if under max_attempts or marking FAILED.
@@ -352,6 +359,7 @@ class QueueRepository:
             else:
                 record.status = JobStatus.FAILED.value
             self.session.flush()
+            self.session.commit()
 
     def block_job_quota(self, job_id: str, artifact_type: ArtifactType, cooldown_seconds: int = 3600) -> None:
         """Mark a job as waiting for quota refresh and set cooldown timer.
@@ -386,6 +394,7 @@ class QueueRepository:
             quota.cooldown_until = cooldown_time
 
         self.session.flush()
+        self.session.commit()
 
     def refresh_quota_wait(self, artifact_type: ArtifactType | None = None) -> int:
         """Reset jobs in QUOTA_WAIT state back to PENDING when cooldown has passed.
@@ -409,6 +418,7 @@ class QueueRepository:
             r.worker_id = None
             r.updated_at = now
         self.session.flush()
+        self.session.commit()
         return len(records)
 
     def list_jobs(self, course_code: str | None = None, status: JobStatus | None = None) -> list[ArtifactJob]:
@@ -458,6 +468,7 @@ class QueueRepository:
         record.error_message = None
         record.updated_at = utc_now()
         self.session.flush()
+        self.session.commit()
         return True
 
     def count_by_status(self, course_code: str | None = None) -> dict[JobStatus, int]:

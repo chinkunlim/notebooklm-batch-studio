@@ -118,3 +118,25 @@ def update_course_profile(code: str, req: UpdateProfileRequest, request: Request
         return service.set_course_profile(code, req.profile)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.post("/api/courses/{code}/setup", tags=["Courses"], operation_id="setup_course_notebook")
+async def setup_course_notebook(code: str, request: Request) -> dict[str, Any]:
+    """Initialize NotebookLM notebook and upload all lecture PDF sources.
+
+    Args:
+        code: Course identifier.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Updated course summary with notebook ID.
+
+    Raises:
+        HTTPException: 404 if course not found.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        course = await service.setup_notebook_and_sources(code)
+        return {"code": course.code, "name": course.name, "notebook_id": course.notebook_id}
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

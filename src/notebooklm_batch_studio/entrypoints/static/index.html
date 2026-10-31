@@ -161,6 +161,8 @@
     <div class="controls">
       <span id="authBadge" class="badge badge-neutral">檢查認證中...</span>
       <span id="queueBadge" class="badge badge-neutral">佇列閒置</span>
+      <button id="btnStartQueue" class="primary" style="background: #10b981; font-weight: 600;" onclick="startQueue()">▶️ 啟動批次生成</button>
+      <button id="btnPauseQueue" style="display:none; background: #eab308; color: #000; font-weight: 600;" onclick="pauseQueue()">⏸️ 暫停佇列</button>
       <button onclick="resumeQuota()" title="喚醒因配額暫停的項目">⚡ 喚醒配額</button>
       <button class="primary" onclick="openAddModal()">➕ 加入課程資料夾</button>
       <a href="/docs" target="_blank" class="btn">📖 OpenAPI 文件</a>
@@ -297,6 +299,11 @@
         </div>
       </div>
 
+      <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
+        <input type="checkbox" id="autoStartQueue" checked>
+        <span>🚀 加入後立即自動在 NotebookLM 建立筆記本、上傳 PDF 並啟動批次生成</span>
+      </label>
+
       <div id="previewResults" style="display: none; background: #0f172a; padding: 12px; border-radius: var(--radius); font-size: 0.85rem; border: 1px solid var(--border);"></div>
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
         <button onclick="previewFolders()">🔍 預覽掃描</button>
@@ -320,15 +327,61 @@
           authBadge.textContent = 'NotebookLM 未登入';
         }
         const queueBadge = document.getElementById('queueBadge');
+        const btnStart = document.getElementById('btnStartQueue');
+        const btnPause = document.getElementById('btnPauseQueue');
+        const counts = data.queue_counts || {};
         if (data.queue_running) {
           queueBadge.className = 'badge badge-warning';
-          queueBadge.textContent = '佇列執行中';
+          queueBadge.textContent = `🟢 佇列運行中 (${counts.running || 0} 運行 / ${counts.pending || 0} 等待 / ${counts.done || 0} 完成)`;
+          if (btnStart) btnStart.style.display = 'none';
+          if (btnPause) btnPause.style.display = 'inline-block';
         } else {
           queueBadge.className = 'badge badge-neutral';
-          queueBadge.textContent = '佇列閒置';
+          queueBadge.textContent = `⚪ 佇列閒置 (${counts.pending || 0} 等待 / ${counts.done || 0} 完成)`;
+          if (btnStart) btnStart.style.display = 'inline-block';
+          if (btnPause) btnPause.style.display = 'none';
         }
       } catch (e) {
         console.error('Status fetch failed:', e);
+      }
+    }
+
+    async function startQueue() {
+      try {
+        const res = await fetch('/api/queue/start', { method: 'POST' });
+        const data = await res.json();
+        await fetchStatus();
+        await fetchCourses();
+      } catch (e) {
+        alert('啟動佇列失敗: ' + e.message);
+      }
+    }
+
+    async function pauseQueue() {
+      try {
+        const res = await fetch('/api/queue/pause', { method: 'POST' });
+        const data = await res.json();
+        await fetchStatus();
+        await fetchCourses();
+      } catch (e) {
+        alert('暫停佇列失敗: ' + e.message);
+      }
+    }
+
+    async function setupCourse(code, event) {
+      if (event) event.stopPropagation();
+      try {
+        alert(`開始為課程 [${code}] 在 NotebookLM 建立筆記本並上傳 PDF 講義...（這可能需要 1~2 分鐘，請稍候）`);
+        const res = await fetch(`/api/courses/${code}/setup`, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || '建立筆記本失敗');
+        }
+        const data = await res.json();
+        alert(`✅ 筆記本建立成功！ID: ${data.notebook_id}`);
+        fetchCourses();
+      } catch (e) {
+        alert('建立筆記本失敗: ' + e.message);
       }
     }
 
@@ -338,7 +391,7 @@
         const courses = await res.json();
         const container = document.getElementById('courseContainer');
         if (!courses || courses.length === 0) {
-          container.innerHTML = '<div class="empty-state">尚未加入任何課程。點擊右上角「➕ 加入課程資料夾」開始。</div>';
+          container.innerHTML = '<div class="empty-state">尚未加入任何課程。點擊右上角「➕ 加入課程資料搞」開始。</div>';
           return;
         }
         container.innerHTML = courses.map(c => `
@@ -358,13 +411,14 @@
               </div>
             </div>
             <div class="status-counts">
-              <span>完成: ${c.done_jobs}/${c.total_jobs}</span>
+              <span>完成: ${c.done_jobs}/${c.total_jobs} (待處理: ${c.counts.pending || 0})</span>
+              ${c.counts.running ? '<span style="color:#38bdf8">運行中: ' + c.counts.running + '</span>' : ''}
               ${c.counts.quota_wait ? '<span style="color:var(--warning)">配額等待: ' + c.counts.quota_wait + '</span>' : ''}
               ${c.counts.failed ? '<span style="color:var(--danger)">失敗: ' + c.counts.failed + '</span>' : ''}
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:4px;">
               <button onclick="viewCourseDetail('${c.code}')">🔍 詳細進度</button>
-              ${c.notebook_url ? `<a href="${c.notebook_url}" target="_blank" class="btn" style="font-size:0.8rem">🔗 NotebookLM</a>` : ''}
+              ${c.notebook_url ? `<a href="${c.notebook_url}" target="_blank" class="btn" style="font-size:0.8rem">🔗 NotebookLM 筆記本</a>` : `<button class="btn" style="font-size:0.75rem; background:#2563eb;" onclick="setupCourse('${c.code}', event)">🚀 初始化 NotebookLM</button>`}
             </div>
           </div>
         `).join('');
@@ -528,6 +582,7 @@
       const raw = document.getElementById('folderPaths').value;
       const folders = raw.split('\n').map(s => s.trim()).filter(Boolean);
       const { chapterArts, courseArts, language } = getSelectedArtifacts();
+      const autoStart = document.getElementById('autoStartQueue').checked;
       try {
         const res = await fetch('/api/courses', {
           method: 'POST',
@@ -541,9 +596,13 @@
           })
         });
         const data = await res.json();
-        alert('成功加入課程並依選取項目排入佇列！');
+        if (autoStart) {
+          await fetch('/api/queue/start', { method: 'POST' });
+        }
+        alert('成功加入課程並排入佇列！' + (autoStart ? ' 系統已自動啟動 NotebookLM 上傳與批次生成！' : ''));
         closeAddModal();
-        fetchCourses();
+        await fetchStatus();
+        await fetchCourses();
       } catch (e) {
         alert('加入失敗: ' + e.message);
       }
