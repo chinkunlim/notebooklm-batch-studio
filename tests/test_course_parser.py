@@ -33,6 +33,10 @@ class CourseParserTest(unittest.TestCase):
         self.assertEqual(code3, "細胞生物學專題")
         self.assertEqual(name3, "細胞生物學專題")
 
+        code4, name4 = parse_course_folder_name("115-1 心理學研究法")
+        self.assertEqual(code4, "115-1")
+        self.assertEqual(name4, "心理學研究法")
+
     def test_parse_lecture_filename(self) -> None:
         """Lecture number and topic are extracted from various filename conventions."""
         no1, topic1 = parse_lecture_filename("03_細胞膜運輸.pdf", fallback_no=1)
@@ -46,6 +50,10 @@ class CourseParserTest(unittest.TestCase):
         no3, topic3 = parse_lecture_filename("GeneralOverview.pdf", fallback_no=9)
         self.assertEqual(no3, 9)
         self.assertEqual(topic3, "GeneralOverview")
+
+        no4, topic4 = parse_lecture_filename("Ch04-Ethics.pdf", fallback_no=4)
+        self.assertEqual(no4, 4)
+        self.assertEqual(topic4, "Ethics")
 
     def test_scan_directory_and_deduplicate(self) -> None:
         """Scanning a directory extracts sorted lectures and deduplicates identical PDFs."""

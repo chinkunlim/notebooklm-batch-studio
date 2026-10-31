@@ -25,7 +25,9 @@ def parse_course_folder_name(folder_name: str) -> tuple[str, str]:
         A tuple of (course_code, course_name).
     """
     clean_name = folder_name.strip()
-    match = re.match(r"^([A-Za-z0-9]+)[\s_\-]+(.+)$", clean_name)
+    match = re.match(r"^([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)[\s_]+(.+)$", clean_name)
+    if not match:
+        match = re.match(r"^([A-Za-z0-9]+)[\s_\-]+(.+)$", clean_name)
     if match:
         code = match.group(1).strip().upper()
         name = match.group(2).strip()
@@ -44,7 +46,7 @@ def parse_lecture_filename(filename: str, fallback_no: int) -> tuple[int, str]:
         A tuple of (lecture_number, topic_name).
     """
     stem = Path(filename).stem
-    match = re.match(r"^(?:Lecture\s*)?(\d+)[\s_\-]*(.*)$", stem, re.IGNORECASE)
+    match = re.match(r"^(?:Lecture\s*|Chapter\s*|Ch\s*)?(\d+)[\s_\-]*(.*)$", stem, re.IGNORECASE)
     if match:
         no = int(match.group(1))
         topic = match.group(2).strip() or f"Lecture {no}"

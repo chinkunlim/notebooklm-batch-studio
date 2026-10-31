@@ -11,6 +11,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(adapter,converters): implement notebooklm adapter and quiz, flashcard, and mindmap converters (TASK-003) (by `@antigravity`)
 - feat(orchestrator,cli): implement batch service, watcher, reporter, and cli subcommands (TASK-004) (by `@antigravity`)
 - feat(api,mcp,web): implement FastAPI web UI, OpenAPI routes, and MCP server (TASK-005) (by `@antigravity`)
+- feat: enhance course folder and chapter regex parsing (by `@antigravity`)
 
 ### Documentation
 - docs(specs): add specs 001-004 and ADR-001 for NotebookLM batch generation (by `@claude-code`)
