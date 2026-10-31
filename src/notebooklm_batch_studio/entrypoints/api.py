@@ -1,7 +1,7 @@
 """FastAPI HTTP service and web management dashboard for NotebookLM Batch Studio.
 
 Exposes RESTful endpoints, auto-generated OpenAPI documentation for AI tools (Open WebUI),
-and serves a local browser management dashboard on 127.0.0.1:8767.
+and serves a local browser management dashboard on 127.0.0.1:8768.
 """
 
 from __future__ import annotations
@@ -138,7 +138,7 @@ def create_app(
 
 
 def main() -> None:
-    """Entrypoint to run the local FastAPI service on 127.0.0.1:8767."""
+    """Entrypoint to run the local FastAPI service on 127.0.0.1:8768."""
     config = load_config()
     setup_logging(config.log_level, config.logs_dir if config.log_to_file else None)
     logger.info("Starting Web UI at http://%s:%d", config.http_host, config.http_port)

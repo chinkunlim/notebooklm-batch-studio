@@ -14,6 +14,9 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat: enhance course folder and chapter regex parsing (by `@antigravity`)
 - feat: support in-app English renaming, 9 artifact types, and dual-column Web dashboard matrix (by `@antigravity`)
 
+### Fixed
+- fix(web): switch default HTTP port from 8767 to 8768 to prevent collision with literature-parser (by `@antigravity`)
+
 ### Documentation
 - docs(specs): add specs 001-004 and ADR-001 for NotebookLM batch generation (by `@claude-code`)
 - docs(adr): document empirical verification results for NotebookLM single-source selection and artifact downloads (TASK-001) (`TASK-001`, by `@antigravity`)

@@ -12,7 +12,7 @@
 
 ## 2. 本專案特有的規則
 
-- **埠號**：`HTTP_PORT=8767`（8080 Open WebUI、8765 literature-fetch、8766 母版網頁、11434 Ollama、7456 Open Design 已占用）。
+- **埠號**：`HTTP_PORT=8768`（8080 Open WebUI、8765 literature-fetch、8766 母版網頁、8767 literature-parser、11434 Ollama、7456 Open Design 已占用）。
 - **命名與位置**：輸入 PDF 與 `course.toml` 放在 `DATA_DIR/input/courses/<課程代號>/`；下載產出檔 `<課程代號>_<講次>_<主題>_<類型>[-序號]`，例如 `BIO101_03_細胞膜_Quiz2-理解.md`，存放在 `DATA_DIR/output/courses/<課程代號>/<講次>_<主題>/`；不足 30 題之待審查項目放 `DATA_DIR/needs_review/`。NotebookLM 內只加 `[講次]` 前綴。
 - **每份 PDF 單獨生成**：生成每講產出時只勾選該份 PDF；整門課產出才勾選全部。
 - **操作 NotebookLM 只在 `adapters/`**：notebooklm-py 為主、Playwright 補位（ADR-001）。

@@ -164,9 +164,9 @@ class TestApiAndMcp(unittest.TestCase):
             data_dir=self.data_dir,
             database_url="sqlite://",
             http_host="127.0.0.1",
-            http_port=8767,
+            http_port=8768,
             http_allowed_hosts=("127.0.0.1", "localhost", "testserver"),
-            http_allowed_origins=("http://127.0.0.1:8767", "http://127.0.0.1:8080"),
+            http_allowed_origins=("http://127.0.0.1:8768", "http://127.0.0.1:8080"),
         )
 
         self.engine = create_db_engine("sqlite://")
@@ -220,7 +220,7 @@ class TestApiAndMcp(unittest.TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("NotebookLM Batch Studio", resp.text)
-        self.assertIn("127.0.0.1:8767", resp.text)
+        self.assertIn("127.0.0.1:8768", resp.text)
 
     def test_get_status_endpoint(self) -> None:
         """GET /api/status returns application environment, auth status, and queue counts."""

@@ -327,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:
     batch_parser.add_argument("--workers", type=int, default=2, help="平行 Worker 數量")
 
     subparsers.add_parser("watch", help="啟動資料夾監控守護")
-    subparsers.add_parser("web", help="啟動本機網頁管理伺服器 (127.0.0.1:8767)")
+    subparsers.add_parser("web", help="啟動本機網頁管理伺服器 (127.0.0.1:8768)")
     subparsers.add_parser("mcp", help="啟動 MCP stdio 伺服器")
 
     args = parser.parse_args(argv)
