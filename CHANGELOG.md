@@ -15,6 +15,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat: support in-app English renaming, 9 artifact types, and dual-column Web dashboard matrix (by `@antigravity`)
 - feat(adapters/domain): add adapters/domain module (by `@antigravity`)
 - feat(adapters/domain): add adapters/domain module (by `@antigravity`)
+- feat(adapters/domain): update adapters/domain (by `@antigravity`)
 
 ### Fixed
 - fix(web): switch default HTTP port from 8767 to 8768 to prevent collision with literature-parser (by `@antigravity`)

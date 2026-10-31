@@ -552,6 +552,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
 
         import tempfile
         from unittest.mock import AsyncMock, MagicMock
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             with self.session_factory() as session:
                 course_repo = CourseRepository(session)

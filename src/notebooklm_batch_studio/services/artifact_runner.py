@@ -576,11 +576,7 @@ class ArtifactRunner:
         elif art_type in (ArtifactType.REPORTS_BLOG_POST, ArtifactType.COURSE_REPORTS_BLOG_POST):
             fmt = "blog_post"
 
-        out_prefix = (
-            f"{course.code}_Course_{fmt}"
-            if is_course
-            else f"{course.code}_L{job.lecture_no}_{fmt}"
-        )
+        out_prefix = f"{course.code}_Course_{fmt}" if is_course else f"{course.code}_L{job.lecture_no}_{fmt}"
         task_id = await self.notebooklm_client.generate_report(
             notebook_id=nb_id,
             source_ids=source_ids,
@@ -595,8 +591,8 @@ class ArtifactRunner:
         html_path = out_dir / f"{out_prefix}_interactive.html"
         content_md = out_path.read_text(encoding="utf-8") if out_path.exists() else ""
         html_wrapper = (
-            "<!DOCTYPE html><html lang=\"zh-TW\"><head><meta charset=\"utf-8\">"
-            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+            '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">'
             f"<title>{out_prefix} — 互動研究報告</title>"
             "<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
             "background:#0f172a;color:#f8fafc;padding:32px;line-height:1.7;max-width:850px;margin:0 auto;}"

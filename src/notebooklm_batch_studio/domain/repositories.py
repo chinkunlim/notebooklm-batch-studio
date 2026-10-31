@@ -409,9 +409,7 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
-    async def wait_for_completion(
-        self, notebook_id: str, task_id: str, timeout_seconds: int = 300
-    ) -> None:
+    async def wait_for_completion(self, notebook_id: str, task_id: str, timeout_seconds: int = 300) -> None:
         """Wait for an artifact generation task to finish.
 
         Args:
