@@ -77,17 +77,52 @@ def _make_job(course_code: str, lecture_no: int | None, art_type: ArtifactType) 
 
 
 def generate_jobs_for_course(course: Course) -> list[ArtifactJob]:
-    """Create the full matrix of scheduled ArtifactJob entities for a course based on its profile.
+    """Create the matrix of scheduled ArtifactJob entities for a course based on settings.
+
+    Supports custom granular selections (selected_chapter_artifacts, selected_course_artifacts)
+    or falls back to legacy predefined profiles.
 
     Args:
-        course: The Course domain entity containing lectures and selected profile.
+        course: The Course domain entity containing lectures and selected settings.
 
     Returns:
         List of ready-to-enqueue ArtifactJob objects with unique identifiers.
     """
     jobs: list[ArtifactJob] = []
-    types_for_lecture = _get_types_for_profile(course.profile)
 
+    # If granular custom selection is provided
+    if course.selected_chapter_artifacts or course.selected_course_artifacts:
+        chapter_types: list[ArtifactType] = []
+        for name in course.selected_chapter_artifacts:
+            try:
+                chapter_types.append(ArtifactType(name))
+            except ValueError:
+                logger.warning("Unknown chapter artifact type: %s", name)
+
+        course_types: list[ArtifactType] = []
+        for name in course.selected_course_artifacts:
+            try:
+                course_types.append(ArtifactType(name))
+            except ValueError:
+                logger.warning("Unknown course artifact type: %s", name)
+
+        for lec in course.lectures:
+            jobs.extend(_make_job(course.code, lec.no, art_type) for art_type in chapter_types)
+
+        for course_art in course_types:
+            jobs.append(_make_job(course.code, None, course_art))
+
+        logger.info(
+            "Generated %d granular jobs for course %s (chapter_types=%d, course_types=%d)",
+            len(jobs),
+            course.code,
+            len(chapter_types),
+            len(course_types),
+        )
+        return jobs
+
+    # Fallback to predefined profile
+    types_for_lecture = _get_types_for_profile(course.profile)
     for lec in course.lectures:
         jobs.extend(_make_job(course.code, lec.no, art_type) for art_type in types_for_lecture)
 

@@ -38,6 +38,7 @@ class MockNotebookLMClient:
         """Initialize mock client."""
         self.notebooks_created: list[str] = []
         self.sources_uploaded: list[tuple[str, str]] = []
+        self.renamed_artifacts: list[tuple[str, str, str]] = []
         self.storage_path = Path("/mock/storage_state.json")
 
     def check_auth(self) -> bool:
@@ -104,7 +105,71 @@ class MockNotebookLMClient:
 
     async def rename_artifact(self, notebook_id: str, artifact_id: str, title: str) -> None:
         """Mock rename artifact."""
-        pass
+        self.renamed_artifacts.append((notebook_id, artifact_id, title))
+
+    async def generate_report(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate report."""
+        return "task-report-1"
+
+    async def download_report(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download report."""
+        Path(output_path).write_text("# Study Guide\nMock content", encoding="utf-8")
+
+    async def generate_slide_deck(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate slide deck."""
+        return "task-slide-1"
+
+    async def download_slide_deck(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download slide deck."""
+        Path(output_path).write_text("# Slide Deck\nSlide 1: Intro", encoding="utf-8")
+
+    async def generate_infographic(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate infographic."""
+        return "task-info-1"
+
+    async def download_infographic(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download infographic."""
+        Path(output_path).write_bytes(b"MOCK_PNG")
+
+    async def generate_data_table(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate data table."""
+        return "task-dt-1"
+
+    async def download_data_table(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download data table."""
+        Path(output_path).write_text("| Column A | Column B |\n|---|---|\n| 1 | 2 |", encoding="utf-8")
+
+    async def generate_video(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate video."""
+        return "task-vid-1"
+
+    async def download_video(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download video."""
+        Path(output_path).write_bytes(b"MOCK_MP4")
+
+    async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
+        """Mock find latest artifact."""
+        return "mock-artifact-id-123"
 
 
 class TestCourseReporter(unittest.TestCase):

@@ -16,9 +16,17 @@ class PreviewCoursesRequest(BaseModel):
 
     Attributes:
         folders: List of filesystem directory paths containing course PDFs.
+        chapter_artifacts: Granular selection of chapter-level artifact types.
+        course_artifacts: Granular selection of course-wide aggregated artifact types.
     """
 
-    folders: list[str] = Field(..., description="List of filesystem folder paths to scan for course PDFs")
+    folders: list[str] = Field(..., description="List of folder paths to scan for course PDFs")
+    chapter_artifacts: list[str] | None = Field(
+        default=None, description="Optional custom chapter artifact types"
+    )
+    course_artifacts: list[str] | None = Field(
+        default=None, description="Optional custom course artifact types"
+    )
 
 
 class AddCoursesRequest(BaseModel):
@@ -27,6 +35,9 @@ class AddCoursesRequest(BaseModel):
     Attributes:
         folders: List of folder paths to register.
         profile: Generation profile ('full', 'quiz-only', 'exam-prep').
+        chapter_artifacts: Granular selection of chapter-level artifact types.
+        course_artifacts: Granular selection of course-wide aggregated artifact types.
+        language: Output language preference ('zh-TW', 'en', 'bilingual').
     """
 
     folders: list[str] = Field(..., description="List of course folder paths to register")
@@ -34,6 +45,13 @@ class AddCoursesRequest(BaseModel):
         default="full",
         description="Artifact generation profile ('full', 'quiz-only', 'exam-prep')",
     )
+    chapter_artifacts: list[str] | None = Field(
+        default=None, description="Selected chapter-level artifact types"
+    )
+    course_artifacts: list[str] | None = Field(
+        default=None, description="Selected course-wide artifact types"
+    )
+    language: str = Field(default="zh-TW", description="Output language ('zh-TW', 'en', 'bilingual')")
 
 
 class UpdateProfileRequest(BaseModel):

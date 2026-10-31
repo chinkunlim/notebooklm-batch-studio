@@ -9,7 +9,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -17,44 +16,16 @@ from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
-    ArtifactType,
     Course,
     JobStatus,
     ProfileName,
-    Quiz,
 )
 from notebooklm_batch_studio.domain.repositories import (
     CourseRepositoryProtocol,
     NotebookLMClientProtocol,
     QueueRepositoryProtocol,
 )
-from notebooklm_batch_studio.services.converters.flashcard_converter import (
-    parse_notebooklm_flashcards,
-    to_anki_csv,
-)
-from notebooklm_batch_studio.services.converters.flashcard_converter import (
-    to_json as flashcards_to_json,
-)
-from notebooklm_batch_studio.services.converters.mindmap_converter import (
-    parse_notebooklm_mindmap,
-    to_opml,
-)
-from notebooklm_batch_studio.services.converters.mindmap_converter import (
-    to_json as mindmap_to_json,
-)
-from notebooklm_batch_studio.services.converters.mindmap_converter import (
-    to_markdown as mindmap_to_markdown,
-)
-from notebooklm_batch_studio.services.converters.quiz_converter import (
-    merge_and_deduplicate_quizzes,
-    parse_notebooklm_quiz,
-    to_answer_markdown,
-    to_exam_markdown,
-    to_pdf,
-)
-from notebooklm_batch_studio.services.converters.quiz_converter import (
-    to_json as quiz_to_json,
-)
+from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.reporter import CourseReporter
 from notebooklm_batch_studio.services.worker_pool import generate_jobs_for_course
@@ -85,6 +56,7 @@ class BatchStudioService:
         self.notebooklm_client = notebooklm_client
         self.config = config or load_config()
         self.reporter = CourseReporter(self.config.courses_output_dir)
+        self.runner = ArtifactRunner(self.notebooklm_client, self.config)
 
     def register_course_folder(self, folder_path: Path | str) -> Course:
         """Scan a folder, detect course code and lectures, and persist to database.
@@ -178,209 +150,10 @@ class BatchStudioService:
             out_dir = self.config.courses_output_dir / course.code / lec_dir_name
         else:
             source_ids = [item.source_id for item in course.lectures if item.source_id]
-            is_exam = job.artifact_type == ArtifactType.COURSE_MOCK_EXAM
-            sub_folder = "_course_exam" if is_exam else "_course_mindmap"
-            out_dir = self.config.courses_output_dir / course.code / sub_folder
+            out_dir = self.config.courses_output_dir / course.code / "_course_synthesis"
 
         out_dir.mkdir(parents=True, exist_ok=True)
-
-        if job.artifact_type == ArtifactType.AUDIO:
-            return await self._process_audio(job, nb_id, source_ids, out_dir)
-        if job.artifact_type in (ArtifactType.QUIZ_1, ArtifactType.QUIZ_2, ArtifactType.QUIZ_3):
-            return await self._process_quiz(job, course, nb_id, source_ids, out_dir)
-        if job.artifact_type == ArtifactType.FLASHCARDS:
-            return await self._process_flashcards(job, course, nb_id, source_ids, out_dir)
-        if job.artifact_type == ArtifactType.MIND_MAP:
-            return await self._process_mindmap(job, nb_id, source_ids, out_dir)
-        if job.artifact_type == ArtifactType.COURSE_MOCK_EXAM:
-            return await self._process_mock_exam(job, course, nb_id, source_ids, out_dir)
-        if job.artifact_type == ArtifactType.COURSE_MIND_MAP:
-            return await self._process_mindmap(job, nb_id, source_ids, out_dir, is_course_wide=True)
-
-        raise ValueError(f"Unsupported artifact type: {job.artifact_type}")
-
-    async def _process_audio(self, job: ArtifactJob, nb_id: str, source_ids: list[str], out_dir: Path) -> str:
-        """Generate and save Deep Dive Audio MP3.
-
-        Args:
-            job: Current artifact job.
-            nb_id: NotebookLM notebook identifier.
-            source_ids: List of source identifiers to include.
-            out_dir: Target output directory for files.
-
-        Returns:
-            Path string of the saved audio file.
-        """
-        await self.notebooklm_client.generate_audio(nb_id, source_ids)
-        audio_file = out_dir / f"{job.course_code}_L{job.lecture_no:02d}_audio.mp3"
-        await self.notebooklm_client.download_audio(nb_id, str(audio_file))
-        return str(audio_file)
-
-    async def _process_quiz(
-        self, job: ArtifactJob, course: Course, nb_id: str, source_ids: list[str], out_dir: Path
-    ) -> str:
-        """Generate 30-question quiz with deduplication, markdown, and PDF output.
-
-        Args:
-            job: Current artifact job.
-            course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
-            source_ids: Selected source identifiers for the lecture.
-            out_dir: Target output directory.
-
-        Returns:
-            Path string to the resulting quiz.json or quarantined file.
-        """
-        variant_map = {
-            ArtifactType.QUIZ_1: "1-基礎",
-            ArtifactType.QUIZ_2: "2-理解",
-            ArtifactType.QUIZ_3: "3-模擬考",
-        }
-        variant = variant_map.get(job.artifact_type, "1-基礎")
-        batches: list[Quiz] = []
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            for attempt in range(3):
-                tmp_json = Path(tmp_dir) / f"quiz_attempt_{attempt}.json"
-                await self.notebooklm_client.generate_quiz(
-                    nb_id, source_ids, prompt=f"Generate rigorous questions for {variant}"
-                )
-                await self.notebooklm_client.download_quiz(nb_id, str(tmp_json))
-
-                if tmp_json.exists():
-                    raw_data = json.loads(tmp_json.read_text(encoding="utf-8"))
-                    parsed = parse_notebooklm_quiz(
-                        raw_data=raw_data,
-                        course_code=course.code,
-                        lecture_no=job.lecture_no or 0,
-                        variant=variant,
-                        source_pdf=f"{job.lecture_no:02d}.pdf",
-                    )
-                    batches.append(parsed)
-
-                merged, is_complete = merge_and_deduplicate_quizzes(batches, target_count=30)
-                if is_complete:
-                    break
-
-        merged_quiz, is_complete = merge_and_deduplicate_quizzes(batches, target_count=30)
-        if not is_complete:
-            review_dir = self.config.needs_review_dir / f"{course.code}_L{job.lecture_no}_{variant}"
-            review_dir.mkdir(parents=True, exist_ok=True)
-            incomplete_json = review_dir / "quiz.json"
-            incomplete_json.write_text(quiz_to_json(merged_quiz), encoding="utf-8")
-            logger.warning(
-                "Quiz incomplete (%d questions), quarantined to %s",
-                len(merged_quiz.questions),
-                review_dir,
-            )
-            return str(incomplete_json)
-
-        return _save_quiz_files(out_dir, merged_quiz)
-
-    async def _process_flashcards(
-        self, job: ArtifactJob, course: Course, nb_id: str, source_ids: list[str], out_dir: Path
-    ) -> str:
-        """Generate flashcards and save JSON and Anki CSV.
-
-        Args:
-            job: Current artifact job.
-            course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
-            source_ids: Selected source identifiers.
-            out_dir: Target output directory.
-
-        Returns:
-            Path string of saved anki.csv.
-        """
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_json = Path(tmp_dir) / "flashcards.json"
-            await self.notebooklm_client.generate_flashcards(nb_id, source_ids)
-            await self.notebooklm_client.download_flashcards(nb_id, str(tmp_json))
-            raw_data = json.loads(tmp_json.read_text(encoding="utf-8"))
-
-        cards = parse_notebooklm_flashcards(raw_data)
-        fc_json = out_dir / "flashcards.json"
-        anki_csv = out_dir / "anki.csv"
-
-        title = f"[{course.code}] L{job.lecture_no}"
-        fc_json.write_text(flashcards_to_json(cards, title=title), encoding="utf-8")
-        anki_tags = [course.code, f"L{job.lecture_no:02d}"]
-        anki_csv.write_text(to_anki_csv(cards, tags=anki_tags), encoding="utf-8")
-        return str(anki_csv)
-
-    async def _process_mindmap(
-        self, job: ArtifactJob, nb_id: str, source_ids: list[str], out_dir: Path, is_course_wide: bool = False
-    ) -> str:
-        """Generate mind map and export to JSON, OPML 2.0 XML, and Markdown.
-
-        Args:
-            job: Current artifact job.
-            nb_id: NotebookLM notebook identifier.
-            source_ids: Selected source identifiers.
-            out_dir: Target output directory.
-            is_course_wide: Whether generating course-wide or lecture-level mind map.
-
-        Returns:
-            Path string of saved mindmap.opml.
-        """
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_json = Path(tmp_dir) / "mindmap.json"
-            await self.notebooklm_client.generate_mind_map(nb_id, source_ids)
-            await self.notebooklm_client.download_mind_map(nb_id, str(tmp_json))
-            raw_data = json.loads(tmp_json.read_text(encoding="utf-8"))
-
-        root = parse_notebooklm_mindmap(raw_data)
-        mm_json = out_dir / "mindmap.json"
-        mm_opml = out_dir / "mindmap.opml"
-        mm_md = out_dir / "mindmap.md"
-
-        mm_json.write_text(mindmap_to_json(root), encoding="utf-8")
-        mm_opml.write_text(to_opml(root), encoding="utf-8")
-        mm_md.write_text(mindmap_to_markdown(root), encoding="utf-8")
-        return str(mm_opml)
-
-    async def _process_mock_exam(
-        self, job: ArtifactJob, course: Course, nb_id: str, source_ids: list[str], out_dir: Path
-    ) -> str:
-        """Generate course-wide 50-question mock exam across all lecture sources.
-
-        Args:
-            job: Current artifact job.
-            course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
-            source_ids: All source identifiers belonging to the course.
-            out_dir: Target output directory.
-
-        Returns:
-            Path string to resulting quiz.json.
-        """
-        target_q = course.mock_exam_questions or 50
-        batches: list[Quiz] = []
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            for attempt in range(5):
-                tmp_json = Path(tmp_dir) / f"mock_attempt_{attempt}.json"
-                await self.notebooklm_client.generate_quiz(
-                    nb_id, source_ids, prompt=f"Comprehensive course final exam, batch {attempt + 1}"
-                )
-                await self.notebooklm_client.download_quiz(nb_id, str(tmp_json))
-                if tmp_json.exists():
-                    raw_data = json.loads(tmp_json.read_text(encoding="utf-8"))
-                    batches.append(
-                        parse_notebooklm_quiz(
-                            raw_data=raw_data,
-                            course_code=course.code,
-                            lecture_no=0,
-                            variant="模擬考",
-                            title=f"[{course.code}] 全課程期末模擬考",
-                        )
-                    )
-                merged, is_complete = merge_and_deduplicate_quizzes(batches, target_count=target_q)
-                if is_complete:
-                    break
-
-        final_quiz, _ = merge_and_deduplicate_quizzes(batches, target_count=target_q)
-        return _save_quiz_files(out_dir, final_quiz)
+        return await self.runner.process_job(job, course, nb_id, source_ids, out_dir)
 
     def generate_summary(self, course_code: str) -> tuple[Path, Path]:
         """Generate summary.md and summary.html for a given course.
@@ -503,11 +276,18 @@ class BatchStudioService:
             "jobs": jobs_data,
         }
 
-    def preview_course_folders(self, folder_paths: list[str]) -> list[dict[str, Any]]:
+    def preview_course_folders(
+        self,
+        folder_paths: list[str],
+        chapter_artifacts: list[str] | None = None,
+        course_artifacts: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Inspect candidate folders and preview lecture extraction without saving to database.
 
         Args:
             folder_paths: List of directory paths on the local filesystem.
+            chapter_artifacts: Optional custom selected chapter artifact types.
+            course_artifacts: Optional custom selected course-wide artifact types.
 
         Returns:
             List of preview structures detailing course codes, lecture count, detected files,
@@ -529,7 +309,12 @@ class BatchStudioService:
             try:
                 course = scan_course_directory(path)
                 lecture_count = len(course.lectures)
-                estimated_jobs = lecture_count * 6 + 2 if lecture_count > 0 else 0
+                if chapter_artifacts is not None or course_artifacts is not None:
+                    ch_count = len(chapter_artifacts or [])
+                    co_count = len(course_artifacts or [])
+                    estimated_jobs = lecture_count * ch_count + co_count
+                else:
+                    estimated_jobs = lecture_count * 6 + 2 if lecture_count > 0 else 0
                 estimated_days = max(1, round(estimated_jobs / 100 + 0.49))
                 results.append(
                     {
@@ -557,22 +342,38 @@ class BatchStudioService:
                 )
         return results
 
-    def add_course_folders(self, folder_paths: list[str], profile: str = "full") -> list[dict[str, Any]]:
+    def add_course_folders(
+        self,
+        folder_paths: list[str],
+        profile: str = "full",
+        chapter_artifacts: list[str] | None = None,
+        course_artifacts: list[str] | None = None,
+        language: str = "zh-TW",
+    ) -> list[dict[str, Any]]:
         """Register course directories and enqueue artifact generation tasks.
 
         Args:
             folder_paths: List of filesystem paths to course lecture folders.
             profile: Generation profile ('full', 'quiz-only', 'exam-prep').
+            chapter_artifacts: Granular list of chapter-level artifact types.
+            course_artifacts: Granular list of course-wide aggregated artifact types.
+            language: Target output language preference.
 
         Returns:
             List of dictionaries describing newly registered courses and enqueued job counts.
         """
         registered: list[dict[str, Any]] = []
-        prof_enum = ProfileName(profile)
+        prof_enum = ProfileName(profile) if profile in ProfileName._value2member_map_ else ProfileName.FULL
         for raw in folder_paths:
             path = Path(raw).expanduser().resolve()
             course = scan_course_directory(path)
-            course = dataclasses.replace(course, profile=prof_enum)
+            course = dataclasses.replace(
+                course,
+                profile=prof_enum,
+                language=language,
+                selected_chapter_artifacts=chapter_artifacts or [],
+                selected_course_artifacts=course_artifacts or [],
+            )
             self.course_repo.save_course(course)
             enqueued = self.enqueue_course_artifacts(course.code)
             registered.append(
@@ -580,6 +381,7 @@ class BatchStudioService:
                     "code": course.code,
                     "name": course.name,
                     "profile": course.profile.value,
+                    "language": course.language,
                     "lecture_count": len(course.lectures),
                     "enqueued_jobs": enqueued,
                 }
@@ -749,28 +551,3 @@ class BatchStudioService:
         """
         self._is_queue_running = True
         return True
-
-
-def _save_quiz_files(out_dir: Path, quiz: Quiz) -> str:
-    """Save quiz markdown, JSON, and PDF files to target directory.
-
-    Args:
-        out_dir: Destination folder.
-        quiz: Domain Quiz entity.
-
-    Returns:
-        Path string of quiz.json.
-    """
-    exam_md = out_dir / "題目卷.md"
-    ans_md = out_dir / "答案卷.md"
-    final_json = out_dir / "quiz.json"
-    exam_pdf = out_dir / "題目卷.pdf"
-    ans_pdf = out_dir / "答案卷.pdf"
-
-    exam_md.write_text(to_exam_markdown(quiz), encoding="utf-8")
-    ans_md.write_text(to_answer_markdown(quiz), encoding="utf-8")
-    final_json.write_text(quiz_to_json(quiz), encoding="utf-8")
-    to_pdf(quiz, exam_pdf, is_answer_key=False)
-    to_pdf(quiz, ans_pdf, is_answer_key=True)
-
-    return str(final_json)

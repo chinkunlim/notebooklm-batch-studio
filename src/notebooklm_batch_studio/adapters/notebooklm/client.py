@@ -35,6 +35,32 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
+def build_language_instruction(base_prompt: str | None, language: str = "zh-TW") -> str:
+    """Combine base prompt instructions with explicit language directives.
+
+    Args:
+        base_prompt: Optional base instructional prompt.
+        language: Language code ('zh-TW', 'en', 'bilingual').
+
+    Returns:
+        Complete instructions string.
+    """
+    if language == "en":
+        prefix = "Please generate all output strictly in English."
+    elif language == "bilingual":
+        prefix = (
+            "Generate bilingual output in both English and Traditional Chinese. "
+            "For all titles, questions, choices, key concepts, explanations, and flashcards, "
+            "provide both English and Traditional Chinese (e.g. 'Concept / 概念')."
+        )
+    else:  # default zh-TW
+        prefix = "請以繁體中文生成內容，專業學術名詞保留英文原名。"
+
+    if base_prompt:
+        return f"{prefix} {base_prompt}"
+    return prefix
+
+
 def _map_exception(err: Exception) -> Exception:
     """Map external provider errors into domain-specific exceptions.
 
@@ -358,4 +384,240 @@ class NotebookLMAdapter:
         """
         async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
             logger.info("Renaming artifact %s to '%s' in notebook %s", artifact_id, title, notebook_id)
-            await client.artifacts.rename(notebook_id, artifact_id, title)
+            try:
+                await client.artifacts.rename(notebook_id, artifact_id, title)
+            except Exception as err:
+                logger.warning("Could not rename artifact %s on NotebookLM: %s", artifact_id, err)
+
+    @_translate_errors
+    async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
+        """Find the most recently generated artifact ID in a notebook.
+
+        Args:
+            notebook_id: The notebook identifier.
+            artifact_type: Optional filter string for artifact kind.
+
+        Returns:
+            Artifact ID string, or None if not found.
+        """
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            arts = await client.artifacts.list(notebook_id)
+            if not arts:
+                return None
+            sorted_arts = sorted(
+                arts,
+                key=lambda a: getattr(a, "created_at", None) or getattr(a, "last_modified_at", None) or "",
+                reverse=True,
+            )
+            top = sorted_arts[0]
+            return str(getattr(top, "id", "")) or None
+
+    @_translate_errors
+    async def generate_report(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of a study guide or briefing report.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language ('zh-TW', 'en', 'bilingual').
+
+        Returns:
+            Task or artifact identifier.
+        """
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            instructions = build_language_instruction(prompt, language)
+            logger.info("Generating study guide report in notebook %s", notebook_id)
+            status = await client.artifacts.generate_study_guide(
+                notebook_id=notebook_id,
+                source_ids=source_ids,
+                extra_instructions=instructions,
+            )
+            task_id = getattr(status, "task_id", str(status))
+            return str(task_id)
+
+    @_translate_errors
+    async def download_report(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download report/study guide content to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            await client.artifacts.download_report(notebook_id, str(out), artifact_id=artifact_id)
+
+    @_translate_errors
+    async def generate_slide_deck(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of slide deck presentation outline.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language.
+
+        Returns:
+            Task or artifact identifier.
+        """
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            instructions = build_language_instruction(prompt, language)
+            logger.info("Generating slide deck in notebook %s", notebook_id)
+            status = await client.artifacts.generate_slide_deck(
+                notebook_id=notebook_id,
+                source_ids=source_ids,
+                instructions=instructions,
+            )
+            task_id = getattr(status, "task_id", str(status))
+            return str(task_id)
+
+    @_translate_errors
+    async def download_slide_deck(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download slide deck outline to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            await client.artifacts.download_slide_deck(notebook_id, str(out), artifact_id=artifact_id)
+
+    @_translate_errors
+    async def generate_infographic(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of an infographic.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language.
+
+        Returns:
+            Task or artifact identifier.
+        """
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            instructions = build_language_instruction(prompt, language)
+            logger.info("Generating infographic in notebook %s", notebook_id)
+            status = await client.artifacts.generate_infographic(
+                notebook_id=notebook_id,
+                source_ids=source_ids,
+                instructions=instructions,
+            )
+            task_id = getattr(status, "task_id", str(status))
+            return str(task_id)
+
+    @_translate_errors
+    async def download_infographic(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download infographic to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            await client.artifacts.download_infographic(notebook_id, str(out), artifact_id=artifact_id)
+
+    @_translate_errors
+    async def generate_data_table(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of comparison data table.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language.
+
+        Returns:
+            Task or artifact identifier.
+        """
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            instructions = build_language_instruction(prompt, language)
+            logger.info("Generating data table in notebook %s", notebook_id)
+            status = await client.artifacts.generate_data_table(
+                notebook_id=notebook_id,
+                source_ids=source_ids,
+                instructions=instructions,
+            )
+            task_id = getattr(status, "task_id", str(status))
+            return str(task_id)
+
+    @_translate_errors
+    async def download_data_table(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download data table content to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            await client.artifacts.download_data_table(notebook_id, str(out), artifact_id=artifact_id)
+
+    @_translate_errors
+    async def generate_video(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of cinematic video overview.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language.
+
+        Returns:
+            Task or artifact identifier.
+        """
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            instructions = build_language_instruction(prompt, language)
+            logger.info("Generating video in notebook %s", notebook_id)
+            status = await client.artifacts.generate_video(
+                notebook_id=notebook_id,
+                source_ids=source_ids,
+                instructions=instructions,
+            )
+            task_id = getattr(status, "task_id", str(status))
+            return str(task_id)
+
+    @_translate_errors
+    async def download_video(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download generated video to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            await client.artifacts.download_video(notebook_id, str(out), artifact_id=artifact_id)

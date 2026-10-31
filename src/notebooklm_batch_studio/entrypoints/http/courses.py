@@ -70,7 +70,11 @@ def preview_courses(req: PreviewCoursesRequest, request: Request) -> list[dict[s
         List of preview results.
     """
     service: BatchStudioService = request.app.state.service
-    return service.preview_course_folders(req.folders)
+    return service.preview_course_folders(
+        req.folders,
+        chapter_artifacts=req.chapter_artifacts,
+        course_artifacts=req.course_artifacts,
+    )
 
 
 @courses_router.post("/api/courses", tags=["Courses"], operation_id="add_courses")
@@ -85,7 +89,13 @@ def add_courses(req: AddCoursesRequest, request: Request) -> list[dict[str, Any]
         List of registered course summaries.
     """
     service: BatchStudioService = request.app.state.service
-    return service.add_course_folders(req.folders, profile=req.profile)
+    return service.add_course_folders(
+        req.folders,
+        profile=req.profile,
+        chapter_artifacts=req.chapter_artifacts,
+        course_artifacts=req.course_artifacts,
+        language=req.language,
+    )
 
 
 @courses_router.post("/api/courses/{code}/profile", tags=["Courses"], operation_id="update_course_profile")

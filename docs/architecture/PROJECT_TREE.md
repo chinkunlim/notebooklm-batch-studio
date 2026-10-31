@@ -161,6 +161,7 @@ notebooklm-batch-studio/
 │       │   │   ├── pdf_renderer.py
 │       │   │   └── quiz_converter.py
 │       │   ├── __init__.py
+│       │   ├── artifact_runner.py
 │       │   ├── course_parser.py
 │       │   ├── greeting.py
 │       │   ├── orchestrator.py

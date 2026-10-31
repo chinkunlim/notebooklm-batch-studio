@@ -20,6 +20,9 @@ from notebooklm_batch_studio.domain.models import (
     JobStatus,
     Lecture,
     ProfileName,
+    get_artifact_english_title,
+    get_course_range_prefix,
+    get_lecture_prefix,
 )
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.services.worker_pool import WorkerPool, generate_jobs_for_course
@@ -283,3 +286,68 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
             assert audio_job is not None
             # AUDIO should either be in QUOTA_WAIT or awakened back to PENDING by the probe
             self.assertIn(audio_job.status, (JobStatus.QUOTA_WAIT, JobStatus.PENDING))
+
+    def test_naming_prefixes_and_english_titles(self) -> None:
+        """Verify Ch vs L prefix inference, range prefix calculation, and English standard titles."""
+        # Ch vs L inference
+        self.assertEqual(get_lecture_prefix("Ch01-Introduction.pdf", 1), "Ch01")
+        self.assertEqual(get_lecture_prefix("Chapter 4.pdf", 4), "Ch04")
+        self.assertEqual(get_lecture_prefix("Lecture 02 - Enzymes.pdf", 2), "L02")
+        self.assertEqual(get_lecture_prefix("03_Membranes.pdf", 3), "L03")
+
+        # Range prefix calculation
+        lectures_ch = [
+            Lecture(no=1, topic="Intro", filename="Ch01-Intro.pdf", sha256="h1"),
+            Lecture(no=6, topic="Validity", filename="Ch06-Validity.pdf", sha256="h6"),
+        ]
+        self.assertEqual(get_course_range_prefix(lectures_ch), "Ch01-Ch06")
+
+        lectures_l = [
+            Lecture(no=1, topic="L1", filename="Lecture 01.pdf", sha256="h1"),
+            Lecture(no=5, topic="L5", filename="Lecture 05.pdf", sha256="h5"),
+        ]
+        self.assertEqual(get_course_range_prefix(lectures_l), "L01-L05")
+
+        # English title generation for NotebookLM in-app display
+        self.assertEqual(
+            get_artifact_english_title(ArtifactType.QUIZ_1, "Ch01"),
+            "[Ch01] Quiz 1 - Fundamentals",
+        )
+        self.assertEqual(
+            get_artifact_english_title(ArtifactType.AUDIO, "L02"),
+            "[L02] Audio Overview",
+        )
+        self.assertEqual(
+            get_artifact_english_title(ArtifactType.COURSE_MOCK_EXAM, "Ch01-Ch06"),
+            "[Ch01-Ch06] Comprehensive Mock Exam",
+        )
+        self.assertEqual(
+            get_artifact_english_title(ArtifactType.COURSE_MIND_MAP, "L01-L05"),
+            "[L01-L05] Course Mind Map",
+        )
+
+    def test_granular_checkbox_job_generation(self) -> None:
+        """Verify custom granular selections generate precise chapter and course-wide jobs."""
+        course = Course(
+            code="115-1",
+            name="心理學研究法",
+            source_dir="/mock/dir",
+            selected_chapter_artifacts=["quiz_1", "flashcards"],
+            selected_course_artifacts=["course_mock_exam", "course_mind_map"],
+            lectures=[
+                Lecture(no=1, topic="Intro", filename="Ch01.pdf", sha256="h1"),
+                Lecture(no=2, topic="Methods", filename="Ch02.pdf", sha256="h2"),
+                Lecture(no=3, topic="Hypothesis", filename="Ch03.pdf", sha256="h3"),
+            ],
+        )
+        jobs = generate_jobs_for_course(course)
+        # 3 lectures * 2 chapter artifacts + 2 course-wide artifacts = 8 jobs
+        self.assertEqual(len(jobs), 8)
+        chapter_jobs = [j for j in jobs if j.lecture_no is not None]
+        course_jobs = [j for j in jobs if j.lecture_no is None]
+        self.assertEqual(len(chapter_jobs), 6)
+        self.assertEqual(len(course_jobs), 2)
+        self.assertEqual(
+            {j.artifact_type for j in course_jobs},
+            {ArtifactType.COURSE_MOCK_EXAM, ArtifactType.COURSE_MIND_MAP},
+        )

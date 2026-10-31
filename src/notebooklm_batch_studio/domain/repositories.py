@@ -330,3 +330,155 @@ class NotebookLMClientProtocol(Protocol):
             title: The new title string (e.g. '[03] Quiz 1-基礎').
         """
         ...
+
+    async def generate_report(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of a study guide or briefing report.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language ('zh-TW', 'en', 'bilingual').
+
+        Returns:
+            Task or artifact identifier.
+        """
+        ...
+
+    async def download_report(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download report/study guide content to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        ...
+
+    async def generate_slide_deck(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of slide deck presentation outline.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language.
+
+        Returns:
+            Task or artifact identifier.
+        """
+        ...
+
+    async def download_slide_deck(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download slide deck outline to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        ...
+
+    async def generate_infographic(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of an infographic.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language.
+
+        Returns:
+            Task or artifact identifier.
+        """
+        ...
+
+    async def download_infographic(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download infographic to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        ...
+
+    async def generate_data_table(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of comparison data table.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language.
+
+        Returns:
+            Task or artifact identifier.
+        """
+        ...
+
+    async def download_data_table(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download data table content to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        ...
+
+    async def generate_video(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Request generation of cinematic video overview.
+
+        Args:
+            notebook_id: The notebook identifier.
+            source_ids: Selected source identifiers.
+            prompt: Optional custom instructions.
+            language: Target language.
+
+        Returns:
+            Task or artifact identifier.
+        """
+        ...
+
+    async def download_video(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download generated video to a local file.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Optional artifact identifier.
+        """
+        ...
+
+    async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
+        """Find the most recently generated artifact ID in a notebook.
+
+        Args:
+            notebook_id: The notebook identifier.
+            artifact_type: Optional filter string for artifact kind.
+
+        Returns:
+            Artifact ID string, or None if not found.
+        """
+        ...

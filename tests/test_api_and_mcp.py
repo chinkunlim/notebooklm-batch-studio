@@ -79,6 +79,74 @@ class MockNotebookLMClient(NotebookLMClientProtocol):
         """Mock download mind map."""
         Path(output_path).write_text("{}", encoding="utf-8")
 
+    async def rename_artifact(self, notebook_id: str, artifact_id: str, title: str) -> None:
+        """Mock rename artifact."""
+        pass
+
+    async def generate_report(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate report."""
+        return "report-job-1"
+
+    async def download_report(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download report."""
+        Path(output_path).write_text("# Report", encoding="utf-8")
+
+    async def generate_slide_deck(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate slide deck."""
+        return "slide-job-1"
+
+    async def download_slide_deck(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download slide deck."""
+        Path(output_path).write_text("# Slide Deck", encoding="utf-8")
+
+    async def generate_infographic(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate infographic."""
+        return "info-job-1"
+
+    async def download_infographic(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download infographic."""
+        Path(output_path).write_bytes(b"PNG")
+
+    async def generate_data_table(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate data table."""
+        return "dt-job-1"
+
+    async def download_data_table(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download data table."""
+        Path(output_path).write_text("| A | B |", encoding="utf-8")
+
+    async def generate_video(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Mock generate video."""
+        return "video-job-1"
+
+    async def download_video(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Mock download video."""
+        Path(output_path).write_bytes(b"MP4")
+
+    async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
+        """Mock find latest artifact."""
+        return "mock-artifact-id-api"
+
 
 class TestApiAndMcp(unittest.TestCase):
     """Test suite for HTTP REST API and MCP Tool Server."""
