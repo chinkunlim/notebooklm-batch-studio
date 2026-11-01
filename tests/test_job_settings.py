@@ -35,9 +35,9 @@ class MergeTest(unittest.TestCase):
 
     def test_effective_options_and_extra_instructions(self) -> None:
         """Overrides win field by field; extra instructions from both levels are kept."""
-        course = GenerationOptions(extra_instructions="考申論", quiz_quantity="more")
-        merged = effective_options(course, {"quiz_quantity": "fewer", "extra_instructions": "多出圖表題"})
-        self.assertEqual(merged.quiz_quantity, "fewer")
+        course = GenerationOptions(extra_instructions="考申論", quiz_questions=30)
+        merged = effective_options(course, {"quiz_questions": 20, "extra_instructions": "多出圖表題"})
+        self.assertEqual(merged.quiz_questions, 20)
         self.assertEqual(merged.extra_instructions, "考申論\n多出圖表題")
 
     def test_apply_job_settings_appends_instructions_and_forces_difficulty(self) -> None:
@@ -60,6 +60,40 @@ class MergeTest(unittest.TestCase):
         self.assertEqual(run_job.custom_prompt, "出 30 題\n\n補充要求：考申論")
         self.assertEqual(run_course.generation_options.quiz_difficulty, "hard")
 
+    def test_question_counts_drive_prompt_and_quantity(self) -> None:
+        """quiz_questions sets the prompt count and NotebookLM size; the mock exam uses the course count."""
+        from notebooklm import QuizQuantity
+
+        from notebooklm_batch_studio.adapters.notebooklm.generation import quiz_quantity_for
+
+        self.assertEqual(
+            [quiz_quantity_for(n) for n in (10, 20, 30)],
+            [QuizQuantity.FEWER, QuizQuantity.STANDARD, QuizQuantity.MORE],
+        )
+        course = Course(
+            code="C",
+            name="n",
+            source_dir="/x",
+            mock_exam_questions=70,
+            generation_options=GenerationOptions(quiz_questions=20),
+        )
+        quiz = ArtifactJob(
+            id="a",
+            course_code="C",
+            lecture_no=1,
+            artifact_type=ArtifactType.QUIZ_1,
+            custom_prompt="請生成 30 題【測驗】",
+        )
+        mock_job = ArtifactJob(
+            id="b",
+            course_code="C",
+            lecture_no=None,
+            artifact_type=ArtifactType.COURSE_MOCK_EXAM,
+            custom_prompt="請生成 50 題跨章節",
+        )
+        self.assertIn("生成 20 題", apply_job_settings(quiz, course)[0].custom_prompt or "")
+        self.assertIn("生成 70 題", apply_job_settings(mock_job, course)[0].custom_prompt or "")
+
     def test_custom_video_style_uses_custom_enum(self) -> None:
         """A style description switches to VideoStyle.CUSTOM; short videos drop it."""
         kwargs = generation_kwargs("video", GenerationOptions(video_style_prompt="手繪粉筆風"))
@@ -71,7 +105,7 @@ class MergeTest(unittest.TestCase):
     def test_fields_per_type(self) -> None:
         """Each output type exposes only its own options plus extra instructions."""
         self.assertEqual(
-            fields_for_type("quiz_2"), ["quiz_quantity", "quiz_difficulty", "extra_instructions"]
+            fields_for_type("quiz_2"), ["quiz_questions", "quiz_difficulty", "extra_instructions"]
         )
         self.assertIn("infographic_orientation", fields_for_type("course_infographic"))
         self.assertEqual(fields_for_type("study_guide"), ["extra_instructions"])
@@ -125,15 +159,14 @@ class ServiceTest(unittest.TestCase):
     def test_job_options_validate_store_and_carry_over(self) -> None:
         """Own settings are validated per type, stored, and copied to a regenerated version."""
         settings = self.service.course_settings
-        out = settings.set_job_options("q", {"quiz_quantity": "fewer", "quiz_difficulty": ""})
-        self.assertEqual(out["overrides"], {"quiz_quantity": "fewer"})
-        self.assertEqual(out["effective"]["quiz_quantity"], "fewer")
+        out = settings.set_job_options("q", {"quiz_questions": 15, "quiz_difficulty": ""})
+        self.assertEqual(out["overrides"], {"quiz_questions": 15})
+        self.assertEqual(out["effective"]["quiz_questions"], 15)
+        self.assertEqual(out["defaults"]["quiz_questions"], 30)
         with self.assertRaises(ValueError):
             settings.set_job_options("q", {"audio_format": "brief"})
         new_id = settings.regenerate("BIO101", 1, "quiz_1")["job_id"]
-        self.assertEqual(
-            json.loads(self.queue_repo.get_job(new_id).style_options), {"quiz_quantity": "fewer"}
-        )  # type: ignore[union-attr,arg-type]
+        self.assertEqual(json.loads(self.queue_repo.get_job(new_id).style_options), {"quiz_questions": 15})  # type: ignore[union-attr,arg-type]
 
     def test_http_and_mcp(self) -> None:
         """GET/PUT /api/jobs/{id}/options and the MCP tool (confirm required)."""
@@ -141,7 +174,7 @@ class ServiceTest(unittest.TestCase):
             create_app(config=self.config, service=self.service, study_service=mock.MagicMock())
         )
         data = http.get("/api/jobs/q/options").json()
-        self.assertIn("quiz_quantity", data["fields"])
+        self.assertIn("quiz_questions", data["fields"])
         self.assertTrue(data["unsupported"])
         self.assertEqual(
             http.put("/api/jobs/q/options", json={"options": {"slide_format": "x"}}).status_code, 422
@@ -149,7 +182,7 @@ class ServiceTest(unittest.TestCase):
         self.assertEqual(http.get("/api/jobs/missing/options").status_code, 404)
         mcp = build_mcp_server(service=self.service, study_service=mock.MagicMock(), config=self.config)
         tool = mcp._tool_manager._tools["set_job_options"].fn  # type: ignore[attr-defined]
-        self.assertFalse(json.loads(tool("q", {"quiz_quantity": "fewer"}))["confirmed"])
+        self.assertFalse(json.loads(tool("q", {"quiz_questions": 15}))["confirmed"])
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ strict file length boundaries.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 import tempfile
@@ -343,6 +344,7 @@ class ArtifactRunner:
                 is saved under `needs_review/` and its path is carried on the error.
         """
         variant, difficulty = QUIZ_VARIANTS.get(job.artifact_type, ("1-基礎", None))
+        target = course.generation_options.quiz_questions  # default 30
         if course.generation_options.quiz_difficulty != "auto":  # forced by course / output settings
             difficulty = course.generation_options.quiz_difficulty
         variant_prefix = job.artifact_type.value
@@ -369,12 +371,12 @@ class ArtifactRunner:
                             source_pdf=f"{job.lecture_no:02d}.pdf",
                         )
                     )
-                if merge_and_deduplicate_quizzes(batches, target_count=30)[1]:
+                if merge_and_deduplicate_quizzes(batches, target_count=target)[1]:
                     break
 
-        merged_quiz, is_complete = merge_and_deduplicate_quizzes(batches, target_count=30)
+        merged_quiz, is_complete = merge_and_deduplicate_quizzes(batches, target_count=target)
         if not is_complete:
-            await self._quarantine_quiz(job, course, nb_id, art_ids, merged_quiz, target=30)
+            await self._quarantine_quiz(job, course, nb_id, art_ids, merged_quiz, target=target)
 
         return _save_quiz_files(
             out_dir, merged_quiz, file_prefix=versioned_name(variant_prefix, job.version)
@@ -497,6 +499,8 @@ class ArtifactRunner:
         target_q = course.mock_exam_questions or 50
         forced = course.generation_options.quiz_difficulty
         mock_difficulty = None if forced == "auto" else forced
+        # NotebookLM's size setting follows the mock exam target, not the lecture quiz count.
+        mock_options = dataclasses.replace(course.generation_options, quiz_questions=min(target_q, 60))
         batches: list[Quiz] = []
         art_ids: list[str] = []
         variant_prefix = job.artifact_type.value
@@ -517,7 +521,7 @@ class ArtifactRunner:
                 )
                 prompt = job.custom_prompt or default_prompt
                 art_id, raw = await self._generate_quiz_batch(
-                    nb_id, source_ids, prompt, mock_difficulty, tmp_json, course.generation_options
+                    nb_id, source_ids, prompt, mock_difficulty, tmp_json, mock_options
                 )
                 art_ids.append(art_id)
                 if raw is not None:

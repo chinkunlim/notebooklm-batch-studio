@@ -1597,7 +1597,7 @@
       slide_download: ['投影片下載格式', { pdf: 'PDF', pptx: 'PowerPoint (PPTX)' }],
       video_format: ['影片形式', { explainer: '講解', brief: '簡短', short: '直式短片' }],
       video_style: ['影片風格', { auto_select: '自動', classic: '經典', whiteboard: '白板', kawaii: '可愛', anime: '動漫', watercolor: '水彩', retro_print: '復古印刷', heritage: '傳統', paper_craft: '紙藝' }],
-      quiz_quantity: ['測驗題量（每次生成）', { fewer: '較少', standard: '標準', more: '較多' }],
+      quiz_questions: ['每份測驗題數（10–60）', 'number'],
       flashcards_quantity: ['閃卡數量', { fewer: '較少', standard: '標準', more: '較多' }],
       flashcards_difficulty: ['閃卡難度', { easy: '簡單', medium: '中等', hard: '困難' }],
       quiz_difficulty: ['測驗難度', { auto: '依測驗而定（1 簡單、2 中等、3 困難）', easy: '全部簡單', medium: '全部中等', hard: '全部困難' }],
@@ -1610,14 +1610,16 @@
       mock_exam_questions: ['全課程模擬考題數（10–100）', 'number'],
     };
 
-    function renderOptionField(key, label, names, value, choices, inherit) {
+    function renderOptionField(key, label, names, value, choices, inherit, defaults) {
+      const dflt = defaults ? defaults[key] : undefined;
+      const mark = v => (dflt !== undefined && v === dflt ? '（預設）' : '');
       const inheritOpt = inherit !== undefined ? `<option value="">沿用課程設定（${escHtml(String(inherit))}）</option>` : '';
       if (names === null) {
         if (inherit !== undefined) {
           return `<label>${label}<select data-opt="${key}" style="margin-top:4px;">${inheritOpt}
-            <option value="true" ${value === true ? 'selected' : ''}>是</option><option value="false" ${value === false ? 'selected' : ''}>否</option></select></label>`;
+            <option value="true" ${value === true ? 'selected' : ''}>是${mark(true)}</option><option value="false" ${value === false ? 'selected' : ''}>否${mark(false)}</option></select></label>`;
         }
-        return `<label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" data-opt="${key}" ${value ? 'checked' : ''}> ${label}</label>`;
+        return `<label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" data-opt="${key}" ${value ? 'checked' : ''}> ${label}${dflt !== undefined ? `（預設：${dflt ? '開' : '關'}）` : ''}</label>`;
       }
       if (names === 'textarea') {
         return `<label style="grid-column: 1 / -1;">${label}<textarea data-opt="${key}" rows="2" style="margin-top:4px;" placeholder="${inherit !== undefined ? '留空就只用課程的補充指示' : '例如：考試以申論題為主；重點放在第 3 章的公式'}">${escHtml(value || '')}</textarea></label>`;
@@ -1626,9 +1628,10 @@
         return `<label>${label}<input type="text" data-opt="${key}" value="${escHtml(value || '')}" style="margin-top:4px;"></label>`;
       }
       if (names === 'number') {
-        return `<label>${label}<input type="number" min="10" max="100" data-opt="${key}" data-num="1" value="${value ?? ''}" style="margin-top:4px;"></label>`;
+        const range = choices[key] || {};
+        return `<label>${label}${dflt !== undefined ? `（預設 ${dflt}）` : ''}<input type="number" min="${range.min ?? ''}" max="${range.max ?? ''}" data-opt="${key}" data-num="1" value="${value ?? ''}" placeholder="${inherit !== undefined ? '留空就沿用課程設定' : ''}" style="margin-top:4px;"></label>`;
       }
-      const opts = (choices[key] || []).map(c => `<option value="${c}" ${c === value ? 'selected' : ''}>${names[c] || c}</option>`).join('');
+      const opts = (choices[key] || []).map(c => `<option value="${c}" ${c === value ? 'selected' : ''}>${names[c] || c}${mark(c)}</option>`).join('');
       return `<label>${label}<select data-opt="${key}" style="margin-top:4px;">${inheritOpt}${opts}</select></label>`;
     }
 
@@ -1636,7 +1639,7 @@
       const options = {};
       document.querySelectorAll(`${selector} [data-opt]`).forEach(el => {
         let v = el.type === 'checkbox' ? el.checked : el.value;
-        if (el.dataset.num) v = parseInt(v, 10);
+        if (el.dataset.num) v = v === '' ? '' : parseInt(v, 10);
         if (el.tagName === 'SELECT' && (v === 'true' || v === 'false')) v = v === 'true';
         options[el.dataset.opt] = v;
       });
@@ -1651,7 +1654,9 @@
         if (!res.ok) throw new Error(data.detail || res.statusText);
         const all = { ...COURSE_FIELD_LABELS, ...OPTION_LABELS };
         box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; font-size: 0.85rem;">
-          ${Object.keys(all).map(key => renderOptionField(key, all[key][0], all[key][1], data.options[key], data.choices)).join('')}
+          ${Object.keys(all).map(key => renderOptionField(key, all[key][0], all[key][1], data.options[key], data.choices, undefined, data.defaults)).join('')}
+        </div>
+        <div style="margin-top:10px;"><button type="button" onclick="resetCourseOptions('${code}')" style="font-size:0.8rem;">↺ 全部恢復預設值</button>
         </div>
         <div style="display:flex; justify-content:flex-end; margin-top: 12px;"><button class="primary" onclick="saveCourseOptions('${code}')">💾 儲存產出設定</button></div>`;
       } catch (e) {
@@ -1691,6 +1696,15 @@
       } catch (e) {
         alert('儲存失敗：' + e.message);
       }
+    }
+
+    async function resetCourseOptions(code) {
+      if (!confirm('把這門課的產出設定全部恢復成預設值？')) return;
+      const data = await (await fetch(`/api/courses/${code}/options`)).json();
+      await fetch(`/api/courses/${code}/options`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ options: data.defaults }),
+      });
+      await loadCourseOptions(code);
     }
 
     async function saveCourseOptions(code) {
@@ -1740,7 +1754,7 @@
           ${data.fields.map(key => {
             const [label, names] = OPTION_LABELS[key];
             const inherit = key === 'extra_instructions' ? '' : describe(key, data.effective[key]);
-            return renderOptionField(key, label, names, data.overrides[key], data.choices, inherit);
+            return renderOptionField(key, label, names, data.overrides[key], data.choices, inherit, data.defaults);
           }).join('')}
         </div>
         ${data.unsupported.map(u => `<div style="margin-top:10px; color:var(--text-muted); font-size:0.8rem;">⏳ ${escHtml(u)}</div>`).join('')}`;

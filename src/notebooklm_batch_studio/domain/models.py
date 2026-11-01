@@ -199,7 +199,8 @@ class GenerationOptions:
         video_format: 'explainer', 'brief' or 'short'.
         video_style: 'auto_select', 'classic', 'whiteboard', 'kawaii', 'anime', 'watercolor',
             'retro_print', 'heritage' or 'paper_craft'.
-        quiz_quantity: 'fewer', 'standard' or 'more'.
+        quiz_questions: Questions per lecture quiz (default 30); drives the prompt, the completeness
+            check and NotebookLM's quantity setting together.
         flashcards_quantity: 'fewer', 'standard' or 'more'.
         flashcards_difficulty: 'easy', 'medium' or 'hard'.
         device_exports: Whether to fit infographics to A4 / iPad Air 4 / MacBook Pro 14.
@@ -220,7 +221,7 @@ class GenerationOptions:
     slide_download: str = "pdf"
     video_format: str = "explainer"
     video_style: str = "auto_select"
-    quiz_quantity: str = "more"
+    quiz_questions: int = 30
     flashcards_quantity: str = "more"
     flashcards_difficulty: str = "medium"
     device_exports: bool = True
@@ -263,7 +264,6 @@ GENERATION_OPTION_CHOICES: dict[str, tuple[str, ...] | None] = {
         "heritage",
         "paper_craft",
     ),
-    "quiz_quantity": ("fewer", "standard", "more"),
     "flashcards_quantity": ("fewer", "standard", "more"),
     "flashcards_difficulty": ("easy", "medium", "hard"),
     "device_exports": None,
@@ -272,6 +272,9 @@ GENERATION_OPTION_CHOICES: dict[str, tuple[str, ...] | None] = {
 
 # Free-text options and their maximum length.
 TEXT_OPTION_LIMITS: dict[str, int] = {"extra_instructions": 2000, "video_style_prompt": 300}
+
+# Whole-number options and their allowed range.
+NUMBER_OPTION_RANGES: dict[str, tuple[int, int]] = {"quiz_questions": (10, 60)}
 
 
 def merge_generation_options(base: GenerationOptions, changes: dict[str, object]) -> GenerationOptions:
@@ -289,6 +292,12 @@ def merge_generation_options(base: GenerationOptions, changes: dict[str, object]
     """
     values = dict(base.__dict__)
     for key, value in changes.items():
+        if key in NUMBER_OPTION_RANGES:
+            low, high = NUMBER_OPTION_RANGES[key]
+            if not isinstance(value, int) or isinstance(value, bool) or not low <= value <= high:
+                raise ValueError(f"{key} must be a whole number from {low} to {high}")
+            values[key] = value
+            continue
         if key in TEXT_OPTION_LIMITS:
             if not isinstance(value, str) or len(value) > TEXT_OPTION_LIMITS[key]:
                 raise ValueError(f"{key} must be text of at most {TEXT_OPTION_LIMITS[key]} characters")

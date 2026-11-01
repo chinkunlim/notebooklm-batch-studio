@@ -10,16 +10,19 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import re
 import uuid
 from typing import Any
 
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.models import (
     GENERATION_OPTION_CHOICES,
+    NUMBER_OPTION_RANGES,
     TEXT_OPTION_LIMITS,
     ArtifactJob,
     ArtifactType,
     Course,
+    GenerationOptions,
     JobStatus,
     effective_options,
     merge_generation_options,
@@ -37,8 +40,8 @@ MOCK_EXAM_RANGE = (10, 100)
 
 # Which options matter for each kind of output (by artifact-type prefix after "course_").
 _FIELDS_BY_PREFIX = (
-    ("quiz", ["quiz_quantity", "quiz_difficulty"]),
-    ("mock_exam", ["quiz_quantity", "quiz_difficulty"]),
+    ("quiz", ["quiz_questions", "quiz_difficulty"]),
+    ("mock_exam", ["quiz_difficulty"]),
     ("flashcards", ["flashcards_quantity", "flashcards_difficulty"]),
     ("audio", ["audio_format", "audio_length"]),
     ("infographic", ["infographic_orientation", "infographic_detail", "infographic_style", "device_exports"]),
@@ -64,14 +67,26 @@ def fields_for_type(artifact_type: str) -> list[str]:
 
 
 def option_choices() -> dict[str, Any]:
-    """Allowed values for every option: a list, None for on/off, or "text" for free text.
+    """Allowed values for every option: a list, None for on/off, "text", or a {min, max} range.
 
     Returns:
         Option name to its allowed values.
     """
     choices: dict[str, Any] = {k: list(v) if v else None for k, v in GENERATION_OPTION_CHOICES.items()}
     choices.update({k: "text" for k in TEXT_OPTION_LIMITS})
+    choices.update({k: {"min": low, "max": high} for k, (low, high) in NUMBER_OPTION_RANGES.items()})
     return choices
+
+
+def default_options() -> dict[str, Any]:
+    """The project defaults a course starts with (what applies when nothing is changed).
+
+    Returns:
+        Option name to default value, including the course-level language and mock exam size.
+    """
+    defaults = dataclasses.asdict(GenerationOptions())
+    defaults.update(language="zh-TW", mock_exam_questions=50)
+    return defaults
 
 
 def job_overrides(job: ArtifactJob) -> dict[str, Any]:
@@ -110,6 +125,14 @@ def apply_job_settings(job: ArtifactJob, course: Course) -> tuple[ArtifactJob, C
         logger.warning("Ignoring invalid overrides on job %s: %s", job.id, err)
         options = course.generation_options
     prompt = job.custom_prompt or ""
+    # The question count in the prompt follows the settings (quiz: quiz_questions, mock exam:
+    # the course's mock_exam_questions), so changing a count changes what NotebookLM is asked.
+    value = job.artifact_type.value.removeprefix("course_")
+    if value.startswith("quiz"):
+        count = course.mock_exam_questions if job.lecture_no is None else options.quiz_questions
+        prompt = re.sub(r"生成 \d+ 題", f"生成 {count} 題", prompt)
+    elif value.startswith("mock_exam"):
+        prompt = re.sub(r"生成 \d+ 題", f"生成 {course.mock_exam_questions} 題", prompt)
     if options.extra_instructions:
         prompt = f"{prompt}\n\n補充要求：{options.extra_instructions}".strip()
     return (
@@ -164,8 +187,11 @@ class CourseSettingsService:
         options = dataclasses.asdict(course.generation_options)
         options.update(language=course.language, mock_exam_questions=course.mock_exam_questions)
         choices = option_choices()
-        choices.update(language=list(LANGUAGES), mock_exam_questions="number")
-        return {"options": options, "choices": choices}
+        choices.update(
+            language=list(LANGUAGES),
+            mock_exam_questions={"min": MOCK_EXAM_RANGE[0], "max": MOCK_EXAM_RANGE[1]},
+        )
+        return {"options": options, "choices": choices, "defaults": default_options()}
 
     def set_options(self, code: str, changes: dict[str, Any]) -> dict[str, Any]:
         """Validate and store option changes; they apply to generations started afterwards.
@@ -345,6 +371,7 @@ class CourseSettingsService:
             "effective": dataclasses.asdict(effective),
             "fields": fields_for_type(job.artifact_type.value),
             "choices": option_choices(),
+            "defaults": default_options(),
             "unsupported": ["題型（選擇題／簡答題）：等 notebooklm-py 下一版支援後開放"] if is_quiz else [],
         }
 

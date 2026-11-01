@@ -83,6 +83,23 @@ def to_enum(enum_cls: type[Enum], value: str) -> Any:
     return enum_cls[value.upper()]
 
 
+def quiz_quantity_for(questions: int) -> QuizQuantity:
+    """Pick NotebookLM's quiz quantity setting that best matches a target question count.
+
+    The prompt states the exact number; this only stops NotebookLM's own size setting from
+    pulling the other way.
+
+    Args:
+        questions: Target questions in one generation.
+
+    Returns:
+        FEWER below 15, STANDARD below 25, otherwise MORE.
+    """
+    if questions < 15:
+        return QuizQuantity.FEWER
+    return QuizQuantity.STANDARD if questions < 25 else QuizQuantity.MORE
+
+
 def _video_kwargs(o: GenerationOptions) -> dict[str, Any]:
     """Video arguments that respect notebooklm-py's rules for styles.
 
@@ -135,7 +152,7 @@ def generation_kwargs(kind: str, options: GenerationOptions | None) -> dict[str,
             "slide_length": to_enum(SlideDeckLength, o.slide_length),
         },
         "video": _video_kwargs(o),
-        "quiz": {"quantity": to_enum(QuizQuantity, o.quiz_quantity)},
+        "quiz": {"quantity": quiz_quantity_for(o.quiz_questions)},
         "flashcards": {
             "quantity": to_enum(QuizQuantity, o.flashcards_quantity),
             "difficulty": to_enum(QuizDifficulty, o.flashcards_difficulty),

@@ -633,7 +633,7 @@ def _register_job_option_tools(mcp: MCPServer, active_service: BatchStudioServic
 
     @mcp.tool()
     def set_job_options(job_id: str, options: dict[str, Any], confirm: bool = False) -> str:
-        """Set one output's own settings, e.g. {"quiz_quantity": "fewer"} (requires confirm=True).
+        """Set one output's own settings, e.g. {"quiz_questions": 20} (requires confirm=True).
 
         Args:
             job_id: Job id.
