@@ -12,12 +12,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.min.mj
 let reader = { doc: null, scale: 1.25, points: [], observer: null, token: 0 };
 
 /**
- * Lower-case and collapse whitespace so a quote can be found regardless of line breaks.
+ * Lower-case, drop punctuation and collapse whitespace, so a quote is found regardless of line breaks,
+ * a missing full stop or curly quotes. Hyphens stay (a line-end hyphen is handled when joining lines).
  * @param {string} text Text to normalise
  * @returns {string} Normalised text
  */
 function norm(text) {
-  return String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+  return String(text).toLowerCase().replace(/[.,;:!?"'“”‘’()（）「」『』，。；：！？、]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -244,6 +245,21 @@ function highlightPage(n) {
     });
     p.foundOn = n;
     document.getElementById(`kpItem-${i}`)?.classList.add('found');
+  });
+  markMissingPoints();
+}
+
+/**
+ * Fade the key points whose quote was not found, but only once every page it could be on is drawn.
+ */
+function markMissingPoints() {
+  const total = reader.doc ? reader.doc.numPages : 0;
+  const drawn = n => !!document.getElementById(`readerPage-${n}`)?._textDivs;
+  reader.points.forEach((p, i) => {
+    if (p.foundOn) return;
+    const pages = p.page ? [p.page - 1, p.page, p.page + 1].filter(n => n >= 1 && n <= total)
+      : Array.from({ length: total }, (_, k) => k + 1);
+    if (pages.length && pages.every(drawn)) document.getElementById(`kpItem-${i}`)?.classList.add('missing');
   });
 }
 

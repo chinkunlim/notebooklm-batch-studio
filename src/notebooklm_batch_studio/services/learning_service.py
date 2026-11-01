@@ -131,6 +131,18 @@ class LearningStoreProtocol(Protocol):
         ...
 
 
+def strip_citations(text: str) -> str:
+    """Remove Gemini Notebook's citation markers such as [1] or [1-3], which mean nothing outside its app.
+
+    Args:
+        text: Answer text.
+
+    Returns:
+        The text without citation markers.
+    """
+    return _CITATION.sub("", text)
+
+
 def parse_key_points(text: str) -> list[dict[str, Any]]:
     """Read the key-point JSON out of a Gemini Notebook answer and clean it.
 
@@ -364,6 +376,7 @@ class LearningService:
         reply, new_conversation = await self.notebooklm_client.ask_in_conversation(
             course.notebook_id, TUTOR_PROMPT.format(message=message.strip()), sources or None, conversation
         )
+        reply = strip_citations(reply)
         self.learning_repo.add_tutor_message(code, lecture_no, "student", message.strip(), new_conversation)
         self.learning_repo.add_tutor_message(code, lecture_no, "tutor", reply, new_conversation)
         logger.info("Tutor replied for %s L%s (conversation %s)", code, lecture_no, new_conversation)

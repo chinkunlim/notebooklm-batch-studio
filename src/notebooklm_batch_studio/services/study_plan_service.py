@@ -23,6 +23,7 @@ from notebooklm_batch_studio.domain.repositories import (
 )
 from notebooklm_batch_studio.domain.study_plan import MARKABLE_STEPS, STUDY_STEPS, ReviewItem, next_schedule
 from notebooklm_batch_studio.services.converters.report_converter import markdown_fragment
+from notebooklm_batch_studio.services.learning_service import strip_citations
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +417,9 @@ class StudyPlanService:
             for lec in course.lectures
             if lec.source_id and (lecture_no is None or lec.no == lecture_no)
         ]
-        answer = await self.notebooklm_client.ask(course.notebook_id, prompt, sources or None)
+        answer = strip_citations(
+            await self.notebooklm_client.ask(course.notebook_id, prompt, sources or None)
+        )
         self.review_repo.save_explanation(code, lecture_no, key, question, answer)
         logger.info("Explained and saved a quiz question for %s L%s", code, lecture_no)
         saved = self.review_repo.get_explanation(code, key) or {}

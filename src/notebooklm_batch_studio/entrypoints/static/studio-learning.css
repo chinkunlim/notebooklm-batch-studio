@@ -22,7 +22,8 @@
 .kp-item.kp-i3 { border-left-color: #facc15; }
 .kp-item.kp-i2 { border-left-color: #2dd4bf; }
 .kp-item.kp-i1 { border-left-color: #a78bfa; }
-.kp-item:not(.found) { opacity: 0.7; }
+.kp-item.missing { opacity: 0.55; }
+.kp-item.missing .kp-page::after { content: " 找不到原文"; display: block; font-size: 0.65rem; }
 .kp-page { font-size: 0.75rem; color: var(--text-muted); min-width: 34px; font-variant-numeric: tabular-nums; }
 .kp-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .kp-quote { font-size: 0.85rem; overflow-wrap: anywhere; }

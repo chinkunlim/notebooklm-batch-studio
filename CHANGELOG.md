@@ -54,6 +54,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix: request-scoped DB sessions (connection pool exhaustion caused Failed to fetch); save and reuse NotebookLM explanations; render their Markdown; no horizontal scrolling at any width (by `@claude-code`)
 - fix(web): every button works - add job prompt view/edit routes (HTTP+MCP), wake-quota button uses /api/queue/resume, downloads answer HEAD; dialogs close with X, outside click or Esc; header splits status from actions; title returns home; quiz choices reshuffle on every attempt; offline banner instead of Failed to fetch (by `@claude-code`)
 - fix: port check uses SO_REUSEADDR like uvicorn so a just-stopped server's TIME_WAIT port does not block the launcher (by `@claude-code`)
+- fix(learning): live test fixes - quote matching ignores punctuation and empty text pieces (12/12 Gemini Notebook key points found), points fade only after their pages are drawn, citation markers stripped from tutor replies and explanations (by `@claude-code`)
 
 ### Documentation
 - docs(adr): add ADR-002 (session token authentication) and ADR-003 (student study portal and spaced repetition) (by `@antigravity`)

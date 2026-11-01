@@ -129,7 +129,7 @@ class LearningServiceTest(unittest.TestCase):
         self.client = mock.MagicMock()
         self.client.ask = mock.AsyncMock(return_value='[{"quote": "Cells are the unit of life", "page": 1}]')
         self.client.ask_in_conversation = mock.AsyncMock(
-            side_effect=[("你覺得呢？", "conv-1"), ("對！下一步？", "conv-1")]
+            side_effect=[("第四個目標是什麼 [1-3]？", "conv-1"), ("對！下一步？", "conv-1")]
         )
         self.repo = LearningRepository(self.session)
         self.learning = LearningService(course_repo, self.repo, self.client)
@@ -170,6 +170,7 @@ class LearningServiceTest(unittest.TestCase):
         self.assertEqual(self.client.ask_in_conversation.await_args_list[1].args[3], "conv-1")
         history = self.http.get("/api/courses/BIO101/study/tutor?lecture_no=1").json()
         self.assertEqual([m["role"] for m in history], ["student", "tutor", "student", "tutor"])
+        self.assertEqual(history[1]["text"], "第四個目標是什麼？")  # citation markers removed
         self.assertTrue(self.http.delete("/api/courses/BIO101/study/tutor?lecture_no=1").json()["cleared"])
         self.assertEqual(self.http.get("/api/courses/BIO101/study/tutor?lecture_no=1").json(), [])
 
