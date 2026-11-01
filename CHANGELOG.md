@@ -68,6 +68,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs: update README, ARCHITECTURE, PROJECT_RULES, and SPECS for Study Portal, versioned regeneration, and device-sized infographics (TASK-010) (by `@antigravity`)
 - docs: synchronize all documentation, architecture, specs, and records (by `@antigravity`)
 - docs(docs): update docs documentation (ADR-001, ADR-002, ADR-003, ADR-005, ADR-006, ISSUE-001, ISSUE-016, ISSUE-021, ISSUE-024, TASK-001, TASK-003, TASK-004, TASK-005) (by `@antigravity`)
+- docs(standards): sync web app and architecture rules from template (by `@antigravity`)
 
 ### Chore
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)
