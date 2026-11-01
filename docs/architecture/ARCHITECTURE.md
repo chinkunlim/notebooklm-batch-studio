@@ -12,16 +12,23 @@
 
 `notebooklm-batch-studio` 是一個專門為大學與進修課程設計的自動化學習輔助系統。使用者只要將每門課程的講義 PDF 放入對應的資料夾，系統便能自動透過 Gemini Notebook (Gemini Notebook) 建立專屬筆記本、逐份講義單獨勾選生成完整複習包（音訊摘要 Audio Overview、30 題階梯式測驗 Quiz、重點閃卡 Flashcards、心智圖 Mind Map、期末模擬考 Mock Exam），並將產出自動更名、轉檔為 Markdown 與列印用 PDF。
 
+此外，系統整合了完整的**學生學習體驗與認知心理學輔助**（SPEC-007、SPEC-008）：
+- **課件智慧閱讀器**：直接在瀏覽器以內建 PDF.js 檢閱講義，色彩對應 Gemini Notebook 萃取的關鍵重點與原文引據位置。
+- **遺忘曲線記憶強度**：依艾賓浩斯遺忘曲線數學模型即時評估各講掌握度（半衰期衰減），並以熱圖與連續天數視覺化呈現。
+- **蘇格拉底式引導家教 (Socratic Tutor)**：連貫對話情境，引導思考而非直接餵答案。
+- **作答前信心評分**：比對「確定卻答錯」的認知盲點，提供深度警示與 AI 詳解。
+- **今日計畫與間隔複習**：動態排程「Today」研讀進度、考前倒數計時與 25 分鐘專注番茄鐘。
+
 系統嚴格遵循單向五層架構（`entrypoints ➔ adapters ➔ services ➔ domain ➔ config`），所有資料與程式碼嚴格分離（儲存於 `DATA_DIR`），並提供三大操作入口：
 1. **CLI 命令列介面**：用於批次排程、目錄監看、狀態檢視與身分登入。
-2. **FastAPI 本機 Web 控制台**（`http://127.0.0.1:8768`）：直觀管理課程、檢視產出物、重試佇列。
+2. **FastAPI 本機 Web 控制台**（`http://127.0.0.1:8768`）：包含管理控制台、研讀工作台、智慧閱讀器與 macOS 一鍵專注視窗。
 3. **MCP 伺服器 & OpenAPI 路由**：供 Claude Code、Antigravity、Open WebUI 等 AI 工具以對話方式協同操作。
 
 ```mermaid
 flowchart TD
     subgraph Storage ["外部儲存層 (DATA_DIR / Config)"]
         PDFs["input/courses/<br/>(講義 PDF)"]
-        DB[(db/app.db<br/>SQLite: 任務/版本/選單/測驗紀錄/錯題本)]
+        DB[(db/app.db<br/>SQLite: 任務/版本/選單/測驗/錯題/進度/間隔複習/重點/家教)]
         Out["output/courses/<br/>(產出物 MD / PDF / Audio / 裝置圖 / HTML)"]
         Quarantine["needs_review/<br/>(題目不足之隔離區)"]
         Creds["~/.config/<br/>(隔離登入憑證 600)"]
@@ -29,15 +36,18 @@ flowchart TD
 
     subgraph Entrypoints ["入口層 (Entrypoints)"]
         CLI["CLI 命令列<br/>(cli.py)"]
-        WebUI["Web 儀表板 & 研讀工作台<br/>(FastAPI / HTML / JS)"]
-        API["REST API 子路由<br/>(courses / queue / artifacts / study / system)"]
-        MCP["MCP Server<br/>(Stdio & Streamable HTTP)"]
+        WebUI["Web 儀表板 & 研讀工作台 & 閱讀器<br/>(FastAPI / HTML / JS / PDF.js)"]
+        API["REST API 子路由<br/>(courses / queue / artifacts / study / learning / plan / settings / system)"]
+        MCP["MCP Server 集群<br/>(Core / Course Settings / Job Prompts / Learning / Study Plan)"]
     end
 
     subgraph Services ["業務邏輯層 (Services)"]
         Orchestrator["批次協調服務<br/>(BatchStudioService)"]
         ArtifactRunner["產出執行器<br/>(ArtifactRunner / 版本管理)"]
         StudyService["研讀追蹤服務<br/>(StudyTrackerService)"]
+        LearningService["學習輔助服務<br/>(LearningService / 閱讀器重點 / 家教)"]
+        StudyPlanService["研讀計畫服務<br/>(StudyPlanService / 今日計畫 / 間隔複習)"]
+        QuizReader["測驗讀取器<br/>(QuizReader)"]
         CourseSettings["產出設定管理<br/>(CourseSettingsService)"]
         FolderBrowser["資料夾瀏覽器<br/>(FolderBrowserService)"]
         QuotaPlanner["即時配額規劃<br/>(QuotaPlanner)"]
@@ -50,17 +60,21 @@ flowchart TD
 
     subgraph Adapters ["適配器與外部服務 (Adapters)"]
         NLMAdapter["Gemini Notebook Client<br/>(notebooklm-py / Playwright)"]
-        Repo["SQLite Repository<br/>(SQLAlchemy: Job / Course / Version)"]
-        StudyRepo["Study Repository<br/>(SQLAlchemy: Attempt / Mistake)"]
+        Repo["SQLite Repository<br/>(Job / Course / Version / Selection)"]
+        StudyRepo["Study Repository<br/>(Attempt / Mistake)"]
+        LearningRepo["Learning Repository<br/>(KeyPoint / TutorMessage)"]
+        ReviewRepo["Review Repository<br/>(StudyProgress / ReviewItem / Explanation)"]
     end
 
     subgraph Domain ["領域模型 (Domain)"]
-        Models["實體: Course, Lecture, Job, Artifact, QuizAttempt, QuizMistake<br/>輔助: Naming, UsageGuide, QuotaCost<br/>列舉: JobStatus, ArtifactType, DifficultyLevel"]
+        Models["實體: Course, Lecture, Job, Artifact, QuizAttempt, QuizMistake<br/>實體: StudyProgress, ReviewItem, KeyPoint, TutorMessage<br/>模型: MemoryModel, StudyPlan, NotebookLMProtocol<br/>輔助: Naming, UsageGuide, QuotaCost"]
     end
 
     PDFs --> Parser
     CLI & WebUI & API & MCP --> Orchestrator
     WebUI & API & MCP --> StudyService
+    WebUI & API & MCP --> LearningService
+    WebUI & API & MCP --> StudyPlanService
     WebUI & API --> CourseSettings
     WebUI & API --> FolderBrowser
     Orchestrator --> Parser
@@ -68,13 +82,17 @@ flowchart TD
     WorkerPool --> ArtifactRunner
     WorkerPool --> QuotaPlanner
     ArtifactRunner --> NLMAdapter
+    LearningService --> NLMAdapter
+    StudyPlanService --> NLMAdapter
     NLMAdapter --> Creds
     ArtifactRunner --> Converters
     Converters --> Out
     Converters -. 檢驗失敗 .-> Quarantine
     Orchestrator --> Repo
     StudyService --> StudyRepo
-    Repo & StudyRepo --> DB
+    LearningService --> LearningRepo
+    StudyPlanService --> ReviewRepo
+    Repo & StudyRepo & LearningRepo & ReviewRepo --> DB
     Orchestrator --> Reporter
     Reporter --> Out
     Watcher --> Orchestrator
@@ -95,12 +113,28 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 - `cli.py`：命令列工具入口，支援 `login`（檢查登入憑證；加 `--browser` 開瀏覽器由使用者親自登入）、`batch`（批次掃描建立）、`status`（即時進度總覽）、`resume`（中斷重試續跑）、`watch`（守護進程監控）與 `web`（啟動 Web 與 MCP 服務）。
 - `api.py` 與 `entrypoints/http/`：FastAPI 應用程式，切分為職責分明的子路由：
   - `courses.py`：課程列表、註冊掃描、講次清單、產出物開關設定與伺服器資料夾瀏覽器 (`/api/browse`)。
-  - `queue.py`：工作佇列狀態、暫停/恢復、工作重試、版本化重新生成 (`POST /api/jobs/{id}/regenerate`)。
+  - `queue.py`：工作佇列狀態、暫停/恢復、工作重試、版本化重新生成 (`POST /api/jobs/{id}/regenerate`)、Prompt 檢視與編輯。
   - `artifacts.py`：檔案安全下載、隔離區 (`needs_review`) 檢視與直接下載、Markdown / HTML 檢視器。
   - `study.py`：研讀工作台 API，包含測驗繳卷即時評分、錯題本查詢與複習掌握標記、Anki 間隔重複 CSV 匯出。
+  - `learning.py`：講義 PDF 安全串流閱讀、重點標註檢視、蘇格拉底式引導家教對話。
+  - `plan.py`：學生個人學習計畫（Today）、複習排程、作答 AI 詳解保存與考前倒數。
+  - `settings.py`：產出細部選項設定（題型、題量、語言、方向、風格）、三層設定繼承與重設。
   - `system.py`：系統健康檢查、即時額度狀態、命名規則與研讀導引指南 (`/api/usage-guide`)。
-- `entrypoints/static/`：單頁響應式控制台（`index.html`）與學生研讀工作台（`study.html`），內嵌 3D 閃卡翻轉、分段音訊播放器與即時測驗互動。
-- `mcp_server.py`：Model Context Protocol (MCP) 伺服器，對外公開課程註冊、佇列控制、產出查詢、研讀數據與 Gemini Notebook 遠端同步等 Tool 與 Resource，關鍵操作具備 `confirm` 確認機制。
+- `entrypoints/static/`：前端使用者介面（純原生 JS，無編譯負擔）：
+  - `index.html`：整合儀表板、學生研讀專區、講義閱讀器、專注番茄鐘、設定抽屜。
+  - `studio-core.js`、`studio.js`：核心介面邏輯、課程資料載入、狀態輪詢。
+  - `studio-learning.js`：研讀專區（Today 計畫、記憶強度卡片、錯題本、卡牌複習、家教對話）。
+  - `studio-reader.js`：講義閱讀器、PDF 原文比對與顏色高亮、滾動定位。
+  - `vendor/pdfjs/`：內建 PDF.js 4.10.38 閱讀核心，完全離線運作。
+- `mcp_server.py` 與 MCP 集群：
+  - `mcp_server.py`：核心 MCP 工具（狀態、佇列控制、筆記本操作）。
+  - `mcp_course_settings.py`：課程選項與產出設定工具。
+  - `mcp_job_prompts.py`：提示詞查詢與改寫工具。
+  - `mcp_learning.py`：重點查詢、閱讀狀態與家教對話工具。
+  - `mcp_study_plan.py`：研讀計畫與間隔複習工具。
+- 一鍵桌面啟動：
+  - `scripts/build_mac_app.sh`：編譯 macOS 一鍵啟動 App。
+  - `scripts/launch_app.sh`：自動啟動本機伺服器並以 Chrome `--app` 全螢幕專注視窗呈現。
 
 ### 2.2 適配器層 (`adapters`)
 負責與外部系統、持久化儲存與第三方函式庫互動：
@@ -112,20 +146,25 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 - `adapters/db/`：
   - `repository.py` (`SQLiteJobRepository`)：使用 SQLAlchemy 管理課程、講次、工作佇列、客製產出選項 (`course_artifact_selections`) 與版本記錄 (`job_versions`)。
   - `study_repository.py` (`StudyRepository`)：管理學生測驗作答紀錄 (`quiz_attempts`) 與個人錯題本 (`quiz_mistakes`)。
-- 檔案系統操作：資料夾監看與 PDF 寫入完成度偵測在 `services/watcher.py`，課程目錄掃描在 `services/course_parser.py`，下載路由的路徑檢核在 `entrypoints/http/artifacts.py`。
+  - `learning_repository.py` (`LearningRepository`)：管理講義 PDF 重點標註萃取 (`key_points`) 與蘇格拉底家教對話紀錄 (`tutor_messages`)。
+  - `review_repository.py` (`ReviewRepository`)：管理研讀步驟進度 (`study_progress`)、艾賓浩斯間隔複習卡片 (`review_items`) 與 AI 題目詳解 (`explanations`)。
+- 檔案系統操作：資料夾監看與 PDF 寫入完成度偵測在 `services/watcher.py`，課程目錄掃描在 `services/course_parser.py`，下載路由與 PDF 閱讀器的路徑檢核在 `entrypoints/http/artifacts.py` 與 `learning.py`。
 
 ### 2.3 業務服務層 (`services`)
 系統核心邏輯與工作流排程：
 - `orchestrator.py` (`BatchStudioService`)：主管課程註冊、來源同步、任務生成、工作排程與產出持久化。
 - `artifact_runner.py`：細緻化產出管線，負責針對各講次各類型產出物調用 Adapter、等待生成完成、依 `artifact_id` 下載改名並處理版本演進（`v2`, `v3`）。
+- `learning_service.py` (`LearningService`)：提供講義 PDF 安全讀取串流、一次性萃取並儲存 Gemini Notebook 講義核心重點、管理蘇格拉底式引導家教的對話推進。
+- `study_plan_service.py` (`StudyPlanService`)：計算學生每日「Today」研讀進度、維護艾賓浩斯間隔複習排程、呼叫 Gemini Notebook 取得答案詳解並永久保存。
 - `study_service.py` (`StudyTrackerService`)：管理學生線上測驗作答驗證、錯題自動入庫、掌握度更新，以及生成 Anki 匯入用牌組。
+- `quiz_reader.py`：解析各講次測驗 Markdown 檔案，結構化為作答題目與選項陣列。
 - `course_settings.py` (`CourseSettingsService`)：管理每門課程的產出類型開關與風格設定，持久化至資料庫與 `course.toml`。
 - `folder_browser.py` (`FolderBrowserService`)：提供本機安全目錄層級導航與 PDF 講義資料夾選取。
 - `course_parser.py`：依檔名結構排序並剖析課程目錄下的講義 PDF 與中繼資料。
 - `worker_pool.py`：控管平行任務排程、依組合展開講次任務，並處理速率限制指數退避重試。
 - `quota_planner.py`：讀取 Gemini Notebook 即時配額，於工作執行前進行嚴格預檢（額度不足自動轉入 `QUOTA_WAIT` 狀態，避免浪費重試次數），並支援 5 小時額度窗與每週額度評估。
 - `converters/`：
-  - `quiz_converter.py`：整併 3 次 10 題測驗，去重並驗證題目數（達 30 題通過，不足則隔離至 `needs_review/`）。
+  - `quiz_converter.py`：整併 3 次 10 題測驗，去重並驗證題目數（達 30 題通過，不足則隔離至 `needs_review/`），並打散正確選項位置避免偏誤。
   - `flashcard_converter.py`：將階梯式閃卡轉換為標準 Markdown 與 CSV 格式。
   - `mindmap_converter.py`：轉換階層結構為標準 Markdown 縮排清單與 Mermaid 語法。
   - `pdf_renderer.py`：使用 ReportLab 將 Markdown 測驗卷與答案卷轉換為高畫質列印用 PDF。
@@ -138,6 +177,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 ### 2.4 領域模型層 (`domain`)
 純 Python 商業物件，無任何外部第三方相依：
 - 實體與值物件：`Course`, `Lecture`, `Job`, `Artifact`, `Quiz`, `Question`, `Flashcard`, `MindMapNode`, `QuizAttempt`, `QuizMistake`, `JobVersion`。
+- 學習與研讀模型：`memory_model.py`（艾賓浩斯記憶強度、半衰期衰減與掌握度等級計算）、`study_plan.py`（今日任務清單、考前倒數天數、間隔複習卡片）、`notebooklm_protocol.py`（定義 Gemini Notebook 通訊協定與資料介面）。
 - 輔助邏輯：`naming.py`（集中控管 Gemini Notebook 遠端標題與本機檔案命名法、版本號尾綴）、`usage_guide.py`（提供課程學習順序、複習規劃與配額解說）。
 - 業務列舉：`JobStatus`, `JobType`, `ArtifactType`, `DifficultyLevel`, `CourseProfile`。
 - 領域例外：`DomainError`, `NotebookLMError`, `QuotaExceededError`, `AuthExpiredError`。
@@ -145,6 +185,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 ### 2.5 設定與基礎設施層 (`config`)
 - `config.py`：單一來源讀取環境變數，解析 `DATA_DIR`、`HTTP_PORT`、`NOTEBOOKLM_HOME` 等全域設定。
 - `logging_setup.py`：設定結構化日誌格式、色彩支援、自動注入 Run ID，並將記錄輸出至 `DATA_DIR/logs/`。
+
+---
 
 ## 3. 核心業務流程與資料流 (Core Workflows)
 
@@ -156,7 +198,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ### 3.2 30 題階梯式測驗與品質隔離機制
 1. 為每講依序發起 3 次 10 題生成任務（基礎題、理解題、模擬考題）。
-2. `quiz_converter.py` 整合 3 次產出，去除重複題幹並補齊解析與提示。
+2. `quiz_converter.py` 整合 3 次產出，去除重複題幹並補齊解析與提示，且打散答案位置消除選項偏誤（ISSUE-021）。
 3. **品質防護**：若因 Gemini Notebook 擷取異常導致有效題數不足 30 題（或整門課模擬考題數不足），系統自動將原始內容隔離至 `DATA_DIR/needs_review/`，將工作狀態標記為 `NEEDS_REVIEW`，並在總結報告中標記警告。隔離檔案可透過 Web 介面直接檢視或下載。
 
 ### 3.3 限額與例外退避 (Quota & Rate-Limit Handling)
@@ -165,7 +207,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 3. 工作池自動暫停佇列並計算下次重置時間，啟動服務後時間一到即無縫續跑，或透過 CLI `notebooklm-batch-studio resume` 手動續行。
 
 ### 3.4 學生研讀工作台與間隔重複 (Study Portal & Spaced Repetition)
-1. 學生在研讀工作台（`study.html`）挑選講次測驗進行自主測驗，系統前端提供即時作答與計分反饋。
+1. 學生在研讀工作台挑選講次測驗進行自主測驗，系統前端提供即時作答與計分反饋。
 2. 測驗結果與錯題透過 `study.py` 記錄至 `quiz_attempts` 與 `quiz_mistakes` 資料表。
 3. 錯題本持續追蹤各題之掌握狀態（待複習 / 已掌握），學生可一鍵匯出為 Anki 專用 CSV 牌組，進行後續艾賓浩斯間隔重複複習。
 
@@ -174,9 +216,29 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 2. 既有歷史檔案完整保留，Gemini Notebook 筆記本遠端標題增加 `(v2)` 標籤，本機下載檔名增加 `_v2` 後綴。
 3. 資訊圖表產出物透過 `image_fitter.py` 自動轉製並適配為多種裝置規格（直式原圖、A4 PDF、iPad Air 4、MacBook Pro 14 吋），方便學生在不同螢幕閱讀。
 
+### 3.6 學習心理學與智慧閱讀 (Learning Aids & PDF Reader, SPEC-008)
+1. **講義智慧閱讀**：透過前端整合的 PDF.js 4.10.38 閱讀器，直接檢閱投影片與教材，不需切換視窗。
+2. **AI 重點對應**：由 Gemini Notebook 自動萃取 10~15 個核心重點，並於 PDF 文字層自動標註高亮與引言定位。
+3. **遺忘曲線記憶強度**：根據學生最後一次研讀或測驗的時間，依半衰期衰減公式即時計算記憶強度百分比（80% 以上掌握、40%~80% 需加強、40% 以下生疏），並在地圖中以色彩即時提示。
+4. **認知盲點偵測**：作答前要求學生評估信心（確定 / 不確定 / 猜測）。若評估為「確定」卻答錯（Sure-but-Wrong），系統標註強烈認知盲點警示，加強後續間隔複習頻率。
+5. **蘇格拉底式引導家教**：針對講次或題目發起討論，由 AI 進行啟發式提問引導思考，並保持多輪連貫對話歷史。
+
+### 3.7 學生研讀計畫與間隔複習 (Study Plan & Spaced Review, SPEC-007)
+1. **Today 每日排程**：根據課程考試日期、目前進度與記憶強度，自動規劃今日建議研讀之講次教材與複習題。
+2. **考前倒數與衝刺**：自動比對行事曆考期，動態調整複習密度與模擬考配比。
+3. **跨講混合複習**：整合多講次的錯題與閃卡進行交錯練習（Interleaving Practice），提高長期記憶保留率。
+4. **AI 詳解保存**：當學生對題目不解時，可向 Gemini Notebook 索取概念詳解，系統將答案 Markdown 儲存至資料庫 (`explanations`)，後續檢閱秒開無需重新查詢。
+
+### 3.8 獨立產出規格微調 (Per-Artifact Settings, SPEC-006)
+1. 支援個別調整單一產出物的生成設定（例如特定講次測驗改為 50 題、特定講次資訊圖表指定橫式或復古風格）。
+2. **三層設定繼承架構**：系統全域預設 ➔ 課程級設定 (`course.toml` / 資料庫) ➔ 個別講次覆寫，未設定之屬性自動向上繼承。
+3. 支援一鍵重設為系統預設值，確保設定調整具備彈性與可逆性。
+
+---
+
 ## 4. 安全性與環境隔離 (Security & Isolation)
 
 1. **憑證安全**：不讀取亦不儲存使用者 Google 密碼。使用者透過 `login` 指令開啟本機 Chromium 瀏覽器完成 OAuth 登入，登入狀態隔離儲存於 `~/.config/notebooklm-batch-studio`（權限 600）。
 2. **服務綁定**：FastAPI 與 MCP 本機伺服器嚴格僅綁定 `127.0.0.1:8768`，並具備 Host Header 檢查機制，禁止對外網暴露。
-3. **路徑穿越防護**：所有靜態資源與產出物讀取均通過 `safe_join_path` 嚴格限制於 `DATA_DIR` 內，防止目錄穿越攻擊。
+3. **路徑穿越防護**：所有靜態資源與產出物讀取（含講義 PDF 閱讀器串流）均通過 `safe_join_path` 嚴格限制於 `DATA_DIR` 內，防止目錄穿越攻擊。
 4. **資料隔離**：原始講義、中繼資料、產出物與紀錄檔案全數集中於專案目錄外的 `DATA_DIR`，避免程式碼倉庫污染或敏感講義外流。

@@ -11,11 +11,10 @@
 - 📄 **多格式轉檔輸出**：測驗轉為 Markdown 與列印用 PDF；閃卡輸出為 Markdown 與 Anki CSV；心智圖輸出為 Markdown 與 Mermaid；資訊圖表自動適配直式、A4 PDF、iPad Air 4 與 MacBook Pro 14 吋；報告輸出排版 HTML。
 - 🔁 **版本化重新生成**：支援在不覆蓋既有產出的前提下生成新版本（v2、v3…），筆記本與檔名同步自動版號管理。
 - 🔄 **斷點續傳與配額防護**：讀取 Gemini Notebook 即時額度表，支援 5 小時與每週額度窗預估，額度用盡自動進入安全等待並排程無縫續跑。
-- 🌐 **三大操作入口**：完整 CLI 指令集、FastAPI 本機儀表板（`127.0.0.1:8768`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器與 OpenAPI 路由。
-
----
-
-- 🧠 **學習心理學輔助**（SPEC-008）：直接看講義 PDF 並標示 Gemini Notebook 挑出的重點、依遺忘曲線估計每講記憶強度、連續學習天數、作答前信心評分、跨講混合複習、蘇格拉底式家教、25 分鐘專注計時。
+- 🧠 **學習心理學輔助**（SPEC-008）：內建離線 PDF.js 講義閱讀器並色彩對應核心重點、艾賓浩斯遺忘曲線記憶強度評估、連續天數熱圖、作答信心比對（sure-but-wrong 盲點警示）、跨講混合複習、蘇格拉底式引導家教與 25 分鐘番茄鐘。
+- 📅 **學生研讀計畫**（SPEC-007）：動態規劃今日研讀「Today」清單、考前倒數天數、AI 詳解自動快取與間隔複習排程。
+- ⚙️ **產出細部自訂**（SPEC-006）：支援個別產出覆寫題目數、難度、語言、圖表風格與投影片格式（PDF/PPTX），三層設定自動繼承。
+- 🌐 **三大操作入口**：完整 CLI 指令集、FastAPI 本機儀表板（`127.0.0.1:8768`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器集群與 OpenAPI 路由。
 
 ## 快速開始
 
@@ -182,8 +181,8 @@ uv run python -m unittest discover -s tests -v
 - [`.agents/handoff/LATEST.md`](.agents/handoff/LATEST.md) — 即時交接看板與歷史記錄
 - [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) — 系統架構圖、五層依賴與核心流程
 - [`docs/architecture/PROJECT_TREE.md`](docs/architecture/PROJECT_TREE.md) — 完整目錄樹與檔案標記
-- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-005）
-- [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-005）
-- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫
+- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-008）
+- [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-006）
+- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-024）
 - [`docs/standards/PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) — 本專案特有規則（領域名詞、埠號 8768、安全禁忌）
-- [`alembic/DB.md`](alembic/DB.md) — 資料庫模型遷移指南 (SQLite / SQLAlchemy)
+- [`alembic/DB.md`](alembic/DB.md) — 資料庫模型遷移與 11 張實體資料表綱要指南 (SQLite / SQLAlchemy)

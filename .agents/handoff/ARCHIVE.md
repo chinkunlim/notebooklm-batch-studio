@@ -31,3 +31,15 @@
 ### [2026-10-21 17:57 UTC] 完成任務 `TASK-003` — Phase 1C: 轉檔器與 NotebookLM Adapter (Converters & Adapter) (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Phase 1C 完成：實作 NotebookLM API Adapter (支援例外轉換與配額偵測)、Quiz 30 題去重合併與題目卷/答案卷 Markdown/PDF 轉檔器、Flashcards Anki CSV 轉檔器、Mind Map OPML 2.0 XML 轉檔器，35 項離線單元測試 100% 通過
+
+### [2026-10-21 18:14 UTC] 完成任務 `TASK-004` — Phase 1D: 核心服務協同、監控與 CLI (Batch Orchestrator, Watcher, Reporter & CLI) (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Phase 1D 完成：實作 BatchStudioService 批次協調服務、CourseReporter 總覽頁生成 (summary.md & summary.html)、CourseWatcher 檔案系統監聽、CLI 命令行完整子命令 (batch, status, resume, watch, login)，41 項離線單元測試 100% 通過
+
+### [2026-10-21 18:02 UTC] 認領任務 `TASK-004` (Phase 1D: 核心服務協同、監控與 CLI (Batch Orchestrator, Watcher, Reporter & CLI)) (by `antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `antigravity`
+
+### [2026-10-21 18:02 UTC] 建立任務 `TASK-004`: Phase 1D: 核心服務協同、監控與 CLI (Batch Orchestrator, Watcher, Reporter & CLI) (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

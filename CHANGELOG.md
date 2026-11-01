@@ -57,6 +57,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(learning): live test fixes - quote matching ignores punctuation and empty text pieces (12/12 Gemini Notebook key points found), points fade only after their pages are drawn, citation markers stripped from tutor replies and explanations (by `@claude-code`)
 
 ### Documentation
+- docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
 - docs(adr): add ADR-002 (session token authentication) and ADR-003 (student study portal and spaced repetition) (by `@antigravity`)
 - docs(specs): add specs 001-004 and ADR-001 for NotebookLM batch generation (by `@claude-code`)
 - docs(adr): document empirical verification results for NotebookLM single-source selection and artifact downloads (TASK-001) (`TASK-001`, by `@antigravity`)
@@ -64,6 +65,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs(specs): add SPEC-005 for generation options, versioned regeneration, and naming guide (by `@claude-code`)
 - docs: update README, ARCHITECTURE, PROJECT_RULES, and SPECS for Study Portal, versioned regeneration, and device-sized infographics (TASK-010) (by `@antigravity`)
 - docs: synchronize all documentation, architecture, specs, and records (by `@antigravity`)
+- docs(docs): update docs documentation (ADR-001, ADR-002, ADR-003, ADR-005, ADR-006, ISSUE-001, ISSUE-016, ISSUE-021, ISSUE-024, TASK-001, TASK-003, TASK-004, TASK-005) (by `@antigravity`)
 
 ### Chore
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)
