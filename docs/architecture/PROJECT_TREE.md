@@ -108,6 +108,7 @@ notebooklm-batch-studio/
 │   │   ├── 004-artifact-wrong-lecture.md
 │   │   ├── 005-quota-status-ignored.md
 │   │   ├── 006-reregister-drops-source-ids.md
+│   │   ├── 007-audio-m4a-named-mp3.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

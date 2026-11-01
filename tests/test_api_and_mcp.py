@@ -311,6 +311,14 @@ class TestApiAndMcp(unittest.TestCase):
         self.assertEqual(resp_download.status_code, 200)
         self.assertEqual(resp_download.content, b"%PDF-1.4 test")
 
+    def test_m4a_audio_download_is_served_as_audio_mp4(self) -> None:
+        """.m4a audio is served as audio/mp4 so browsers' <audio> can play it. Refs: ISSUE-007"""
+        audio = self.data_dir / "output" / "courses" / "BIO101" / "01_細胞膜" / "BIO101_L01_audio.m4a"
+        audio.write_bytes(b"\x00\x00\x00\x18ftypdash")
+        resp = self.client.get("/api/artifacts/BIO101/download/01_細胞膜/BIO101_L01_audio.m4a")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.headers["content-type"], "audio/mp4")
+
     def test_path_traversal_prevention(self) -> None:
         """Security: Attempting directory traversal returns 403 Forbidden."""
         resp = self.client.get("/api/artifacts/BIO101/download/../../../../etc/passwd")

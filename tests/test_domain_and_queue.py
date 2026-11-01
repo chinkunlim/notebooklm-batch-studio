@@ -33,6 +33,7 @@ from notebooklm_batch_studio.services.converters.quiz_converter import to_intera
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 from notebooklm_batch_studio.services.sync_service import (
     RemoteSyncService,
+    get_extension_for_kind,
     infer_lecture_no_from_title,
     map_remote_kind_to_artifact_type,
 )
@@ -572,6 +573,9 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(map_remote_kind_to_artifact_type("mind_map"), ArtifactType.MIND_MAP)
         self.assertEqual(map_remote_kind_to_artifact_type("audio"), ArtifactType.AUDIO)
         self.assertEqual(map_remote_kind_to_artifact_type("briefing_doc"), ArtifactType.REPORTS_BRIEFING)
+        # Refs: ISSUE-007 — NotebookLM audio is MP4/AAC and infographics are PNG.
+        self.assertEqual(get_extension_for_kind("audio"), ".m4a")
+        self.assertEqual(get_extension_for_kind("infographic"), ".png")
 
         import tempfile
         from unittest.mock import AsyncMock, MagicMock

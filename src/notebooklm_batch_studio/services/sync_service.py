@@ -89,11 +89,14 @@ def get_extension_for_kind(kind: str) -> str:
         Appropriate file extension with leading dot.
     """
     k = kind.lower()
+    # NotebookLM audio is MP4/AAC and infographics are PNG. Refs: ISSUE-007
     if "audio" in k:
-        return ".mp3"
+        return ".m4a"
     if "video" in k:
         return ".mp4"
-    if "slide" in k or "infographic" in k:
+    if "infographic" in k:
+        return ".png"
+    if "slide" in k:
         return ".pdf"
     if "report" in k or "briefing" in k or "study_guide" in k or "blog" in k:
         return ".html"

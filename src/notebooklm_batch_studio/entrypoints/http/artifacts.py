@@ -74,7 +74,7 @@ def list_artifacts(
     operation_id="download_artifact",
 )
 def download_artifact(code: str, file_path: str, request: Request) -> FileResponse:
-    """Download a generated artifact package file (PDF, CSV, OPML, MP3, etc.).
+    """Download a generated artifact package file (PDF, CSV, OPML, M4A, etc.).
 
     Args:
         code: Course identifier.
@@ -99,4 +99,6 @@ def download_artifact(code: str, file_path: str, request: Request) -> FileRespon
             target_path = candidates[0]
         else:
             raise HTTPException(status_code=404, detail="Requested file not found")
-    return FileResponse(path=target_path, filename=target_path.name)
+    # Python guesses audio/mp4a-latm for .m4a, which browsers' <audio> may refuse. Refs: ISSUE-007
+    media_type = "audio/mp4" if target_path.suffix.lower() == ".m4a" else None
+    return FileResponse(path=target_path, filename=target_path.name, media_type=media_type)

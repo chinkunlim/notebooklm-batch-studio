@@ -239,10 +239,11 @@ class ArtifactRunner:
         art_id = await self.notebooklm_client.generate_audio(
             nb_id, source_ids, prompt=job.custom_prompt, language=course.language
         )
+        # NotebookLM delivers MP4/AAC audio, so the file is .m4a. Refs: ISSUE-007
         if job.lecture_no is None:
-            audio_file = out_dir / f"{job.course_code}_course_audio.mp3"
+            audio_file = out_dir / f"{job.course_code}_course_audio.m4a"
         else:
-            audio_file = out_dir / f"{job.course_code}_L{job.lecture_no:02d}_audio.mp3"
+            audio_file = out_dir / f"{job.course_code}_L{job.lecture_no:02d}_audio.m4a"
         await self.notebooklm_client.download_audio(nb_id, str(audio_file), artifact_id=art_id)
         return str(audio_file), [art_id]
 

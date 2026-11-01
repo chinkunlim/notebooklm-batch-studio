@@ -19,3 +19,4 @@
 | [ISSUE-004](004-artifact-wrong-lecture.md) | 🟢 已根治 (Resolved) | 下載與改名可能對到別的講次或未完成的產出 | 下載未帶 artifact_id、多數類型未等完成就下載、改名取最新一份、download_audio 下載兩次 | `adapters/notebooklm/client.py`, `services/artifact_runner.py` |
 | [ISSUE-005](005-quota-status-ignored.md) | 🟢 已根治 (Resolved) | 配額拒絕以 failed 狀態回傳時未被偵測 | generate 回傳 USER_DISPLAYABLE_ERROR 的 failed 狀態而非例外，程式未檢查，未進 QUOTA_WAIT；冷卻固定猜 1 小時 | `adapters/notebooklm/quota.py`, `adapters/notebooklm/generation.py`, `services/orchestrator.py` |
 | [ISSUE-006](006-reregister-drops-source-ids.md) | 🟢 已根治 (Resolved) | 重新註冊課程會清掉 source_id，導致重複上傳 | save_course 刪除並重建講次紀錄時沒保留 source_id，再跑 batch 或 watcher 觸發時會把所有 PDF 重新上傳到同一本筆記本 | `adapters/db/repository.py` |
+| [ISSUE-007](007-audio-m4a-named-mp3.md) | 🟢 已根治 (Resolved) | 語音檔實際是 MP4/AAC，卻存成 .mp3 | 副檔名寫死 .mp3、網頁宣告 audio/mpeg，部分播放器打不開；同步服務也把資訊圖表猜成 .pdf | `services/artifact_runner.py`, `services/sync_service.py`, `entrypoints/http/artifacts.py`, `entrypoints/static/index.html` |

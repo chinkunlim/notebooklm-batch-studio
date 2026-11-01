@@ -31,7 +31,7 @@
 
 | 產出 | 取得方式（依序嘗試） | 本機存成 |
 |---|---|---|
-| Audio | 直接下載 | `.mp3` |
+| Audio | 直接下載 | `.m4a`（MP4/AAC） |
 | Infographic | 直接下載 | `.png` |
 | Study guide | 讀出文字 | `.md` |
 | Quiz | notebooklm-py 取資料 → Playwright 讀網頁 | `.json`（原始資料）、`題目卷.md`、`答案卷.md`（含解析與出處）、可列印 `.pdf` |
