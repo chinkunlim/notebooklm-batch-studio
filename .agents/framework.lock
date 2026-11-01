@@ -1,7 +1,7 @@
 {
   "framework_version": "3.4.0",
-  "template_commit": "c1749c1",
-  "installed_at": "2026-11-01T15:23:55Z",
+  "template_commit": "55a8d2c",
+  "installed_at": "2026-11-01T15:25:21Z",
   "skills": [
     "adr-issue-tracker",
     "api-adapter-scaffold",
@@ -34,8 +34,8 @@
     ".agents/skills/catalog.json": "e8cbb3a2b80d74db64ee0a93ff4082e43ce3b2c774b0dc3e9520175ad1ebe9c8",
     ".agents/skills/code-review-guard/SKILL.md": "2ed3d488f0dbb6a086a4e12eefb8067d1b02a801a01ab1cbc0118d71c4b52cc9",
     ".agents/skills/code-review-guard/scripts/review_guard.py": "161152b1e22e7ba6b6ba92e4e9546c21b80986398903f1e3297a505ce94a170d",
-    ".agents/skills/session-closeout/SKILL.md": "71308a72af063fbc94796df35b0ba8d1847e3b1e984f0457b3bf6fe283bf76fb",
-    ".agents/skills/session-closeout/scripts/closeout_runner.py": "b0f4d40ac1b6ca76c5f35c84d3a55cf7a03d64118e1825fd4594d16184f34e3a",
+    ".agents/skills/session-closeout/SKILL.md": "d10b3816f13ded83f386d2371146a930390915e5de64271f14db756f0d6cce6e",
+    ".agents/skills/session-closeout/scripts/closeout_runner.py": "d05f4f062de0e3ed5f7904a55a5f3fe9cfd0826477978f117e5ba821ef740692",
     ".agents/skills/tdd-bugfix/SKILL.md": "3039a064a614a5452d79f321469e98f356e362fee3c5e89a6f114da553a9c4f3",
     ".agents/skills/tdd-bugfix/scripts/tdd_runner.py": "fddd86c7ded6a8b1451b6870f3613eadea0b81b295304e5fac0076db851c49d5",
     "docs/standards/ARCHITECTURE_RULES.md": "7d036adbd90ef86eb7e9769d4d80ef3c0da2fdb65edcb0919e763e1e0fd77e1f",
