@@ -13,6 +13,16 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <meta name="theme-color" content="#7c3aed">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <script>
+    /* Design preview switch: ?design=v2 turns the new look on, ?design=v1 turns it off (remembered). */
+    (function () {
+      try {
+        var wanted = new URLSearchParams(location.search).get('design');
+        if (wanted) localStorage.setItem('studioDesign', wanted);
+        if ((wanted || localStorage.getItem('studioDesign')) === 'v2') document.documentElement.classList.add('design-v2');
+      } catch (e) { /* storage blocked: keep the current look */ }
+    })();
+  </script>
   <style>
     /* 全域色彩與元件樣式表 */
     :root {
@@ -237,6 +247,7 @@
     }
   </style>
   <link rel="stylesheet" href="/static/studio.css">
+  <link rel="stylesheet" href="/static/studio-theme.css">
 </head>
 <body>
   <header class="app-header">

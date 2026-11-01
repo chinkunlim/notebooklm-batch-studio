@@ -213,6 +213,7 @@ notebooklm-batch-studio/
 │       │   │   ├── index.html
 │       │   │   ├── manifest.webmanifest
 │       │   │   ├── studio-core.js
+│       │   │   ├── studio-theme.css
 │       │   │   ├── studio.css
 │       │   │   └── studio.js
 │       │   ├── __init__.py

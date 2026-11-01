@@ -68,6 +68,9 @@ body { background: var(--bg); color: var(--text); }
 .plan-card.next { border-color: var(--primary); }
 .chapter-row { display: grid; grid-template-columns: minmax(140px, 220px) 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .chapter-row:last-child { border-bottom: none; }
+/* Grid items may shrink below their content, so chips wrap instead of running off a phone screen. */
+.chapter-row > * { min-width: 0; }
+.step-chips .step-chip { max-width: 100%; white-space: normal; text-align: left; }
 .step-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .step-chip { font-size: 0.75rem; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
 .step-chip.done { background: rgba(16,185,129,0.15); color: var(--success); border-color: rgba(16,185,129,0.4); }

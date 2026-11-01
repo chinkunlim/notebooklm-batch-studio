@@ -1,0 +1,161 @@
+/* Gemini Notebook 學習工作室 — design v2 (preview: open the page with ?design=v2, back with ?design=v1).
+   Direction from the chosen references: dashboard-first, dark base with matte purple accent,
+   vibrant course cards, visible progress. Psychology: one colour per lecture as a context cue,
+   soft depth to group related items, calm motion that respects prefers-reduced-motion. */
+
+/* ---------- Tokens ---------- */
+html.design-v2 {
+  --bg: #0f0d1a;
+  --surface: #191628;
+  --surface-2: #211d34;
+  --surface-hover: #2a2542;
+  --border: #2e2947;
+  --text: #ece9f7;
+  --text-muted: #a49fc0;
+  --primary: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --on-primary: #ffffff;
+  --accent: #14b8a6;
+  --warm: #f59e0b;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #f43f5e;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(10, 6, 30, 0.35);
+  --glow: 0 0 0 3px rgba(139, 92, 246, 0.35);
+  /* One colour per lecture, repeated every 8 (same colour in nav, quiz and cards). */
+  --lec-1: #8b5cf6; --lec-2: #14b8a6; --lec-3: #f59e0b; --lec-4: #ec4899;
+  --lec-5: #3b82f6; --lec-6: #22c55e; --lec-7: #f97316; --lec-8: #06b6d4;
+}
+html.design-v2[data-theme="light"] {
+  --bg: #f6f4fb;
+  --surface: #ffffff;
+  --surface-2: #f1edfb;
+  --surface-hover: #ebe5fa;
+  --border: #e3dcf3;
+  --text: #1d1530;
+  --text-muted: #675f80;
+  --primary: #7c3aed;
+  --primary-hover: #6d28d9;
+  --shadow: 0 1px 2px rgba(40, 20, 90, 0.06), 0 8px 24px rgba(40, 20, 90, 0.08);
+}
+@media (prefers-color-scheme: light) {
+  html.design-v2:not([data-theme="dark"]) {
+    --bg: #f6f4fb; --surface: #ffffff; --surface-2: #f1edfb; --surface-hover: #ebe5fa;
+    --border: #e3dcf3; --text: #1d1530; --text-muted: #675f80; --primary: #7c3aed; --primary-hover: #6d28d9;
+    --shadow: 0 1px 2px rgba(40, 20, 90, 0.06), 0 8px 24px rgba(40, 20, 90, 0.08);
+  }
+}
+
+/* ---------- Base ---------- */
+html.design-v2 body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(900px 400px at -10% 10%, rgba(20, 184, 166, 0.10), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  font-feature-settings: "tnum";
+}
+html.design-v2 h1, html.design-v2 h2, html.design-v2 h3 { letter-spacing: -0.01em; }
+html.design-v2 .card,
+html.design-v2 .modal,
+html.design-v2 #confirmBox {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border-color: var(--border);
+}
+html.design-v2 .card:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); }
+html.design-v2 button, html.design-v2 .btn { border-radius: 10px; }
+html.design-v2 button.primary, html.design-v2 .btn.primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: var(--on-primary);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+}
+html.design-v2 button:focus-visible, html.design-v2 a:focus-visible { outline: none; box-shadow: var(--glow); }
+html.design-v2 .badge { text-transform: none; letter-spacing: 0; }
+
+/* ---------- Header ---------- */
+html.design-v2 header.app-header {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 18px;
+  box-shadow: var(--shadow);
+}
+html.design-v2 .brand-logo {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; font-size: 1.4rem;
+  background: linear-gradient(135deg, #8b5cf6, #14b8a6);
+}
+html.design-v2 .brand h1 {
+  background: linear-gradient(90deg, var(--text), color-mix(in srgb, var(--primary) 70%, var(--text)));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+html.design-v2 .view-switch { border-radius: 12px; }
+html.design-v2 .view-switch button.primary { box-shadow: none; }
+
+/* ---------- Course cards: colour band + big progress ---------- */
+html.design-v2 #courseContainer .card { position: relative; overflow: hidden; padding-top: 22px; }
+html.design-v2 #courseContainer .card::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 6px;
+  background: linear-gradient(90deg, var(--lec-1), var(--lec-2), var(--lec-3));
+}
+html.design-v2 .progress-bar-bg { height: 10px; border-radius: 999px; background: var(--surface-2); }
+html.design-v2 .progress-bar-fill { border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); }
+
+/* ---------- Study: lecture colours as context cues ---------- */
+html.design-v2 .study-nav-btn { border-radius: 12px; border-left: 5px solid var(--lec, var(--border)); }
+html.design-v2 .study-nav-btn.active {
+  background: color-mix(in srgb, var(--lec, var(--primary)) 22%, var(--surface));
+  border-color: var(--lec, var(--primary)); color: var(--text);
+}
+html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+2) { --lec: var(--lec-1); }
+html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+3) { --lec: var(--lec-2); }
+html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+4) { --lec: var(--lec-3); }
+html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+5) { --lec: var(--lec-4); }
+html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+6) { --lec: var(--lec-5); }
+html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+7) { --lec: var(--lec-6); }
+html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+8) { --lec: var(--lec-7); }
+html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+1) { --lec: var(--lec-8); }
+html.design-v2 #studyLectureList .study-nav-btn:first-child { --lec: var(--warm); }
+html.design-v2 .study-tab-btn { border-radius: 999px; }
+
+/* ---------- Today dashboard ---------- */
+html.design-v2 .plan-card {
+  border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+html.design-v2 .plan-card.next {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 28%, var(--surface-2)), var(--surface-2));
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+}
+html.design-v2 .plan-card .big { font-size: 2rem; font-weight: 800; }
+html.design-v2 .meter { height: 10px; background: var(--surface-hover); }
+html.design-v2 .meter > span { background: linear-gradient(90deg, var(--primary), var(--accent)); }
+html.design-v2 .step-chip.done { background: rgba(20, 184, 166, 0.16); color: var(--accent); border-color: rgba(20, 184, 166, 0.45); }
+
+/* ---------- Quiz: clear choices, gentle feedback ---------- */
+html.design-v2 .choice-btn { border-radius: 12px; transition: transform 0.12s ease, background 0.12s ease; }
+html.design-v2 .choice-btn:hover { transform: translateX(2px); }
+html.design-v2 .choice-btn.selected { background: color-mix(in srgb, var(--primary) 20%, transparent); border-color: var(--primary); }
+html.design-v2 .choice-btn.correct { animation: v2-pop 0.35s ease-out; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25); }
+html.design-v2 .result-card {
+  border: none; color: var(--text);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 30%, var(--surface-2)), color-mix(in srgb, var(--accent) 18%, var(--surface-2)));
+}
+html.design-v2 #quizActionBar { background: var(--surface) !important; border-radius: 14px !important; box-shadow: var(--shadow) !important; }
+@keyframes v2-pop { 0% { transform: scale(1); } 40% { transform: scale(1.02); } 100% { transform: scale(1); } }
+
+/* ---------- Motion preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html.design-v2 *, html.design-v2 *::before, html.design-v2 *::after {
+    animation: none !important; transition: none !important;
+  }
+}
+
+/* ---------- Older inline colours follow the v2 tokens ---------- */
+html.design-v2 [style*="background: #0f172a"], html.design-v2 [style*="background:#0f172a"],
+html.design-v2 [style*="background: #1e293b"] { background: var(--surface-2) !important; }
+html.design-v2 [style*="color: #38bdf8"], html.design-v2 [style*="color:#38bdf8"] { color: var(--primary) !important; }
+html.design-v2 [style*="border-left: 4px solid var(--primary)"] { border-radius: 10px; }
