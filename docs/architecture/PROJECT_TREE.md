@@ -59,7 +59,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-005-phase-1e-openapi-mcp-web-ui-fast.json
 │   │   ├── TASK-006-update-all-documentation-and-arc.json
 │   │   ├── TASK-007-fix-ollama-prompt-refinement-and.json
-│   │   └── TASK-008-fix-notebooklm-language-artifact.json
+│   │   ├── TASK-008-fix-notebooklm-language-artifact.json
+│   │   └── TASK-009-mind-map-rename-versioned-regene.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -86,7 +87,8 @@ notebooklm-batch-studio/
 │   │   ├── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
 │   │   ├── 20261101_3dbb5819dc15_add_style_options_interactive_path_and_.py
 │   │   ├── 20261101_4985a300eaa2_add_quiz_attempts_and_mistakes.py
-│   │   └── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
+│   │   ├── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
+│   │   └── 20261101_d6e896ae4e2c_add_job_version_artifact_ids_and_course_.py
 │   ├── DB.md
 │   ├── env.py
 │   └── script.py.mako
@@ -96,6 +98,7 @@ notebooklm-batch-studio/
 │   │   ├── 002-session-token-auth.md
 │   │   ├── 003-student-study-portal-spaced-repetition.md
 │   │   ├── 004-artifact-id-targeting.md
+│   │   ├── 005-job-versions-and-generation-options.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -112,6 +115,8 @@ notebooklm-batch-studio/
 │   │   ├── 008-quota-blind-scheduling.md
 │   │   ├── 009-mock-exam-not-quarantined.md
 │   │   ├── 010-needs-review-not-downloadable.md
+│   │   ├── 011-mind-map-not-renamed.md
+│   │   ├── 012-wrong-extensions-and-download-link.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -119,6 +124,7 @@ notebooklm-batch-studio/
 │   │   ├── 002-export-downloads.md
 │   │   ├── 003-web-and-ai-tools.md
 │   │   ├── 004-phase2-self-test.md
+│   │   ├── 005-generation-options-and-versions.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -162,6 +168,7 @@ notebooklm-batch-studio/
 │       │   ├── __init__.py
 │       │   ├── exceptions.py
 │       │   ├── models.py
+│       │   ├── naming.py
 │       │   └── repositories.py
 │       ├── entrypoints/
 │       │   ├── http/
@@ -169,6 +176,7 @@ notebooklm-batch-studio/
 │       │   │   ├── artifacts.py
 │       │   │   ├── courses.py
 │       │   │   ├── queue.py
+│       │   │   ├── settings.py
 │       │   │   ├── study.py
 │       │   │   └── system.py
 │       │   ├── static/
@@ -183,12 +191,14 @@ notebooklm-batch-studio/
 │       │   ├── converters/
 │       │   │   ├── __init__.py
 │       │   │   ├── flashcard_converter.py
+│       │   │   ├── image_fitter.py
 │       │   │   ├── mindmap_converter.py
 │       │   │   ├── pdf_renderer.py
 │       │   │   └── quiz_converter.py
 │       │   ├── __init__.py
 │       │   ├── artifact_runner.py
 │       │   ├── course_parser.py
+│       │   ├── course_settings.py
 │       │   ├── greeting.py
 │       │   ├── job_views.py
 │       │   ├── orchestrator.py
@@ -219,7 +229,8 @@ notebooklm-batch-studio/
 │   ├── test_quota_and_limits.py
 │   ├── test_remaining_fixes.py
 │   ├── test_services_and_cli.py
-│   └── test_study_service.py
+│   ├── test_study_service.py
+│   └── test_versions_and_options.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取

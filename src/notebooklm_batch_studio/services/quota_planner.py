@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
+from notebooklm_batch_studio.domain.exceptions import QuotaExceededError
 from notebooklm_batch_studio.domain.models import ArtifactType
+from notebooklm_batch_studio.domain.repositories import NotebookLMClientProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -138,3 +140,42 @@ def estimate_quota_plan(types: list[ArtifactType], quota: dict[str, Any] | None)
         "estimated_wait_hours": wait_hours,
         "estimated_days": max(1, math.ceil(wait_hours / 24)),
     }
+
+
+async def read_quota_or_none(client: NotebookLMClientProtocol) -> dict[str, Any] | None:
+    """Read the live usage meter, returning None instead of raising when it is unavailable.
+
+    Args:
+        client: NotebookLM client.
+
+    Returns:
+        Quota summary, or None.
+    """
+    try:
+        return await client.get_quota_status()
+    except Exception as err:  # the meter is advisory; never block work on it
+        logger.warning("NotebookLM quota meter unavailable: %s", err)
+        return None
+
+
+async def ensure_quota_for(client: NotebookLMClientProtocol, art_type: ArtifactType) -> None:
+    """Refuse to start a job the live meter says cannot be paid for.
+
+    Args:
+        client: NotebookLM client.
+        art_type: Artifact type of the job about to run.
+
+    Raises:
+        QuotaExceededError: When the meter reports insufficient quota for this action.
+    """
+    quota = await read_quota_or_none(client)
+    if quota is None:
+        return
+    wait = quota_retry_after(quota, art_type, datetime.now(UTC))
+    if wait is not None:
+        logger.info("Quota pre-check: %s must wait %ds before starting", art_type.value, wait)
+        raise QuotaExceededError(
+            f"NotebookLM quota insufficient for {art_type.value}",
+            artifact_type=art_type.value,
+            retry_after_seconds=wait,
+        )

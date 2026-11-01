@@ -17,11 +17,13 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    GenerationOptions,
     Quiz,
     get_artifact_english_title,
     get_course_range_prefix,
     get_lecture_prefix,
 )
+from notebooklm_batch_studio.domain.naming import versioned_name, versioned_title
 from notebooklm_batch_studio.domain.repositories import NotebookLMClientProtocol
 from notebooklm_batch_studio.services.converters.flashcard_converter import (
     parse_notebooklm_flashcards,
@@ -30,6 +32,7 @@ from notebooklm_batch_studio.services.converters.flashcard_converter import (
 from notebooklm_batch_studio.services.converters.flashcard_converter import (
     to_json as flashcards_to_json,
 )
+from notebooklm_batch_studio.services.converters.image_fitter import export_device_versions
 from notebooklm_batch_studio.services.converters.mindmap_converter import (
     parse_notebooklm_mindmap,
     to_opml,
@@ -122,15 +125,18 @@ QUIZ_VARIANTS = {
 SIMPLE_OUTPUTS: dict[ArtifactType, tuple[str, str, str]] = {
     ArtifactType.STUDY_GUIDE: ("report", "study_guide.md", "course_study_guide.md"),
     ArtifactType.COURSE_STUDY_GUIDE: ("report", "study_guide.md", "course_study_guide.md"),
-    ArtifactType.SLIDE_DECK: ("slide_deck", "slide_deck.md", "course_slide_deck.md"),
-    ArtifactType.COURSE_SLIDE_DECK: ("slide_deck", "slide_deck.md", "course_slide_deck.md"),
+    # Slide decks download as PDF (or PPTX per course options), data tables as CSV. Refs: ISSUE-012
+    ArtifactType.SLIDE_DECK: ("slide_deck", "slide_deck.pdf", "course_slide_deck.pdf"),
+    ArtifactType.COURSE_SLIDE_DECK: ("slide_deck", "slide_deck.pdf", "course_slide_deck.pdf"),
     ArtifactType.INFOGRAPHIC: ("infographic", "infographic.png", "course_infographic.png"),
     ArtifactType.COURSE_INFOGRAPHIC: ("infographic", "infographic.png", "course_infographic.png"),
-    ArtifactType.DATA_TABLE: ("data_table", "data_table.md", "course_data_table.md"),
-    ArtifactType.COURSE_DATA_TABLE: ("data_table", "data_table.md", "course_data_table.md"),
+    ArtifactType.DATA_TABLE: ("data_table", "data_table.csv", "course_data_table.csv"),
+    ArtifactType.COURSE_DATA_TABLE: ("data_table", "data_table.csv", "course_data_table.csv"),
     ArtifactType.VIDEO: ("video", "video.mp4", "course_video.mp4"),
     ArtifactType.COURSE_VIDEO: ("video", "video.mp4", "course_video.mp4"),
 }
+
+MIND_MAP_TYPES = (ArtifactType.MIND_MAP, ArtifactType.COURSE_MIND_MAP)
 
 # A processed job: primary output path plus the NotebookLM artifact ids it produced.
 ProcessResult = tuple[str, list[str]]
@@ -170,10 +176,16 @@ class ArtifactRunner:
             if (job.lecture_no is not None and lec)
             else get_course_range_prefix(course.lectures)
         )
-        title = get_artifact_english_title(job.artifact_type, prefix)
+        title = versioned_title(get_artifact_english_title(job.artifact_type, prefix), job.version)
+        # Mind maps are notes, renamed through a different API. Refs: ISSUE-011
+        rename = (
+            self.notebooklm_client.rename_mind_map
+            if job.artifact_type in MIND_MAP_TYPES
+            else self.notebooklm_client.rename_artifact
+        )
         for artifact_id in artifact_ids:
             try:
-                await self.notebooklm_client.rename_artifact(nb_id, artifact_id, title)
+                await rename(nb_id, artifact_id, title)
                 logger.info("Renamed artifact %s to '%s'", artifact_id, title)
             except Exception as err:
                 logger.warning("Could not rename artifact %s on NotebookLM: %s", artifact_id, err)
@@ -198,6 +210,29 @@ class ArtifactRunner:
         Returns:
             Path string of the primary deliverable output file.
         """
+        path, _ = await self.process_job_with_ids(job, course, nb_id, source_ids, out_dir)
+        return path
+
+    async def process_job_with_ids(
+        self,
+        job: ArtifactJob,
+        course: Course,
+        nb_id: str,
+        source_ids: list[str],
+        out_dir: Path,
+    ) -> ProcessResult:
+        """Run a job like `process_job` and also return the NotebookLM ids it produced.
+
+        Args:
+            job: The artifact job to execute.
+            course: The associated Course entity.
+            nb_id: NotebookLM notebook identifier.
+            source_ids: Selected source identifiers for context.
+            out_dir: Filesystem output directory.
+
+        Returns:
+            Primary output path and the artifact / note ids (recorded on the job, ADR-005).
+        """
         art_type = job.artifact_type
         result: ProcessResult
         if art_type in (ArtifactType.AUDIO, ArtifactType.COURSE_AUDIO):
@@ -219,7 +254,7 @@ class ArtifactRunner:
 
         path, artifact_ids = result
         await self.rename_after_generation(job, course, nb_id, artifact_ids)
-        return path
+        return path, artifact_ids
 
     async def _process_audio(
         self, job: ArtifactJob, course: Course, nb_id: str, source_ids: list[str], out_dir: Path
@@ -237,18 +272,29 @@ class ArtifactRunner:
             Saved audio path and the generated artifact id.
         """
         art_id = await self.notebooklm_client.generate_audio(
-            nb_id, source_ids, prompt=job.custom_prompt, language=course.language
+            nb_id,
+            source_ids,
+            prompt=job.custom_prompt,
+            language=course.language,
+            options=course.generation_options,
         )
         # NotebookLM delivers MP4/AAC audio, so the file is .m4a. Refs: ISSUE-007
         if job.lecture_no is None:
-            audio_file = out_dir / f"{job.course_code}_course_audio.m4a"
+            name = f"{job.course_code}_course_audio.m4a"
         else:
-            audio_file = out_dir / f"{job.course_code}_L{job.lecture_no:02d}_audio.m4a"
+            name = f"{job.course_code}_L{job.lecture_no:02d}_audio.m4a"
+        audio_file = out_dir / versioned_name(name, job.version)
         await self.notebooklm_client.download_audio(nb_id, str(audio_file), artifact_id=art_id)
         return str(audio_file), [art_id]
 
     async def _generate_quiz_batch(
-        self, nb_id: str, source_ids: list[str], prompt: str, difficulty: str | None, tmp_json: Path
+        self,
+        nb_id: str,
+        source_ids: list[str],
+        prompt: str,
+        difficulty: str | None,
+        tmp_json: Path,
+        options: GenerationOptions | None = None,
     ) -> tuple[str, dict[str, object] | None]:
         """Generate one quiz batch and download exactly that artifact.
 
@@ -258,12 +304,13 @@ class ArtifactRunner:
             prompt: Quiz instructions.
             difficulty: 'easy', 'medium', 'hard', or None.
             tmp_json: Temporary download path.
+            options: Course generation options (question quantity).
 
         Returns:
             Generated artifact id and the raw quiz JSON (None if nothing was downloaded).
         """
         art_id = await self.notebooklm_client.generate_quiz(
-            nb_id, source_ids, prompt=prompt, difficulty=difficulty
+            nb_id, source_ids, prompt=prompt, difficulty=difficulty, options=options
         )
         await self.notebooklm_client.download_quiz(nb_id, str(tmp_json), artifact_id=art_id)
         raw = json.loads(tmp_json.read_text(encoding="utf-8")) if tmp_json.exists() else None
@@ -299,7 +346,9 @@ class ArtifactRunner:
         with tempfile.TemporaryDirectory() as tmp_dir:
             for attempt in range(3):
                 tmp_json = Path(tmp_dir) / f"quiz_attempt_{attempt}.json"
-                art_id, raw = await self._generate_quiz_batch(nb_id, source_ids, prompt, difficulty, tmp_json)
+                art_id, raw = await self._generate_quiz_batch(
+                    nb_id, source_ids, prompt, difficulty, tmp_json, course.generation_options
+                )
                 art_ids.append(art_id)
                 if raw is not None:
                     batches.append(
@@ -318,7 +367,9 @@ class ArtifactRunner:
         if not is_complete:
             await self._quarantine_quiz(job, course, nb_id, art_ids, merged_quiz, target=30)
 
-        return _save_quiz_files(out_dir, merged_quiz, file_prefix=variant_prefix), art_ids
+        return _save_quiz_files(
+            out_dir, merged_quiz, file_prefix=versioned_name(variant_prefix, job.version)
+        ), art_ids
 
     async def _quarantine_quiz(
         self, job: ArtifactJob, course: Course, nb_id: str, art_ids: list[str], quiz: Quiz, target: int
@@ -336,7 +387,7 @@ class ArtifactRunner:
         Raises:
             NeedsReviewError: Always; carries the quarantined JSON path.
         """
-        prefix = job.artifact_type.value
+        prefix = versioned_name(job.artifact_type.value, job.version)
         scope = "course" if job.lecture_no is None else f"L{job.lecture_no}"
         await self.rename_after_generation(job, course, nb_id, art_ids)
         review_dir = self.config.needs_review_dir / f"{course.code}_{scope}_{prefix}"
@@ -365,14 +416,14 @@ class ArtifactRunner:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_json = Path(tmp_dir) / "flashcards.json"
             art_id = await self.notebooklm_client.generate_flashcards(
-                nb_id, source_ids, prompt=job.custom_prompt
+                nb_id, source_ids, prompt=job.custom_prompt, options=course.generation_options
             )
             await self.notebooklm_client.download_flashcards(nb_id, str(tmp_json), artifact_id=art_id)
             raw_data = json.loads(tmp_json.read_text(encoding="utf-8"))
 
         cards = parse_notebooklm_flashcards(raw_data)
-        fc_json = out_dir / "flashcards.json"
-        anki_csv = out_dir / "anki.csv"
+        fc_json = out_dir / versioned_name("flashcards.json", job.version)
+        anki_csv = out_dir / versioned_name("anki.csv", job.version)
 
         title = f"[{course.code}] L{job.lecture_no}"
         fc_json.write_text(flashcards_to_json(cards, title=title), encoding="utf-8")
@@ -385,7 +436,8 @@ class ArtifactRunner:
     ) -> ProcessResult:
         """Generate a mind map and export to JSON, OPML 2.0 XML, and Markdown.
 
-        Mind maps are saved as NotebookLM notes, so they are not renamed as artifacts.
+        Mind maps are saved as NotebookLM notes; their note id is returned so the runner renames
+        them through the mind map API (ISSUE-011).
 
         Args:
             job: Current artifact job.
@@ -395,7 +447,7 @@ class ArtifactRunner:
             out_dir: Target output directory.
 
         Returns:
-            Path of saved mindmap.opml and no artifact ids to rename.
+            Path of saved mindmap.opml and the mind map note id.
         """
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_json = Path(tmp_dir) / "mindmap.json"
@@ -406,14 +458,14 @@ class ArtifactRunner:
             raw_data = json.loads(tmp_json.read_text(encoding="utf-8"))
 
         root = parse_notebooklm_mindmap(raw_data)
-        mm_json = out_dir / "mindmap.json"
-        mm_opml = out_dir / "mindmap.opml"
-        mm_md = out_dir / "mindmap.md"
+        mm_json = out_dir / versioned_name("mindmap.json", job.version)
+        mm_opml = out_dir / versioned_name("mindmap.opml", job.version)
+        mm_md = out_dir / versioned_name("mindmap.md", job.version)
 
         mm_json.write_text(mindmap_to_json(root), encoding="utf-8")
         mm_opml.write_text(to_opml(root), encoding="utf-8")
         mm_md.write_text(mindmap_to_markdown(root), encoding="utf-8")
-        return str(mm_opml), []
+        return str(mm_opml), [note_id]
 
     async def _process_mock_exam(
         self, job: ArtifactJob, course: Course, nb_id: str, source_ids: list[str], out_dir: Path
@@ -453,7 +505,9 @@ class ArtifactRunner:
                     f"target={target_q}, language={course.language}"
                 )
                 prompt = job.custom_prompt or default_prompt
-                art_id, raw = await self._generate_quiz_batch(nb_id, source_ids, prompt, None, tmp_json)
+                art_id, raw = await self._generate_quiz_batch(
+                    nb_id, source_ids, prompt, None, tmp_json, course.generation_options
+                )
                 art_ids.append(art_id)
                 if raw is not None:
                     batches.append(
@@ -471,7 +525,9 @@ class ArtifactRunner:
         final_quiz, is_complete = merge_and_deduplicate_quizzes(batches, target_count=target_q)
         if not is_complete:  # Refs: ISSUE-009
             await self._quarantine_quiz(job, course, nb_id, art_ids, final_quiz, target=target_q)
-        return _save_quiz_files(out_dir, final_quiz, file_prefix=variant_prefix), art_ids
+        return _save_quiz_files(
+            out_dir, final_quiz, file_prefix=versioned_name(variant_prefix, job.version)
+        ), art_ids
 
     async def _generate_simple(
         self, art_type: ArtifactType, course: Course, nb_id: str, source_ids: list[str], prompt: str | None
@@ -490,17 +546,22 @@ class ArtifactRunner:
         """
         client = self.notebooklm_client
         lang = course.language
+        opts = course.generation_options
         if art_type in (ArtifactType.STUDY_GUIDE, ArtifactType.COURSE_STUDY_GUIDE):
             return await client.generate_report(
                 nb_id, source_ids, prompt=prompt, language=lang, report_format="study_guide"
             )
         if art_type in (ArtifactType.SLIDE_DECK, ArtifactType.COURSE_SLIDE_DECK):
-            return await client.generate_slide_deck(nb_id, source_ids, prompt=prompt, language=lang)
+            return await client.generate_slide_deck(
+                nb_id, source_ids, prompt=prompt, language=lang, options=opts
+            )
         if art_type in (ArtifactType.INFOGRAPHIC, ArtifactType.COURSE_INFOGRAPHIC):
-            return await client.generate_infographic(nb_id, source_ids, prompt=prompt, language=lang)
+            return await client.generate_infographic(
+                nb_id, source_ids, prompt=prompt, language=lang, options=opts
+            )
         if art_type in (ArtifactType.DATA_TABLE, ArtifactType.COURSE_DATA_TABLE):
             return await client.generate_data_table(nb_id, source_ids, prompt=prompt, language=lang)
-        return await client.generate_video(nb_id, source_ids, prompt=prompt, language=lang)
+        return await client.generate_video(nb_id, source_ids, prompt=prompt, language=lang, options=opts)
 
     async def _process_simple(
         self, job: ArtifactJob, course: Course, nb_id: str, source_ids: list[str], out_dir: Path
@@ -519,9 +580,23 @@ class ArtifactRunner:
         """
         kind, lecture_name, course_name = SIMPLE_OUTPUTS[job.artifact_type]
         art_id = await self._generate_simple(job.artifact_type, course, nb_id, source_ids, job.custom_prompt)
-        out_file = out_dir / (course_name if job.lecture_no is None else lecture_name)
-        downloader = getattr(self.notebooklm_client, f"download_{kind}")
-        await downloader(nb_id, str(out_file), artifact_id=art_id)
+        name = course_name if job.lecture_no is None else lecture_name
+        opts = course.generation_options
+        if kind == "slide_deck" and opts.slide_download == "pptx":
+            name = name.removesuffix(".pdf") + ".pptx"
+        out_file = out_dir / versioned_name(name, job.version)
+        if kind == "slide_deck":
+            await self.notebooklm_client.download_slide_deck(
+                nb_id, str(out_file), artifact_id=art_id, output_format=opts.slide_download
+            )
+        else:
+            downloader = getattr(self.notebooklm_client, f"download_{kind}")
+            await downloader(nb_id, str(out_file), artifact_id=art_id)
+        if kind == "infographic" and opts.device_exports and out_file.exists():
+            try:
+                export_device_versions(out_file)
+            except Exception as err:  # device copies are a convenience; never fail the job
+                logger.warning("Could not export device versions of %s: %s", out_file.name, err)
         return str(out_file), [art_id]
 
     async def _process_report(
@@ -541,7 +616,8 @@ class ArtifactRunner:
         """
         fmt = REPORT_FORMATS[job.artifact_type]
         is_course = job.lecture_no is None
-        out_prefix = f"{course.code}_Course_{fmt}" if is_course else f"{course.code}_L{job.lecture_no}_{fmt}"
+        base_prefix = f"{course.code}_Course_{fmt}" if is_course else f"{course.code}_L{job.lecture_no}_{fmt}"
+        out_prefix = versioned_name(base_prefix, job.version)
         art_id = await self.notebooklm_client.generate_report(
             notebook_id=nb_id,
             source_ids=source_ids,

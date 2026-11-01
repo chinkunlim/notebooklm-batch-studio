@@ -19,6 +19,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactType,
     Choice,
     Course,
+    GenerationOptions,
     JobStatus,
     Lecture,
     ProfileName,
@@ -705,7 +706,11 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
 
             # Check prompt was passed to generate_quiz
             mock_client.generate_quiz.assert_called_with(
-                "nb-1", ["src-1"], prompt="Custom Academic Blueprint Prompt 123", difficulty="hard"
+                "nb-1",
+                ["src-1"],
+                prompt="Custom Academic Blueprint Prompt 123",
+                difficulty="hard",
+                options=GenerationOptions(),
             )
 
             # 2. Run Concept Quiz on the same directory
@@ -720,7 +725,11 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
 
             # Check prompt was passed to generate_quiz
             mock_client.generate_quiz.assert_called_with(
-                "nb-1", ["src-1"], prompt="Custom Concept Drill Prompt 456", difficulty="medium"
+                "nb-1",
+                ["src-1"],
+                prompt="Custom Concept Drill Prompt 456",
+                difficulty="medium",
+                options=GenerationOptions(),
             )
 
             # Crucial check: both files must coexist and not overwrite each other!
@@ -738,7 +747,11 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
             )
             await runner.process_job(job_audio, course, "nb-1", ["src-1"], out_dir)
             mock_client.generate_audio.assert_called_with(
-                "nb-1", ["src-1"], prompt="Custom Audio Prompt 789", language="zh-TW"
+                "nb-1",
+                ["src-1"],
+                prompt="Custom Audio Prompt 789",
+                language="zh-TW",
+                options=GenerationOptions(),
             )
 
             job_fc = ArtifactJob(
@@ -750,7 +763,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
             )
             await runner.process_job(job_fc, course, "nb-1", ["src-1"], out_dir)
             mock_client.generate_flashcards.assert_called_with(
-                "nb-1", ["src-1"], prompt="Custom Flashcards Prompt 999"
+                "nb-1", ["src-1"], prompt="Custom Flashcards Prompt 999", options=GenerationOptions()
             )
 
             job_mm = ArtifactJob(

@@ -10,11 +10,26 @@ Refs: ADR-004, ISSUE-003, ISSUE-004, ISSUE-005
 from __future__ import annotations
 
 import logging
+from enum import Enum
 from typing import Any
 
-from notebooklm import GenerationStatus, QuizDifficulty
+from notebooklm import (
+    AudioFormat,
+    AudioLength,
+    GenerationStatus,
+    InfographicDetail,
+    InfographicOrientation,
+    InfographicStyle,
+    QuizDifficulty,
+    QuizQuantity,
+    SlideDeckFormat,
+    SlideDeckLength,
+    VideoFormat,
+    VideoStyle,
+)
 
 from notebooklm_batch_studio.domain.exceptions import QuotaExceededError, StudioError
+from notebooklm_batch_studio.domain.models import GenerationOptions
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +68,57 @@ def to_quiz_difficulty(difficulty: str | None) -> QuizDifficulty | None:
         QuizDifficulty value, or None.
     """
     return QUIZ_DIFFICULTIES.get(difficulty) if difficulty else None
+
+
+def to_enum(enum_cls: type[Enum], value: str) -> Any:
+    """Map a lower-case option string (e.g. 'portrait') to a notebooklm-py enum member.
+
+    Args:
+        enum_cls: notebooklm-py enum class.
+        value: Lower-case member name stored in GenerationOptions.
+
+    Returns:
+        The matching enum member.
+    """
+    return enum_cls[value.upper()]
+
+
+def generation_kwargs(kind: str, options: GenerationOptions | None) -> dict[str, Any]:
+    """Build the notebooklm-py keyword arguments for one artifact kind from course options.
+
+    Args:
+        kind: 'audio', 'infographic', 'slide_deck', 'video', 'quiz' or 'flashcards'.
+        options: Course generation options (None = project defaults).
+
+    Returns:
+        Keyword arguments for the matching `client.artifacts.generate_*` call.
+    """
+    o = options or GenerationOptions()
+    table: dict[str, dict[str, Any]] = {
+        "audio": {
+            "audio_format": to_enum(AudioFormat, o.audio_format),
+            "audio_length": to_enum(AudioLength, o.audio_length),
+        },
+        "infographic": {
+            "orientation": to_enum(InfographicOrientation, o.infographic_orientation),
+            "detail_level": to_enum(InfographicDetail, o.infographic_detail),
+            "style": to_enum(InfographicStyle, o.infographic_style),
+        },
+        "slide_deck": {
+            "slide_format": to_enum(SlideDeckFormat, o.slide_format),
+            "slide_length": to_enum(SlideDeckLength, o.slide_length),
+        },
+        "video": {
+            "video_format": to_enum(VideoFormat, o.video_format),
+            "video_style": to_enum(VideoStyle, o.video_style),
+        },
+        "quiz": {"quantity": to_enum(QuizQuantity, o.quiz_quantity)},
+        "flashcards": {
+            "quantity": to_enum(QuizQuantity, o.flashcards_quantity),
+            "difficulty": to_enum(QuizDifficulty, o.flashcards_difficulty),
+        },
+    }
+    return table.get(kind, {})
 
 
 def _raise_for_status(status: GenerationStatus, label: str) -> None:

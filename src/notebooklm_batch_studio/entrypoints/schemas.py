@@ -132,3 +132,25 @@ class GenericActionResponse(BaseModel):
     success: bool
     message: str
     data: Any = None
+
+
+class UpdateOptionsRequest(BaseModel):
+    """Payload changing a course's NotebookLM generation options.
+
+    Attributes:
+        options: Option name to new value (see GET /api/courses/{code}/options for choices).
+    """
+
+    options: dict[str, Any] = Field(..., description="Option name to new value")
+
+
+class RegenerateRequest(BaseModel):
+    """Payload asking for a new version of one artifact.
+
+    Attributes:
+        artifact_type: Artifact type value, e.g. 'infographic'.
+        lecture_no: Lecture number, or null for a course-wide artifact.
+    """
+
+    artifact_type: str = Field(..., description="Artifact type value, e.g. 'infographic'")
+    lecture_no: int | None = Field(default=None, description="Lecture number; null for course-wide")

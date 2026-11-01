@@ -73,6 +73,8 @@ class AppConfig:
         data_dir: Root folder for all data, outside the project folder.
         database_url: SQLAlchemy URL; SQLite file `<data_dir>/db/app.db` by default.
         notebooklm_home: Folder holding NotebookLM credentials and session states.
+        auto_start_queue: Start the job queue when the web service starts (`AUTO_START_QUEUE`,
+            default true in `.env`; off for configs built directly, e.g. in tests).
     """
 
     app_env: str = "development"
@@ -88,6 +90,7 @@ class AppConfig:
     http_port: int = 8768
     http_allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost")
     http_allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8768", "http://127.0.0.1:8080")
+    auto_start_queue: bool = False
 
     @property
     def input_dir(self) -> Path:
@@ -217,4 +220,5 @@ def load_config() -> AppConfig:
         http_allowed_origins=_csv(
             os.environ.get("HTTP_ALLOWED_ORIGINS", "http://127.0.0.1:8768, http://127.0.0.1:8080")
         ),
+        auto_start_queue=_flag(os.environ.get("AUTO_START_QUEUE", "true")),
     )

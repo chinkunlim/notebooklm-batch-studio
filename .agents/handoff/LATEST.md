@@ -5,18 +5,24 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-01 03:25 UTC`
+- **最後更新時間**: `2026-11-01 05:35 UTC`
 - **最近操作 Agent**: `claude-code`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `3311fbc fix(notebooklm): pass zh_Hant language, wait for and target generated artifact ids, detect quota status, and switch Ollama to gemma4 [agent:claude-code]`
+- **最新 Git Commit**: `8689ed2 fix(queue): pre-check live quota, estimate workloads from real costs, quarantine short mock exams, serve needs_review files, and correct docs [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
+| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
+|---|---|---|---|---|---|---|
+| **TASK-009**<br/>Mind map rename, versioned regenerate, generation options, web status and naming guide | 🟢 `in_progress` | `claude-code` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-01 05:35 UTC] 建立任務 `TASK-009`: Mind map rename, versioned regenerate, generation options, web status and naming guide (by `claude-code`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-01 03:25 UTC] 完成任務 `TASK-008` — Fix NotebookLM language, artifact targeting, quota handling; switch to gemma4 (by `claude-code`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -101,7 +107,3 @@
 ### [2026-10-21 17:20 UTC] 完成任務 `TASK-002` — Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue) (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Phase 1B 完成：實作不可變領域模型、SQLite 佇列與課程資料表、Alembic 遷移、課程目錄智慧推導、2~3 Worker 平行排程池與 Quota 隔離狀態機，單元測試 100% 綠燈
-
-### [2026-10-21 17:12 UTC] 建立任務 `TASK-002`: Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue) (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`

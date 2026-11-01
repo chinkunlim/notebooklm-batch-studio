@@ -12,7 +12,6 @@ import json
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +19,6 @@ from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.exceptions import (
     CourseNotFoundError,
     OllamaUnavailableError,
-    QuotaExceededError,
     SourceLimitExceededError,
 )
 from notebooklm_batch_studio.domain.models import (
@@ -37,12 +35,17 @@ from notebooklm_batch_studio.domain.repositories import (
 )
 from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
+from notebooklm_batch_studio.services.course_settings import CourseSettingsService
 from notebooklm_batch_studio.services.job_views import (
     format_jobs_data,
     preview_job_types,
 )
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
-from notebooklm_batch_studio.services.quota_planner import estimate_quota_plan, quota_retry_after
+from notebooklm_batch_studio.services.quota_planner import (
+    ensure_quota_for,
+    estimate_quota_plan,
+    read_quota_or_none,
+)
 from notebooklm_batch_studio.services.reporter import CourseReporter
 from notebooklm_batch_studio.services.sync_service import RemoteSyncService
 from notebooklm_batch_studio.services.worker_pool import (
@@ -86,6 +89,7 @@ class BatchStudioService:
         self.ollama_client = ollama_client
         self.worker_pool: WorkerPool | None = None
         self._is_queue_running = False
+        self.course_settings = CourseSettingsService(course_repo, queue_repo)
 
     @contextmanager
     def _default_queue_provider(self) -> Iterator[QueueRepositoryProtocol]:
@@ -189,39 +193,6 @@ class BatchStudioService:
                 f"account allows {limit} sources per notebook; split the course folder"
             )
 
-    async def _read_quota_or_none(self) -> dict[str, Any] | None:
-        """Read the live usage meter, returning None instead of raising when it is unavailable.
-
-        Returns:
-            Quota summary, or None.
-        """
-        try:
-            return await self.notebooklm_client.get_quota_status()
-        except Exception as err:  # the meter is advisory; never block work on it
-            logger.warning("NotebookLM quota meter unavailable: %s", err)
-            return None
-
-    async def _ensure_quota_for(self, job: ArtifactJob) -> None:
-        """Refuse to start a job the live meter says cannot be paid for. Refs: ISSUE-008
-
-        Args:
-            job: Job about to be executed.
-
-        Raises:
-            QuotaExceededError: When the meter reports insufficient quota for this action.
-        """
-        quota = await self._read_quota_or_none()
-        if quota is None:
-            return
-        wait = quota_retry_after(quota, job.artifact_type, datetime.now(UTC))
-        if wait is not None:
-            logger.info("Quota pre-check: %s must wait %ds before starting", job.artifact_type.value, wait)
-            raise QuotaExceededError(
-                f"NotebookLM quota insufficient for {job.artifact_type.value}",
-                artifact_type=job.artifact_type.value,
-                retry_after_seconds=wait,
-            )
-
     async def get_notebooklm_quota(self) -> dict[str, Any]:
         """Return the live NotebookLM usage meter and account limits.
 
@@ -264,7 +235,7 @@ class BatchStudioService:
         course = self.course_repo.get_course(job.course_code)
         if course is None:
             raise CourseNotFoundError(f"Course {job.course_code} not found")
-        await self._ensure_quota_for(job)
+        await ensure_quota_for(self.notebooklm_client, job.artifact_type)
         if not course.notebook_id or any(not lec.source_id for lec in course.lectures):
             logger.info("Initializing NotebookLM notebook and sources for course %s", course.code)
             course = await self.setup_notebook_and_sources(course.code)
@@ -283,7 +254,10 @@ class BatchStudioService:
             out_dir = self.config.courses_output_dir / course.code / "_course_synthesis"
 
         out_dir.mkdir(parents=True, exist_ok=True)
-        return await self.runner.process_job(job, course, nb_id, source_ids, out_dir)
+        path, artifact_ids = await self.runner.process_job_with_ids(job, course, nb_id, source_ids, out_dir)
+        with self.queue_provider() as repo:
+            repo.record_artifact_ids(job.id, artifact_ids)  # Refs: ADR-005
+        return path
 
     def generate_summary(self, course_code: str) -> tuple[Path, Path]:
         """Generate summary.md and summary.html for a given course.
@@ -433,7 +407,7 @@ class BatchStudioService:
                 lecture_count = len(course.lectures)
                 types = preview_job_types(course, chapter_artifacts, course_artifacts)
                 if not quota_read:
-                    quota, quota_read = await self._read_quota_or_none(), True
+                    quota, quota_read = await read_quota_or_none(self.notebooklm_client), True
                 plan = estimate_quota_plan(types, quota)  # Refs: ISSUE-008
                 results.append(
                     {

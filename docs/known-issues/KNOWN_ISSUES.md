@@ -23,3 +23,5 @@
 | [ISSUE-008](008-quota-blind-scheduling.md) | 🟢 已根治 (Resolved) | 排程不看即時額度，預估天數用猜的 | 額度不足仍送出請求；預覽固定用每天 100 個估算且任務數算錯；每次額度等待都吃掉重試次數 | `services/quota_planner.py`, `services/orchestrator.py`, `adapters/db/repository.py` |
 | [ISSUE-009](009-mock-exam-not-quarantined.md) | 🟢 已根治 (Resolved) | 整門課模擬考題數不足仍標成完成 | `_process_mock_exam` 忽略「是否完整」旗標，不完整的考卷照樣存進正式產出並標 DONE | `services/artifact_runner.py` |
 | [ISSUE-010](010-needs-review-not-downloadable.md) | 🟢 已根治 (Resolved) | needs_review 的檔案在網頁上無法下載 | 隔離檔不在課程產出資料夾內，下載路由找不到；路徑穿越檢查用字串前綴比對 | `services/orchestrator.py`, `entrypoints/http/artifacts.py` |
+| [ISSUE-011](011-mind-map-not-renamed.md) | 🟢 已根治 (Resolved) | 心智圖在 NotebookLM 上沒有改名 | 心智圖是 note，artifacts.rename 改不到，程式直接跳過；改用 mind_maps.rename | `adapters/notebooklm/client.py`, `services/artifact_runner.py` |
+| [ISSUE-012](012-wrong-extensions-and-download-link.md) | 🟢 已根治 (Resolved) | 投影片與資料表副檔名錯誤，網頁下載連結忽略 rel_path | 投影片 PDF 存成 .md、資料表 CSV 存成 .md；網頁只用檔名組下載網址 | `services/artifact_runner.py`, `entrypoints/static/index.html` |

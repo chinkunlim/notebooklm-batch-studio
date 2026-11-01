@@ -32,6 +32,7 @@ class CourseRecord(Base):
         exam_date: Date of upcoming exam.
         watch: Whether folder watcher is active.
         mock_exam_questions: Number of questions in course-wide mock exam.
+        generation_options: JSON of the course's GenerationOptions (None = defaults).
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
     """
@@ -47,6 +48,7 @@ class CourseRecord(Base):
     exam_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
     watch: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     mock_exam_questions: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
+    generation_options: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
@@ -97,6 +99,8 @@ class ArtifactJobRecord(Base):
         cooldown_until: Timestamp when eligible for retry/probe.
         created_at: Creation timestamp.
         updated_at: Last state transition timestamp.
+        version: Generation version (1 = first, 2+ = regenerations).
+        artifact_ids: JSON list of NotebookLM artifact / note ids produced by this job.
     """
 
     __tablename__ = "artifact_jobs"
@@ -112,6 +116,8 @@ class ArtifactJobRecord(Base):
     output_file: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     custom_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     style_options: Mapped[str | None] = mapped_column(Text, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    artifact_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
     interactive_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     source_origin: Mapped[str] = mapped_column(String(30), nullable=False, default="auto")
     quota_blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

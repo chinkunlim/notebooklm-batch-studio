@@ -178,6 +178,116 @@ class Lecture:
 
 
 @dataclass(frozen=True)
+class GenerationOptions:
+    """Per-course NotebookLM generation settings, stored as plain strings (mapped in the adapter).
+
+    Each value is the lower-case name of a notebooklm-py enum member (e.g. 'portrait'), so the
+    domain and services never import notebooklm-py. Refs: ADR-005
+
+    Attributes:
+        infographic_orientation: 'landscape', 'portrait' or 'square'.
+        infographic_detail: 'concise', 'standard' or 'detailed'.
+        infographic_style: 'auto_select', 'sketch_note', 'professional', 'bento_grid', 'editorial',
+            'instructional', 'bricks', 'clay', 'anime', 'kawaii' or 'scientific'.
+        audio_format: 'deep_dive', 'brief', 'critique' or 'debate'.
+        audio_length: 'short', 'default' or 'long'.
+        slide_format: 'detailed_deck' or 'presenter_slides'.
+        slide_length: 'default' or 'short'.
+        slide_download: 'pdf' or 'pptx'.
+        video_format: 'explainer', 'brief' or 'short'.
+        video_style: 'auto_select', 'classic', 'whiteboard', 'kawaii', 'anime', 'watercolor',
+            'retro_print', 'heritage' or 'paper_craft'.
+        quiz_quantity: 'fewer', 'standard' or 'more'.
+        flashcards_quantity: 'fewer', 'standard' or 'more'.
+        flashcards_difficulty: 'easy', 'medium' or 'hard'.
+        device_exports: Whether to fit infographics to A4 / iPad Air 4 / MacBook Pro 14.
+    """
+
+    infographic_orientation: str = "portrait"
+    infographic_detail: str = "detailed"
+    infographic_style: str = "auto_select"
+    audio_format: str = "deep_dive"
+    audio_length: str = "default"
+    slide_format: str = "detailed_deck"
+    slide_length: str = "default"
+    slide_download: str = "pdf"
+    video_format: str = "explainer"
+    video_style: str = "auto_select"
+    quiz_quantity: str = "more"
+    flashcards_quantity: str = "more"
+    flashcards_difficulty: str = "medium"
+    device_exports: bool = True
+
+
+# Allowed values per GenerationOptions field (None = boolean field).
+GENERATION_OPTION_CHOICES: dict[str, tuple[str, ...] | None] = {
+    "infographic_orientation": ("landscape", "portrait", "square"),
+    "infographic_detail": ("concise", "standard", "detailed"),
+    "infographic_style": (
+        "auto_select",
+        "sketch_note",
+        "professional",
+        "bento_grid",
+        "editorial",
+        "instructional",
+        "bricks",
+        "clay",
+        "anime",
+        "kawaii",
+        "scientific",
+    ),
+    "audio_format": ("deep_dive", "brief", "critique", "debate"),
+    "audio_length": ("short", "default", "long"),
+    "slide_format": ("detailed_deck", "presenter_slides"),
+    "slide_length": ("default", "short"),
+    "slide_download": ("pdf", "pptx"),
+    "video_format": ("explainer", "brief", "short"),
+    "video_style": (
+        "auto_select",
+        "classic",
+        "whiteboard",
+        "kawaii",
+        "anime",
+        "watercolor",
+        "retro_print",
+        "heritage",
+        "paper_craft",
+    ),
+    "quiz_quantity": ("fewer", "standard", "more"),
+    "flashcards_quantity": ("fewer", "standard", "more"),
+    "flashcards_difficulty": ("easy", "medium", "hard"),
+    "device_exports": None,
+}
+
+
+def merge_generation_options(base: GenerationOptions, changes: dict[str, object]) -> GenerationOptions:
+    """Return new options with validated changes applied.
+
+    Args:
+        base: Current options.
+        changes: Field name to new value.
+
+    Returns:
+        Updated GenerationOptions.
+
+    Raises:
+        ValueError: On an unknown field or a value outside the allowed choices.
+    """
+    values = dict(base.__dict__)
+    for key, value in changes.items():
+        if key not in GENERATION_OPTION_CHOICES:
+            raise ValueError(f"Unknown generation option: {key}")
+        choices = GENERATION_OPTION_CHOICES[key]
+        if choices is None:
+            if not isinstance(value, bool):
+                raise ValueError(f"{key} must be true or false")
+        elif value not in choices:
+            raise ValueError(f"{key} must be one of {', '.join(choices)}")
+        values[key] = value
+    return GenerationOptions(**values)
+
+
+@dataclass(frozen=True)
 class Course:
     """A course containing multiple lectures and generation settings.
 
@@ -192,6 +302,7 @@ class Course:
         watch: Whether folder watcher is enabled for this course.
         mock_exam_questions: Target question count for course-wide mock exam.
         lectures: List of lectures belonging to this course.
+        generation_options: NotebookLM generation settings for this course.
     """
 
     code: str
@@ -206,6 +317,7 @@ class Course:
     selected_chapter_artifacts: list[str] = field(default_factory=list)
     selected_course_artifacts: list[str] = field(default_factory=list)
     lectures: list[Lecture] = field(default_factory=list)
+    generation_options: GenerationOptions = field(default_factory=GenerationOptions)
 
 
 def get_lecture_prefix(filename: str, fallback_no: int) -> str:
@@ -306,6 +418,8 @@ class ArtifactJob:
         cooldown_until: Timestamp when this task is eligible for quota resume probe.
         created_at: Task creation timestamp.
         updated_at: Last state transition timestamp.
+        version: 1 for the first generation; 2, 3, ... for each regeneration (ADR-005).
+        artifact_ids: NotebookLM artifact / note ids this job produced.
     """
 
     id: str
@@ -325,6 +439,8 @@ class ArtifactJob:
     cooldown_until: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    version: int = 1
+    artifact_ids: tuple[str, ...] = ()
 
 
 # Backward-compatibility for initial bootstrap tests

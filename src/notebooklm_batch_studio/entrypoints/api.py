@@ -7,8 +7,8 @@ and serves a local browser management dashboard on 127.0.0.1:8768.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import AsyncIterator, Callable, Iterator
+from contextlib import asynccontextmanager, contextmanager
 from typing import Any, cast
 
 import uvicorn
@@ -29,6 +29,7 @@ from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.entrypoints.http.artifacts import artifacts_router
 from notebooklm_batch_studio.entrypoints.http.courses import courses_router
 from notebooklm_batch_studio.entrypoints.http.queue import queue_router
+from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
@@ -140,6 +141,40 @@ def _resolve_study_service(
     return StudyTrackerService(study_repo=study_repo, config=cfg)
 
 
+def _build_lifespan(service: BatchStudioService, cfg: AppConfig) -> Callable[[FastAPI], Any]:
+    """Create the app lifespan: start the queue on startup (if enabled) and stop it on shutdown.
+
+    With the queue running, jobs blocked by quota sit in QUOTA_WAIT and the worker pool's probe
+    loop puts them back to PENDING once their cooldown passes, so work continues on its own.
+
+    Args:
+        service: Orchestrator whose queue is managed.
+        cfg: Application configuration (`auto_start_queue`).
+
+    Returns:
+        An async context manager factory accepted by FastAPI(lifespan=...).
+    """
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        """Run startup and shutdown hooks around the application's lifetime.
+
+        Args:
+            _app: The FastAPI application.
+
+        Yields:
+            Control while the application serves requests.
+        """
+        if cfg.auto_start_queue:
+            logger.info("AUTO_START_QUEUE is on: starting the job queue")
+            service.start_queue()
+        yield
+        if service.worker_pool is not None:
+            await service.worker_pool.stop()
+
+    return lifespan
+
+
 def create_app(
     config: AppConfig | None = None,
     service: BatchStudioService | None = None,
@@ -169,6 +204,7 @@ def create_app(
         version="0.1.0",
         docs_url="/docs",
         openapi_url="/openapi.json",
+        lifespan=_build_lifespan(active_service, cfg),
     )
 
     app.state.service = active_service
@@ -192,6 +228,7 @@ def create_app(
     app.include_router(artifacts_router)
     app.include_router(queue_router)
     app.include_router(study_router)
+    app.include_router(settings_router)
 
     return app
 

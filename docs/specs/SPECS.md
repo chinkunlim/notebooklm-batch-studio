@@ -14,3 +14,4 @@
 | [002-export-downloads](002-export-downloads.md) | Implemented | 下載與轉檔（quiz / mind map / flashcards / pdf）＋技術驗證 | TASK-001, TASK-003 |
 | [003-web-and-ai-tools](003-web-and-ai-tools.md) | Implemented | 本機網頁、OpenAPI（Open WebUI）、MCP 工具 | TASK-005 |
 | [004-phase2-self-test](004-phase2-self-test.md) | Implemented | 第二階段：學生研讀工作台、錯題本、3D卡牌、語音導讀與 Anki 間隔重複匯出 | TASK-007, ADR-003 |
+| [005-generation-options-and-versions](005-generation-options-and-versions.md) | Implemented | 產出參數設定、重新生成版本、命名說明與網頁進度 | TASK-009, ADR-005 |

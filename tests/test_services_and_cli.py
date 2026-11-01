@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import Any
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
@@ -69,6 +70,7 @@ class MockNotebookLMClient:
         source_ids: list[str],
         prompt: str | None = None,
         difficulty: str | None = None,
+        options: Any = None,
     ) -> str:
         """Mock generate quiz."""
         return "task-quiz-1"
@@ -80,7 +82,7 @@ class MockNotebookLMClient:
         Path(output_path).write_text(content, encoding="utf-8")
 
     async def generate_flashcards(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, options: Any = None
     ) -> str:
         """Mock generate flashcards."""
         return "task-fc-1"
@@ -108,7 +110,12 @@ class MockNotebookLMClient:
         Path(output_path).write_text(content, encoding="utf-8")
 
     async def generate_audio(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: Any = None,
     ) -> str:
         """Mock generate audio."""
         return "task-audio-1"
@@ -123,6 +130,10 @@ class MockNotebookLMClient:
         """Mock rename artifact."""
         self.renamed_artifacts.append((notebook_id, artifact_id, title))
 
+    async def rename_mind_map(self, notebook_id: str, note_id: str, title: str) -> None:
+        """Mock rename mind map."""
+        self.renamed_artifacts.append((notebook_id, note_id, title))
+
     async def generate_report(
         self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
@@ -136,19 +147,29 @@ class MockNotebookLMClient:
         Path(output_path).write_text("# Study Guide\nMock content", encoding="utf-8")
 
     async def generate_slide_deck(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: Any = None,
     ) -> str:
         """Mock generate slide deck."""
         return "task-slide-1"
 
     async def download_slide_deck(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None, output_format: str = "pdf"
     ) -> None:
         """Mock download slide deck."""
         Path(output_path).write_text("# Slide Deck\nSlide 1: Intro", encoding="utf-8")
 
     async def generate_infographic(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: Any = None,
     ) -> str:
         """Mock generate infographic."""
         return "task-info-1"
@@ -172,7 +193,12 @@ class MockNotebookLMClient:
         Path(output_path).write_text("| Column A | Column B |\n|---|---|\n| 1 | 2 |", encoding="utf-8")
 
     async def generate_video(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: Any = None,
     ) -> str:
         """Mock generate video."""
         return "task-vid-1"

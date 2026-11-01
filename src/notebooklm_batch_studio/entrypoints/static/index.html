@@ -50,6 +50,7 @@
       font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
     .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
@@ -252,6 +253,7 @@
       <button id="btnResumeQueue" style="display:none; background: #10b981; font-weight: 600;" onclick="resumeQueue()">▶️ 繼續執行</button>
       <button onclick="resumeQuota()" title="喚醒因配額暫停的項目">⚡ 喚醒配額</button>
       <button class="primary" onclick="openAddModal()">➕ 加入課程資料夾</button>
+      <button onclick="openNamingModal()" title="測驗與檔案的命名規則">🏷️ 命名規則</button>
       <a href="/docs" target="_blank" class="btn">📖 OpenAPI 文件</a>
     </div>
   </header>
@@ -272,6 +274,10 @@
         <button onclick="closeDetail()">✖ 關閉詳細資訊</button>
       </div>
       <div id="detailContent" class="card"></div>
+      <details id="detailOptionsBox" class="card" style="margin-top: 16px;">
+        <summary style="cursor: pointer; font-weight: 600; color: #38bdf8;">⚙️ 產出設定（之後生成的內容才會套用；已生成的請按「重新生成」）</summary>
+        <div id="detailOptions" style="margin-top: 12px;">載入中...</div>
+      </details>
     </section>
   </main>
 
@@ -455,6 +461,17 @@
         <button onclick="previewFolders()">🔍 預覽掃描</button>
         <button class="primary" id="btnConfirmAdd" onclick="confirmAddFolders()" disabled>✅ 確認加入</button>
         <button onclick="closeAddModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Naming Guide Modal -->
+  <div id="namingModal" class="modal-overlay" style="display: none;">
+    <div class="modal" style="max-width: 920px; max-height: 85vh; overflow-y: auto;">
+      <h3>🏷️ 命名規則：測驗與產出檔案怎麼命名</h3>
+      <div id="namingContent" style="font-size: 0.85rem;">載入中...</div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+        <button onclick="closeNamingModal()">關閉</button>
       </div>
     </div>
   </div>
@@ -1317,7 +1334,7 @@
       }
     }
 
-    async function viewCourseDetail(code) {
+    async function viewCourseDetail(code, silent = false) {
       activeCourseCode = code;
       const sec = document.getElementById('courseDetailSection');
       const title = document.getElementById('detailTitle');
@@ -1325,8 +1342,11 @@
 
       sec.style.display = 'block';
       title.textContent = `課程詳細進度：${code}`;
-      content.innerHTML = '<div style="color:var(--text-muted);">載入中...</div>';
-      sec.scrollIntoView({ behavior: 'smooth' });
+      if (!silent) {
+        content.innerHTML = '<div style="color:var(--text-muted);">載入中...</div>';
+        sec.scrollIntoView({ behavior: 'smooth' });
+        loadCourseOptions(code);
+      }
 
       try {
         const res = await fetch(`/api/courses/${code}`);
@@ -1372,9 +1392,16 @@
           </table>
         `;
 
-        let jobsTable = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-            <h4 style="font-size: 1rem; color: #38bdf8;">⚙️ 生成任務佇列與成果下載</h4>
+        const jobs = data.jobs || [];
+        const versionsBySlot = {};
+        jobs.forEach(j => {
+          const slot = `${j.lecture_no}|${j.artifact_type}`;
+          versionsBySlot[slot] = Math.max(versionsBySlot[slot] || 0, j.version || 1);
+        });
+        const jobsTable = `
+          ${renderStatusBar(jobs)}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+            <h4 style="font-size: 1rem; color: #38bdf8;">⚙️ 生成任務佇列與成果下載 <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">（每 15 秒自動更新）</span></h4>
             <div style="display:flex; gap:8px;">
               <button class="btn" onclick="syncFromNotebookLM('${code}')" style="background:#0284c7; color:#fff; font-size:0.8rem; font-weight:600;">🔄 從 NotebookLM 同步網頁生成內容</button>
               <button class="btn" onclick="refinePrompts('${code}')" style="background:#4f46e5; color:#fff; font-size:0.8rem; font-weight:600;">🤖 使用 Ollama Gemma4 潤飾 Prompt</button>
@@ -1385,32 +1412,44 @@
               <tr>
                 <th>範圍</th>
                 <th>產物種類</th>
+                <th>版本</th>
                 <th>狀態</th>
                 <th>Prompt / 風格指令</th>
                 <th>檔案下載</th>
+                <th>動作</th>
               </tr>
             </thead>
             <tbody>
-              ${(data.jobs || []).map(j => {
-                let badgeClass = 'badge-neutral';
-                if (j.status === 'done') badgeClass = 'badge-success';
-                else if (j.status === 'running') badgeClass = 'badge-warning';
-                else if (j.status === 'failed') badgeClass = 'badge-danger';
-                else if (j.status === 'quota_wait') badgeClass = 'badge-warning';
-                else if (j.status === 'needs_review') badgeClass = 'badge-warning';
-
+              ${jobs.map(j => {
+                const st = STATUS_LABELS[j.status] || { text: j.status, cls: 'badge-neutral' };
                 const scope = j.lecture_no ? `L${String(j.lecture_no).padStart(2, '0')}` : '全課程';
-                const filename = j.output_file ? j.output_file.split('/').pop() : null;
-                const dlLink = filename ? `<a href="/api/artifacts/${code}/download/${filename}" target="_blank" class="btn" style="padding: 2px 8px; font-size: 0.75rem;">📥 下載 ${filename.split('.').pop().toUpperCase()}</a>` : '—';
-                const promptBtn = `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">📝 檢視/編輯 Prompt</button>`;
-
+                const target = j.rel_path || (j.output_file ? j.output_file.split('/').pop() : null);
+                const dlName = target ? target.split('/').pop() : null;
+                const dlLink = target ? `<a href="/api/artifacts/${code}/download/${encodeURI(target)}" target="_blank" class="btn" style="padding: 2px 8px; font-size: 0.75rem;">📥 ${escHtml(dlName.split('.').pop().toUpperCase())}</a>` : '—';
+                const promptBtn = `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">📝 Prompt</button>`;
+                const slot = `${j.lecture_no}|${j.artifact_type}`;
+                const total = versionsBySlot[slot] || 1;
+                const ver = `<span class="badge ${j.version > 1 ? 'badge-warning' : 'badge-neutral'}">v${j.version || 1}</span>` +
+                  (total > 1 && j.version === total ? `<div style="font-size:0.7rem; color:var(--text-muted);">已生成 ${total} 版</div>` : '');
+                let statusExtra = '';
+                if (j.status === 'quota_wait' && j.cooldown_until) {
+                  statusExtra = `<div style="font-size:0.7rem; color:var(--text-muted);">${formatResume(j.cooldown_until)}</div>`;
+                } else if ((j.status === 'needs_review' || j.status === 'failed') && j.error_message) {
+                  statusExtra = `<div style="font-size:0.7rem; color:var(--text-muted);">${escHtml(j.error_message.slice(0, 80))}</div>`;
+                }
+                const lecArg = j.lecture_no === null ? 'null' : j.lecture_no;
+                const regenBtn = (j.status === 'done' || j.status === 'needs_review') && j.version === total
+                  ? `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem; white-space: nowrap;" onclick="regenerateArtifact('${code}', ${lecArg}, '${j.artifact_type}', '${escHtml(j.label || j.artifact_type)}', ${total + 1})">🔁 重新生成</button>`
+                  : '';
                 return `
                   <tr>
                     <td>${scope}</td>
-                    <td><strong>${j.artifact_type}</strong></td>
-                    <td><span class="badge ${badgeClass}">${j.status}</span></td>
+                    <td><strong>${escHtml(j.label || j.artifact_type)}</strong><div style="font-size:0.7rem; color:var(--text-muted);"><code>${j.artifact_type}</code></div></td>
+                    <td>${ver}</td>
+                    <td><span class="badge ${st.cls}">${st.text}</span>${statusExtra}</td>
                     <td>${promptBtn}</td>
                     <td>${dlLink}</td>
+                    <td>${regenBtn}</td>
                   </tr>
                 `;
               }).join('')}
@@ -1422,6 +1461,125 @@
       } catch (e) {
         content.innerHTML = `<div style="color:var(--danger)">載入失敗: ${e.message}</div>`;
       }
+    }
+
+    const STATUS_LABELS = {
+      done: { text: '✅ 完成', cls: 'badge-success' },
+      pending: { text: '⏳ 排隊中', cls: 'badge-neutral' },
+      running: { text: '⚙️ 生成中', cls: 'badge-warning' },
+      quota_wait: { text: '⏸ 等待額度', cls: 'badge-warning' },
+      needs_review: { text: '⚠️ 需審查', cls: 'badge-warning' },
+      failed: { text: '❌ 失敗', cls: 'badge-danger' },
+    };
+
+    function formatResume(iso) {
+      const t = new Date(iso);
+      const mins = Math.max(0, Math.round((t - new Date()) / 60000));
+      const hhmm = t.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+      return mins > 0 ? `預計 ${hhmm} 自動繼續（約 ${mins} 分鐘後）` : '額度已重置，即將自動繼續';
+    }
+
+    function renderStatusBar(jobs) {
+      const counts = {};
+      jobs.forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; });
+      const order = ['done', 'running', 'pending', 'quota_wait', 'needs_review', 'failed'];
+      const chips = order.map(k => `<span class="badge ${STATUS_LABELS[k].cls}" style="font-size:0.8rem;">${STATUS_LABELS[k].text} ${counts[k] || 0}</span>`).join(' ');
+      const waits = jobs.filter(j => j.status === 'quota_wait' && j.cooldown_until).map(j => j.cooldown_until).sort();
+      const resume = waits.length ? `<div style="font-size:0.8rem; color:var(--warning); margin-top:6px;">⏸ 額度用完的工作會等額度重置，${formatResume(waits[0])}。網頁服務開著就會自己接著跑。</div>` : '';
+      return `<div style="margin-top: 20px; padding: 10px 12px; background:#0f172a; border:1px solid var(--border); border-radius: var(--radius);">
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"><strong style="font-size:0.85rem; margin-right:6px;">📊 共 ${jobs.length} 項</strong>${chips}</div>${resume}
+      </div>`;
+    }
+
+    async function regenerateArtifact(code, lectureNo, artifactType, label, nextVersion) {
+      const scope = lectureNo === null ? '全課程' : `L${String(lectureNo).padStart(2, '0')}`;
+      if (!confirm(`重新生成 ${scope}「${label}」為 v${nextVersion}？\n舊版本會保留，這會使用 NotebookLM 額度。`)) return;
+      try {
+        const res = await fetch(`/api/courses/${code}/jobs/regenerate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ artifact_type: artifactType, lecture_no: lectureNo }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        await viewCourseDetail(code, true);
+      } catch (e) {
+        alert('重新生成失敗：' + e.message);
+      }
+    }
+
+    const OPTION_LABELS = {
+      infographic_orientation: ['資訊圖表方向', { landscape: '橫式', portrait: '直式（A4 / iPad）', square: '方形' }],
+      infographic_detail: ['資訊圖表詳細程度', { concise: '精簡', standard: '標準', detailed: '詳細' }],
+      infographic_style: ['資訊圖表風格', { auto_select: '自動', sketch_note: '手繪筆記', professional: '專業', bento_grid: '便當格', editorial: '雜誌', instructional: '教學', bricks: '積木', clay: '黏土', anime: '動漫', kawaii: '可愛', scientific: '科學' }],
+      device_exports: ['資訊圖表另存裝置版本（A4 PDF / iPad Air 4 / MacBook Pro 14）', null],
+      audio_format: ['語音形式', { deep_dive: '深度對談', brief: '簡短摘要', critique: '評論', debate: '辯論' }],
+      audio_length: ['語音長度', { short: '短', default: '標準', long: '長' }],
+      slide_format: ['投影片形式', { detailed_deck: '詳細版（自學）', presenter_slides: '講者版（上台）' }],
+      slide_length: ['投影片長度', { default: '標準', short: '精簡' }],
+      slide_download: ['投影片下載格式', { pdf: 'PDF', pptx: 'PowerPoint (PPTX)' }],
+      video_format: ['影片形式', { explainer: '講解', brief: '簡短', short: '直式短片' }],
+      video_style: ['影片風格', { auto_select: '自動', classic: '經典', whiteboard: '白板', kawaii: '可愛', anime: '動漫', watercolor: '水彩', retro_print: '復古印刷', heritage: '傳統', paper_craft: '紙藝' }],
+      quiz_quantity: ['測驗題量（每次生成）', { fewer: '較少', standard: '標準', more: '較多' }],
+      flashcards_quantity: ['閃卡數量', { fewer: '較少', standard: '標準', more: '較多' }],
+      flashcards_difficulty: ['閃卡難度', { easy: '簡單', medium: '中等', hard: '困難' }],
+    };
+
+    async function loadCourseOptions(code) {
+      const box = document.getElementById('detailOptions');
+      try {
+        const res = await fetch(`/api/courses/${code}/options`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; font-size: 0.85rem;">
+          ${Object.keys(OPTION_LABELS).map(key => {
+            const [label, names] = OPTION_LABELS[key];
+            const value = data.options[key];
+            if (names === null) {
+              return `<label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" data-opt="${key}" ${value ? 'checked' : ''}> ${label}</label>`;
+            }
+            const opts = (data.choices[key] || []).map(c => `<option value="${c}" ${c === value ? 'selected' : ''}>${names[c] || c}</option>`).join('');
+            return `<label>${label}<select data-opt="${key}" style="margin-top:4px;">${opts}</select></label>`;
+          }).join('')}
+        </div>
+        <div style="display:flex; justify-content:flex-end; margin-top: 12px;"><button class="primary" onclick="saveCourseOptions('${code}')">💾 儲存產出設定</button></div>`;
+      } catch (e) {
+        box.innerHTML = `<div style="color:var(--danger)">設定載入失敗：${escHtml(e.message)}</div>`;
+      }
+    }
+
+    async function saveCourseOptions(code) {
+      const options = {};
+      document.querySelectorAll('#detailOptions [data-opt]').forEach(el => {
+        options[el.dataset.opt] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      try {
+        const res = await fetch(`/api/courses/${code}/options`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ options }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        alert('已儲存。之後生成的內容會套用新設定；已生成的內容可按「🔁 重新生成」。');
+      } catch (e) {
+        alert('儲存失敗：' + e.message);
+      }
+    }
+
+    async function openNamingModal() {
+      document.getElementById('namingModal').style.display = 'flex';
+      const box = document.getElementById('namingContent');
+      try {
+        const data = await (await fetch('/api/naming-guide')).json();
+        box.innerHTML = `<ul style="margin: 0 0 12px 18px; line-height: 1.7;">${data.rules.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
+          <table><thead><tr><th>代碼</th><th>名稱</th><th>意思</th><th>NotebookLM 標題</th><th>本機檔名</th></tr></thead><tbody>
+          ${data.artifacts.map(a => `<tr><td><code>${a.artifact_type}</code></td><td style="white-space:nowrap;">${escHtml(a.label)}</td><td style="min-width:180px;">${escHtml(a.meaning)}</td><td><code>${escHtml(a.notebooklm_title)}</code></td><td><code>${escHtml(a.local_files)}</code></td></tr>`).join('')}
+          </tbody></table>`;
+      } catch (e) {
+        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
+      }
+    }
+
+    function closeNamingModal() {
+      document.getElementById('namingModal').style.display = 'none';
     }
 
     function closeDetail() {
@@ -1569,6 +1727,10 @@
       fetchQuota();
       setInterval(fetchStatus, 5000);
       setInterval(fetchQuota, 60000);
+      setInterval(() => {
+        const sec = document.getElementById('courseDetailSection');
+        if (activeCourseCode && sec.style.display !== 'none') viewCourseDetail(activeCourseCode, true);
+      }, 15000);
     });
   </script>
 </body>

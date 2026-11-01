@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, Course
+from notebooklm_batch_studio.domain.naming import label_for
 from notebooklm_batch_studio.services.worker_pool import generate_jobs_for_course
 
 # Download-route prefix for quarantined files under DATA_DIR/needs_review/. Refs: ISSUE-010
@@ -47,6 +48,10 @@ def format_jobs_data(
                 "id": j.id,
                 "lecture_no": j.lecture_no,
                 "artifact_type": j.artifact_type.value,
+                "label": label_for(j.artifact_type),
+                "version": j.version,
+                "artifact_ids": list(j.artifact_ids),
+                "cooldown_until": j.cooldown_until.isoformat() if j.cooldown_until else None,
                 "status": j.status.value,
                 "custom_prompt": j.custom_prompt,
                 "output_file": j.output_file,

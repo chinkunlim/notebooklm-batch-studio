@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
@@ -20,6 +21,7 @@ from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
@@ -428,6 +430,100 @@ def _register_study_weakness_tools(mcp: MCPServer, active_study: StudyTrackerSer
         return f"Mistake {mistake_id} not found."
 
 
+def _register_settings_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register naming-guide and generation-option tools.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+
+    @mcp.tool()
+    def get_naming_guide() -> str:
+        """Explain how artifacts are named on NotebookLM and locally (read-only).
+
+        Returns:
+            JSON string with naming rules and one row per artifact type.
+        """
+        return json.dumps(naming_guide(), ensure_ascii=False, indent=2)
+
+    @mcp.tool()
+    def get_course_options(code: str) -> str:
+        """Read a course's NotebookLM generation options and allowed values (read-only).
+
+        Args:
+            code: Course code.
+
+        Returns:
+            JSON string with current options and choices.
+        """
+        try:
+            return json.dumps(active_service.course_settings.get_options(code), ensure_ascii=False, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+    @mcp.tool()
+    def set_course_options(code: str, options: dict[str, Any], confirm: bool = False) -> str:
+        """Change a course's generation options (requires confirm=True).
+
+        Args:
+            code: Course code.
+            options: Option name to new value, e.g. {"infographic_orientation": "portrait"}.
+            confirm: Must be True to save the change.
+
+        Returns:
+            JSON string with the updated options, or a confirmation warning.
+        """
+        if not confirm:
+            return json.dumps(
+                {
+                    "confirmed": False,
+                    "warning": "Set confirm=True to save these options.",
+                    "options": options,
+                },
+                ensure_ascii=False,
+            )
+        try:
+            return json.dumps(active_service.course_settings.set_options(code, options), ensure_ascii=False)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+def _register_regenerate_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register the versioned regeneration tool.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+
+    @mcp.tool()
+    def regenerate_artifact(
+        code: str, artifact_type: str, lecture_no: int | None = None, confirm: bool = False
+    ) -> str:
+        """Enqueue a new version (v2, v3, ...) of one artifact; older versions are kept (requires confirm).
+
+        Args:
+            code: Course code.
+            artifact_type: Artifact type value, e.g. 'infographic'.
+            lecture_no: Lecture number, or None for a course-wide artifact.
+            confirm: Must be True to enqueue (this spends NotebookLM quota).
+
+        Returns:
+            JSON string with the new job id and version, or a confirmation warning.
+        """
+        if not confirm:
+            return json.dumps(
+                {"confirmed": False, "warning": "Set confirm=True to enqueue; this spends NotebookLM quota."},
+                ensure_ascii=False,
+            )
+        try:
+            result = active_service.course_settings.regenerate(code, lecture_no, artifact_type)
+            return json.dumps(result, ensure_ascii=False)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
 def build_mcp_server(
     service: BatchStudioService | None = None,
     study_service: StudyTrackerService | None = None,
@@ -480,6 +576,8 @@ def build_mcp_server(
     _register_sync_and_prompt_tools(mcp, active_service)
     _register_study_history_tools(mcp, active_study)
     _register_study_weakness_tools(mcp, active_study)
+    _register_settings_tools(mcp, active_service)
+    _register_regenerate_tools(mcp, active_service)
     return mcp
 
 

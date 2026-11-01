@@ -108,6 +108,7 @@ async def _execute_batch_pipeline(
     config: AppConfig,
     courses_to_run: list[str],
     workers: int,
+    wait_quota: bool = False,
 ) -> None:
     """Run batch initialization, parallel worker pool execution, and reporting.
 
@@ -117,6 +118,7 @@ async def _execute_batch_pipeline(
         config: Application configuration.
         courses_to_run: List of course codes to execute.
         workers: Concurrency worker count.
+        wait_quota: Keep running until quota-blocked jobs have resumed and finished.
     """
 
     @contextmanager
@@ -132,13 +134,15 @@ async def _execute_batch_pipeline(
     with session_scope(engine) as session:
         c_repo = CourseRepository(session)
         q_repo = QueueRepository(session)
-        srv = BatchStudioService(c_repo, q_repo, adapter, config)
+        srv = BatchStudioService(c_repo, q_repo, adapter, config, queue_provider=q_provider)
         for code in courses_to_run:
             print(f"🚀 初始化 NotebookLM 筆記本與講義來源: {code}...")
             await srv.setup_notebook_and_sources(code)
 
     pool = WorkerPool(q_provider, srv.execute_job, concurrency=workers)
-    await pool.run_until_empty()
+    if wait_quota:
+        print("⏸ 額度用完時會等待重置，時間到自動繼續，全部完成才結束。")
+    await pool.run_until_empty(wait_for_quota=wait_quota)
 
     with session_scope(engine) as session:
         c_repo = CourseRepository(session)
@@ -149,7 +153,9 @@ async def _execute_batch_pipeline(
             print(f"📄 已產出課程總覽: {md_path.name}, {html_path.name}")
 
 
-def _handle_batch(config: AppConfig, paths: list[str], workers: int, profile: str = "full") -> int:
+def _handle_batch(
+    config: AppConfig, paths: list[str], workers: int, profile: str = "full", wait_quota: bool = False
+) -> int:
     """Process one or more course folders end-to-end.
 
     Args:
@@ -157,6 +163,7 @@ def _handle_batch(config: AppConfig, paths: list[str], workers: int, profile: st
         paths: List of course directory paths.
         workers: Number of parallel worker threads.
         profile: Output profile ('full', 'quiz-only', 'exam-prep').
+        wait_quota: Wait for quota resets instead of exiting with jobs in QUOTA_WAIT.
 
     Returns:
         Exit code (0 on success).
@@ -173,7 +180,7 @@ def _handle_batch(config: AppConfig, paths: list[str], workers: int, profile: st
         courses_to_run = [item["code"] for item in registered]
 
     print(f"✅ 已排入 {len(courses_to_run)} 門課程至工作佇列。啟動 {workers} 個 Worker...")
-    asyncio.run(_execute_batch_pipeline(engine, adapter, config, courses_to_run, workers))
+    asyncio.run(_execute_batch_pipeline(engine, adapter, config, courses_to_run, workers, wait_quota))
     print("🎉 批次處理完畢！")
     return 0
 
@@ -257,7 +264,7 @@ def _dispatch_command(args: argparse.Namespace, config: AppConfig) -> int:
     if args.command == "resume":
         return _handle_resume(config)
     if args.command == "batch":
-        return _handle_batch(config, args.paths, args.workers, args.profile)
+        return _handle_batch(config, args.paths, args.workers, args.profile, args.wait_quota)
     if args.command == "watch":
         return _handle_watch(config)
     if args.command == "web":
@@ -328,6 +335,11 @@ def main(argv: list[str] | None = None) -> int:
         choices=[p.value for p in ProfileName],
         default=ProfileName.FULL.value,
         help="產出組合：full / quiz-only / exam-prep",
+    )
+    batch_parser.add_argument(
+        "--wait-quota",
+        action="store_true",
+        help="額度用完時等待重置並自動繼續，全部完成才結束",
     )
 
     subparsers.add_parser("watch", help="啟動資料夾監控守護")

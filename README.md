@@ -72,6 +72,8 @@ uv run notebooklm-batch-studio batch /path/to/BIO101 /path/to/CS101 --profile fu
 - `quiz-only`：僅生成各講 30 題測驗
 - `exam-prep`：期末考衝刺包（各講模擬考題、整門課模擬考、全課程總心智圖）
 
+加上 `--wait-quota`：額度用完時不結束，等額度重置後自動繼續，全部完成才結束。
+
 ### 2. 檢視進度與狀態
 
 ```bash
@@ -105,6 +107,14 @@ uv run notebooklm-batch-studio web
 - 網頁儀表板：瀏覽器開啟 `http://127.0.0.1:8768/`
 - OpenAPI 規格與文件：`http://127.0.0.1:8768/docs`（可作為 Open WebUI 工具伺服器）
 - MCP 端點：供 AI 代理人透過 MCP Client 連線協同
+
+網頁服務啟動後會自動處理佇列（`.env` 的 `AUTO_START_QUEUE=true`）。額度用完的工作會顯示「⏸ 等待額度，預計 HH:MM 自動繼續」，網頁服務開著時間到就自己接著跑。
+
+課程詳細頁可以：
+- 看狀態統計：完成、生成中、排隊中、等待額度、需審查、失敗各有幾項（每 15 秒自動更新）。
+- 按「🔁 重新生成」：產生新版本（v2、v3…），舊版保留；NotebookLM 標題加「 (v2)」，本機檔名加「_v2」。
+- 打開「⚙️ 產出設定」：資訊圖表方向 / 詳細程度 / 風格、語音形式與長度、投影片格式與下載格式（PDF / PPTX）、影片形式與風格、測驗與閃卡題量。資訊圖表預設直式，並另存 A4 PDF、iPad Air 4、MacBook Pro 14 吋三個版本。
+- 頁首「🏷️ 命名規則」說明每種產出的意思、NotebookLM 標題與本機檔名，例如 quiz_1 是基礎（easy）、quiz_2 是理解（medium）、quiz_3 是模擬考（hard），各 30 題。
 
 ---
 

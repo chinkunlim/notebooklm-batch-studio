@@ -231,11 +231,13 @@ class WorkerPool:
         self._probe_task = None
         logger.info("WorkerPool stopped.")
 
-    async def run_until_empty(self, idle_timeout: float = 2.0) -> None:
+    async def run_until_empty(self, idle_timeout: float = 2.0, wait_for_quota: bool = False) -> None:
         """Run workers until no pending or running jobs remain, then stop.
 
         Args:
             idle_timeout: Seconds to wait after queue becomes empty before shutting down.
+            wait_for_quota: Also keep running while jobs wait in QUOTA_WAIT; the probe loop
+                wakes them when their cooldown passes, so the run finishes everything.
         """
         await self.start()
         idle_start: float | None = None
@@ -245,7 +247,8 @@ class WorkerPool:
                 counts = repo.count_by_status()
             pending = counts.get(JobStatus.PENDING, 0)
             running = counts.get(JobStatus.RUNNING, 0)
-            if pending == 0 and running == 0:
+            waiting = counts.get(JobStatus.QUOTA_WAIT, 0) if wait_for_quota else 0
+            if pending == 0 and running == 0 and waiting == 0:
                 if idle_start is None:
                     idle_start = time.time()
                 elif time.time() - idle_start >= idle_timeout:

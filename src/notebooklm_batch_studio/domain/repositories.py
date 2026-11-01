@@ -8,6 +8,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    GenerationOptions,
     JobStatus,
     QuizAttempt,
     QuizMistake,
@@ -73,6 +74,28 @@ class QueueRepositoryProtocol(Protocol):
             job_id: Task UUID.
             output_file: Path of the generated output file.
             interactive_path: Optional path to interactive HTML output.
+        """
+        ...
+
+    def record_artifact_ids(self, job_id: str, artifact_ids: list[str]) -> None:
+        """Remember which NotebookLM artifacts / notes a job produced.
+
+        Args:
+            job_id: Task UUID.
+            artifact_ids: Artifact or note ids.
+        """
+        ...
+
+    def max_version(self, course_code: str, lecture_no: int | None, artifact_type: ArtifactType) -> int:
+        """Return the highest version generated so far for one artifact slot.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Lecture number, or None for course-wide artifacts.
+            artifact_type: Artifact type.
+
+        Returns:
+            Highest version, or 0 when none exists.
         """
         ...
 
@@ -205,6 +228,15 @@ class CourseRepositoryProtocol(Protocol):
         """
         ...
 
+    def update_generation_options(self, code: str, options: GenerationOptions) -> None:
+        """Store a course's NotebookLM generation options.
+
+        Args:
+            code: Course code.
+            options: Options to persist.
+        """
+        ...
+
     def update_notebook_id(self, code: str, notebook_id: str) -> None:
         """Update linked NotebookLM notebook ID.
 
@@ -323,6 +355,7 @@ class NotebookLMClientProtocol(Protocol):
         source_ids: list[str],
         prompt: str | None = None,
         difficulty: str | None = None,
+        options: GenerationOptions | None = None,
     ) -> str:
         """Generate a quiz from selected sources and wait for completion.
 
@@ -331,6 +364,7 @@ class NotebookLMClientProtocol(Protocol):
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for the quiz generation.
             difficulty: 'easy', 'medium', 'hard', or None for the default.
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed quiz artifact id.
@@ -348,7 +382,11 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def generate_flashcards(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        options: GenerationOptions | None = None,
     ) -> str:
         """Request generation of flashcards from selected sources.
 
@@ -356,6 +394,7 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for flashcards generation.
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed flashcards artifact id.
@@ -403,7 +442,12 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def generate_audio(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: GenerationOptions | None = None,
     ) -> str:
         """Generate a Deep Dive audio overview and wait for completion.
 
@@ -412,6 +456,7 @@ class NotebookLMClientProtocol(Protocol):
             source_ids: List of source identifiers to generate from.
             prompt: Optional customization prompt for audio discussion.
             language: Course language ('zh-TW', 'en', 'bilingual').
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed audio artifact id.
@@ -437,6 +482,16 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             artifact_id: The artifact identifier to rename.
             title: The new title string (e.g. '[03] Quiz 1-基礎').
+        """
+        ...
+
+    async def rename_mind_map(self, notebook_id: str, note_id: str, title: str) -> None:
+        """Rename a note-backed mind map within NotebookLM. Refs: ISSUE-011
+
+        Args:
+            notebook_id: The notebook identifier.
+            note_id: The mind map note identifier.
+            title: The new title string.
         """
         ...
 
@@ -475,7 +530,12 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def generate_slide_deck(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: GenerationOptions | None = None,
     ) -> str:
         """Request generation of slide deck presentation outline.
 
@@ -484,6 +544,7 @@ class NotebookLMClientProtocol(Protocol):
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
             language: Target language.
+            options: Course generation options (None = defaults).
 
         Returns:
             Task or artifact identifier.
@@ -491,19 +552,25 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def download_slide_deck(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None, output_format: str = "pdf"
     ) -> None:
-        """Download slide deck outline to a local file.
+        """Download a slide deck as PDF or PPTX.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Target filesystem destination.
             artifact_id: Optional artifact identifier.
+            output_format: 'pdf' or 'pptx'.
         """
         ...
 
     async def generate_infographic(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: GenerationOptions | None = None,
     ) -> str:
         """Request generation of an infographic.
 
@@ -512,6 +579,7 @@ class NotebookLMClientProtocol(Protocol):
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
             language: Target language.
+            options: Course generation options (None = defaults).
 
         Returns:
             Task or artifact identifier.
@@ -559,7 +627,12 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def generate_video(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: GenerationOptions | None = None,
     ) -> str:
         """Request generation of cinematic video overview.
 
@@ -568,6 +641,7 @@ class NotebookLMClientProtocol(Protocol):
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
             language: Target language.
+            options: Course generation options (None = defaults).
 
         Returns:
             Task or artifact identifier.

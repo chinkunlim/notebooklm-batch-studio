@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 from datetime import timedelta
 
 from sqlalchemy import delete, func, select
@@ -20,11 +21,33 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    GenerationOptions,
     GreetingResult,
     JobStatus,
     Lecture,
     ProfileName,
+    merge_generation_options,
 )
+
+
+def _options_from_json(raw: str | None) -> GenerationOptions:
+    """Decode stored generation options, ignoring unknown or invalid keys.
+
+    Args:
+        raw: JSON text from the courses table, or None.
+
+    Returns:
+        GenerationOptions (defaults for anything missing).
+    """
+    if not raw:
+        return GenerationOptions()
+    options = GenerationOptions()
+    for key, value in json.loads(raw).items():
+        try:
+            options = merge_generation_options(options, {key: value})
+        except ValueError:
+            continue
+    return options
 
 
 def _to_domain_lecture(record: LectureRecord) -> Lecture:
@@ -72,6 +95,7 @@ def _to_domain_course(record: CourseRecord, lectures: list[Lecture]) -> Course:
         watch=record.watch,
         mock_exam_questions=record.mock_exam_questions,
         lectures=lectures,
+        generation_options=_options_from_json(getattr(record, "generation_options", None)),
     )
 
 
@@ -102,6 +126,8 @@ def _to_domain_job(record: ArtifactJobRecord) -> ArtifactJob:
         cooldown_until=record.cooldown_until,
         created_at=record.created_at,
         updated_at=record.updated_at,
+        version=getattr(record, "version", 1) or 1,
+        artifact_ids=tuple(json.loads(record.artifact_ids)) if record.artifact_ids else (),
     )
 
 
@@ -194,6 +220,8 @@ class CourseRepository:
                 exam_date=course.exam_date,
                 watch=course.watch,
                 mock_exam_questions=course.mock_exam_questions,
+                # Later re-registrations keep the stored options (see update_generation_options).
+                generation_options=json.dumps(dataclasses.asdict(course.generation_options)),
             )
             self.session.add(existing)
         else:
@@ -245,6 +273,20 @@ class CourseRepository:
             lectures = [_to_domain_lecture(lec) for lec in self.session.scalars(stmt)]
             result.append(_to_domain_course(r, lectures))
         return result
+
+    def update_generation_options(self, code: str, options: GenerationOptions) -> None:
+        """Store a course's NotebookLM generation options.
+
+        Args:
+            code: Course code.
+            options: Options to persist.
+        """
+        record = self.session.get(CourseRecord, code)
+        if record:
+            record.generation_options = json.dumps(dataclasses.asdict(options))
+            record.updated_at = utc_now()
+            self.session.flush()
+            self.session.commit()
 
     def update_notebook_id(self, code: str, notebook_id: str) -> None:
         """Update the linked NotebookLM notebook ID for a course.
@@ -316,6 +358,7 @@ class QueueRepository:
                 ArtifactJobRecord.course_code == job.course_code,
                 ArtifactJobRecord.lecture_no == job.lecture_no,
                 ArtifactJobRecord.artifact_type == job.artifact_type.value,
+                ArtifactJobRecord.version == job.version,
             )
             existing = self.session.scalars(stmt).first()
             if existing is None:
@@ -333,6 +376,7 @@ class QueueRepository:
                     style_options=job.style_options,
                     interactive_path=job.interactive_path,
                     source_origin=job.source_origin,
+                    version=job.version,
                 )
                 self.session.add(record)
                 added_count += 1
@@ -374,6 +418,37 @@ class QueueRepository:
         self.session.flush()
         self.session.commit()
         return _to_domain_job(record)
+
+    def record_artifact_ids(self, job_id: str, artifact_ids: list[str]) -> None:
+        """Remember which NotebookLM artifacts / notes a job produced. Refs: ADR-005
+
+        Args:
+            job_id: Task UUID.
+            artifact_ids: Artifact or note ids returned by the generate calls.
+        """
+        record = self.session.get(ArtifactJobRecord, job_id)
+        if record:
+            record.artifact_ids = json.dumps(list(artifact_ids))
+            self.session.flush()
+            self.session.commit()
+
+    def max_version(self, course_code: str, lecture_no: int | None, artifact_type: ArtifactType) -> int:
+        """Return the highest version generated so far for one artifact slot.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Lecture number, or None for course-wide artifacts.
+            artifact_type: Artifact type.
+
+        Returns:
+            Highest version number, or 0 when the slot has no job yet.
+        """
+        stmt = select(func.max(ArtifactJobRecord.version)).where(
+            ArtifactJobRecord.course_code == course_code,
+            ArtifactJobRecord.lecture_no == lecture_no,
+            ArtifactJobRecord.artifact_type == artifact_type.value,
+        )
+        return int(self.session.scalar(stmt) or 0)
 
     def complete_job(self, job_id: str, output_file: str, interactive_path: str | None = None) -> None:
         """Mark a job as successfully completed.

@@ -18,6 +18,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(adapters/domain): add adapters/domain module (by `@antigravity`)
 - feat(adapters/domain): update adapters/domain (by `@antigravity`)
 - feat(adapters/domain): add adapters/domain module (by `@antigravity`)
+- feat(studio): rename mind maps, versioned regeneration, per-course generation options with device-sized infographics, naming guide, live web status and auto-resume (by `@claude-code`)
 
 ### Fixed
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)

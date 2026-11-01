@@ -20,13 +20,14 @@ from notebooklm import (
     ArtifactTimeoutError,
     AuthError,
     NotebookLMClient,
-    QuizQuantity,
     RateLimitError,
     ReportFormat,
 )
+from notebooklm.types import MindMapKind
 
 from notebooklm_batch_studio.adapters.notebooklm.generation import (
     finish_generation,
+    generation_kwargs,
     to_nlm_language,
     to_quiz_difficulty,
 )
@@ -38,6 +39,7 @@ from notebooklm_batch_studio.domain.exceptions import (
     QuotaExceededError,
     StudioError,
 )
+from notebooklm_batch_studio.domain.models import GenerationOptions
 
 logger = logging.getLogger(__name__)
 
@@ -290,6 +292,7 @@ class NotebookLMAdapter:
         source_ids: list[str],
         prompt: str | None = None,
         difficulty: str | None = None,
+        options: GenerationOptions | None = None,
     ) -> str:
         """Generate a quiz from selected sources and wait for it to complete.
 
@@ -300,6 +303,7 @@ class NotebookLMAdapter:
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for the quiz generation.
             difficulty: 'easy', 'medium', 'hard', or None for the NotebookLM default.
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed quiz artifact id.
@@ -310,14 +314,18 @@ class NotebookLMAdapter:
                 notebook_id=notebook_id,
                 source_ids=source_ids,
                 instructions=instructions,
-                quantity=QuizQuantity.MORE,
                 difficulty=to_quiz_difficulty(difficulty),
+                **generation_kwargs("quiz", options),
             )
             return await finish_generation(client, notebook_id, status, "quiz")
 
     @_translate_errors
     async def generate_flashcards(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        options: GenerationOptions | None = None,
     ) -> str:
         """Generate flashcards from selected sources and wait for them to complete.
 
@@ -325,6 +333,7 @@ class NotebookLMAdapter:
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for flashcards generation.
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed flashcards artifact id.
@@ -332,7 +341,10 @@ class NotebookLMAdapter:
         instructions = prompt or "Extract key vocabulary, core concepts, and biochemical mechanisms."
         async with self._client() as client:
             status = await client.artifacts.generate_flashcards(
-                notebook_id=notebook_id, source_ids=source_ids, instructions=instructions
+                notebook_id=notebook_id,
+                source_ids=source_ids,
+                instructions=instructions,
+                **generation_kwargs("flashcards", options),
             )
             return await finish_generation(client, notebook_id, status, "flashcards")
 
@@ -369,7 +381,12 @@ class NotebookLMAdapter:
 
     @_translate_errors
     async def generate_audio(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: GenerationOptions | None = None,
     ) -> str:
         """Generate a Deep Dive audio overview and wait for it to complete.
 
@@ -378,6 +395,7 @@ class NotebookLMAdapter:
             source_ids: List of source identifiers to generate from.
             prompt: Optional customization prompt for audio discussion.
             language: Course language ('zh-TW', 'en', 'bilingual').
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed audio artifact id.
@@ -389,6 +407,7 @@ class NotebookLMAdapter:
                 source_ids=source_ids,
                 language=to_nlm_language(language),
                 instructions=instructions,
+                **generation_kwargs("audio", options),
             )
             return await finish_generation(client, notebook_id, status, "audio")
 
@@ -430,7 +449,12 @@ class NotebookLMAdapter:
 
     @_translate_errors
     async def generate_slide_deck(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: GenerationOptions | None = None,
     ) -> str:
         """Generate a slide deck and wait for it to complete.
 
@@ -439,6 +463,7 @@ class NotebookLMAdapter:
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
             language: Course language ('zh-TW', 'en', 'bilingual').
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed slide deck artifact id.
@@ -449,12 +474,18 @@ class NotebookLMAdapter:
                 source_ids=source_ids,
                 language=to_nlm_language(language),
                 instructions=build_language_instruction(prompt, language),
+                **generation_kwargs("slide_deck", options),
             )
             return await finish_generation(client, notebook_id, status, "slide deck")
 
     @_translate_errors
     async def generate_infographic(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: GenerationOptions | None = None,
     ) -> str:
         """Generate an infographic and wait for it to complete.
 
@@ -463,6 +494,7 @@ class NotebookLMAdapter:
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
             language: Course language ('zh-TW', 'en', 'bilingual').
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed infographic artifact id.
@@ -473,6 +505,7 @@ class NotebookLMAdapter:
                 source_ids=source_ids,
                 language=to_nlm_language(language),
                 instructions=build_language_instruction(prompt, language),
+                **generation_kwargs("infographic", options),
             )
             return await finish_generation(client, notebook_id, status, "infographic")
 
@@ -502,7 +535,12 @@ class NotebookLMAdapter:
 
     @_translate_errors
     async def generate_video(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        language: str = "zh-TW",
+        options: GenerationOptions | None = None,
     ) -> str:
         """Generate a video overview and wait for it to complete.
 
@@ -511,6 +549,7 @@ class NotebookLMAdapter:
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
             language: Course language ('zh-TW', 'en', 'bilingual').
+            options: Course generation options (None = defaults).
 
         Returns:
             The completed video artifact id.
@@ -521,12 +560,13 @@ class NotebookLMAdapter:
                 source_ids=source_ids,
                 language=to_nlm_language(language),
                 instructions=build_language_instruction(prompt, language),
+                **generation_kwargs("video", options),
             )
             return await finish_generation(client, notebook_id, status, "video", timeout=1800.0)
 
     @_translate_errors
     async def download_artifact(
-        self, kind: str, notebook_id: str, output_path: str, artifact_id: str
+        self, kind: str, notebook_id: str, output_path: str, artifact_id: str, **extra: Any
     ) -> None:
         """Download one specific artifact with the notebooklm-py downloader for its kind.
 
@@ -536,13 +576,14 @@ class NotebookLMAdapter:
             notebook_id: The notebook identifier.
             output_path: Local filesystem destination.
             artifact_id: Artifact (or mind map note) id returned by the generate call.
+            **extra: Extra downloader keywords (e.g. output_format for slide decks).
         """
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
         async with self._client() as client:
             logger.info("Downloading %s %s from notebook %s to %s", kind, artifact_id, notebook_id, out)
             downloader = getattr(client.artifacts, f"download_{kind}")
-            await downloader(notebook_id, str(out), artifact_id=artifact_id)
+            await downloader(notebook_id, str(out), artifact_id=artifact_id, **extra)
 
     async def download_quiz(self, notebook_id: str, output_path: str, artifact_id: str | None = None) -> None:
         """Download a quiz JSON.
@@ -603,16 +644,19 @@ class NotebookLMAdapter:
         await self.download_artifact("report", notebook_id, output_path, artifact_id or "")
 
     async def download_slide_deck(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None, output_format: str = "pdf"
     ) -> None:
-        """Download a slide deck.
+        """Download a slide deck as PDF or PPTX.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Target filesystem destination.
             artifact_id: Artifact id returned by generate_slide_deck.
+            output_format: 'pdf' or 'pptx'.
         """
-        await self.download_artifact("slide_deck", notebook_id, output_path, artifact_id or "")
+        await self.download_artifact(
+            "slide_deck", notebook_id, output_path, artifact_id or "", output_format=output_format
+        )
 
     async def download_infographic(
         self, notebook_id: str, output_path: str, artifact_id: str | None = None
@@ -665,6 +709,23 @@ class NotebookLMAdapter:
                 await client.artifacts.rename(notebook_id, artifact_id, title)
             except Exception as err:
                 logger.warning("Could not rename artifact %s on NotebookLM: %s", artifact_id, err)
+
+    @_translate_errors
+    async def rename_mind_map(self, notebook_id: str, note_id: str, title: str) -> None:
+        """Rename a note-backed mind map within NotebookLM. Refs: ISSUE-011
+
+        Mind maps are notes, not studio artifacts, so `artifacts.rename` cannot rename them.
+
+        Args:
+            notebook_id: The notebook identifier.
+            note_id: The mind map note identifier.
+            title: The new title string.
+        """
+        async with self._client() as client:
+            logger.info("Renaming mind map %s to '%s' in notebook %s", note_id, title, notebook_id)
+            await client.mind_maps.rename(
+                notebook_id, note_id, title, kind=MindMapKind.NOTE_BACKED, return_object=False
+            )
 
     @_translate_errors
     async def list_artifacts(self, notebook_id: str) -> list[dict[str, Any]]:
