@@ -17,7 +17,7 @@
 | 🏠 今天 | 下一步（依順序：語音 → 讀書指南 → 測驗 1/2/3 → 閃卡）、考試倒數、今天到期的閃卡與錯題、各講進度 | 學習專區預設分頁；`GET /api/courses/{code}/study/plan`；MCP `get_study_plan` |
 | 完成標記 | 「我聽完了」「我讀完了」；測驗與閃卡自動判斷 | `POST .../study/progress`；MCP `mark_study_step(confirm)` |
 | 交卷回饋 | 頁內分數卡、每題對錯與解析、只重做錯題、各章答對率（全課程考題帶【ChNN】標記） | 學習專區 |
-| 🤔 為什麼？ | 請 NotebookLM 只依該講來源解釋正確答案與各選項（約 0.06% 額度） | `POST .../study/explain`；MCP `explain_question(confirm)` |
+| 🤔 為什麼？ | 請 Gemini Notebook 只依該講來源解釋正確答案與各選項（約 0.06% 額度） | `POST .../study/explain`；MCP `explain_question(confirm)` |
 | 間隔複習 | 閃卡「記得／不記得」，記得 1→3→7→14→30 天，不記得 10 分鐘後再來 | `GET .../reviews/due`、`POST .../reviews` |
 | 模擬考模式 | 全課程測驗可開始計時（每題 1.5 分鐘），時間到自動交卷 | 學習專區 |
 | 語音續播 | 記住每講播放位置與速度（瀏覽器本機） | 學習專區 |
@@ -34,4 +34,4 @@
 ## 4. 驗收
 
 - [x] 單元測試：`tests/test_study_plan.py`（排程、下一步、進度、解釋、HTTP / MCP）
-- [x] 瀏覽器（隔離資料）：今天頁、完成標記、交卷回饋、只重做錯題、為什麼（真實 NotebookLM 回應）、閃卡評分、模擬考計時、課程頁分組、精靈、iPad 直式、深淺色
+- [x] 瀏覽器（隔離資料）：今天頁、完成標記、交卷回饋、只重做錯題、為什麼（真實 Gemini Notebook 回應）、閃卡評分、模擬考計時、課程頁分組、精靈、iPad 直式、深淺色

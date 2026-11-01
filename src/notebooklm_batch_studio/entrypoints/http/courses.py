@@ -128,7 +128,7 @@ def update_course_profile(code: str, req: UpdateProfileRequest, request: Request
 
 @courses_router.post("/api/courses/{code}/setup", tags=["Courses"], operation_id="setup_course_notebook")
 async def setup_course_notebook(code: str, request: Request) -> dict[str, Any]:
-    """Initialize NotebookLM notebook and upload all lecture PDF sources.
+    """Initialize Gemini Notebook notebook and upload all lecture PDF sources.
 
     Args:
         code: Course identifier.
@@ -180,7 +180,7 @@ def refine_course_prompts(code: str, request: Request) -> dict[str, Any]:
     operation_id="retry_lecture_upload",
 )
 async def retry_lecture_upload(code: str, no: int, request: Request) -> dict[str, Any]:
-    """Retry uploading a single failed lecture PDF to NotebookLM.
+    """Retry uploading a single failed lecture PDF to Gemini Notebook.
 
     Args:
         code: Course identifier.
@@ -213,7 +213,7 @@ async def retry_lecture_upload(code: str, no: int, request: Request) -> dict[str
     operation_id="sync_course_from_notebooklm",
 )
 async def sync_course_from_notebooklm(code: str, request: Request) -> dict[str, Any]:
-    """Synchronize remote artifacts created manually in NotebookLM back to local files.
+    """Synchronize remote artifacts created manually in Gemini Notebook back to local files.
 
     Args:
         code: Course identifier.

@@ -1,4 +1,4 @@
-"""Generation helpers shared by the NotebookLM adapter: language codes, quiz options, status checks.
+"""Generation helpers shared by the Gemini Notebook adapter: language codes, quiz options, status checks.
 
 notebooklm-py returns a `GenerationStatus` from every `generate_*` call. Its `task_id` is also the
 artifact id, and a quota rejection usually comes back as a *failed status* rather than an
@@ -62,7 +62,7 @@ def to_quiz_difficulty(difficulty: str | None) -> QuizDifficulty | None:
     """Map a domain difficulty string to the notebooklm-py enum.
 
     Args:
-        difficulty: 'easy', 'medium', 'hard', or None for the NotebookLM default.
+        difficulty: 'easy', 'medium', 'hard', or None for the Gemini Notebook default.
 
     Returns:
         QuizDifficulty value, or None.
@@ -84,9 +84,9 @@ def to_enum(enum_cls: type[Enum], value: str) -> Any:
 
 
 def quiz_quantity_for(questions: int) -> QuizQuantity:
-    """Pick NotebookLM's quiz quantity setting that best matches a target question count.
+    """Pick Gemini Notebook's quiz quantity setting that best matches a target question count.
 
-    The prompt states the exact number; this only stops NotebookLM's own size setting from
+    The prompt states the exact number; this only stops Gemini Notebook's own size setting from
     pulling the other way.
 
     Args:
@@ -169,13 +169,13 @@ def _raise_for_status(status: GenerationStatus, label: str) -> None:
         label: Human-readable artifact label for messages.
 
     Raises:
-        QuotaExceededError: When NotebookLM rejected the request for quota / rate limit.
+        QuotaExceededError: When Gemini Notebook rejected the request for quota / rate limit.
         StudioError: When generation failed for any other reason.
     """
     if status.is_rate_limited:
-        raise QuotaExceededError(f"NotebookLM quota reached while generating {label}: {status.error}")
+        raise QuotaExceededError(f"Gemini Notebook quota reached while generating {label}: {status.error}")
     if status.is_failed:
-        raise StudioError(f"NotebookLM failed to generate {label}: {status.error or status.error_code}")
+        raise StudioError(f"Gemini Notebook failed to generate {label}: {status.error or status.error_code}")
 
 
 async def finish_generation(

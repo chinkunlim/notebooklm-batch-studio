@@ -2,7 +2,7 @@
 
 Combines what has been generated (artifact jobs), what the student has done (progress marks, quiz
 attempts, flashcard reviews) and the exam date into one "today" view, and runs the spaced-review
-schedule for flashcards and mistakes. "Why is this the answer?" asks NotebookLM about one quiz
+schedule for flashcards and mistakes. "Why is this the answer?" asks Gemini Notebook about one quiz
 question, grounded in the course's own sources.
 """
 
@@ -178,14 +178,14 @@ class StudyPlanService:
         review_repo: ReviewStoreProtocol,
         notebooklm_client: NotebookLMClientProtocol,
     ) -> None:
-        """Bind the service to its stores and the NotebookLM client.
+        """Bind the service to its stores and the Gemini Notebook client.
 
         Args:
             course_repo: Courses and lectures.
             queue_repo: Generated artifact jobs.
             study_repo: Quiz attempts and mistakes.
             review_repo: Progress marks and review items.
-            notebooklm_client: NotebookLM client (for explanations).
+            notebooklm_client: Gemini Notebook client (for explanations).
         """
         self.course_repo = course_repo
         self.queue_repo = queue_repo
@@ -369,9 +369,9 @@ class StudyPlanService:
         answer_index: int,
         force: bool = False,
     ) -> dict[str, Any]:
-        """Explain why an answer is correct: the saved explanation, or ask NotebookLM and save it.
+        """Explain why an answer is correct: the saved explanation, or ask Gemini Notebook and save it.
 
-        Every NotebookLM answer is kept, so the same question never spends quota twice unless the
+        Every Gemini Notebook answer is kept, so the same question never spends quota twice unless the
         student asks again on purpose (`force`).
 
         Args:
@@ -380,7 +380,7 @@ class StudyPlanService:
             question: Question text.
             choices: Answer options in display order.
             answer_index: Index of the correct option.
-            force: Ask NotebookLM again even if an explanation is saved.
+            force: Ask Gemini Notebook again even if an explanation is saved.
 
         Returns:
             Dictionary with `answer` (Markdown), `html`, `saved_at` and `from_cache`.
@@ -400,7 +400,7 @@ class StudyPlanService:
                 "from_cache": True,
             }
         if not course.notebook_id:
-            raise ValueError("This course has no NotebookLM notebook yet")
+            raise ValueError("This course has no Gemini Notebook notebook yet")
         if not 0 <= answer_index < len(choices):
             raise ValueError("answer_index is out of range")
         letters = "ABCDEFGH"
@@ -428,7 +428,7 @@ class StudyPlanService:
         }
 
     def list_explanations(self, code: str, lecture_no: int | None = None) -> list[dict[str, Any]]:
-        """Saved NotebookLM explanations for a course (or one lecture), newest first, with HTML.
+        """Saved Gemini Notebook explanations for a course (or one lecture), newest first, with HTML.
 
         Args:
             code: Course code.

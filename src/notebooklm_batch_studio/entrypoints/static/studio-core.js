@@ -161,4 +161,28 @@ function goHome() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/* ---------- Focus mode (full screen) ---------- */
+/**
+ * Enter or leave full screen. Browsers only allow this after a click, so it cannot start by itself;
+ * the desktop launcher (scripts/launch_app.sh) opens the app full screen instead.
+ * @returns {Promise<void>}
+ */
+async function toggleFocusMode() {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch (e) {
+    showToast('這個瀏覽器不允許全螢幕，可用 ⌃⌘F（Mac）切換。', 'warning');
+  }
+}
+
+/**
+ * Keep the focus button label in step with the full-screen state.
+ */
+function syncFocusButton() {
+  const btn = document.getElementById('btnFocus');
+  if (btn) btn.textContent = document.fullscreenElement ? '🗗 離開專注' : '⛶ 專注';
+}
+
+document.addEventListener('fullscreenchange', syncFocusButton);
 document.addEventListener('DOMContentLoaded', initModals);

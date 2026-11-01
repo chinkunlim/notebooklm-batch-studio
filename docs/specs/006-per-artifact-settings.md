@@ -6,7 +6,7 @@
 
 ## 1. 目標
 
-使用者在網頁上一次設定好，系統就自動在 NotebookLM 產生所有內容，不必到 NotebookLM 一項一項手動操作。
+使用者在網頁上一次設定好，系統就自動在 Gemini Notebook 產生所有內容，不必到 Gemini Notebook 一項一項手動操作。
 除了「整門課共用」的產出設定（SPEC-005），還要能針對**某一種產出**、甚至**某一講的某一份產出**單獨設定，
 例如：第 3 講的測驗 2 改成簡答題、題數較少；整門課的資訊圖表改成橫式。
 
@@ -52,7 +52,7 @@
 - [x] 單項設定覆蓋課程設定，課程設定覆蓋預設值（單元測試）
 - [x] 尚未開始的工作改設定後，生成時帶入新參數
 - [x] 重新生成沿用上一版單項設定
-- [x] 不支援的欄位不會送給 NotebookLM
+- [x] 不支援的欄位不會送給 Gemini Notebook
 
 ## 6. 未決問題
 
@@ -70,6 +70,6 @@
 - **加入時設定**：加入課程視窗有「⚙️ 進階產出設定」，只送出和預設值不同的項目；設定在任何工作開始前寫入。
 - **課程暫停**：取消「加入後立即開始」＝以暫停狀態加入；課程頁可「▶️ 開始生成／⏸ 暫停這門課」。HTTP `POST /api/courses/{code}/pause|start`、MCP `set_course_paused(confirm)`。
 - **章節範圍**：整門課產出可設 `chapter_range`（例如 `1-3`），只用那些講次的來源，標題前綴與 prompt 都跟著範圍。
-- **刪除課程**：`DELETE /api/courses/{code}`、MCP `delete_course(confirm)`；刪本機紀錄，產出移到 `DATA_DIR/deleted/`，講義 PDF 與 NotebookLM 不動。
-- **沿用筆記本**：重新加入時，NotebookLM 上已有同名筆記本就沿用，已上傳的 PDF（依檔名）不重傳；可在加入視窗取消。
+- **刪除課程**：`DELETE /api/courses/{code}`、MCP `delete_course(confirm)`；刪本機紀錄，產出移到 `DATA_DIR/deleted/`，講義 PDF 與 Gemini Notebook 不動。
+- **沿用筆記本**：重新加入時，Gemini Notebook 上已有同名筆記本就沿用，已上傳的 PDF（依檔名）不重傳；可在加入視窗取消。
 - 測試：`tests/test_course_admin.py`。

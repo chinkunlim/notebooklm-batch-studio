@@ -1,6 +1,6 @@
 """Unit tests for artifact converters (Quiz, Flashcards, Mind Map).
 
-Tests parsing of real NotebookLM output fixtures, deduplication and merging up to 30
+Tests parsing of real Gemini Notebook output fixtures, deduplication and merging up to 30
 questions, Markdown generation (題目卷.md & 答案卷.md), Anki CSV formatting,
 OPML 2.0 XML tree structures, and ReportLab PDF rendering.
 """
@@ -54,7 +54,7 @@ class TestQuizConverter(unittest.TestCase):
             self.raw_quiz_data = json.load(f)
 
     def test_parse_quiz_structure(self) -> None:
-        """Verify parsing raw NotebookLM JSON into domain Quiz entity."""
+        """Verify parsing raw Gemini Notebook JSON into domain Quiz entity."""
         quiz = parse_notebooklm_quiz(
             raw_data=self.raw_quiz_data,
             course_code="BIO101",

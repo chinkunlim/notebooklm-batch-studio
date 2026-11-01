@@ -64,7 +64,7 @@ class Fixture(unittest.TestCase):
 
 
 class QuizBatchTitleTest(unittest.IsolatedAsyncioTestCase):
-    """A quiz collected over several batches numbers its NotebookLM titles."""
+    """A quiz collected over several batches numbers its Gemini Notebook titles."""
 
     async def test_batches_are_numbered(self) -> None:
         """Three generated batches are renamed (1/3), (2/3), (3/3)."""

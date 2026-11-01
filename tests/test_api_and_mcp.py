@@ -29,7 +29,7 @@ from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 
 class MockNotebookLMClient(NotebookLMClientProtocol):
-    """Offline test stub for NotebookLM operations."""
+    """Offline test stub for Gemini Notebook operations."""
 
     def __init__(self) -> None:
         """Initialize mock client."""
@@ -236,7 +236,7 @@ class TestApiAndMcp(unittest.TestCase):
         """GET / returns the local management dashboard HTML."""
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("NotebookLM Batch Studio", resp.text)
+        self.assertIn("Gemini Notebook 學習工作室", resp.text)
         self.assertIn("127.0.0.1:8768", resp.text)
 
     def test_get_status_endpoint(self) -> None:

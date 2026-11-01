@@ -20,13 +20,13 @@
 - **必須 (Must)**：
   - 每門課可設定的參數（預設值）：資訊圖表方向 portrait、詳細程度 detailed、風格 auto_select；語音 deep_dive / default；
     投影片 detailed_deck / default、下載 pdf；影片 explainer / auto_select；測驗題量 more；閃卡 more / medium；裝置版本 開。
-  - 重新生成保留舊版，NotebookLM 標題加「 (v2)」，本機檔名加「_v2」。
+  - 重新生成保留舊版，Gemini Notebook 標題加「 (v2)」，本機檔名加「_v2」。
   - 資訊圖表裝置版本：`<名稱>_A4.pdf`（2480×3508，300 dpi）、`<名稱>_iPadAir4.png`（1640×2360）、
     `<名稱>_MacBookPro14.png`（3024×1964），補白邊、不裁切。
   - web 啟動自動處理佇列（`AUTO_START_QUEUE=true`）；CLI `batch --wait-quota` 等額度重置後繼續。
   - 網頁課程頁：狀態統計條、中文狀態、版本徽章、重新生成按鈕、產出設定面板、每 15 秒自動更新。
 - **可選 (Nice to have)**：依使用者勾選只生成部分內容（目前測試階段全部生成）。
-- **不做 (Out of scope)**：NotebookLM 指定精確像素尺寸（API 只提供橫 / 直 / 方）；自動刪除舊版本。
+- **不做 (Out of scope)**：Gemini Notebook 指定精確像素尺寸（API 只提供橫 / 直 / 方）；自動刪除舊版本。
 
 ## 4. 介面 / API
 
@@ -46,8 +46,8 @@
 - [x] 參數正確對應成 notebooklm-py enum；不合法的值被拒絕；重新註冊不覆蓋設定
 - [x] 額度等待到期後工作自動完成（`wait_for_quota`）
 - [x] web 啟動時自動開始佇列
-- [ ] 真機：v2 資訊圖表為直式、NotebookLM 標題正確
+- [ ] 真機：v2 資訊圖表為直式、Gemini Notebook 標題正確
 
 ## 6. 未決問題
 
-- 影片 `short` 格式在 NotebookLM 是固定風格，選了其他風格可能被忽略。
+- 影片 `short` 格式在 Gemini Notebook 是固定風格，選了其他風格可能被忽略。

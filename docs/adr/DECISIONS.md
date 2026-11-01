@@ -17,3 +17,4 @@
 | [ADR-003](003-student-study-portal-spaced-repetition.md) | 以 SQLite 與 Anki CSV 整合學生研讀工作台與間隔重複 | Accepted | 2026-11-01 | `src/notebooklm_batch_studio/adapters/db/study_repository.py, src/notebooklm_batch_studio/services/study_service.py` |
 | [ADR-004](004-artifact-id-targeting.md) | 以 generate 回傳的 artifact_id 精準下載與改名，取代取最新一份 | Accepted | 2026-11-01 | `src/notebooklm_batch_studio/adapters/notebooklm/`, `src/notebooklm_batch_studio/services/artifact_runner.py` |
 | [ADR-005](005-job-versions-and-generation-options.md) | 工作記錄 artifact id 與版本號，重新生成保留舊版；產出參數存於課程 | Accepted | 2026-11-01 | `src/notebooklm_batch_studio/services/course_settings.py`, `src/notebooklm_batch_studio/domain/naming.py`, `src/notebooklm_batch_studio/adapters/notebooklm/generation.py` |
+| [ADR-006](006-gemini-notebook-display-name.md) | 產品改名 Gemini Notebook：只改顯示名稱，不改程式識別名稱 | Accepted | 2026-11-01 | — |

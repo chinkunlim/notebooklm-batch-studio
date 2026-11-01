@@ -1,6 +1,6 @@
 """Course summary reporter: generates summary.md and summary.html for completed packages.
 
-Lists course metadata, lecture progress, links to NotebookLM web interface,
+Lists course metadata, lecture progress, links to Gemini Notebook web interface,
 and all generated deliverable files (audio MP3, quizzes, flashcards, mind maps, mock exam).
 """
 
@@ -155,9 +155,9 @@ class CourseReporter:
             Formatted Markdown string.
         """
         nb_link = (
-            f"[開啟 NotebookLM 筆記本](https://notebooklm.google.com/notebook/{course.notebook_id})"
+            f"[開啟 Gemini Notebook 筆記本](https://notebook.google.com/notebook/{course.notebook_id})"
             if course.notebook_id
-            else "尚未關聯 NotebookLM"
+            else "尚未關聯 Gemini Notebook"
         )
         exam_str = f"預定考試日期：`{course.exam_date}`" if course.exam_date else "未設定考試日期"
 
@@ -210,7 +210,7 @@ class CourseReporter:
         Returns:
             HTML page string with inline styling.
         """
-        nb_url = f"https://notebooklm.google.com/notebook/{course.notebook_id}" if course.notebook_id else "#"
+        nb_url = f"https://notebook.google.com/notebook/{course.notebook_id}" if course.notebook_id else "#"
         rows_html = _render_html_rows(course.lectures, job_statuses)
 
         return f"""<!DOCTYPE html>
@@ -245,7 +245,7 @@ class CourseReporter:
     <div class="meta-item">設定檔：<strong>{course.profile.value}</strong></div>
     <div class="meta-item">語言：<strong>{course.language}</strong></div>
     <div class="meta-item">講次數：<strong>{len(course.lectures)}</strong></div>
-    <a href="{nb_url}" target="_blank" class="btn">開啟 NotebookLM 雲端筆記本 ↗</a>
+    <a href="{nb_url}" target="_blank" class="btn">開啟 Gemini Notebook 雲端筆記本 ↗</a>
   </div>
 
   <h2>講次複習包產出狀態</h2>

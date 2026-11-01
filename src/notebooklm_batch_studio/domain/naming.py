@@ -1,6 +1,6 @@
 """Naming rules for generated artifacts: Chinese labels, version suffixes, and the web naming guide.
 
-One table describes what every artifact type means, how it is titled on NotebookLM and how its
+One table describes what every artifact type means, how it is titled on Gemini Notebook and how its
 files are named locally, so the runner, the API, MCP and the web page all explain the same rules.
 Refs: ADR-005
 """
@@ -131,10 +131,10 @@ _GUIDE: tuple[ArtifactNaming, ...] = (
 NAMING_BY_TYPE: dict[str, ArtifactNaming] = {n.artifact_type: n for n in _GUIDE}
 
 NAMING_RULES: tuple[str, ...] = (
-    "NotebookLM 上的標題格式：[前綴] 英文名稱，例如 [Ch01] Quiz 1 - Fundamentals。",
+    "Gemini Notebook 上的標題格式：[前綴] 英文名稱，例如 [Ch01] Quiz 1 - Fundamentals。",
     "前綴：PDF 檔名含 ch 或 chapter 時用 Ch01、Ch02…，否則用 L01、L02…；全課程產出用範圍，例如 Ch01-Ch06。",
     "本機檔案放在 output/courses/<課程>/<講次資料夾>/，全課程產出放在 _course_synthesis/。",
-    "重新生成時保留舊版：NotebookLM 標題加「 (v2)」，本機檔名加「_v2」，例如 infographic_v2.png。",
+    "重新生成時保留舊版：Gemini Notebook 標題加「 (v2)」，本機檔名加「_v2」，例如 infographic_v2.png。",
     "quiz.json 與 答案卷.md（沒有前綴）是學習頁預設讀取的副本，內容是該講第一份完成的測驗。",
     "題數不足的測驗不會放進正式資料夾，會移到 needs_review/ 等你審查。",
 )
@@ -155,7 +155,7 @@ def label_for(artifact_type: ArtifactType | str) -> str:
 
 
 def versioned_title(title: str, version: int) -> str:
-    """Add the regeneration suffix to a NotebookLM title.
+    """Add the regeneration suffix to a Gemini Notebook title.
 
     Args:
         title: Base title, e.g. '[Ch01] Infographic'.
@@ -189,7 +189,7 @@ def naming_guide() -> dict[str, Any]:
     """Build the naming guide shown in the web app and returned by HTTP / MCP.
 
     Returns:
-        Dictionary with general `rules` and per-type `artifacts` (label, meaning, NotebookLM
+        Dictionary with general `rules` and per-type `artifacts` (label, meaning, Gemini Notebook
         title example, local files).
     """
     artifacts = []

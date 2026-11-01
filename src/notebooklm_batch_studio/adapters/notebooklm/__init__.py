@@ -1,1 +1,1 @@
-"""NotebookLM adapter package: wraps NotebookLM API client and Playwright session manager."""
+"""Gemini Notebook adapter package: wraps Gemini Notebook API client and Playwright session manager."""

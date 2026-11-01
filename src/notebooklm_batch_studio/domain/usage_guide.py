@@ -1,4 +1,4 @@
-"""How to use NotebookLM Batch Studio: operating steps and an evidence-based study routine.
+"""How to use Gemini Notebook 學習工作室: operating steps and an evidence-based study routine.
 
 Shown in the web app ("📘 使用方法") and returned by HTTP / MCP, so every entry point gives the
 same advice.
@@ -10,6 +10,10 @@ from typing import Any
 
 USAGE_GUIDE: dict[str, Any] = {
     "title": "使用方法",
+    "note": (
+        "Gemini Notebook 就是原本的 NotebookLM（Google 在 2026 年 7 月 16 日改名），"
+        "帳號、筆記本和額度都不變。"
+    ),
     "sections": [
         {
             "heading": "一、產出流程（管理控制台）",
@@ -37,7 +41,7 @@ USAGE_GUIDE: dict[str, Any] = {
                 "📘 讀讀書指南或概念解說，讀完按「✅ 我讀完了」。",
                 (
                     "📝 做測驗 1 → 2 → 3：交卷後每題都會標對錯並附解析，"
-                    "可以「只重做錯的題目」；看不懂可以按「🤔 為什麼？」請 NotebookLM 依講義解釋。"
+                    "可以「只重做錯的題目」；看不懂可以按「🤔 為什麼？」請 Gemini Notebook 依講義解釋。"
                 ),
                 (
                     "🗂️ 閃卡翻面後誠實按「記得／不記得」：記得的 1、"
@@ -69,7 +73,7 @@ USAGE_GUIDE: dict[str, Any] = {
         {
             "heading": "五、額度怎麼算",
             "steps": [
-                "NotebookLM 用「5 小時」與「每週」兩個百分比額度計算，不是用字數。",
+                "Gemini Notebook 用「5 小時」與「每週」兩個百分比額度計算，不是用字數。",
                 (
                     "每種產出花費固定：語音約 9.8%、投影片約 14.3%、"
                     "影片約 10.4%、資訊圖表約 2.3%、報告約 1.4%、測驗約 0.6%（以 5 小時額度計）"

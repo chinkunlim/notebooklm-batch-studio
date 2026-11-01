@@ -91,7 +91,7 @@ class QueueRepositoryProtocol(Protocol):
         ...
 
     def record_artifact_ids(self, job_id: str, artifact_ids: list[str]) -> None:
-        """Remember which NotebookLM artifacts / notes a job produced.
+        """Remember which Gemini Notebook artifacts / notes a job produced.
 
         Args:
             job_id: Task UUID.
@@ -275,7 +275,7 @@ class CourseRepositoryProtocol(Protocol):
         ...
 
     def delete_course(self, code: str) -> int:
-        """Delete a course and its local records (NotebookLM untouched).
+        """Delete a course and its local records (Gemini Notebook untouched).
 
         Args:
             code: Course code.
@@ -308,7 +308,7 @@ class CourseRepositoryProtocol(Protocol):
         ...
 
     def update_generation_options(self, code: str, options: GenerationOptions) -> None:
-        """Store a course's NotebookLM generation options.
+        """Store a course's Gemini Notebook generation options.
 
         Args:
             code: Course code.
@@ -317,21 +317,21 @@ class CourseRepositoryProtocol(Protocol):
         ...
 
     def update_notebook_id(self, code: str, notebook_id: str) -> None:
-        """Update linked NotebookLM notebook ID.
+        """Update linked Gemini Notebook notebook ID.
 
         Args:
             code: Course code.
-            notebook_id: Google NotebookLM notebook ID.
+            notebook_id: Google Gemini Notebook notebook ID.
         """
         ...
 
     def update_lecture_source_id(self, code: str, lecture_no: int, source_id: str) -> None:
-        """Update the NotebookLM source ID for a lecture.
+        """Update the Gemini Notebook source ID for a lecture.
 
         Args:
             code: Course code.
             lecture_no: Sequence number of the lecture.
-            source_id: Uploaded source ID from NotebookLM.
+            source_id: Uploaded source ID from Gemini Notebook.
         """
         ...
 
@@ -358,7 +358,7 @@ class CourseRepositoryProtocol(Protocol):
             code: Course code.
             lecture_no: Sequence number of the lecture.
             status: Status string (pending, uploading, parsing, ready, failed).
-            source_id: Optional NotebookLM source ID when ready.
+            source_id: Optional Gemini Notebook source ID when ready.
             error_message: Optional failure explanation.
         """
         ...

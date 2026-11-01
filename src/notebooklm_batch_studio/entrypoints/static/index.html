@@ -1,5 +1,5 @@
 <!--
-用途：NotebookLM Batch Studio 本機管理介面與學生研讀專區 (Single Page Application)。
+用途：Gemini Notebook 學習工作室 本機管理介面與學生研讀專區 (Single Page Application)。
 提供課程批次生成管理、即時佇列監控、學生研讀工作台、3D 翻轉卡牌、語音導讀播放器與 Anki 匯出。
 -->
 <!DOCTYPE html>
@@ -7,7 +7,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NotebookLM Batch Studio</title>
+  <title>Gemini Notebook 學習工作室</title>
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <style>
     /* 全域色彩與元件樣式表 */
     :root {
@@ -248,6 +253,7 @@
         <button id="btnViewAdmin" class="primary" onclick="switchMainView('admin')">⚙️ 管理控制台</button>
         <button id="btnViewStudy" onclick="switchMainView('study')">🎓 學生研讀專區</button>
         <button onclick="openUsageModal()">📘 使用方法</button>
+        <button id="btnFocus" onclick="toggleFocusMode()" title="全螢幕專注模式（Esc 離開）">⛶ 專注</button>
       </nav>
     </div>
 
@@ -354,7 +360,7 @@
         <!-- Tab 1: Audio Player Panel -->
         <div id="tabPanelAudio" class="card" style="padding: 24px; display: none;">
           <h3 style="font-size: 1.1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-            <span>🎧 NotebookLM Studio 語音導讀 (Audio Overview)</span>
+            <span>🎧 Gemini Notebook Studio 語音導讀 (Audio Overview)</span>
           </h3>
           <div id="audioPlayerContainer"></div>
         </div>
@@ -512,7 +518,7 @@
       </label>
       <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
         <input type="checkbox" id="reuseNotebook" checked>
-        <span>📒 NotebookLM 上已有同名筆記本就沿用（已上傳的 PDF 不重傳；取消勾選會另建新的筆記本）</span>
+        <span>📒 Gemini Notebook 上已有同名筆記本就沿用（已上傳的 PDF 不重傳；取消勾選會另建新的筆記本）</span>
       </label>
 
       <div id="previewResults" style="display: none; background: #0f172a; padding: 12px; border-radius: var(--radius); font-size: 0.85rem; border: 1px solid var(--border);"></div>
@@ -1292,10 +1298,10 @@
         const authBadge = document.getElementById('authBadge');
         if (data.auth && data.auth.authenticated) {
           authBadge.className = 'badge badge-success';
-          authBadge.textContent = 'NotebookLM 已登入';
+          authBadge.textContent = 'Gemini Notebook 已登入';
         } else {
           authBadge.className = 'badge badge-danger';
-          authBadge.textContent = 'NotebookLM 未登入';
+          authBadge.textContent = 'Gemini Notebook 未登入';
         }
         const queueBadge = document.getElementById('queueBadge');
         const btnStart = document.getElementById('btnStartQueue');
@@ -1383,7 +1389,7 @@
     async function setupCourse(code, event) {
       if (event) event.stopPropagation();
       try {
-        alert(`開始為課程 [${code}] 在 NotebookLM 建立筆記本並上傳 PDF 講義...（這可能需要 1~2 分鐘，請稍候）`);
+        alert(`開始為課程 [${code}] 在 Gemini Notebook 建立筆記本並上傳 PDF 講義...（這可能需要 1~2 分鐘，請稍候）`);
         const res = await fetch(`/api/courses/${code}/setup`, { method: 'POST' });
         if (!res.ok) {
           const err = await res.json();
@@ -1400,7 +1406,7 @@
 
     async function retryUpload(code, lectureNo) {
       try {
-        alert(`開始重新上傳講義第 ${lectureNo} 講至 NotebookLM...`);
+        alert(`開始重新上傳講義第 ${lectureNo} 講至 Gemini Notebook...`);
         const res = await fetch(`/api/courses/${code}/lectures/${lectureNo}/retry_upload`, { method: 'POST' });
         if (!res.ok) {
           const err = await res.json();
@@ -1429,7 +1435,7 @@
 
     async function syncFromNotebookLM(code) {
       try {
-        alert(`正在向 NotebookLM 查詢課程 [${code}] 遠端所有生成物，並同步下載至本機...`);
+        alert(`正在向 Gemini Notebook 查詢課程 [${code}] 遠端所有生成物，並同步下載至本機...`);
         const res = await fetch(`/api/courses/${code}/sync`, { method: 'POST' });
         if (!res.ok) throw new Error('同步失敗');
         const data = await res.json();
@@ -1534,7 +1540,7 @@
 
         let lecturesTable = `
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 6px;">
-            <h4 style="font-size: 1rem; color: #38bdf8;">📄 講義 PDF 上傳與 NotebookLM 解析狀態</h4>
+            <h4 style="font-size: 1rem; color: #38bdf8;">📄 講義 PDF 上傳與 Gemini Notebook 解析狀態</h4>
           </div>
           <table>
             <thead>
@@ -1543,7 +1549,7 @@
                 <th>主題</th>
                 <th>檔名</th>
                 <th>狀態</th>
-                <th>NotebookLM Source ID</th>
+                <th>Gemini Notebook Source ID</th>
                 <th>動作</th>
               </tr>
             </thead>
@@ -1637,7 +1643,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
             <h4 style="font-size: 1rem; color: var(--primary);">⚙️ 生成項目 <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">（依講次分組，每 15 秒自動更新）</span></h4>
             <details class="more-menu"><summary>🛠️ 進階工具</summary><div class="menu">
-              <button onclick="syncFromNotebookLM('${code}')">🔄 從 NotebookLM 同步網頁上做的產出</button>
+              <button onclick="syncFromNotebookLM('${code}')">🔄 從 Gemini Notebook 同步網頁上做的產出</button>
               <button onclick="refinePrompts('${code}')">🤖 用 Ollama Gemma4 潤飾 Prompt</button>
             </div></details>
           </div>
@@ -1647,7 +1653,7 @@
         // Technical upload details are rarely needed: keep them collapsed at the bottom.
         // Keep the groups the user opened or closed when the page refreshes itself.
         const openState = new Map([...content.querySelectorAll('details.job-group')].map(d => [d.querySelector('summary span').textContent, d.open]));
-        content.innerHTML = jobsTable + `<details class="job-group" style="margin-top:16px;"><summary><span>📄 講義上傳與 NotebookLM 技術資訊</span><span class="badge badge-neutral">${(data.lectures || []).length} 份 PDF</span></summary><div>${lecturesTable}</div></details>`;
+        content.innerHTML = jobsTable + `<details class="job-group" style="margin-top:16px;"><summary><span>📄 講義上傳與 Gemini Notebook 技術資訊</span><span class="badge badge-neutral">${(data.lectures || []).length} 份 PDF</span></summary><div>${lecturesTable}</div></details>`;
         if (silent) content.querySelectorAll('details.job-group').forEach(d => {
           const key = d.querySelector('summary span').textContent;
           if (openState.has(key)) d.open = openState.get(key);
@@ -1704,7 +1710,7 @@
     }
 
     async function deleteCourse(code) {
-      if (!(await askConfirm(`刪除課程 ${code}？\n\n• 本機的工作紀錄與學習紀錄會刪除\n• 產出檔案移到 DATA_DIR/deleted/（可找回）\n• 講義 PDF 和 NotebookLM 上的筆記本不會動`, { okLabel: '刪除', danger: true }))) return;
+      if (!(await askConfirm(`刪除課程 ${code}？\n\n• 本機的工作紀錄與學習紀錄會刪除\n• 產出檔案移到 DATA_DIR/deleted/（可找回）\n• 講義 PDF 和 Gemini Notebook 上的筆記本不會動`, { okLabel: '刪除', danger: true }))) return;
       try {
         const res = await fetch(`/api/courses/${code}`, { method: 'DELETE' });
         const data = await res.json();
@@ -1720,7 +1726,7 @@
 
     async function regenerateArtifact(code, lectureNo, artifactType, label, nextVersion) {
       const scope = lectureNo === null ? '全課程' : `L${String(lectureNo).padStart(2, '0')}`;
-      if (!(await askConfirm(`重新生成 ${scope}「${label}」為 v${nextVersion}？\n舊版本會保留，這會使用 NotebookLM 額度。`, { okLabel: '重新生成' }))) return;
+      if (!(await askConfirm(`重新生成 ${scope}「${label}」為 v${nextVersion}？\n舊版本會保留，這會使用 Gemini Notebook 額度。`, { okLabel: '重新生成' }))) return;
       try {
         const res = await fetch(`/api/courses/${code}/jobs/regenerate`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1877,7 +1883,7 @@
       try {
         const data = await (await fetch('/api/naming-guide')).json();
         box.innerHTML = `<ul style="margin: 0 0 12px 18px; line-height: 1.7;">${data.rules.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
-          <table><thead><tr><th>代碼</th><th>名稱</th><th>意思</th><th>NotebookLM 標題</th><th>本機檔名</th></tr></thead><tbody>
+          <table><thead><tr><th>代碼</th><th>名稱</th><th>意思</th><th>Gemini Notebook 標題</th><th>本機檔名</th></tr></thead><tbody>
           ${data.artifacts.map(a => `<tr><td><code>${a.artifact_type}</code></td><td>${escHtml(a.label)}</td><td style="min-width:180px;">${escHtml(a.meaning)}</td><td><code>${escHtml(a.notebooklm_title)}</code></td><td><code>${escHtml(a.local_files)}</code></td></tr>`).join('')}
           </tbody></table>`;
       } catch (e) {
@@ -1934,7 +1940,8 @@
       const box = document.getElementById('usageContent');
       try {
         const data = await (await fetch('/api/usage-guide')).json();
-        box.innerHTML = data.sections.map(sec => `
+        const note = data.note ? `<p class="plan-card" style="margin-bottom:8px;">ℹ️ ${escHtml(data.note)}</p>` : '';
+        box.innerHTML = note + data.sections.map(sec => `
           <h4 style="color:#38bdf8; margin: 14px 0 6px;">${escHtml(sec.heading)}</h4>
           <ol style="margin: 0 0 0 20px;">${sec.steps.map(st => `<li>${escHtml(st)}</li>`).join('')}</ol>
         `).join('');

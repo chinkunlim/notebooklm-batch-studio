@@ -23,7 +23,7 @@ settings_router = APIRouter()
 
 @settings_router.get("/api/naming-guide", tags=["Settings"], operation_id="get_naming_guide")
 def get_naming_guide() -> dict[str, Any]:
-    """Explain how artifacts are named on NotebookLM and locally (quiz levels, prefixes, versions).
+    """Explain how artifacts are named on Gemini Notebook and locally (quiz levels, prefixes, versions).
 
     Returns:
         Naming rules and one row per artifact type.
@@ -289,7 +289,7 @@ def start_course(code: str, request: Request) -> dict[str, Any]:
 def delete_course(code: str, request: Request) -> dict[str, Any]:
     """Remove a course from this app (records deleted, outputs moved to DATA_DIR/deleted/).
 
-    The source PDFs and everything on NotebookLM stay untouched.
+    The source PDFs and everything on Gemini Notebook stay untouched.
 
     Args:
         code: Course code.

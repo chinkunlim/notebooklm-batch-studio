@@ -1,4 +1,4 @@
-"""Every button's API call must exist: job prompt view/edit routes and the wake-quota button (button audit)."""
+"""Every button's API call must exist: job prompt routes, wake-quota button, HEAD downloads (button audit)."""
 
 from __future__ import annotations
 

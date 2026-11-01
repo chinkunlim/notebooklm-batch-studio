@@ -26,7 +26,7 @@ class CourseRecord(Base):
         code: Unique course identifier (primary key).
         name: Course name.
         source_dir: Filesystem path to course materials.
-        notebook_id: Associated NotebookLM notebook ID.
+        notebook_id: Associated Gemini Notebook notebook ID.
         profile: Active generation profile.
         language: Output language preference.
         exam_date: Date of upcoming exam.
@@ -36,7 +36,7 @@ class CourseRecord(Base):
         selected_chapter_artifacts: JSON list of per-lecture artifact types chosen in the web app.
         selected_course_artifacts: JSON list of course-wide artifact types chosen in the web app.
         paused: When true, the queue does not start this course's jobs.
-        reuse_notebook: Reuse a NotebookLM notebook with the same title (and its PDFs) if one exists.
+        reuse_notebook: Reuse a Gemini Notebook notebook with the same title (and its PDFs) if one exists.
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
     """
@@ -108,7 +108,7 @@ class ArtifactJobRecord(Base):
         created_at: Creation timestamp.
         updated_at: Last state transition timestamp.
         version: Generation version (1 = first, 2+ = regenerations).
-        artifact_ids: JSON list of NotebookLM artifact / note ids produced by this job.
+        artifact_ids: JSON list of Gemini Notebook artifact / note ids produced by this job.
     """
 
     __tablename__ = "artifact_jobs"
@@ -264,7 +264,7 @@ class ReviewItemRecord(Base):
 
 
 class ExplanationRecord(Base):
-    """A saved NotebookLM explanation of one quiz question (table `explanations`).
+    """A saved Gemini Notebook explanation of one quiz question (table `explanations`).
 
     Attributes:
         id: "<course>:<question key>" primary key.
@@ -272,7 +272,7 @@ class ExplanationRecord(Base):
         lecture_no: Lecture number, or None for course-wide questions.
         question_key: Hash of the question text.
         question: Question text.
-        answer_md: NotebookLM's answer (Markdown).
+        answer_md: Gemini Notebook's answer (Markdown).
         created_at: When it was asked (UTC).
     """
 

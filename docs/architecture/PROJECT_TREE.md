@@ -105,6 +105,7 @@ notebooklm-batch-studio/
 │   │   ├── 003-student-study-portal-spaced-repetition.md
 │   │   ├── 004-artifact-id-targeting.md
 │   │   ├── 005-job-versions-and-generation-options.md
+│   │   ├── 006-gemini-notebook-display-name.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -158,7 +159,9 @@ notebooklm-batch-studio/
 │   │   └── TESTING_AND_QUALITY.md          # 測試金字塔與 DoD 驗收清單
 │   └── TEMPLATE_FEEDBACK.md
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
-│   └── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
+│   ├── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
+│   ├── build_mac_app.sh
+│   └── launch_app.sh
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── notebooklm_batch_studio/
 │       ├── adapters/
@@ -205,16 +208,21 @@ notebooklm-batch-studio/
 │       │   │   ├── study.py
 │       │   │   └── system.py
 │       │   ├── static/
+│       │   │   ├── icon-192.png
+│       │   │   ├── icon-512.png
 │       │   │   ├── index.html
+│       │   │   ├── manifest.webmanifest
 │       │   │   ├── studio-core.js
 │       │   │   ├── studio.css
 │       │   │   └── studio.js
 │       │   ├── __init__.py
 │       │   ├── api.py
 │       │   ├── cli.py
+│       │   ├── mcp_course_settings.py
 │       │   ├── mcp_job_prompts.py
 │       │   ├── mcp_server.py
 │       │   ├── mcp_study_plan.py
+│       │   ├── port_check.py
 │       │   ├── schemas.py
 │       │   └── web_template.py
 │       ├── services/
@@ -262,8 +270,10 @@ notebooklm-batch-studio/
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
+│   ├── test_port_check.py
 │   ├── test_quota_and_limits.py
 │   ├── test_remaining_fixes.py
+│   ├── test_rename.py
 │   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py
 │   ├── test_study_plan.py

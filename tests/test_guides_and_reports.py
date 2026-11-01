@@ -81,7 +81,7 @@ class ReportTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("<title>T&lt;1&gt;</title>", page)
 
     async def test_concept_report_uses_concept_format(self) -> None:
-        """REPORTS_CONCEPT asks NotebookLM for concept_explanation and writes a rendered page."""
+        """REPORTS_CONCEPT asks Gemini Notebook for concept_explanation and writes a rendered page."""
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             out = tmp / "out"

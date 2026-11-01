@@ -1,6 +1,6 @@
-"""Remote synchronization service: syncs manually generated artifacts from NotebookLM to local storage.
+"""Remote synchronization service: syncs manually generated artifacts from Gemini Notebook to local storage.
 
-Queries all remote artifacts in a course's linked NotebookLM notebook, identifies artifacts
+Queries all remote artifacts in a course's linked Gemini Notebook notebook, identifies artifacts
 created on the web interface, downloads them to their corresponding lecture folders or
 the manual_artifacts folder, and registers them in the local database.
 """
@@ -47,7 +47,7 @@ def infer_lecture_no_from_title(title: str, total_lectures: int) -> int | None:
 
 
 def map_remote_kind_to_artifact_type(kind: str) -> ArtifactType:
-    """Map NotebookLM artifact kind string to local domain ArtifactType.
+    """Map Gemini Notebook artifact kind string to local domain ArtifactType.
 
     Args:
         kind: Remote artifact kind string (e.g. 'quiz', 'audio', 'flashcards').
@@ -82,7 +82,7 @@ def map_remote_kind_to_artifact_type(kind: str) -> ArtifactType:
 
 
 def get_extension_for_kind(kind: str) -> str:
-    """Determine file extension based on NotebookLM artifact kind.
+    """Determine file extension based on Gemini Notebook artifact kind.
 
     Args:
         kind: Artifact kind string.
@@ -91,7 +91,7 @@ def get_extension_for_kind(kind: str) -> str:
         Appropriate file extension with leading dot.
     """
     k = kind.lower()
-    # NotebookLM audio is MP4/AAC and infographics are PNG. Refs: ISSUE-007
+    # Gemini Notebook audio is MP4/AAC and infographics are PNG. Refs: ISSUE-007
     if "audio" in k:
         return ".m4a"
     if "video" in k:
@@ -158,7 +158,7 @@ def resolve_artifact_destination(
 
 
 class RemoteSyncService:
-    """Synchronizes remote NotebookLM artifacts back into local repository and disk."""
+    """Synchronizes remote Gemini Notebook artifacts back into local repository and disk."""
 
     def __init__(
         self,
@@ -170,7 +170,7 @@ class RemoteSyncService:
         """Initialize remote synchronization service.
 
         Args:
-            notebooklm_client: Adapter client for NotebookLM communication.
+            notebooklm_client: Adapter client for Gemini Notebook communication.
             course_repo: Course repository.
             queue_repo: Job queue repository.
             output_base_dir: Base directory for storing course outputs.
@@ -193,7 +193,7 @@ class RemoteSyncService:
         if not course:
             raise ValueError(f"Course not found: {course_code}")
         if not course.notebook_id:
-            raise ValueError(f"Course {course_code} has no linked NotebookLM notebook")
+            raise ValueError(f"Course {course_code} has no linked Gemini Notebook notebook")
 
         nb_id = course.notebook_id
         logger.info("Syncing remote artifacts for course %s (notebook: %s)", course_code, nb_id)
@@ -240,7 +240,7 @@ class RemoteSyncService:
                     status=JobStatus.DONE,
                     output_file=downloaded_path,
                     source_origin="remote_sync",
-                    custom_prompt=f"Synced from NotebookLM [{art_id}]: {title}",
+                    custom_prompt=f"Synced from Gemini Notebook [{art_id}]: {title}",
                 )
                 self.queue_repo.enqueue_jobs([job])
                 synced_items.append({"id": art_id, "title": title, "path": downloaded_path})

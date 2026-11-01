@@ -1,4 +1,4 @@
-/* NotebookLM Batch Studio — shared UI layer: toasts, confirm dialog, study plan, light theme, iPad layout.
+/* Gemini Notebook 學習工作室 — shared UI layer: toasts, confirm dialog, study plan, light theme, iPad layout.
    Loaded after the inline styles in index.html, so it can refine them. */
 
 /* ---------- Light theme (explicit toggle, or the system setting when no choice is stored) ---------- */
@@ -121,7 +121,7 @@ body { background: var(--bg); color: var(--text); }
   .step-chip { min-height: 32px; }
 }
 
-/* Saved NotebookLM explanation: readable Markdown, nothing wider than the page. */
+/* Saved Gemini Notebook explanation: readable Markdown, nothing wider than the page. */
 .explain-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700; color: var(--primary); margin-bottom: 6px; font-size: 0.85rem; }
 .link-btn { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.8rem; padding: 2px 4px; min-height: 0; }
 .explain-box h1, .explain-box h2, .explain-box h3, .explain-box h4 { font-size: 1rem; margin: 12px 0 6px; }

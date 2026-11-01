@@ -142,12 +142,12 @@ SIMPLE_OUTPUTS: dict[ArtifactType, tuple[str, str, str]] = {
 
 MIND_MAP_TYPES = (ArtifactType.MIND_MAP, ArtifactType.COURSE_MIND_MAP)
 
-# A processed job: primary output path plus the NotebookLM artifact ids it produced.
+# A processed job: primary output path plus the Gemini Notebook artifact ids it produced.
 ProcessResult = tuple[str, list[str]]
 
 
 class ArtifactRunner:
-    """Dispatches individual artifact generation, conversion, and NotebookLM in-app renaming.
+    """Dispatches individual artifact generation, conversion, and Gemini Notebook in-app renaming.
 
     Downloads and renames always target the artifact id returned by the generate call, never
     "the latest artifact", so parallel workers cannot mix up lectures. Refs: ADR-004
@@ -157,7 +157,7 @@ class ArtifactRunner:
         """Initialize the artifact runner.
 
         Args:
-            notebooklm_client: Client protocol for NotebookLM interactions.
+            notebooklm_client: Client protocol for Gemini Notebook interactions.
             config: Application configuration settings.
         """
         self.notebooklm_client = notebooklm_client
@@ -166,12 +166,12 @@ class ArtifactRunner:
     async def rename_after_generation(
         self, job: ArtifactJob, course: Course, nb_id: str, artifact_ids: list[str]
     ) -> None:
-        """Rename the artifacts this job produced on NotebookLM using a standardized English title.
+        """Rename the artifacts this job produced on Gemini Notebook using a standardized English title.
 
         Args:
             job: Current artifact job.
             course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             artifact_ids: Artifact ids returned by the generate calls of this job.
         """
         lec = next((item for item in course.lectures if item.no == job.lecture_no), None)
@@ -190,13 +190,13 @@ class ArtifactRunner:
         total = len(artifact_ids)
         for index, artifact_id in enumerate(artifact_ids, start=1):
             # A quiz collected over several batches gets "(1/3)", "(2/3)"... so the batches of one
-            # quiz are told apart on NotebookLM instead of showing identical titles.
+            # quiz are told apart on Gemini Notebook instead of showing identical titles.
             batch_title = f"{title} ({index}/{total})" if total > 1 else title
             try:
                 await rename(nb_id, artifact_id, batch_title)
                 logger.info("Renamed artifact %s to '%s'", artifact_id, batch_title)
             except Exception as err:
-                logger.warning("Could not rename artifact %s on NotebookLM: %s", artifact_id, err)
+                logger.warning("Could not rename artifact %s on Gemini Notebook: %s", artifact_id, err)
 
     async def process_job(
         self,
@@ -211,7 +211,7 @@ class ArtifactRunner:
         Args:
             job: The artifact job to execute.
             course: The associated Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: Selected source identifiers for context.
             out_dir: Filesystem output directory.
 
@@ -229,12 +229,12 @@ class ArtifactRunner:
         source_ids: list[str],
         out_dir: Path,
     ) -> ProcessResult:
-        """Run a job like `process_job` and also return the NotebookLM ids it produced.
+        """Run a job like `process_job` and also return the Gemini Notebook ids it produced.
 
         Args:
             job: The artifact job to execute.
             course: The associated Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: Selected source identifiers for context.
             out_dir: Filesystem output directory.
 
@@ -272,7 +272,7 @@ class ArtifactRunner:
         Args:
             job: Current artifact job.
             course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: List of source identifiers to include.
             out_dir: Target output directory for files.
 
@@ -286,7 +286,7 @@ class ArtifactRunner:
             language=course.language,
             options=course.generation_options,
         )
-        # NotebookLM delivers MP4/AAC audio, so the file is .m4a. Refs: ISSUE-007
+        # Gemini Notebook delivers MP4/AAC audio, so the file is .m4a. Refs: ISSUE-007
         if job.lecture_no is None:
             name = f"{job.course_code}_course_audio.m4a"
         else:
@@ -307,7 +307,7 @@ class ArtifactRunner:
         """Generate one quiz batch and download exactly that artifact.
 
         Args:
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Quiz instructions.
             difficulty: 'easy', 'medium', 'hard', or None.
@@ -332,7 +332,7 @@ class ArtifactRunner:
         Args:
             job: Current artifact job.
             course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: Selected source identifiers for the lecture.
             out_dir: Target output directory.
 
@@ -390,7 +390,7 @@ class ArtifactRunner:
         Args:
             job: Current artifact job.
             course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             art_ids: Artifact ids of every generation attempt.
             quiz: Merged, incomplete quiz.
             target: Number of questions that was required.
@@ -417,7 +417,7 @@ class ArtifactRunner:
         Args:
             job: Current artifact job.
             course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: Selected source identifiers.
             out_dir: Target output directory.
 
@@ -447,13 +447,13 @@ class ArtifactRunner:
     ) -> ProcessResult:
         """Generate a mind map and export to JSON, OPML 2.0 XML, and Markdown.
 
-        Mind maps are saved as NotebookLM notes; their note id is returned so the runner renames
+        Mind maps are saved as Gemini Notebook notes; their note id is returned so the runner renames
         them through the mind map API (ISSUE-011).
 
         Args:
             job: Current artifact job.
             course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: Selected source identifiers.
             out_dir: Target output directory.
 
@@ -486,7 +486,7 @@ class ArtifactRunner:
         Args:
             job: Current artifact job.
             course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: All source identifiers belonging to the course.
             out_dir: Target output directory.
 
@@ -499,7 +499,7 @@ class ArtifactRunner:
         target_q = course.mock_exam_questions or 50
         forced = course.generation_options.quiz_difficulty
         mock_difficulty = None if forced == "auto" else forced
-        # NotebookLM's size setting follows the mock exam target, not the lecture quiz count.
+        # Gemini Notebook's size setting follows the mock exam target, not the lecture quiz count.
         mock_options = dataclasses.replace(course.generation_options, quiz_questions=min(target_q, 60))
         batches: list[Quiz] = []
         art_ids: list[str] = []
@@ -552,7 +552,7 @@ class ArtifactRunner:
         Args:
             art_type: Artifact type (study guide, slide deck, infographic, data table, video).
             course: Associated domain Course entity (for language).
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional tailored prompt.
 
@@ -586,7 +586,7 @@ class ArtifactRunner:
         Args:
             job: Current artifact job.
             course: Associated domain Course entity.
-            nb_id: NotebookLM notebook identifier.
+            nb_id: Gemini Notebook notebook identifier.
             source_ids: Selected source identifiers.
             out_dir: Target output directory.
 

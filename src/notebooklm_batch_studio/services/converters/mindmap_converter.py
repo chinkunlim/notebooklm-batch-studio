@@ -1,4 +1,4 @@
-"""Mind map converter: transforms NotebookLM tree structures into OPML, Markdown, and JSON.
+"""Mind map converter: transforms Gemini Notebook tree structures into OPML, Markdown, and JSON.
 
 Supports XMind/MindNode-compatible OPML 2.0 XML exports, clean Markdown hierarchical
 bullet outlines, and normalized JSON structures.
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_notebooklm_mindmap(raw_data: dict[str, Any]) -> MindMapNode:
-    """Recursively parse NotebookLM raw mind map JSON into a domain MindMapNode tree.
+    """Recursively parse Gemini Notebook raw mind map JSON into a domain MindMapNode tree.
 
     Args:
         raw_data: Dictionary containing 'name' and optional 'children' list.

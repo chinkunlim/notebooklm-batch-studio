@@ -61,7 +61,7 @@ class MergeTest(unittest.TestCase):
         self.assertEqual(run_course.generation_options.quiz_difficulty, "hard")
 
     def test_question_counts_drive_prompt_and_quantity(self) -> None:
-        """quiz_questions sets the prompt count and NotebookLM size; the mock exam uses the course count."""
+        """quiz_questions sets the prompt count and quiz size; the mock exam uses the course count."""
         from notebooklm import QuizQuantity
 
         from notebooklm_batch_studio.adapters.notebooklm.generation import quiz_quantity_for

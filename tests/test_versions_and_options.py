@@ -86,7 +86,7 @@ class NamingTest(unittest.TestCase):
         self.assertEqual(versioned_name("quiz_1", 3), "quiz_1_v3")
 
     def test_guide_explains_quiz_levels(self) -> None:
-        """The guide lists every quiz with its difficulty and NotebookLM title."""
+        """The guide lists every quiz with its difficulty and Gemini Notebook title."""
         rows = {r["artifact_type"]: r for r in naming_guide()["artifacts"]}
         self.assertIn("easy", rows["quiz_1"]["meaning"])
         self.assertIn("hard", rows["quiz_3"]["meaning"])
@@ -185,7 +185,7 @@ class RunnerVersionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.client.called("rename_artifact"), [])
 
     async def test_v2_infographic_title_files_and_device_exports(self) -> None:
-        """A regenerated infographic is '(v2)' on NotebookLM, '_v2' locally, with device copies."""
+        """A regenerated infographic is '(v2)' on Gemini Notebook, '_v2' locally, with device copies."""
         path = await self._run(ArtifactType.INFOGRAPHIC, version=2)
         self.assertTrue(path.endswith("infographic_v2.png"))
         self.assertEqual(self.client.called("rename_artifact")[0]["args"][2], "[Ch01] Infographic (v2)")
@@ -203,7 +203,7 @@ class RunnerVersionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.client.called("download_slide_deck")[1]["output_format"], "pptx")
 
     async def test_data_table_saved_as_csv(self) -> None:
-        """NotebookLM data tables download as CSV. Refs: ISSUE-012"""
+        """Gemini Notebook data tables download as CSV. Refs: ISSUE-012"""
         self.assertTrue((await self._run(ArtifactType.DATA_TABLE)).endswith("data_table.csv"))
 
 

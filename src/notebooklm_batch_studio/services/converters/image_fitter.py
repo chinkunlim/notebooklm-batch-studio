@@ -1,6 +1,6 @@
-"""Fit a NotebookLM infographic onto device-sized canvases without cropping.
+"""Fit a Gemini Notebook infographic onto device-sized canvases without cropping.
 
-NotebookLM only lets us pick landscape / portrait / square, not an exact size, so the image is
+Gemini Notebook only lets us pick landscape / portrait / square, not an exact size, so the image is
 scaled to fit inside each target canvas and centered on a white background (letterboxing).
 Nothing is cropped, so every part of the infographic stays readable.
 """

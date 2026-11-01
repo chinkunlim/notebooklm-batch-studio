@@ -72,7 +72,7 @@ class AppConfig:
         ollama_model: Ollama model tag used for prompt refinement (`OLLAMA_MODEL`).
         data_dir: Root folder for all data, outside the project folder.
         database_url: SQLAlchemy URL; SQLite file `<data_dir>/db/app.db` by default.
-        notebooklm_home: Folder holding NotebookLM credentials and session states.
+        notebooklm_home: Folder holding Gemini Notebook credentials and session states.
         auto_start_queue: Start the job queue when the web service starts (`AUTO_START_QUEUE`,
             default true in `.env`; off for configs built directly, e.g. in tests).
     """

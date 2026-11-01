@@ -283,7 +283,7 @@ class TestCourseReporter(unittest.TestCase):
         md_content = md_path.read_text(encoding="utf-8")
         self.assertIn("# 課程總覽：[BIO101] General Biology", md_content)
         self.assertIn("第 01 講 | Cell Structure", md_content)
-        self.assertIn("https://notebooklm.google.com/notebook/nb-12345", md_content)
+        self.assertIn("https://notebook.google.com/notebook/nb-12345", md_content)
 
         html_content = html_path.read_text(encoding="utf-8")
         self.assertIn("<title>[BIO101] General Biology", html_content)
@@ -334,7 +334,7 @@ class TestBatchStudioService(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(course.code, "BIO101")
             self.assertEqual(len(course.lectures), 2)
 
-            # 2. Setup NotebookLM notebook and sources
+            # 2. Setup Gemini Notebook notebook and sources
             updated = await service.setup_notebook_and_sources("BIO101")
             self.assertIsNotNone(updated.notebook_id)
             self.assertEqual(len(self.mock_client.sources_uploaded), 2)
@@ -420,7 +420,7 @@ class TestCliCommands(unittest.TestCase):
         with redirect_stdout(out):
             code = main(["status"])
         self.assertEqual(code, 0)
-        self.assertIn("NotebookLM Batch Studio", out.getvalue())
+        self.assertIn("Gemini Notebook 學習工作室", out.getvalue())
 
     def test_cli_resume(self) -> None:
         """Verify resume command executes."""

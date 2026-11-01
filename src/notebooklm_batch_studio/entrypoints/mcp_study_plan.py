@@ -10,7 +10,7 @@ from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
 
 
 def register_study_plan_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
-    """Register study-plan tools (changes and NotebookLM calls require confirm=True).
+    """Register study-plan tools (changes and Gemini Notebook calls require confirm=True).
 
     Args:
         mcp: MCPServer instance.
@@ -58,7 +58,7 @@ def _register_read_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
 
     @mcp.tool()
     def get_saved_explanations(code: str, lecture_no: int | None = None) -> str:
-        """Saved NotebookLM explanations of quiz questions (read-only, no quota).
+        """Saved Gemini Notebook explanations of quiz questions (read-only, no quota).
 
         Args:
             code: Course code.
@@ -74,7 +74,7 @@ def _register_read_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
 
 
 def _register_write_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
-    """Register study-plan tools that save data or call NotebookLM (confirm required).
+    """Register study-plan tools that save data or call Gemini Notebook (confirm required).
 
     Args:
         mcp: MCPServer instance.
@@ -115,7 +115,7 @@ def _register_write_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
         lecture_no: int | None = None,
         confirm: bool = False,
     ) -> str:
-        """Ask NotebookLM why an answer is correct, from the course's sources (requires confirm=True).
+        """Ask Gemini Notebook why an answer is correct, from the course's sources (requires confirm=True).
 
         Args:
             code: Course code.
@@ -123,7 +123,7 @@ def _register_write_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
             choices: Options in display order.
             answer_index: Index of the correct option.
             lecture_no: Lecture number, or None for course-wide.
-            confirm: Must be True (this uses a little NotebookLM quota).
+            confirm: Must be True (this uses a little Gemini Notebook quota).
 
         Returns:
             JSON string with the explanation, or a confirmation warning.
@@ -132,7 +132,7 @@ def _register_write_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
             return json.dumps(
                 {
                     "confirmed": False,
-                    "warning": "Set confirm=True; this asks NotebookLM and uses a little quota.",
+                    "warning": "Set confirm=True; this asks Gemini Notebook and uses a little quota.",
                 },
                 ensure_ascii=False,
             )

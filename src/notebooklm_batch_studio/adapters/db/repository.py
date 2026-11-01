@@ -47,7 +47,7 @@ class CourseRepository:
         """Replace all lectures for a course, keeping upload state of PDFs whose content is unchanged.
 
         A rescanned lecture carries no source id; if a stored lecture has the same sha256 its
-        NotebookLM source id and upload status are kept, so re-registering never re-uploads it.
+        Gemini Notebook source id and upload status are kept, so re-registering never re-uploads it.
         Refs: ISSUE-006
 
         Args:
@@ -90,7 +90,7 @@ class CourseRepository:
             code: Course code.
             lecture_no: Sequence number of the lecture.
             status: Status string (pending, uploading, parsing, ready, failed).
-            source_id: Optional NotebookLM source ID when ready.
+            source_id: Optional Gemini Notebook source ID when ready.
             error_message: Optional failure explanation.
         """
         stmt = select(LectureRecord).where(LectureRecord.course_code == code, LectureRecord.no == lecture_no)
@@ -202,7 +202,7 @@ class CourseRepository:
     def delete_course(self, code: str) -> int:
         """Delete a course and everything recorded for it in this database.
 
-        NotebookLM is not touched; only local records (jobs, lectures, study history) go.
+        Gemini Notebook is not touched; only local records (jobs, lectures, study history) go.
 
         Args:
             code: Course code.
@@ -263,7 +263,7 @@ class CourseRepository:
             self.session.commit()
 
     def update_generation_options(self, code: str, options: GenerationOptions) -> None:
-        """Store a course's NotebookLM generation options.
+        """Store a course's Gemini Notebook generation options.
 
         Args:
             code: Course code.
@@ -277,11 +277,11 @@ class CourseRepository:
             self.session.commit()
 
     def update_notebook_id(self, code: str, notebook_id: str) -> None:
-        """Update the linked NotebookLM notebook ID for a course.
+        """Update the linked Gemini Notebook notebook ID for a course.
 
         Args:
             code: Course code.
-            notebook_id: Google NotebookLM notebook ID.
+            notebook_id: Google Gemini Notebook notebook ID.
         """
         record = self.session.get(CourseRecord, code)
         if record:
@@ -291,12 +291,12 @@ class CourseRepository:
             self.session.commit()
 
     def update_lecture_source_id(self, code: str, lecture_no: int, source_id: str) -> None:
-        """Update the NotebookLM source ID for a lecture.
+        """Update the Gemini Notebook source ID for a lecture.
 
         Args:
             code: Course code.
             lecture_no: Sequence number of the lecture.
-            source_id: Uploaded source ID from NotebookLM.
+            source_id: Uploaded source ID from Gemini Notebook.
         """
         stmt = select(LectureRecord).where(LectureRecord.course_code == code, LectureRecord.no == lecture_no)
         record = self.session.scalars(stmt).first()
@@ -427,7 +427,7 @@ class QueueRepository:
             self.session.commit()
 
     def record_artifact_ids(self, job_id: str, artifact_ids: list[str]) -> None:
-        """Remember which NotebookLM artifacts / notes a job produced. Refs: ADR-005
+        """Remember which Gemini Notebook artifacts / notes a job produced. Refs: ADR-005
 
         Args:
             job_id: Task UUID.

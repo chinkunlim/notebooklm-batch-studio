@@ -1,6 +1,6 @@
 """Per-course settings and versioned regeneration, kept apart from the orchestrator.
 
-Generation options change how future NotebookLM generations look (infographic orientation,
+Generation options change how future Gemini Notebook generations look (infographic orientation,
 audio format, ...). Regeneration enqueues a new version of one artifact slot and never deletes
 or overwrites the older version (ADR-005).
 """
@@ -132,7 +132,7 @@ def apply_job_settings(job: ArtifactJob, course: Course) -> tuple[ArtifactJob, C
         options = course.generation_options
     prompt = job.custom_prompt or ""
     # The question count in the prompt follows the settings (quiz: quiz_questions, mock exam:
-    # the course's mock_exam_questions), so changing a count changes what NotebookLM is asked.
+    # the course's mock_exam_questions), so changing a count changes what Gemini Notebook is asked.
     value = job.artifact_type.value.removeprefix("course_")
     if value.startswith("quiz"):
         count = course.mock_exam_questions if job.lecture_no is None else options.quiz_questions
@@ -143,7 +143,7 @@ def apply_job_settings(job: ArtifactJob, course: Course) -> tuple[ArtifactJob, C
     wanted = parse_chapter_range(options.chapter_range) if options.chapter_range else None
     if job.lecture_no is None and wanted:
         # A course-wide output limited to some chapters (e.g. a midterm on Ch01-Ch03) uses only
-        # those sources, and its NotebookLM title prefix shows that range.
+        # those sources, and its Gemini Notebook title prefix shows that range.
         lectures = [lec for lec in course.lectures if lec.no in wanted] or course.lectures
         prompt = f"{prompt}\n\n範圍：只涵蓋第 {options.chapter_range} 講的內容。".strip()
     if options.extra_instructions:
@@ -451,7 +451,7 @@ class CourseSettingsService:
         """Remove a course from this app: database records go, its output folder is set aside.
 
         Output files are moved to `DATA_DIR/deleted/<code>-<time>/` (recoverable), the source
-        PDFs in `input/` are never touched, and nothing on NotebookLM is deleted.
+        PDFs in `input/` are never touched, and nothing on Gemini Notebook is deleted.
 
         Args:
             code: Course code.

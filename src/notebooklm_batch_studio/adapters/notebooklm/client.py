@@ -1,4 +1,4 @@
-"""NotebookLM API adapter: encapsulates NotebookLM client and maps exceptions to domain errors.
+"""Gemini Notebook API adapter: encapsulates Gemini Notebook client and maps exceptions to domain errors.
 
 Provides resilient operations for uploading course PDFs, generating quizzes,
 flashcards, mind maps, audio overviews, and downloading raw artifacts with
@@ -84,7 +84,7 @@ def _map_exception(err: Exception) -> Exception:
     """Map external provider errors into domain-specific exceptions.
 
     Args:
-        err: Caught exception from NotebookLM client or network call.
+        err: Caught exception from Gemini Notebook client or network call.
 
     Returns:
         Mapped domain exception.
@@ -92,14 +92,14 @@ def _map_exception(err: Exception) -> Exception:
     if isinstance(err, StudioError):
         return err
     if isinstance(err, RateLimitError):
-        logger.warning("NotebookLM Rate Limit exceeded: %s", err)
+        logger.warning("Gemini Notebook Rate Limit exceeded: %s", err)
         return QuotaExceededError(
-            message=f"NotebookLM API quota or rate limit reached: {err}",
+            message=f"Gemini Notebook API quota or rate limit reached: {err}",
             retry_after_seconds=3600,
         )
     if isinstance(err, AuthError):
-        logger.error("NotebookLM Authentication error: %s", err)
-        return AuthExpiredError(f"NotebookLM credentials invalid or expired: {err}")
+        logger.error("Gemini Notebook Authentication error: %s", err)
+        return AuthExpiredError(f"Gemini Notebook credentials invalid or expired: {err}")
     if isinstance(err, FileNotFoundError) and "storage_state.json" in str(err):
         return AuthExpiredError("Authentication storage file not found. Please log in first.")
     if isinstance(err, (ArtifactTimeoutError, ArtifactParseError)):
@@ -107,14 +107,14 @@ def _map_exception(err: Exception) -> Exception:
     if isinstance(err, ArtifactError):
         msg = str(err).lower()
         if "quota" in msg or "rate limit" in msg or "resource_exhausted" in msg:
-            return QuotaExceededError(message=f"NotebookLM quota limit encountered: {err}")
-        return StudioError(f"NotebookLM artifact operation failed: {err}")
+            return QuotaExceededError(message=f"Gemini Notebook quota limit encountered: {err}")
+        return StudioError(f"Gemini Notebook artifact operation failed: {err}")
 
     err_msg = str(err).lower()
     if "429" in err_msg or "quota" in err_msg or "rate limit" in err_msg:
-        return QuotaExceededError(message=f"NotebookLM rate limit hit: {err}")
+        return QuotaExceededError(message=f"Gemini Notebook rate limit hit: {err}")
     if "401" in err_msg or "403" in err_msg or "unauthorized" in err_msg:
-        return AuthExpiredError(f"NotebookLM authorization failed: {err}")
+        return AuthExpiredError(f"Gemini Notebook authorization failed: {err}")
     return err
 
 
@@ -151,7 +151,7 @@ def _translate_errors(func: Callable[..., Coroutine[Any, Any, T]]) -> Callable[.
                 raise mapped from err
             if isinstance(err, StudioError):
                 raise
-            logger.exception("Unexpected error communicating with NotebookLM: %s", err)
+            logger.exception("Unexpected error communicating with Gemini Notebook: %s", err)
             raise
 
     return wrapper
@@ -170,7 +170,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
         config: AppConfig | None = None,
         storage_path: Path | None = None,
     ) -> None:
-        """Initialize the NotebookLM adapter.
+        """Initialize the Gemini Notebook adapter.
 
         Args:
             config: Application configuration (defaults to global settings).
@@ -210,12 +210,12 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
                 usage = await client.settings.get_usage()
             return retry_after_from_usage(usage, datetime.now(timezone.utc))
         except Exception as err:
-            logger.warning("Could not read NotebookLM usage meter: %s", err)
+            logger.warning("Could not read Gemini Notebook usage meter: %s", err)
             return None
 
     @_translate_errors
     async def get_quota_status(self) -> dict[str, Any]:
-        """Return the live NotebookLM usage meter and account limits.
+        """Return the live Gemini Notebook usage meter and account limits.
 
         Returns:
             Dictionary with usage windows, per-action availability, and notebook/source limits.
@@ -233,7 +233,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
         """Return the maximum number of sources allowed per notebook for this account.
 
         Returns:
-            Source limit, or None when NotebookLM does not report it.
+            Source limit, or None when Gemini Notebook does not report it.
         """
         async with self._client() as client:
             limits = await client.settings.get_account_limits()
@@ -241,7 +241,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
 
     @_translate_errors
     async def ask(self, notebook_id: str, question: str, source_ids: list[str] | None = None) -> str:
-        """Ask the notebook a question grounded in its sources (NotebookLM chat).
+        """Ask the notebook a question grounded in its sources (Gemini Notebook chat).
 
         Args:
             notebook_id: Notebook identifier.
@@ -288,7 +288,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
 
     @_translate_errors
     async def create_notebook(self, title: str) -> str:
-        """Create a new notebook in NotebookLM.
+        """Create a new notebook in Gemini Notebook.
 
         Args:
             title: The title of the new notebook.
@@ -325,7 +325,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
 
     @_translate_errors
     async def wait_source_ready(self, notebook_id: str, source_id: str, timeout_seconds: int = 180) -> None:
-        """Wait until an uploaded source is fully processed by NotebookLM.
+        """Wait until an uploaded source is fully processed by Gemini Notebook.
 
         Args:
             notebook_id: The notebook identifier.
@@ -351,13 +351,13 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
     ) -> str:
         """Generate a quiz from selected sources and wait for it to complete.
 
-        Quizzes have no language parameter in NotebookLM; language is steered by the prompt.
+        Quizzes have no language parameter in Gemini Notebook; language is steered by the prompt.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for the quiz generation.
-            difficulty: 'easy', 'medium', 'hard', or None for the NotebookLM default.
+            difficulty: 'easy', 'medium', 'hard', or None for the Gemini Notebook default.
             options: Course generation options (None = defaults).
 
         Returns:
@@ -407,7 +407,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
     async def generate_mind_map(
         self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
-        """Generate a note-backed mind map (synchronous in NotebookLM).
+        """Generate a note-backed mind map (synchronous in Gemini Notebook).
 
         Args:
             notebook_id: The notebook identifier.
@@ -419,7 +419,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
             The id of the note the mind map was saved to.
 
         Raises:
-            IncompleteArtifactError: When NotebookLM returned no mind map note.
+            IncompleteArtifactError: When Gemini Notebook returned no mind map note.
         """
         instructions = prompt or "Create a detailed hierarchical mind map organizing concepts."
         async with self._client() as client:
@@ -430,7 +430,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
                 instructions=instructions,
             )
         if not result.note_id:
-            raise IncompleteArtifactError("NotebookLM returned no mind map note")
+            raise IncompleteArtifactError("Gemini Notebook returned no mind map note")
         logger.info("Mind map saved as note %s", result.note_id)
         return str(result.note_id)
 
@@ -650,7 +650,7 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
 
     @_translate_errors
     async def rename_artifact(self, notebook_id: str, artifact_id: str, title: str) -> None:
-        """Rename an artifact within NotebookLM for readability.
+        """Rename an artifact within Gemini Notebook for readability.
 
         Args:
             notebook_id: The notebook identifier.
@@ -662,11 +662,11 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
             try:
                 await client.artifacts.rename(notebook_id, artifact_id, title)
             except Exception as err:
-                logger.warning("Could not rename artifact %s on NotebookLM: %s", artifact_id, err)
+                logger.warning("Could not rename artifact %s on Gemini Notebook: %s", artifact_id, err)
 
     @_translate_errors
     async def rename_mind_map(self, notebook_id: str, note_id: str, title: str) -> None:
-        """Rename a note-backed mind map within NotebookLM. Refs: ISSUE-011
+        """Rename a note-backed mind map within Gemini Notebook. Refs: ISSUE-011
 
         Mind maps are notes, not studio artifacts, so `artifacts.rename` cannot rename them.
 

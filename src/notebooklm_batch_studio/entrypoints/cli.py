@@ -1,6 +1,6 @@
-"""Command-line entrypoint for NotebookLM Batch Studio.
+"""Command-line entrypoint for Gemini Notebook 學習工作室.
 
-Wires together database repositories, NotebookLM adapter, orchestrator service,
+Wires together database repositories, Gemini Notebook adapter, orchestrator service,
 and folder watcher to provide batch execution, queue management, status checks,
 and directory monitoring. Only entrypoints may print to standard output.
 """
@@ -46,14 +46,14 @@ def _browser_login(config: AppConfig, storage_path: Path) -> int:
         Exit code of the notebooklm login command.
     """
     notebooklm_cli = Path(sys.executable).with_name("notebooklm")
-    print(f"🌐 開啟瀏覽器登入 NotebookLM，請在視窗中親自登入 Google。憑證會存到：{storage_path}")
+    print(f"🌐 開啟瀏覽器登入 Gemini Notebook，請在視窗中親自登入 Google。憑證會存到：{storage_path}")
     logger.info("Starting browser login, storage=%s", storage_path)
     # load_config() already exported NOTEBOOKLM_HOME, so the child process inherits it.
     return subprocess.call([str(notebooklm_cli), "login", "--storage", str(storage_path)])
 
 
 def _handle_login(config: AppConfig, browser: bool = False) -> int:
-    """Check NotebookLM login credentials, or sign in through the browser with `--browser`.
+    """Check Gemini Notebook login credentials, or sign in through the browser with `--browser`.
 
     Args:
         config: Application configuration.
@@ -68,7 +68,7 @@ def _handle_login(config: AppConfig, browser: bool = False) -> int:
         if code != 0:
             return code
     if adapter.check_auth():
-        print(f"✅ NotebookLM 認證檔案存在且有效：{adapter.storage_path}")
+        print(f"✅ Gemini Notebook 認證檔案存在且有效：{adapter.storage_path}")
         return 0
 
     print("❌ 尚未找到有效登入憑證！")
@@ -96,7 +96,7 @@ def _handle_status(config: AppConfig, course_code: str | None = None) -> int:
         counts = queue_repo.count_by_status(course_code=course_code)
 
     print("==================================================")
-    print("📊 NotebookLM Batch Studio — 執行與佇列狀態")
+    print("📊 Gemini Notebook 學習工作室 — 執行與佇列狀態")
     print("==================================================")
     print(f"已註冊課程數：{len(courses)}")
     for c in courses:
@@ -140,7 +140,7 @@ async def _execute_batch_pipeline(
 
     Args:
         engine: Database engine.
-        adapter: NotebookLM adapter instance.
+        adapter: Gemini Notebook adapter instance.
         config: Application configuration.
         courses_to_run: List of course codes to execute.
         workers: Concurrency worker count.
@@ -162,7 +162,7 @@ async def _execute_batch_pipeline(
         q_repo = QueueRepository(session)
         srv = BatchStudioService(c_repo, q_repo, adapter, config, queue_provider=q_provider)
         for code in courses_to_run:
-            print(f"🚀 初始化 NotebookLM 筆記本與講義來源: {code}...")
+            print(f"🚀 初始化 Gemini Notebook 筆記本與講義來源: {code}...")
             await srv.setup_notebook_and_sources(code)
 
     pool = WorkerPool(q_provider, srv.execute_job, concurrency=workers)
@@ -224,7 +224,7 @@ def _on_pdf_detected(
         course_dir: Course input directory path.
         pdf_path: Newly stabilized PDF path.
         engine: Database engine.
-        adapter: NotebookLM adapter.
+        adapter: Gemini Notebook adapter.
         config: Application configuration.
     """
     print(f"\n🔔 偵測到新講義檔案：{pdf_path.name}，開始自動註冊並排程...")
@@ -341,12 +341,12 @@ def main(argv: list[str] | None = None) -> int:
     """
     parser = argparse.ArgumentParser(
         prog="notebooklm-batch-studio",
-        description="NotebookLM Batch Studio — 批次課程筆記本自動化生成系統",
+        description="Gemini Notebook 學習工作室 — 批次課程筆記本自動化生成系統",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="子命令")
     login_parser = subparsers.add_parser(
-        "login", help="檢查 NotebookLM 登入憑證（加 --browser 開瀏覽器登入）"
+        "login", help="檢查 Gemini Notebook 登入憑證（加 --browser 開瀏覽器登入）"
     )
     login_parser.add_argument("--browser", action="store_true", help="開啟瀏覽器，由你親自登入 Google")
 

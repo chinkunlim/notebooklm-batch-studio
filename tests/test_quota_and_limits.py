@@ -28,7 +28,7 @@ QUOTA = {"status": "ready", "windows": [], "actions": [], "notebook_limit": 100,
 
 
 class LimitClient:
-    """Minimal NotebookLM client fake for limit and quota tests."""
+    """Minimal Gemini Notebook client fake for limit and quota tests."""
 
     def __init__(self, source_limit: int | None) -> None:
         """Initialize the fake.
@@ -153,7 +153,7 @@ class QuotaAndLimitTest(unittest.IsolatedAsyncioTestCase):
         """Build the service under test.
 
         Args:
-            client: Fake NotebookLM client.
+            client: Fake Gemini Notebook client.
 
         Returns:
             BatchStudioService.

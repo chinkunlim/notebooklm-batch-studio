@@ -1,4 +1,4 @@
-# SPEC-002：下載與轉檔（包含 NotebookLM 不給下載的產出）
+# SPEC-002：下載與轉檔（包含 Gemini Notebook 不給下載的產出）
 
 - **狀態**：Implemented (Phase 1, TASK-001, TASK-003)
 - **日期**：2026-10-21
@@ -6,7 +6,7 @@
 
 ## 1. 目標
 
-所有產出都要能存到本機。NotebookLM 網頁只讓 audio 與 infographic 下載，quiz、mind map、flashcards 不能下載，
+所有產出都要能存到本機。Gemini Notebook 網頁只讓 audio 與 infographic 下載，quiz、mind map、flashcards 不能下載，
 所以程式要自己把內容取出並轉成好用的格式。這也是第二階段本機做題（SPEC-004）的資料來源。
 
 ## 2. 使用情境
@@ -39,17 +39,17 @@
 | Mind map | notebooklm-py 取樹狀資料 → Playwright 全展開截圖 | `.json`、`.md` 大綱、`.opml`（XMind 可匯入）、`.png` |
 
 - 題目卷和答案卷分開，題目卷不顯示答案。
-- 所有 `.json` 用統一格式（見 §4），不直接存 NotebookLM 的原始格式，NotebookLM 格式改變時只需改轉換層。
+- 所有 `.json` 用統一格式（見 §4），不直接存 Gemini Notebook 的原始格式，Gemini Notebook 格式改變時只需改轉換層。
 - 取出內容後驗證完整性：quiz 每題都有 4 個選項和 1 個正確答案；mind map 至少有根節點和一層子節點。不完整標為 `failed`。
 - 下載檔一律依 SPEC-001 的命名規則存放。
 
 ### 可選 (Nice to have)
 - Mind map 另存 Mermaid（`.mmd`），可放進 Markdown 筆記。
-- Audio 另存逐字稿（若 NotebookLM 提供）。
+- Audio 另存逐字稿（若 Gemini Notebook 提供）。
 - 一門課所有 quiz 合併成一本可列印的題庫 PDF。
 
 ### 不做 (Out of scope)
-- 用 AI 自己重新出題（題目以 NotebookLM 產出為準）。
+- 用 AI 自己重新出題（題目以 Gemini Notebook 產出為準）。
 - 對 audio 做剪輯或轉檔成其他格式。
 
 ## 4. 介面 / API
@@ -90,5 +90,5 @@ flashcards：`{"cards": [{"front": "...", "back": "...", "source": "p.5"}]}`。
 
 ## 6. 未決問題
 
-- quiz 的出處（頁碼）NotebookLM 是否提供；沒有的話答案卷只寫解析。
+- quiz 的出處（頁碼）Gemini Notebook 是否提供；沒有的話答案卷只寫解析。
 - mind map 截圖在節點很多時是否需要分段截圖或改用 SVG。

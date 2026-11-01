@@ -1,4 +1,4 @@
-"""Protocol for the NotebookLM client: what services may ask NotebookLM to do.
+"""Protocol for the Gemini Notebook client: what services may ask Gemini Notebook to do.
 
 Split out of `repositories.py` to keep that file within the size limit; import it from either
 module.
@@ -12,7 +12,7 @@ from notebooklm_batch_studio.domain.models import GenerationOptions
 
 
 class NotebookLMClientProtocol(Protocol):
-    """Abstract interface for Google NotebookLM operations and artifact generation.
+    """Abstract interface for Google Gemini Notebook operations and artifact generation.
 
     Every `generate_*` waits for completion and returns the artifact id; callers pass that id
     to the matching `download_*` and to `rename_artifact`. Refs: ADR-004
@@ -62,7 +62,7 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def create_notebook(self, title: str) -> str:
-        """Create a new notebook in NotebookLM.
+        """Create a new notebook in Gemini Notebook.
 
         Args:
             title: The title of the new notebook.
@@ -237,7 +237,7 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def rename_artifact(self, notebook_id: str, artifact_id: str, title: str) -> None:
-        """Rename an artifact within NotebookLM for readability.
+        """Rename an artifact within Gemini Notebook for readability.
 
         Args:
             notebook_id: The notebook identifier.
@@ -247,7 +247,7 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def rename_mind_map(self, notebook_id: str, note_id: str, title: str) -> None:
-        """Rename a note-backed mind map within NotebookLM. Refs: ISSUE-011
+        """Rename a note-backed mind map within Gemini Notebook. Refs: ISSUE-011
 
         Args:
             notebook_id: The notebook identifier.

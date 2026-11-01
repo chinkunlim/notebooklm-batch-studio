@@ -1,4 +1,4 @@
-"""Quiz converter: transforms NotebookLM raw quiz outputs into Markdown, PDF, and JSON.
+"""Quiz converter: transforms Gemini Notebook raw quiz outputs into Markdown, PDF, and JSON.
 
 Supports merging multiple 10-question extracts, deduplicating question stems,
 generating student exam papers (題目卷.md, no answers) and teacher/study answer keys
@@ -35,12 +35,12 @@ _POSITIONAL_OPTION = re.compile(
 def _shuffle_choices(stem: str, choices: list[Choice]) -> list[Choice]:
     """Put the options in a stable pseudo-random order so the answer is not always A.
 
-    NotebookLM tends to list the correct option first (about 70% "A" in a real course, ISSUE-021).
+    Gemini Notebook tends to list the correct option first (about 70% "A" in a real course, ISSUE-021).
     The order is seeded by the question text, so the same question always shows the same order.
 
     Args:
         stem: Question text (seed).
-        choices: Options in NotebookLM's order.
+        choices: Options in Gemini Notebook's order.
 
     Returns:
         Shuffled options, or the original order when an option refers to other options.
@@ -71,7 +71,7 @@ def _parse_question_dict(
         Populated Question entity, or None if invalid.
     """
     stem = str(q_dict.get("question", "")).strip()
-    # Course-wide exams ask NotebookLM to start each stem with its chapter, e.g. "【Ch03】"; keep it
+    # Course-wide exams ask Gemini Notebook to start each stem with its chapter, e.g. "【Ch03】"; keep it
     # as the question's source so results can be scored per chapter.
     tag = _CHAPTER_TAG.match(stem)
     if tag:
@@ -117,10 +117,10 @@ def parse_notebooklm_quiz(
     source_pdf: str = "",
     title: str = "",
 ) -> Quiz:
-    """Parse raw NotebookLM quiz JSON into a domain Quiz entity.
+    """Parse raw Gemini Notebook quiz JSON into a domain Quiz entity.
 
     Args:
-        raw_data: Raw JSON dictionary or question list extracted from NotebookLM.
+        raw_data: Raw JSON dictionary or question list extracted from Gemini Notebook.
         course_code: Course identifier (e.g. BIO101).
         lecture_no: Sequence number of the lecture.
         variant: Quiz difficulty or variant label (e.g. 1-基礎, 2-理解, 3-模擬考).

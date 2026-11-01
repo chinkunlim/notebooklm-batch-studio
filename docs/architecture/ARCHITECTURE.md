@@ -10,7 +10,7 @@
 
 ## 1. 系統概覽 (System Overview)
 
-`notebooklm-batch-studio` 是一個專門為大學與進修課程設計的自動化學習輔助系統。使用者只要將每門課程的講義 PDF 放入對應的資料夾，系統便能自動透過 Gemini Notebook (NotebookLM) 建立專屬筆記本、逐份講義單獨勾選生成完整複習包（音訊摘要 Audio Overview、30 題階梯式測驗 Quiz、重點閃卡 Flashcards、心智圖 Mind Map、期末模擬考 Mock Exam），並將產出自動更名、轉檔為 Markdown 與列印用 PDF。
+`notebooklm-batch-studio` 是一個專門為大學與進修課程設計的自動化學習輔助系統。使用者只要將每門課程的講義 PDF 放入對應的資料夾，系統便能自動透過 Gemini Notebook (Gemini Notebook) 建立專屬筆記本、逐份講義單獨勾選生成完整複習包（音訊摘要 Audio Overview、30 題階梯式測驗 Quiz、重點閃卡 Flashcards、心智圖 Mind Map、期末模擬考 Mock Exam），並將產出自動更名、轉檔為 Markdown 與列印用 PDF。
 
 系統嚴格遵循單向五層架構（`entrypoints ➔ adapters ➔ services ➔ domain ➔ config`），所有資料與程式碼嚴格分離（儲存於 `DATA_DIR`），並提供三大操作入口：
 1. **CLI 命令列介面**：用於批次排程、目錄監看、狀態檢視與身分登入。
@@ -49,7 +49,7 @@ flowchart TD
     end
 
     subgraph Adapters ["適配器與外部服務 (Adapters)"]
-        NLMAdapter["NotebookLM Client<br/>(notebooklm-py / Playwright)"]
+        NLMAdapter["Gemini Notebook Client<br/>(notebooklm-py / Playwright)"]
         Repo["SQLite Repository<br/>(SQLAlchemy: Job / Course / Version)"]
         StudyRepo["Study Repository<br/>(SQLAlchemy: Attempt / Mistake)"]
     end
@@ -100,7 +100,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `study.py`：研讀工作台 API，包含測驗繳卷即時評分、錯題本查詢與複習掌握標記、Anki 間隔重複 CSV 匯出。
   - `system.py`：系統健康檢查、即時額度狀態、命名規則與研讀導引指南 (`/api/usage-guide`)。
 - `entrypoints/static/`：單頁響應式控制台（`index.html`）與學生研讀工作台（`study.html`），內嵌 3D 閃卡翻轉、分段音訊播放器與即時測驗互動。
-- `mcp_server.py`：Model Context Protocol (MCP) 伺服器，對外公開課程註冊、佇列控制、產出查詢、研讀數據與 NotebookLM 遠端同步等 Tool 與 Resource，關鍵操作具備 `confirm` 確認機制。
+- `mcp_server.py`：Model Context Protocol (MCP) 伺服器，對外公開課程註冊、佇列控制、產出查詢、研讀數據與 Gemini Notebook 遠端同步等 Tool 與 Resource，關鍵操作具備 `confirm` 確認機制。
 
 ### 2.2 適配器層 (`adapters`)
 負責與外部系統、持久化儲存與第三方函式庫互動：
@@ -108,7 +108,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `client.py`：核心客戶端，提供筆記本操作、單一來源上傳與來源選取、例外捕捉轉換。
   - `generation.py`：精確傳遞繁體中文語系代碼 (`zh_Hant`)、客製提示詞，並精確取得遠端生成物回傳之 `artifact_id`。
   - `downloads.py`：依照 `artifact_id` 精確下載遠端產出，處理語音 `.m4a` 與心智圖改名。
-  - `quota.py`：查詢 NotebookLM 即時配額表與估算消耗。
+  - `quota.py`：查詢 Gemini Notebook 即時配額表與估算消耗。
 - `adapters/db/`：
   - `repository.py` (`SQLiteJobRepository`)：使用 SQLAlchemy 管理課程、講次、工作佇列、客製產出選項 (`course_artifact_selections`) 與版本記錄 (`job_versions`)。
   - `study_repository.py` (`StudyRepository`)：管理學生測驗作答紀錄 (`quiz_attempts`) 與個人錯題本 (`quiz_mistakes`)。
@@ -123,7 +123,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 - `folder_browser.py` (`FolderBrowserService`)：提供本機安全目錄層級導航與 PDF 講義資料夾選取。
 - `course_parser.py`：依檔名結構排序並剖析課程目錄下的講義 PDF 與中繼資料。
 - `worker_pool.py`：控管平行任務排程、依組合展開講次任務，並處理速率限制指數退避重試。
-- `quota_planner.py`：讀取 NotebookLM 即時配額，於工作執行前進行嚴格預檢（額度不足自動轉入 `QUOTA_WAIT` 狀態，避免浪費重試次數），並支援 5 小時額度窗與每週額度評估。
+- `quota_planner.py`：讀取 Gemini Notebook 即時配額，於工作執行前進行嚴格預檢（額度不足自動轉入 `QUOTA_WAIT` 狀態，避免浪費重試次數），並支援 5 小時額度窗與每週額度評估。
 - `converters/`：
   - `quiz_converter.py`：整併 3 次 10 題測驗，去重並驗證題目數（達 30 題通過，不足則隔離至 `needs_review/`）。
   - `flashcard_converter.py`：將階梯式閃卡轉換為標準 Markdown 與 CSV 格式。
@@ -138,7 +138,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 ### 2.4 領域模型層 (`domain`)
 純 Python 商業物件，無任何外部第三方相依：
 - 實體與值物件：`Course`, `Lecture`, `Job`, `Artifact`, `Quiz`, `Question`, `Flashcard`, `MindMapNode`, `QuizAttempt`, `QuizMistake`, `JobVersion`。
-- 輔助邏輯：`naming.py`（集中控管 NotebookLM 遠端標題與本機檔案命名法、版本號尾綴）、`usage_guide.py`（提供課程學習順序、複習規劃與配額解說）。
+- 輔助邏輯：`naming.py`（集中控管 Gemini Notebook 遠端標題與本機檔案命名法、版本號尾綴）、`usage_guide.py`（提供課程學習順序、複習規劃與配額解說）。
 - 業務列舉：`JobStatus`, `JobType`, `ArtifactType`, `DifficultyLevel`, `CourseProfile`。
 - 領域例外：`DomainError`, `NotebookLMError`, `QuotaExceededError`, `AuthExpiredError`。
 
@@ -151,17 +151,17 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 ### 3.1 講義匯入與單一來源生成
 1. 使用者將講義放入 `DATA_DIR/input/courses/<CourseCode>/`，或透過 Web UI 目錄瀏覽器挑選加入。
 2. 系統解析講義檔名序號（例如 `01_細胞膜.pdf`, `02_酵素.pdf`）。
-3. 建立或重用 NotebookLM 遠端同名筆記本，並上傳所有來源（重註冊時自動保留既有 `source_id`，避免重複上傳）。
+3. 建立或重用 Gemini Notebook 遠端同名筆記本，並上傳所有來源（重註冊時自動保留既有 `source_id`，避免重複上傳）。
 4. **單一來源聚焦**：生成第 N 講的音訊與測驗時，只勾選第 N 份來源 ID（`source_ids=[source_id]`），確保產出專注於當次主題，不互相污染。
 
 ### 3.2 30 題階梯式測驗與品質隔離機制
 1. 為每講依序發起 3 次 10 題生成任務（基礎題、理解題、模擬考題）。
 2. `quiz_converter.py` 整合 3 次產出，去除重複題幹並補齊解析與提示。
-3. **品質防護**：若因 NotebookLM 擷取異常導致有效題數不足 30 題（或整門課模擬考題數不足），系統自動將原始內容隔離至 `DATA_DIR/needs_review/`，將工作狀態標記為 `NEEDS_REVIEW`，並在總結報告中標記警告。隔離檔案可透過 Web 介面直接檢視或下載。
+3. **品質防護**：若因 Gemini Notebook 擷取異常導致有效題數不足 30 題（或整門課模擬考題數不足），系統自動將原始內容隔離至 `DATA_DIR/needs_review/`，將工作狀態標記為 `NEEDS_REVIEW`，並在總結報告中標記警告。隔離檔案可透過 Web 介面直接檢視或下載。
 
 ### 3.3 限額與例外退避 (Quota & Rate-Limit Handling)
 1. 每次發起生成前，`quota_planner.py` 讀取即時配額表，若預估配額不足，任務自動標記為 `QUOTA_WAIT` 並排定等待時間，不盲目發送 API。
-2. 若在生成過程中 NotebookLM 回傳 HTTP 429、USER_DISPLAYABLE_ERROR 或限額耗盡提示，配接層映射為 `QuotaExceededError`。
+2. 若在生成過程中 Gemini Notebook 回傳 HTTP 429、USER_DISPLAYABLE_ERROR 或限額耗盡提示，配接層映射為 `QuotaExceededError`。
 3. 工作池自動暫停佇列並計算下次重置時間，啟動服務後時間一到即無縫續跑，或透過 CLI `notebooklm-batch-studio resume` 手動續行。
 
 ### 3.4 學生研讀工作台與間隔重複 (Study Portal & Spaced Repetition)
@@ -171,7 +171,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ### 3.5 版本化重新生成與產出多裝置適配 (Versioned Regeneration & Multi-Device Fit)
 1. 當使用者對特定講次的產出不滿意時，可在 Web UI 點擊「🔁 重新生成」，系統自動分配新版號（`v2`, `v3`…）。
-2. 既有歷史檔案完整保留，NotebookLM 筆記本遠端標題增加 `(v2)` 標籤，本機下載檔名增加 `_v2` 後綴。
+2. 既有歷史檔案完整保留，Gemini Notebook 筆記本遠端標題增加 `(v2)` 標籤，本機下載檔名增加 `_v2` 後綴。
 3. 資訊圖表產出物透過 `image_fitter.py` 自動轉製並適配為多種裝置規格（直式原圖、A4 PDF、iPad Air 4、MacBook Pro 14 吋），方便學生在不同螢幕閱讀。
 
 ## 4. 安全性與環境隔離 (Security & Isolation)

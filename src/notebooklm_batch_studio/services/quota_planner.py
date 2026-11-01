@@ -1,6 +1,6 @@
-"""Quota planning from the live NotebookLM usage meter: pre-checks before a job and workload estimates.
+"""Quota planning from the live Gemini Notebook usage meter: pre-checks before a job and workload estimates.
 
-NotebookLM reports, per action kind, whether the account has enough quota and the estimated
+Gemini Notebook reports, per action kind, whether the account has enough quota and the estimated
 cost as a percentage of the five-hour window. This module maps artifact types to those action
 kinds so the queue can skip a job before spending a request on it, and so course previews can
 estimate how many five-hour windows a workload needs instead of guessing "100 jobs per day".
@@ -47,7 +47,7 @@ _ACTION_PREFIXES = (
 
 
 def action_kind_for(art_type: ArtifactType) -> str | None:
-    """Map an artifact type to the NotebookLM usage action kind that it consumes.
+    """Map an artifact type to the Gemini Notebook usage action kind that it consumes.
 
     Args:
         art_type: Artifact type of a job.
@@ -66,7 +66,7 @@ def _find_action(quota: dict[str, Any], kind: str) -> dict[str, Any] | None:
     """Find one action entry in a quota summary.
 
     Args:
-        quota: Quota summary from the NotebookLM adapter.
+        quota: Quota summary from the Gemini Notebook adapter.
         kind: Action kind name.
 
     Returns:
@@ -76,10 +76,10 @@ def _find_action(quota: dict[str, Any], kind: str) -> dict[str, Any] | None:
 
 
 def quota_retry_after(quota: dict[str, Any], art_type: ArtifactType, now: datetime) -> int | None:
-    """Decide whether a job must wait for quota before it is sent to NotebookLM.
+    """Decide whether a job must wait for quota before it is sent to Gemini Notebook.
 
     Args:
-        quota: Quota summary from the NotebookLM adapter.
+        quota: Quota summary from the Gemini Notebook adapter.
         art_type: Artifact type of the job about to run.
         now: Current timezone-aware time.
 
@@ -108,7 +108,7 @@ def estimate_quota_plan(
 
     Args:
         types: Artifact type of every job in the workload.
-        quota: Quota summary from the NotebookLM adapter, or None when it is unavailable.
+        quota: Quota summary from the Gemini Notebook adapter, or None when it is unavailable.
         now: Current time (defaults to now; tests pass a fixed time).
 
     Returns:
@@ -168,7 +168,7 @@ async def read_quota_or_none(client: NotebookLMClientProtocol) -> dict[str, Any]
     """Read the live usage meter, returning None instead of raising when it is unavailable.
 
     Args:
-        client: NotebookLM client.
+        client: Gemini Notebook client.
 
     Returns:
         Quota summary, or None.
@@ -176,7 +176,7 @@ async def read_quota_or_none(client: NotebookLMClientProtocol) -> dict[str, Any]
     try:
         return await client.get_quota_status()
     except Exception as err:  # the meter is advisory; never block work on it
-        logger.warning("NotebookLM quota meter unavailable: %s", err)
+        logger.warning("Gemini Notebook quota meter unavailable: %s", err)
         return None
 
 
@@ -184,7 +184,7 @@ async def ensure_quota_for(client: NotebookLMClientProtocol, art_type: ArtifactT
     """Refuse to start a job the live meter says cannot be paid for.
 
     Args:
-        client: NotebookLM client.
+        client: Gemini Notebook client.
         art_type: Artifact type of the job about to run.
 
     Raises:
@@ -197,7 +197,7 @@ async def ensure_quota_for(client: NotebookLMClientProtocol, art_type: ArtifactT
     if wait is not None:
         logger.info("Quota pre-check: %s must wait %ds before starting", art_type.value, wait)
         raise QuotaExceededError(
-            f"NotebookLM quota insufficient for {art_type.value}",
+            f"Gemini Notebook quota insufficient for {art_type.value}",
             artifact_type=art_type.value,
             retry_after_seconds=wait,
         )

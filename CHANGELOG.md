@@ -26,6 +26,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(courses): settings when adding, per-course pause/start, chapter range for course-wide outputs, delete course, reuse existing notebook; fix study-portal quizzes; split oversized modules (by `@claude-code`)
 - feat(study): study plan with next step and exam countdown, progress marks, spaced review schedule, grounded answer explanations, chapter tags for course exams, editable exam date (by `@claude-code`)
 - feat(web): student experience - Today plan, in-page quiz review with retry-wrong and NotebookLM explanations, spaced flashcard review, mock-exam timer, audio resume, add-course wizard, grouped course page, toasts, light theme and iPad layout (by `@claude-code`)
+- feat: rename NotebookLM to Gemini Notebook in all user-facing text and links (ADR-006); start-up port check names the owner of a busy port; one-click macOS launcher app opening a full-screen Chrome app window; focus button and web app manifest; split course-settings MCP tools out of mcp_server (by `@claude-code`)
 
 ### Fixed
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)

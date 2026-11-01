@@ -1,4 +1,4 @@
-"""Flashcards converter: transforms NotebookLM flashcards into JSON and Anki-compatible CSV.
+"""Flashcards converter: transforms Gemini Notebook flashcards into JSON and Anki-compatible CSV.
 
 Supports standard Anki import formatting (front, back, tags) with HTML/newlines
 and RFC 4180 quote escaping.
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def _extract_card_text(field_val: Any) -> str:
-    """Extract text from either a string or NotebookLM's nested block structure.
+    """Extract text from either a string or Gemini Notebook's nested block structure.
 
     Args:
         field_val: Raw field value from JSON, which may be a string or a dict
@@ -46,7 +46,7 @@ def _extract_card_text(field_val: Any) -> str:
 
 
 def parse_notebooklm_flashcards(raw_data: dict[str, Any] | list[Any]) -> list[Flashcard]:
-    """Parse raw NotebookLM flashcards JSON into a list of domain Flashcard entities.
+    """Parse raw Gemini Notebook flashcards JSON into a list of domain Flashcard entities.
 
     Args:
         raw_data: Raw JSON dictionary (with 'cards' key) or list of card objects.

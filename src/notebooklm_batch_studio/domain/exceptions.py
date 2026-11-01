@@ -4,11 +4,11 @@ from __future__ import annotations
 
 
 class StudioError(Exception):
-    """Base exception for all domain and service errors in NotebookLM Batch Studio."""
+    """Base exception for all domain and service errors in Gemini Notebook 學習工作室."""
 
 
 class QuotaExceededError(StudioError):
-    """Raised when an operation exceeds Google NotebookLM's rate limit or daily quota.
+    """Raised when an operation exceeds Google Gemini Notebook's rate limit or daily quota.
 
     Attributes:
         artifact_type: The type of artifact that reached its quota.
@@ -31,7 +31,7 @@ class QuotaExceededError(StudioError):
 
 
 class AuthExpiredError(StudioError):
-    """Raised when NotebookLM authentication credentials have expired or are missing."""
+    """Raised when Gemini Notebook authentication credentials have expired or are missing."""
 
 
 class IncompleteArtifactError(StudioError):

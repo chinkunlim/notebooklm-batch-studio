@@ -1,4 +1,4 @@
-"""Regression test: re-registering a course must keep NotebookLM source ids of unchanged PDFs.
+"""Regression test: re-registering a course must keep Gemini Notebook source ids of unchanged PDFs.
 
 Without this, `batch` on an already-uploaded course (or the folder watcher re-registering
 on every new PDF) re-uploads every lecture and duplicates sources in the notebook.

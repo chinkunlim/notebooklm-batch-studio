@@ -54,7 +54,7 @@ def get_status(request: Request) -> dict[str, Any]:
 
 @system_router.get("/api/notebooklm/quota", tags=["System"], operation_id="get_notebooklm_quota")
 async def get_notebooklm_quota(request: Request) -> dict[str, Any]:
-    """Read the live NotebookLM usage meter (5-hour and weekly windows) and account limits.
+    """Read the live Gemini Notebook usage meter (5-hour and weekly windows) and account limits.
 
     Args:
         request: Incoming HTTP request context.
@@ -64,7 +64,8 @@ async def get_notebooklm_quota(request: Request) -> dict[str, Any]:
         notebook limit, and per-notebook source limit.
 
     Raises:
-        HTTPException: 401 when NotebookLM login is missing or expired, 503 on other NotebookLM errors.
+        HTTPException: 401 when Gemini Notebook login is missing or expired, 503 on other
+            Gemini Notebook errors.
     """
     service: BatchStudioService = request.app.state.service
     try:

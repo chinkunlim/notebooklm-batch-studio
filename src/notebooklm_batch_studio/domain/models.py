@@ -167,7 +167,7 @@ class Lecture:
         topic: Topic name inferred from filename or course.toml.
         filename: Name of the PDF file.
         sha256: SHA-256 hash of the PDF content for deduplication.
-        source_id: Associated NotebookLM source ID once uploaded.
+        source_id: Associated Gemini Notebook source ID once uploaded.
     """
 
     no: int
@@ -181,7 +181,7 @@ class Lecture:
 
 @dataclass(frozen=True)
 class GenerationOptions:
-    """Per-course NotebookLM generation settings, stored as plain strings (mapped in the adapter).
+    """Per-course Gemini Notebook generation settings, stored as plain strings (mapped in the adapter).
 
     Each value is the lower-case name of a notebooklm-py enum member (e.g. 'portrait'), so the
     domain and services never import notebooklm-py. Refs: ADR-005
@@ -200,7 +200,7 @@ class GenerationOptions:
         video_style: 'auto_select', 'classic', 'whiteboard', 'kawaii', 'anime', 'watercolor',
             'retro_print', 'heritage' or 'paper_craft'.
         quiz_questions: Questions per lecture quiz (default 30); drives the prompt, the completeness
-            check and NotebookLM's quantity setting together.
+            check and Gemini Notebook's quantity setting together.
         flashcards_quantity: 'fewer', 'standard' or 'more'.
         flashcards_difficulty: 'easy', 'medium' or 'hard'.
         device_exports: Whether to fit infographics to A4 / iPad Air 4 / MacBook Pro 14.
@@ -373,16 +373,16 @@ class Course:
         code: Unique course identifier (e.g. BIO101).
         name: Full course title.
         source_dir: Filesystem path to the course's input materials.
-        notebook_id: Associated NotebookLM notebook ID, if created.
+        notebook_id: Associated Gemini Notebook notebook ID, if created.
         profile: Active generation profile.
         language: Target output language (default: zh-TW).
         exam_date: Optional exam date string (YYYY-MM-DD).
         watch: Whether folder watcher is enabled for this course.
         mock_exam_questions: Target question count for course-wide mock exam.
         lectures: List of lectures belonging to this course.
-        generation_options: NotebookLM generation settings for this course.
+        generation_options: Gemini Notebook generation settings for this course.
         paused: When true, the queue does not start this course's jobs (set it up first).
-        reuse_notebook: Reuse an existing NotebookLM notebook with the same title and its PDFs.
+        reuse_notebook: Reuse an existing Gemini Notebook notebook with the same title and its PDFs.
     """
 
     code: str
@@ -437,7 +437,7 @@ def get_course_range_prefix(lectures: list[Lecture]) -> str:
 
 
 def get_artifact_english_title(artifact_type: ArtifactType | str, prefix: str) -> str:
-    """Generate the standardized English title with prefix for NotebookLM in-app display.
+    """Generate the standardized English title with prefix for Gemini Notebook in-app display.
 
     Args:
         artifact_type: Artifact type enum or string value.
@@ -503,7 +503,7 @@ class ArtifactJob:
         created_at: Task creation timestamp.
         updated_at: Last state transition timestamp.
         version: 1 for the first generation; 2, 3, ... for each regeneration (ADR-005).
-        artifact_ids: NotebookLM artifact / note ids this job produced.
+        artifact_ids: Gemini Notebook artifact / note ids this job produced.
     """
 
     id: str

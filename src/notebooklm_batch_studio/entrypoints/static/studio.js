@@ -1,4 +1,4 @@
-/* NotebookLM Batch Studio — study and UX layer (loaded after the inline script in index.html).
+/* Gemini Notebook 學習工作室 — study and UX layer (loaded after the inline script in index.html).
    Toasts / confirm dialog, theme, "today" plan, quiz review, explanations, mock-exam timer,
    spaced review, audio resume and the add-course wizard. Uses globals from index.html:
    currentStudyCourse, activeStudyLectureNo, activeQuizVariant, currentQuizData, currentQuizAnswers,
@@ -265,12 +265,12 @@ async function loadSavedExplanations() {
  */
 function explanationBox(html, savedAt, askAgain) {
   const when = savedAt ? new Date(savedAt).toLocaleString('zh-TW', { dateStyle: 'short', timeStyle: 'short' }) : '';
-  return `<div class="explain-box"><div class="explain-head">📖 NotebookLM 解釋${when ? `（已儲存 ${escHtml(when)}）` : ''}
+  return `<div class="explain-box"><div class="explain-head">📖 Gemini Notebook 解釋${when ? `（已儲存 ${escHtml(when)}）` : ''}
     <button class="link-btn" onclick="${askAgain}">🔁 重新問</button></div>${html}</div>`;
 }
 
 /**
- * Ask NotebookLM (or reuse the saved answer) why a question's answer is correct, and show it.
+ * Ask Gemini Notebook (or reuse the saved answer) why a question's answer is correct, and show it.
  * @param {{question: string, choices: Array, answer_index: number, lecture_no: (number|null)}} q Question
  * @param {HTMLElement} anchor Element to put the explanation after (replaced when it is a button)
  * @param {boolean} force Ask again even if an explanation is saved
@@ -279,7 +279,7 @@ function explanationBox(html, savedAt, askAgain) {
  */
 async function askExplanation(q, anchor, force, askAgain) {
   const original = anchor.textContent;
-  if (anchor.tagName === 'BUTTON') { anchor.disabled = true; anchor.textContent = '⏳ NotebookLM 回答中…'; }
+  if (anchor.tagName === 'BUTTON') { anchor.disabled = true; anchor.textContent = '⏳ Gemini Notebook 回答中…'; }
   try {
     const res = await fetch(`/api/courses/${currentStudyCourse.code}/study/explain`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -298,10 +298,10 @@ async function askExplanation(q, anchor, force, askAgain) {
     const holder = anchor.closest('.explain-box') || anchor;
     holder.insertAdjacentHTML('afterend', box);
     holder.remove();
-    if (!data.from_cache) showToast('已向 NotebookLM 詢問並儲存，下次直接顯示', 'success', 2500);
+    if (!data.from_cache) showToast('已向 Gemini Notebook 詢問並儲存，下次直接顯示', 'success', 2500);
   } catch (e) {
     if (anchor.tagName === 'BUTTON') { anchor.disabled = false; anchor.textContent = original; }
-    showToast('NotebookLM 沒有回應：' + e.message, 'error');
+    showToast('Gemini Notebook 沒有回應：' + e.message, 'error');
   }
 }
 
@@ -342,7 +342,7 @@ function explainMistake(mistakeId, anchor, force = false) {
 function explanationSlot(question, askJs, askAgainJs) {
   const saved = savedExplanations.get(String(question).trim());
   if (saved) return explanationBox(saved.html || escHtml(saved.answer_md || ''), saved.created_at, askAgainJs);
-  return `<button class="why-btn" style="margin-top:8px;font-size:0.8rem;" onclick="${askJs}">🤔 為什麼？問 NotebookLM</button>`;
+  return `<button class="why-btn" style="margin-top:8px;font-size:0.8rem;" onclick="${askJs}">🤔 為什麼？問 Gemini Notebook</button>`;
 }
 
 /**

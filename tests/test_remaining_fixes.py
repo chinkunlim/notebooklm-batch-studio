@@ -128,7 +128,7 @@ class ServiceFixture(unittest.IsolatedAsyncioTestCase):
         """Build the service under test.
 
         Args:
-            client: Fake NotebookLM client.
+            client: Fake Gemini Notebook client.
 
         Returns:
             BatchStudioService.

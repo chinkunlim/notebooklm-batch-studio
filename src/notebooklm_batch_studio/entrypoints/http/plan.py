@@ -55,7 +55,7 @@ class ExplainIn(BaseModel):
         question: Question text.
         choices: Options in display order.
         answer_index: Index of the correct option.
-        force: Ask NotebookLM again even when an explanation is saved.
+        force: Ask Gemini Notebook again even when an explanation is saved.
     """
 
     lecture_no: int | None = None
@@ -163,7 +163,7 @@ def record_review(code: str, req: ReviewIn, request: Request) -> dict[str, Any]:
 
 @plan_router.post("/explain", operation_id="explain_question")
 async def explain_question(code: str, req: ExplainIn, request: Request) -> dict[str, Any]:
-    """Ask NotebookLM why the answer is correct, grounded in the course's own sources.
+    """Ask Gemini Notebook why the answer is correct, grounded in the course's own sources.
 
     Args:
         code: Course code.
@@ -174,7 +174,7 @@ async def explain_question(code: str, req: ExplainIn, request: Request) -> dict[
         The explanation.
 
     Raises:
-        HTTPException: 404 for an unknown course, 422 for bad input, 502 when NotebookLM fails.
+        HTTPException: 404 for an unknown course, 422 for bad input, 502 when Gemini Notebook fails.
     """
     try:
         return await _plan(request).explain(
@@ -192,7 +192,7 @@ async def explain_question(code: str, req: ExplainIn, request: Request) -> dict[
 def get_saved_explanations(
     code: str, request: Request, lecture_no: int | None = Query(default=None)
 ) -> list[dict[str, Any]]:
-    """Saved NotebookLM explanations (shown again without spending quota).
+    """Saved Gemini Notebook explanations (shown again without spending quota).
 
     Args:
         code: Course code.

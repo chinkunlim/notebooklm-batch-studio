@@ -1,4 +1,4 @@
-"""Per-kind download helpers for the NotebookLM adapter.
+"""Per-kind download helpers for the Gemini Notebook adapter.
 
 Each method downloads exactly one artifact by id through `download_artifact`, which the adapter
 implements (with error translation). Split out of `client.py` to keep that file under the size

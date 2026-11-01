@@ -39,7 +39,7 @@ class AddCoursesRequest(BaseModel):
         course_artifacts: Granular selection of course-wide aggregated artifact types.
         language: Output language preference ('zh-TW', 'en', 'bilingual').
         paused: Hold the course until it is started.
-        reuse_notebook: Reuse an existing NotebookLM notebook with the same title.
+        reuse_notebook: Reuse an existing Gemini Notebook notebook with the same title.
         options: Generation options applied before any job runs.
     """
 
@@ -56,7 +56,7 @@ class AddCoursesRequest(BaseModel):
     )
     language: str = Field(default="zh-TW", description="Output language ('zh-TW', 'en', 'bilingual')")
     paused: bool = Field(default=False, description="Hold the course until it is started")
-    reuse_notebook: bool = Field(default=True, description="Reuse a NotebookLM notebook with the same title")
+    reuse_notebook: bool = Field(default=True, description="Reuse a Gemini Notebook with the same title")
     options: dict[str, Any] | None = Field(default=None, description="Generation options to set first")
 
 
@@ -85,14 +85,14 @@ class StatusResponse(BaseModel):
 
     Attributes:
         app_env: Running application environment.
-        auth: Authentication status of Google NotebookLM credentials.
+        auth: Authentication status of Google Gemini Notebook credentials.
         queue_running: Whether active queue worker is running.
         total_courses: Total registered courses count.
         queue_counts: Summary of job counts across statuses.
     """
 
     app_env: str = Field(..., description="Application environment name")
-    auth: dict[str, Any] = Field(..., description="NotebookLM credential status")
+    auth: dict[str, Any] = Field(..., description="Gemini Notebook credential status")
     queue_running: bool = Field(..., description="Whether worker queue is currently executing")
     total_courses: int = Field(..., description="Total number of registered courses")
     queue_counts: dict[str, int] = Field(..., description="Job count per lifecycle status")
@@ -106,8 +106,8 @@ class CourseSummaryResponse(BaseModel):
         name: Course name.
         profile: Active generation profile.
         lecture_count: Total lecture PDFs detected.
-        notebook_id: Linked NotebookLM notebook identifier.
-        notebook_url: Direct web URL to NotebookLM.
+        notebook_id: Linked Gemini Notebook notebook identifier.
+        notebook_url: Direct web URL to Gemini Notebook.
         total_jobs: Total scheduled artifact tasks.
         done_jobs: Count of completed artifact tasks.
         progress_percent: Percentage of finished tasks (0.0 - 100.0).
@@ -142,7 +142,7 @@ class GenericActionResponse(BaseModel):
 
 
 class UpdateOptionsRequest(BaseModel):
-    """Payload changing a course's NotebookLM generation options.
+    """Payload changing a course's Gemini Notebook generation options.
 
     Attributes:
         options: Option name to new value (see GET /api/courses/{code}/options for choices).

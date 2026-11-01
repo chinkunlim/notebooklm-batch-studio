@@ -2,7 +2,7 @@
 
 Covers output language (`zh_Hant`, not the library's English default), checking the returned
 GenerationStatus for quota/failure, waiting for completion, targeting downloads and renames by
-the artifact id NotebookLM returned, quiz difficulty, quota reset-based cooldowns, and the
+the artifact id Gemini Notebook returned, quiz difficulty, quota reset-based cooldowns, and the
 per-notebook source limit.
 """
 
@@ -392,13 +392,13 @@ class RunnerTargetingTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.client.called("generate_audio")[0]["language"], "zh-TW")
 
     async def test_audio_is_saved_as_m4a(self) -> None:
-        """NotebookLM audio is MP4/AAC, so it is saved as .m4a, not .mp3. Refs: ISSUE-007"""
+        """Gemini Notebook audio is MP4/AAC, so it is saved as .m4a, not .mp3. Refs: ISSUE-007"""
         await self._run(ArtifactType.AUDIO)
         out_path = self.client.called("download_audio")[0]["args"][1]
         self.assertTrue(out_path.endswith("BIO101_L01_audio.m4a"), out_path)
 
     async def test_study_guide_requests_study_guide_format(self) -> None:
-        """STUDY_GUIDE jobs ask NotebookLM for the study_guide report format."""
+        """STUDY_GUIDE jobs ask Gemini Notebook for the study_guide report format."""
         await self._run(ArtifactType.STUDY_GUIDE)
         self.assertEqual(self.client.called("generate_report")[0]["report_format"], "study_guide")
         self.assertEqual(self.client.called("download_report")[0]["artifact_id"], "report-1")

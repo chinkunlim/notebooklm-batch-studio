@@ -1,6 +1,6 @@
-"""Render a NotebookLM report (Markdown) as a readable standalone HTML page.
+"""Render a Gemini Notebook report (Markdown) as a readable standalone HTML page.
 
-The report text comes from NotebookLM, so raw HTML in it is escaped before Markdown rendering;
+The report text comes from Gemini Notebook, so raw HTML in it is escaped before Markdown rendering;
 only Markdown formatting (headings, lists, tables, bold, quotes) becomes HTML.
 Refs: ISSUE-013
 """
@@ -32,7 +32,7 @@ def markdown_fragment(markdown_text: str) -> str:
     """Render Markdown to an HTML fragment, escaping any raw HTML in the source first.
 
     Args:
-        markdown_text: Markdown from NotebookLM.
+        markdown_text: Markdown from Gemini Notebook.
 
     Returns:
         HTML fragment (no page wrapper).
@@ -46,7 +46,7 @@ def report_to_html(title: str, markdown_text: str) -> str:
 
     Args:
         title: Page title (escaped).
-        markdown_text: Report content in Markdown, as downloaded from NotebookLM.
+        markdown_text: Report content in Markdown, as downloaded from Gemini Notebook.
 
     Returns:
         Complete HTML document string.

@@ -189,7 +189,7 @@ class ReviewRepository:
     def save_explanation(
         self, course_code: str, lecture_no: int | None, question_key: str, question: str, answer_md: str
     ) -> None:
-        """Save (or replace) NotebookLM's explanation of one question.
+        """Save (or replace) Gemini Notebook's explanation of one question.
 
         Args:
             course_code: Course code.

@@ -1,4 +1,4 @@
-"""Offline unit tests for NotebookLM adapter and error translation logic.
+"""Offline unit tests for Gemini Notebook adapter and error translation logic.
 
 Tests authentication checking, exception translation for rate limits (QuotaExceededError),
 session expiry (AuthExpiredError), and artifact failure (IncompleteArtifactError).

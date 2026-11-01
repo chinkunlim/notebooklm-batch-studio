@@ -156,7 +156,7 @@ class PlanTest(PlanFixture):
             self.plan.record_review("C1", "nope", key, True)
 
     def test_explain_uses_lecture_sources(self) -> None:
-        """The explanation asks NotebookLM with only that lecture's source and the correct letter."""
+        """The explanation asks Gemini Notebook with only that lecture's source and the correct letter."""
         out = asyncio.run(self.plan.explain("C1", 2, "哪個對？", ["甲", "乙"], 1))
         self.assertEqual(out["answer"], "因為……")
         args = self.client.ask.await_args.args
@@ -164,7 +164,7 @@ class PlanTest(PlanFixture):
         self.assertIn("正確答案是 B", args[1])
         with self.assertRaises(ValueError):
             asyncio.run(self.plan.explain("C1", 2, "q", ["a"], 3))
-        # Markdown from NotebookLM is rendered with raw HTML escaped.
+        # Markdown from Gemini Notebook is rendered with raw HTML escaped.
         self.client.ask = mock.AsyncMock(return_value="**重點** <script>x</script>")
         html = asyncio.run(self.plan.explain("C1", 2, "q", ["a", "b"], 0))["html"]
         self.assertIn("<strong>重點</strong>", html)

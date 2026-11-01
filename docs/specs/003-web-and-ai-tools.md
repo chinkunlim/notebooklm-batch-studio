@@ -22,7 +22,7 @@
 | 項目 | 決定 |
 |---|---|
 | 誰用、在哪裡 | 只有使用者自己，在這台 Mac；綁 `127.0.0.1` |
-| 會改資料的動作 | 加入／移除課程、開始生成、重做、變更設定與 prompt、登入 NotebookLM |
+| 會改資料的動作 | 加入／移除課程、開始生成、重做、變更設定與 prompt、登入 Gemini Notebook |
 | AI 工具 | Open WebUI（OpenAPI 工具伺服器）；Claude Code、Antigravity、OpenCode、Cursor（MCP） |
 | 本機模型 | 不需要（不接 Ollama） |
 | 資料 | 下載檔在 `DATA_DIR/output/courses/`；原始講義在 `DATA_DIR/input/courses/`；佇列與紀錄在 SQLite |
@@ -63,7 +63,7 @@
 
 ### 不做 (Out of scope)
 - 對外網開放、手機存取、多使用者。
-- 刪除 NotebookLM 上的 notebook。
+- 刪除 Gemini Notebook 上的 notebook。
 - 網頁或 MCP 工具處理 Google 密碼。
 
 ## 4. 介面 / API
@@ -78,7 +78,7 @@ HTTP 路由（OpenAPI 由 FastAPI 自動產生，給 Open WebUI 匯入）：
 - `POST /api/queue/start` / `POST /api/queue/pause`
 - `POST /api/items/{id}/retry`
 
-錯誤：資料夾不存在或沒有 PDF（400）、課程不存在（404）、尚未登入 NotebookLM（409，附說明）。
+錯誤：資料夾不存在或沒有 PDF（400）、課程不存在（404）、尚未登入 Gemini Notebook（409，附說明）。
 
 ## 5. 驗收標準
 

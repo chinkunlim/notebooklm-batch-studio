@@ -1,6 +1,6 @@
 """Batch orchestrator: coordinates course scanning, task enqueuing, and execution.
 
-Integrates CourseRepository, QueueRepository, NotebookLM client, artifact converters,
+Integrates CourseRepository, QueueRepository, Gemini Notebook client, artifact converters,
 and the parallel WorkerPool to provide an end-to-end processing pipeline.
 """
 
@@ -74,7 +74,7 @@ class BatchStudioService:
         Args:
             course_repo: Repository for course and lecture persistence.
             queue_repo: Repository for task queue state.
-            notebooklm_client: Protocol client for NotebookLM operations.
+            notebooklm_client: Protocol client for Gemini Notebook operations.
             config: Application configuration.
             queue_provider: Factory returning scoped QueueRepository instances.
             ollama_client: Local Ollama client used for prompt refinement (None disables it).
@@ -116,7 +116,7 @@ class BatchStudioService:
         return course
 
     async def setup_notebook_and_sources(self, course_code: str) -> Course:
-        """Ensure Google NotebookLM notebook is created and all PDFs are uploaded.
+        """Ensure Google Gemini Notebook notebook is created and all PDFs are uploaded.
 
         Args:
             course_code: Course code identifier.
@@ -146,10 +146,10 @@ class BatchStudioService:
                 # creating a second notebook with the same name.
                 notebook_id = found
                 existing_sources = await self.notebooklm_client.list_ready_sources(found)
-                logger.info("Reusing NotebookLM notebook %s for %s", found, course_code)
+                logger.info("Reusing Gemini Notebook notebook %s for %s", found, course_code)
             else:
                 notebook_id = await self.notebooklm_client.create_notebook(title)
-                logger.info("Created NotebookLM notebook %s for %s", notebook_id, course_code)
+                logger.info("Created Gemini Notebook notebook %s for %s", notebook_id, course_code)
             self.course_repo.update_notebook_id(course_code, notebook_id)
 
         for lec in course.lectures:
@@ -195,7 +195,7 @@ class BatchStudioService:
         return updated or course
 
     async def _check_source_limit(self, course: Course) -> None:
-        """Refuse courses whose lecture count exceeds NotebookLM's per-notebook source limit.
+        """Refuse courses whose lecture count exceeds Gemini Notebook's per-notebook source limit.
 
         Args:
             course: Course about to be set up.
@@ -206,15 +206,15 @@ class BatchStudioService:
         limit = await self.notebooklm_client.get_source_limit()
         if limit is not None and len(course.lectures) > limit:
             raise SourceLimitExceededError(
-                f"Course {course.code} has {len(course.lectures)} lectures but this NotebookLM "
+                f"Course {course.code} has {len(course.lectures)} lectures but this Gemini Notebook "
                 f"account allows {limit} sources per notebook; split the course folder"
             )
 
     async def get_notebooklm_quota(self) -> dict[str, Any]:
-        """Return the live NotebookLM usage meter and account limits.
+        """Return the live Gemini Notebook usage meter and account limits.
 
         Returns:
-            Quota summary from the NotebookLM adapter.
+            Quota summary from the Gemini Notebook adapter.
         """
         return await self.notebooklm_client.get_quota_status()
 
@@ -254,12 +254,12 @@ class BatchStudioService:
             raise CourseNotFoundError(f"Course {job.course_code} not found")
         await ensure_quota_for(self.notebooklm_client, job.artifact_type)
         if not course.notebook_id or any(not lec.source_id for lec in course.lectures):
-            logger.info("Initializing NotebookLM notebook and sources for course %s", course.code)
+            logger.info("Initializing Gemini Notebook notebook and sources for course %s", course.code)
             course = await self.setup_notebook_and_sources(course.code)
 
         nb_id = course.notebook_id
         if not nb_id:
-            raise RuntimeError(f"Course {job.course_code} lacks NotebookLM notebook_id")
+            raise RuntimeError(f"Course {job.course_code} lacks Gemini Notebook notebook_id")
 
         run_job, run_course = apply_job_settings(job, course)  # SPEC-006 (may narrow lectures)
         if job.lecture_no is not None:
@@ -312,9 +312,7 @@ class BatchStudioService:
             raw_counts = {st.value: counts.get(st, 0) for st in JobStatus}
             total_jobs = sum(raw_counts.values())
             done_jobs = raw_counts.get(JobStatus.DONE.value, 0)
-            notebook_url = (
-                f"https://notebooklm.google.com/notebook/{c.notebook_id}" if c.notebook_id else None
-            )
+            notebook_url = f"https://notebook.google.com/notebook/{c.notebook_id}" if c.notebook_id else None
             summaries.append(
                 {
                     "code": c.code,
@@ -372,7 +370,7 @@ class BatchStudioService:
         jobs_data = format_jobs_data(jobs, course_dir, self.config.needs_review_dir)
 
         notebook_url = (
-            f"https://notebooklm.google.com/notebook/{course.notebook_id}" if course.notebook_id else None
+            f"https://notebook.google.com/notebook/{course.notebook_id}" if course.notebook_id else None
         )
 
         return {
@@ -477,7 +475,7 @@ class BatchStudioService:
             course_artifacts: Granular list of course-wide aggregated artifact types.
             language: Target output language preference.
             paused: Queue the jobs but hold the course until it is started.
-            reuse_notebook: Reuse a NotebookLM notebook with the same title and its PDFs.
+            reuse_notebook: Reuse a Gemini Notebook notebook with the same title and its PDFs.
             options: Generation options to set before any job runs (see course_settings).
 
         Returns:
@@ -620,7 +618,7 @@ class BatchStudioService:
         }
 
     def check_auth_status(self) -> dict[str, Any]:
-        """Check NotebookLM credential readiness.
+        """Check Gemini Notebook credential readiness.
 
         Returns:
             Dictionary indicating whether login state file is valid.
@@ -752,7 +750,7 @@ class BatchStudioService:
         return updated_count
 
     async def sync_course_artifacts(self, course_code: str) -> dict[str, Any]:
-        """Synchronize remote NotebookLM artifacts back to local storage and database.
+        """Synchronize remote Gemini Notebook artifacts back to local storage and database.
 
         Args:
             course_code: Course identifier.

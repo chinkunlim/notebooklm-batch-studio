@@ -1,6 +1,6 @@
-"""NotebookLM quota helpers: turn notebooklm-py usage snapshots into cooldowns and summaries.
+"""Gemini Notebook quota helpers: turn notebooklm-py usage snapshots into cooldowns and summaries.
 
-NotebookLM meters generation in a 5-hour window and a weekly window, each with its own
+Gemini Notebook meters generation in a 5-hour window and a weekly window, each with its own
 `resets_at`. These helpers read that live meter instead of guessing a fixed cooldown.
 Refs: ISSUE-005
 """

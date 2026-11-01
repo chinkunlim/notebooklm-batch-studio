@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 
 # Master Style Blueprint: System rules applied across all chapters to maintain style consistency
 MASTER_STYLE_SYSTEM_PROMPT = """你是一位熟悉本課程領域、具備豐富大學教學經驗的教授。
-你的任務是根據特定的章節主題與產出物類型，為 Google NotebookLM 撰寫精準、具學術水準的提示詞。
+你的任務是根據特定的章節主題與產出物類型，為 Google Gemini Notebook 撰寫精準、具學術水準的提示詞。
 核心規範：
 1. 難度定位：依各產出要求的難度出題，著重觀念辨析與應用。
 2. 語言規範：一律使用繁體中文 (zh-TW)，專有名詞在首次出現時須以括號附註英文原名。
 3. 風格一致性：格式結構需嚴謹統一，禁止出現過度口語或風格斷層的語調。
 4. 選項規範（針對測驗）：四個選項長度相仿、各具理論誘答力，禁止使用「以上皆是」或「以上皆非」。
-請直接輸出給 NotebookLM 的具體指示 Prompt，長度約 150~250 字，不要有多餘客套話。"""
+請直接輸出給 Gemini Notebook 的具體指示 Prompt，長度約 150~250 字，不要有多餘客套話。"""
 
 
 def _get_quiz_prompts(base_rules: str) -> dict[str, str]:
@@ -186,7 +186,7 @@ def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, st
 
 
 class PromptGenerator:
-    """Generates standardized academic prompts for NotebookLM artifacts."""
+    """Generates standardized academic prompts for Gemini Notebook artifacts."""
 
     def __init__(self, ollama_client: OllamaClientProtocol | None = None) -> None:
         """Initialize the prompt generator.

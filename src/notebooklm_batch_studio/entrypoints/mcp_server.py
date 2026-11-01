@@ -1,4 +1,4 @@
-"""Model Context Protocol (MCP) server for NotebookLM Batch Studio.
+"""Model Context Protocol (MCP) server for Gemini Notebook 學習工作室.
 
 Exposes tools for Agent pairing (Claude Code, Antigravity, OpenCode, Open WebUI)
 to monitor course progress, preview imports, enqueue batches, view quizzes, and retry jobs.
@@ -24,6 +24,7 @@ from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
+from notebooklm_batch_studio.entrypoints.mcp_course_settings import register_course_settings_tools
 from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
 from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
 from notebooklm_batch_studio.services.folder_browser import browse_folders
@@ -44,7 +45,7 @@ def _register_course_query_tools(mcp: MCPServer, active_service: BatchStudioServ
 
     @mcp.tool()
     def list_courses() -> str:
-        """List all registered courses, progress completion, and NotebookLM links.
+        """List all registered courses, progress completion, and Gemini Notebook links.
 
         Returns:
             JSON string containing course summaries.
@@ -70,7 +71,7 @@ def _register_course_query_tools(mcp: MCPServer, active_service: BatchStudioServ
 
     @mcp.tool()
     async def get_notebooklm_quota() -> str:
-        """Read the live NotebookLM usage meter and account limits (read-only).
+        """Read the live Gemini Notebook usage meter and account limits (read-only).
 
         Returns:
             JSON string with 5-hour/weekly window usage and reset times, per-action
@@ -287,7 +288,7 @@ def _register_sync_and_prompt_tools(mcp: MCPServer, active_service: BatchStudioS
 
     @mcp.tool()
     async def sync_course_remote_artifacts(course_code: str, confirm: bool = False) -> str:
-        """Synchronize manually generated artifacts from NotebookLM to local storage (requires confirm=True).
+        """Synchronize manually generated Gemini Notebook artifacts to local storage (needs confirm=True).
 
         Args:
             course_code: Course identifier (e.g. 'BIO101').
@@ -298,7 +299,7 @@ def _register_sync_and_prompt_tools(mcp: MCPServer, active_service: BatchStudioS
         """
         if not confirm:
             return (
-                f"Action not confirmed. Pass confirm=True to sync remote NotebookLM "
+                f"Action not confirmed. Pass confirm=True to sync remote Gemini Notebook "
                 f"artifacts for course '{course_code}'."
             )
         try:
@@ -446,7 +447,7 @@ def _register_settings_tools(mcp: MCPServer, active_service: BatchStudioService)
 
     @mcp.tool()
     def get_naming_guide() -> str:
-        """Explain how artifacts are named on NotebookLM and locally (read-only).
+        """Explain how artifacts are named on Gemini Notebook and locally (read-only).
 
         Returns:
             JSON string with naming rules and one row per artifact type.
@@ -464,7 +465,7 @@ def _register_settings_tools(mcp: MCPServer, active_service: BatchStudioService)
 
     @mcp.tool()
     def get_course_options(code: str) -> str:
-        """Read a course's NotebookLM generation options and allowed values (read-only).
+        """Read a course's Gemini Notebook generation options and allowed values (read-only).
 
         Args:
             code: Course code.
@@ -522,14 +523,17 @@ def _register_regenerate_tools(mcp: MCPServer, active_service: BatchStudioServic
             code: Course code.
             artifact_type: Artifact type value, e.g. 'infographic'.
             lecture_no: Lecture number, or None for a course-wide artifact.
-            confirm: Must be True to enqueue (this spends NotebookLM quota).
+            confirm: Must be True to enqueue (this spends Gemini Notebook quota).
 
         Returns:
             JSON string with the new job id and version, or a confirmation warning.
         """
         if not confirm:
             return json.dumps(
-                {"confirmed": False, "warning": "Set confirm=True to enqueue; this spends NotebookLM quota."},
+                {
+                    "confirmed": False,
+                    "warning": "Set confirm=True to enqueue; this spends Gemini Notebook quota.",
+                },
                 ensure_ascii=False,
             )
         try:
@@ -587,7 +591,7 @@ def _register_selection_tools(mcp: MCPServer, active_service: BatchStudioService
     ) -> str:
         """Change which artifact types a course generates (requires confirm=True).
 
-        Added types are queued (spending NotebookLM quota); removed types have unstarted jobs skipped.
+        Added types are queued (spending Gemini Notebook quota); removed types have unstarted jobs skipped.
 
         Args:
             code: Course code.
@@ -606,110 +610,6 @@ def _register_selection_tools(mcp: MCPServer, active_service: BatchStudioService
         try:
             result = active_service.course_settings.set_artifact_selection(code, chapter, course)
             return json.dumps(result, ensure_ascii=False)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-
-def _register_job_option_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register tools for one output's own generation settings (SPEC-006).
-
-    Args:
-        mcp: MCPServer instance.
-        active_service: Orchestrator service.
-    """
-
-    @mcp.tool()
-    def get_job_options(job_id: str) -> str:
-        """Read one output's own settings and the settings it will actually use (read-only).
-
-        Args:
-            job_id: Job id (from get_course_status).
-
-        Returns:
-            JSON string with overrides, effective options and the fields its type supports.
-        """
-        try:
-            return json.dumps(
-                active_service.course_settings.get_job_options(job_id), ensure_ascii=False, indent=2
-            )
-        except ValueError as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-    @mcp.tool()
-    def set_job_options(job_id: str, options: dict[str, Any], confirm: bool = False) -> str:
-        """Set one output's own settings, e.g. {"quiz_questions": 20} (requires confirm=True).
-
-        Args:
-            job_id: Job id.
-            options: Option overrides; "" removes one and falls back to the course setting.
-            confirm: Must be True to save.
-
-        Returns:
-            JSON string with the updated settings, or a confirmation warning.
-        """
-        if not confirm:
-            return json.dumps(
-                {"confirmed": False, "warning": "Set confirm=True to save.", "options": options},
-                ensure_ascii=False,
-            )
-        try:
-            return json.dumps(
-                active_service.course_settings.set_job_options(job_id, options), ensure_ascii=False
-            )
-        except ValueError as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-
-def _register_course_admin_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register per-course pause / start and course deletion tools (all require confirm).
-
-    Args:
-        mcp: MCPServer instance.
-        active_service: Orchestrator service.
-    """
-
-    @mcp.tool()
-    def set_course_paused(code: str, paused: bool, confirm: bool = False) -> str:
-        """Pause a course (jobs wait) or start it (jobs run; spends quota). Requires confirm=True.
-
-        Args:
-            code: Course code.
-            paused: True to pause, False to start.
-            confirm: Must be True to apply.
-
-        Returns:
-            JSON string with the new state, or a confirmation warning.
-        """
-        if not confirm:
-            return json.dumps(
-                {"confirmed": False, "warning": "Set confirm=True to apply."}, ensure_ascii=False
-            )
-        try:
-            result = active_service.course_settings.set_paused(code, paused)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-        if not paused:
-            active_service.start_queue()
-        return json.dumps(result, ensure_ascii=False)
-
-    @mcp.tool()
-    def delete_course(code: str, confirm: bool = False) -> str:
-        """Remove a course from this app; outputs move to DATA_DIR/deleted/, NotebookLM untouched.
-
-        Args:
-            code: Course code.
-            confirm: Must be True to delete.
-
-        Returns:
-            JSON string with what was removed and moved, or a confirmation warning.
-        """
-        if not confirm:
-            return json.dumps(
-                {"confirmed": False, "warning": "Set confirm=True to delete this course's local records."},
-                ensure_ascii=False,
-            )
-        try:
-            return json.dumps(active_service.course_settings.delete_course(code), ensure_ascii=False)
         except Exception as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
@@ -776,8 +676,7 @@ def build_mcp_server(
     _register_settings_tools(mcp, active_service)
     _register_regenerate_tools(mcp, active_service)
     _register_selection_tools(mcp, active_service)
-    _register_job_option_tools(mcp, active_service)
-    _register_course_admin_tools(mcp, active_service)
+    register_course_settings_tools(mcp, active_service)
     register_job_prompt_tools(mcp, active_service)
     if study_plan is not None:
         register_study_plan_tools(mcp, study_plan)

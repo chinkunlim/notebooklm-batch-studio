@@ -1,4 +1,4 @@
-"""FastAPI HTTP service and web management dashboard for NotebookLM Batch Studio.
+"""FastAPI HTTP service and web management dashboard for Gemini Notebook 學習工作室.
 
 Exposes RESTful endpoints, auto-generated OpenAPI documentation for AI tools (Open WebUI),
 and serves a local browser management dashboard on 127.0.0.1:8768.
@@ -38,6 +38,7 @@ from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
+from notebooklm_batch_studio.entrypoints.port_check import busy_port_message, port_is_free
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
@@ -231,7 +232,7 @@ def _build_study_plan(
     """Create the study-plan service on the same repositories as the other services.
 
     Args:
-        service: Orchestrator (course / queue repositories and NotebookLM client).
+        service: Orchestrator (course / queue repositories and Gemini Notebook client).
         study: Study tracker (quiz attempts and mistakes).
         cfg: Application configuration.
         engine: Shared engine, or None to open one from the configured database URL.
@@ -277,8 +278,8 @@ def create_app(
     active_study = _resolve_study_service(study_service, cfg, engine=shared_engine)
 
     app = FastAPI(
-        title="NotebookLM Batch Studio",
-        description="Batch upload PDFs to Gemini NotebookLM, generate quizzes, mind maps, and audio.",
+        title="Gemini Notebook 學習工作室",
+        description="Batch upload PDFs to Gemini Gemini Notebook, generate quizzes, mind maps, and audio.",
         version="0.1.0",
         docs_url="/docs",
         openapi_url="/openapi.json",
@@ -321,6 +322,11 @@ def main() -> None:
     """Entrypoint to run the local FastAPI service on 127.0.0.1:8768."""
     config = load_config()
     setup_logging(config.log_level, config.logs_dir if config.log_to_file else None)
+    if not port_is_free(config.http_host, config.http_port):
+        message = busy_port_message(config.http_host, config.http_port)
+        logger.error("Port busy, not starting: %s", message)
+        print(message)
+        raise SystemExit(1)
     logger.info("Starting Web UI at http://%s:%d", config.http_host, config.http_port)
     uvicorn.run(
         "notebooklm_batch_studio.entrypoints.api:create_app",
