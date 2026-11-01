@@ -107,6 +107,7 @@ notebooklm-batch-studio/
 │   │   ├── 003-nlm-output-language-english.md
 │   │   ├── 004-artifact-wrong-lecture.md
 │   │   ├── 005-quota-status-ignored.md
+│   │   ├── 006-reregister-drops-source-ids.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -202,6 +203,7 @@ notebooklm-batch-studio/
 │   ├── test_api_and_mcp.py
 │   ├── test_converters.py
 │   ├── test_course_parser.py
+│   ├── test_course_reregistration.py
 │   ├── test_db.py
 │   ├── test_domain_and_queue.py
 │   ├── test_greeting.py

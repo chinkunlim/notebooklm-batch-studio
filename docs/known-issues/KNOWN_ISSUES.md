@@ -18,3 +18,4 @@
 | [ISSUE-003](003-nlm-output-language-english.md) | 🟢 已根治 (Resolved) | NotebookLM 產出語言預設為英文 | 語音、投影片、資訊圖表等未傳 language，函式庫預設 en；報告傳了無效代碼 zh-TW | `adapters/notebooklm/generation.py`, `adapters/notebooklm/client.py` |
 | [ISSUE-004](004-artifact-wrong-lecture.md) | 🟢 已根治 (Resolved) | 下載與改名可能對到別的講次或未完成的產出 | 下載未帶 artifact_id、多數類型未等完成就下載、改名取最新一份、download_audio 下載兩次 | `adapters/notebooklm/client.py`, `services/artifact_runner.py` |
 | [ISSUE-005](005-quota-status-ignored.md) | 🟢 已根治 (Resolved) | 配額拒絕以 failed 狀態回傳時未被偵測 | generate 回傳 USER_DISPLAYABLE_ERROR 的 failed 狀態而非例外，程式未檢查，未進 QUOTA_WAIT；冷卻固定猜 1 小時 | `adapters/notebooklm/quota.py`, `adapters/notebooklm/generation.py`, `services/orchestrator.py` |
+| [ISSUE-006](006-reregister-drops-source-ids.md) | 🟢 已根治 (Resolved) | 重新註冊課程會清掉 source_id，導致重複上傳 | save_course 刪除並重建講次紀錄時沒保留 source_id，再跑 batch 或 watcher 觸發時會把所有 PDF 重新上傳到同一本筆記本 | `adapters/db/repository.py` |

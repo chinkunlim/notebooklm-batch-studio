@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import timedelta
 
 from sqlalchemy import delete, func, select
@@ -116,14 +117,25 @@ class CourseRepository:
         self.session = session
 
     def _update_lectures(self, code: str, lectures: list[Lecture]) -> None:
-        """Replace all lectures for a course with updated records.
+        """Replace all lectures for a course, keeping upload state of PDFs whose content is unchanged.
+
+        A rescanned lecture carries no source id; if a stored lecture has the same sha256 its
+        NotebookLM source id and upload status are kept, so re-registering never re-uploads it.
+        Refs: ISSUE-006
 
         Args:
             code: Course code.
             lectures: List of lecture entities to persist.
         """
+        stmt = select(LectureRecord).where(LectureRecord.course_code == code)
+        uploaded = {r.sha256: r for r in self.session.scalars(stmt).all() if r.source_id}
         self.session.execute(delete(LectureRecord).where(LectureRecord.course_code == code))
         for lecture in lectures:
+            prev = uploaded.get(lecture.sha256) if lecture.source_id is None else None
+            if prev is not None:
+                lecture = dataclasses.replace(
+                    lecture, source_id=prev.source_id, upload_status=prev.upload_status, error_message=None
+                )
             self.session.add(
                 LectureRecord(
                     course_code=code,
