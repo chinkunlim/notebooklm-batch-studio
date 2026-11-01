@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
+from notebooklm_batch_studio.services.job_views import NEEDS_REVIEW_PREFIX
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
 artifacts_router = APIRouter()
@@ -78,7 +79,8 @@ def download_artifact(code: str, file_path: str, request: Request) -> FileRespon
 
     Args:
         code: Course identifier.
-        file_path: Relative path within the course's output directory.
+        file_path: Relative path within the course's output directory, or
+            `_needs_review/<code>_.../<file>` for a quarantined file of this course.
         request: Incoming HTTP request context.
 
     Returns:
@@ -88,9 +90,20 @@ def download_artifact(code: str, file_path: str, request: Request) -> FileRespon
         HTTPException: 403 on traversal attempt, 404 if file missing.
     """
     config: AppConfig = request.app.state.config
+    review_prefix = f"{NEEDS_REVIEW_PREFIX}/"
+    if file_path.startswith(review_prefix):  # Refs: ISSUE-010
+        review_root = config.needs_review_dir.resolve()
+        target_path = (review_root / file_path.removeprefix(review_prefix)).resolve()
+        if not target_path.is_relative_to(review_root):
+            raise HTTPException(status_code=403, detail="Access denied: path traversal detected")
+        top = target_path.relative_to(review_root).parts[0]
+        if not top.startswith(f"{code}_") or not target_path.is_file():
+            raise HTTPException(status_code=404, detail="Requested file not found")
+        return FileResponse(path=target_path, filename=target_path.name)
+
     course_dir = (config.courses_output_dir / code).resolve()
     target_path = (course_dir / file_path).resolve()
-    if not str(target_path).startswith(str(course_dir)):
+    if not target_path.is_relative_to(course_dir):
         raise HTTPException(status_code=403, detail="Access denied: path traversal detected")
     if not target_path.exists() or not target_path.is_file():
         # Fallback: search recursively inside course_dir for file_path's filename

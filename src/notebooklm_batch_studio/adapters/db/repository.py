@@ -445,6 +445,8 @@ class QueueRepository:
         cooldown_time = now + timedelta(seconds=cooldown_seconds)
         record = self.session.get(ArtifactJobRecord, job_id)
         if record:
+            # A quota wait is not a failed attempt: give back the attempt taken at claim. Refs: ISSUE-008
+            record.attempts = max(0, record.attempts - 1)
             record.status = JobStatus.QUOTA_WAIT.value
             record.quota_blocked_at = now
             record.cooldown_until = cooldown_time

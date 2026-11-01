@@ -14,7 +14,7 @@
 
 系統嚴格遵循單向五層架構（`entrypoints ➔ adapters ➔ services ➔ domain ➔ config`），所有資料與程式碼嚴格分離（儲存於 `DATA_DIR`），並提供三大操作入口：
 1. **CLI 命令列介面**：用於批次排程、目錄監看、狀態檢視與身分登入。
-2. **FastAPI 本機 Web 控制台**（`http://127.0.0.1:8767`）：直觀管理課程、檢視產出物、重試佇列。
+2. **FastAPI 本機 Web 控制台**（`http://127.0.0.1:8768`）：直觀管理課程、檢視產出物、重試佇列。
 3. **MCP 伺服器 & OpenAPI 路由**：供 Claude Code、Antigravity、Open WebUI 等 AI 工具以對話方式協同操作。
 
 ```mermaid
@@ -81,15 +81,15 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ### 2.1 入口層 (`entrypoints`)
 負責協調外部使用者與外部代理人的請求輸入，不包含業務規則：
-- `cli.py`：命令列工具入口，支援 `login`（瀏覽器互動登入）、`batch`（批次掃描建立）、`status`（即時進度總覽）、`resume`（中斷重試續跑）、`watch`（守護進程監控）與 `web`（啟動 Web 與 MCP 服務）。
-- `api.py` 與 `entrypoints/http/`：FastAPI 應用程式，掛載子路由（`courses.py`, `jobs.py`, `artifacts.py`, `system.py`），提供靜態儀表板模板與 OpenAPI 規範接口（供 Open WebUI 整合）。
+- `cli.py`：命令列工具入口，支援 `login`（檢查登入憑證；實際登入用 `scripts/spike_notebooklm.py login`）、`batch`（批次掃描建立）、`status`（即時進度總覽）、`resume`（中斷重試續跑）、`watch`（守護進程監控）與 `web`（啟動 Web 與 MCP 服務）。
+- `api.py` 與 `entrypoints/http/`：FastAPI 應用程式，掛載子路由（`courses.py`, `queue.py`, `artifacts.py`, `study.py`, `system.py`），提供靜態儀表板模板與 OpenAPI 規範接口（供 Open WebUI 整合）。
 - `mcp_server.py`：Model Context Protocol (MCP) 伺服器，對外公開課程註冊、佇列執行、產出查詢等 Tool 與 Resource，包含對破壞性操作之 `confirm` 確認機制。
 
 ### 2.2 適配器層 (`adapters`)
 負責與外部系統、持久化儲存與第三方函式庫互動：
 - `adapters/notebooklm/client.py`：封裝 `notebooklm-py` 與 Playwright 補位機制，實現講義上傳、單一來源勾選、音訊/測驗/閃卡/心智圖生成與更名，並將非受控例外轉換為純領域例外（`QuotaExceededError`, `AuthExpiredError` 等）。
 - `adapters/db/`：使用 SQLAlchemy 與 SQLite 實作 `SQLiteJobRepository`，透過 `session_scope()` 保證交易一致性。
-- `adapters/filesystem/`：提供安全的路徑檢核、檔案寫入原子操作與檔案寫入完成度偵測（防止讀取複製中的不完整 PDF）。
+- 檔案系統操作沒有獨立的 adapter：資料夾監看與 PDF 寫入完成度偵測（防止讀取複製中的不完整 PDF）在 `services/watcher.py`，課程掃描在 `services/course_parser.py`，下載路由的路徑檢核在 `entrypoints/http/artifacts.py`。
 
 ### 2.3 業務服務層 (`services`)
 系統核心邏輯與工作流排程：
@@ -103,6 +103,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `pdf_renderer.py`：使用 ReportLab 將 Markdown 測驗卷與閃卡轉換為高畫質列印用 PDF。
 - `reporter.py`：為每門課程產生整體的 `summary.md` 與可離線瀏覽的 `summary.html`。
 - `watcher.py`：監看檔案系統變更，當偵測到新上傳講義且寫入完成後自動加入排程。
+- `quota_planner.py`：讀 NotebookLM 即時額度表，工作開始前檢查該動作是否還有額度（不足就進 QUOTA_WAIT，不送出請求），並用每種動作的實際花費估算新課程需要幾個 5 小時額度窗。
 
 ### 2.4 領域模型層 (`domain`)
 純 Python 商業物件，無任何外部第三方相依：
@@ -135,6 +136,6 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 ## 4. 安全性與環境隔離 (Security & Isolation)
 
 1. **憑證安全**：不讀取亦不儲存使用者 Google 密碼。使用者透過 `login` 指令開啟本機 Chromium 瀏覽器完成 OAuth 登入，登入狀態隔離儲存於 `~/.config/notebooklm-batch-studio`（權限 600）。
-2. **服務綁定**：FastAPI 與 MCP 本機伺服器嚴格僅綁定 `127.0.0.1:8767`，並具備 Host Header 檢查機制，禁止對外網暴露。
+2. **服務綁定**：FastAPI 與 MCP 本機伺服器嚴格僅綁定 `127.0.0.1:8768`，並具備 Host Header 檢查機制，禁止對外網暴露。
 3. **路徑穿越防護**：所有靜態資源與產出物讀取均通過 `safe_join_path` 嚴格限制於 `DATA_DIR` 內，防止目錄穿越攻擊。
 4. **資料隔離**：原始講義、中繼資料、產出物與紀錄檔案全數集中於專案目錄外的 `DATA_DIR`，避免程式碼倉庫污染或敏感講義外流。

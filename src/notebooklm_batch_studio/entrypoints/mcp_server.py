@@ -132,7 +132,7 @@ def _register_import_tools(mcp: MCPServer, active_service: BatchStudioService) -
     """
 
     @mcp.tool()
-    def preview_add_courses(folders: list[str]) -> str:
+    async def preview_add_courses(folders: list[str]) -> str:
         """Preview lecture extraction and workload estimation for course folders.
 
         Args:
@@ -141,11 +141,11 @@ def _register_import_tools(mcp: MCPServer, active_service: BatchStudioService) -
         Returns:
             JSON string describing detected lectures and estimated jobs.
         """
-        preview = active_service.preview_course_folders(folders)
+        preview = await active_service.preview_course_folders(folders)
         return json.dumps(preview, ensure_ascii=False, indent=2)
 
     @mcp.tool()
-    def add_courses(folders: list[str], profile: str = "full", confirm: bool = False) -> str:
+    async def add_courses(folders: list[str], profile: str = "full", confirm: bool = False) -> str:
         """Register course folders and enqueue generation jobs (requires confirm=True).
 
         Args:
@@ -157,7 +157,7 @@ def _register_import_tools(mcp: MCPServer, active_service: BatchStudioService) -
             Result summary or confirmation preview message.
         """
         if not confirm:
-            preview = active_service.preview_course_folders(folders)
+            preview = await active_service.preview_course_folders(folders)
             return json.dumps(
                 {
                     "confirmed": False,

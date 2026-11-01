@@ -1524,7 +1524,7 @@
         box.innerHTML = results.map(r => `
           <div style="margin-bottom:8px;">
             <strong>${r.is_valid ? '✅ ' + r.course_code + ' (' + r.course_name + ')' : '❌ 無效資料夾'}</strong>
-            <div>${r.is_valid ? '掃描到 ' + r.lecture_count + ' 講次，依目前勾選預估 ' + r.estimated_jobs + ' 項任務 (約 ' + r.estimated_days + ' 天)' : r.error}</div>
+            <div>${r.is_valid ? '掃描到 ' + r.lecture_count + ' 講次，依目前勾選預估 ' + r.estimated_jobs + ' 項任務' + (r.quota_estimate_available ? '，約用 ' + r.estimated_quota_percent + '% 的 5 小時額度（目前剩 ' + r.five_hour_remaining_percent + '%）' + (r.estimated_wait_hours > 0 ? '，需等額度重置約 ' + r.estimated_wait_hours + ' 小時' : '，目前額度足夠') : '（無法讀取額度，未估算時間）') : r.error}</div>
           </div>
         `).join('');
         document.getElementById('btnConfirmAdd').disabled = !results.some(r => r.is_valid);

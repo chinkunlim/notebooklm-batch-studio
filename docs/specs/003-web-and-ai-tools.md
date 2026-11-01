@@ -28,7 +28,7 @@
 | 資料 | 下載檔在 `DATA_DIR/output/courses/`；原始講義在 `DATA_DIR/input/courses/`；佇列與紀錄在 SQLite |
 | 介面 | 完整網頁 |
 | 啟動 | 需要時手動開 |
-| 埠號 | `8767` |
+| 埠號 | `8768` |
 | 驗收 | 見 §5 |
 
 ### 必須 (Must)
@@ -82,7 +82,7 @@ HTTP 路由（OpenAPI 由 FastAPI 自動產生，給 Open WebUI 匯入）：
 
 ## 5. 驗收標準
 
-- [ ] 實作第一步：專案補上 `api` 與 `web`（FastAPI、`entrypoints/mcp_server.py`、各工具設定檔），服務在 `http://127.0.0.1:8767` 啟動。
+- [ ] 實作第一步：專案補上 `api` 與 `web`（FastAPI、`entrypoints/mcp_server.py`、各工具設定檔），服務在 `http://127.0.0.1:8768` 啟動。
 - [ ] 網頁加入一個資料夾 → 預覽 → 確認後自動完成全部產出並可下載。
 - [ ] 在 Open WebUI 問「BIO101 做到哪了？」能回答正確進度。
 - [ ] 在 Claude Code 透過 MCP `add_courses` 時，沒有 `confirm=true` 不會建立任何東西。

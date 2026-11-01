@@ -109,6 +109,9 @@ notebooklm-batch-studio/
 │   │   ├── 005-quota-status-ignored.md
 │   │   ├── 006-reregister-drops-source-ids.md
 │   │   ├── 007-audio-m4a-named-mp3.md
+│   │   ├── 008-quota-blind-scheduling.md
+│   │   ├── 009-mock-exam-not-quarantined.md
+│   │   ├── 010-needs-review-not-downloadable.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -187,8 +190,10 @@ notebooklm-batch-studio/
 │       │   ├── artifact_runner.py
 │       │   ├── course_parser.py
 │       │   ├── greeting.py
+│       │   ├── job_views.py
 │       │   ├── orchestrator.py
 │       │   ├── prompt_generator.py
+│       │   ├── quota_planner.py
 │       │   ├── reporter.py
 │       │   ├── study_service.py
 │       │   ├── sync_service.py
@@ -212,6 +217,7 @@ notebooklm-batch-studio/
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
 │   ├── test_quota_and_limits.py
+│   ├── test_remaining_fixes.py
 │   ├── test_services_and_cli.py
 │   └── test_study_service.py
 ├── .editorconfig

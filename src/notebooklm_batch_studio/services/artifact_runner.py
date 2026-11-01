@@ -316,16 +316,36 @@ class ArtifactRunner:
 
         merged_quiz, is_complete = merge_and_deduplicate_quizzes(batches, target_count=30)
         if not is_complete:
-            await self.rename_after_generation(job, course, nb_id, art_ids)
-            review_dir = self.config.needs_review_dir / f"{course.code}_L{job.lecture_no}_{variant_prefix}"
-            review_dir.mkdir(parents=True, exist_ok=True)
-            incomplete_json = review_dir / f"{variant_prefix}_quiz.json"
-            incomplete_json.write_text(quiz_to_json(merged_quiz), encoding="utf-8")
-            count = len(merged_quiz.questions)
-            logger.warning("Quiz incomplete (%d questions), quarantined to %s", count, review_dir)
-            raise NeedsReviewError(f"Quiz has {count}/30 questions", output_file=str(incomplete_json))
+            await self._quarantine_quiz(job, course, nb_id, art_ids, merged_quiz, target=30)
 
         return _save_quiz_files(out_dir, merged_quiz, file_prefix=variant_prefix), art_ids
+
+    async def _quarantine_quiz(
+        self, job: ArtifactJob, course: Course, nb_id: str, art_ids: list[str], quiz: Quiz, target: int
+    ) -> None:
+        """Rename the attempts, save an incomplete quiz under `needs_review/`, and raise.
+
+        Args:
+            job: Current artifact job.
+            course: Associated domain Course entity.
+            nb_id: NotebookLM notebook identifier.
+            art_ids: Artifact ids of every generation attempt.
+            quiz: Merged, incomplete quiz.
+            target: Number of questions that was required.
+
+        Raises:
+            NeedsReviewError: Always; carries the quarantined JSON path.
+        """
+        prefix = job.artifact_type.value
+        scope = "course" if job.lecture_no is None else f"L{job.lecture_no}"
+        await self.rename_after_generation(job, course, nb_id, art_ids)
+        review_dir = self.config.needs_review_dir / f"{course.code}_{scope}_{prefix}"
+        review_dir.mkdir(parents=True, exist_ok=True)
+        incomplete_json = review_dir / f"{prefix}_quiz.json"
+        incomplete_json.write_text(quiz_to_json(quiz), encoding="utf-8")
+        count = len(quiz.questions)
+        logger.warning("Quiz incomplete (%d/%d questions), quarantined to %s", count, target, review_dir)
+        raise NeedsReviewError(f"Quiz has {count}/{target} questions", output_file=str(incomplete_json))
 
     async def _process_flashcards(
         self, job: ArtifactJob, course: Course, nb_id: str, source_ids: list[str], out_dir: Path
@@ -409,6 +429,9 @@ class ArtifactRunner:
 
         Returns:
             Path to resulting quiz.json and the generated artifact ids.
+
+        Raises:
+            NeedsReviewError: When fewer than the target questions were collected.
         """
         target_q = course.mock_exam_questions or 50
         batches: list[Quiz] = []
@@ -445,7 +468,9 @@ class ArtifactRunner:
                 if merge_and_deduplicate_quizzes(batches, target_count=target_q)[1]:
                     break
 
-        final_quiz, _ = merge_and_deduplicate_quizzes(batches, target_count=target_q)
+        final_quiz, is_complete = merge_and_deduplicate_quizzes(batches, target_count=target_q)
+        if not is_complete:  # Refs: ISSUE-009
+            await self._quarantine_quiz(job, course, nb_id, art_ids, final_quiz, target=target_q)
         return _save_quiz_files(out_dir, final_quiz, file_prefix=variant_prefix), art_ids
 
     async def _generate_simple(

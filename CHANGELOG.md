@@ -29,6 +29,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(notebooklm): pass zh_Hant language, wait for and target generated artifact ids, detect quota status, and switch Ollama to gemma4 (by `@claude-code`)
 - fix(db): keep NotebookLM source ids of unchanged PDFs when re-registering a course (by `@claude-code`)
 - fix(audio): save NotebookLM audio as .m4a and serve it as audio/mp4 (by `@claude-code`)
+- fix(queue): pre-check live quota, estimate workloads from real costs, quarantine short mock exams, serve needs_review files, and correct docs (by `@claude-code`)
 
 ### Documentation
 - docs(adr): add ADR-002 (session token authentication) and ADR-003 (student study portal and spaced repetition) (by `@antigravity`)

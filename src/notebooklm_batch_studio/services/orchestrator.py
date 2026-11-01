@@ -12,6 +12,7 @@ import json
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.exceptions import (
     CourseNotFoundError,
     OllamaUnavailableError,
+    QuotaExceededError,
     SourceLimitExceededError,
 )
 from notebooklm_batch_studio.domain.models import (
@@ -35,7 +37,12 @@ from notebooklm_batch_studio.domain.repositories import (
 )
 from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
+from notebooklm_batch_studio.services.job_views import (
+    format_jobs_data,
+    preview_job_types,
+)
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
+from notebooklm_batch_studio.services.quota_planner import estimate_quota_plan, quota_retry_after
 from notebooklm_batch_studio.services.reporter import CourseReporter
 from notebooklm_batch_studio.services.sync_service import RemoteSyncService
 from notebooklm_batch_studio.services.worker_pool import (
@@ -45,46 +52,6 @@ from notebooklm_batch_studio.services.worker_pool import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _format_jobs_data(jobs: list[ArtifactJob], course_dir: Path) -> list[dict[str, Any]]:
-    """Format artifact jobs for API representation including relative paths.
-
-    Args:
-        jobs: List of ArtifactJob entities.
-        course_dir: Base directory of the course output.
-
-    Returns:
-        List of formatted job dictionaries.
-    """
-    jobs_data = []
-    for j in jobs:
-        rel_path = None
-        if j.output_file:
-            try:
-                p = Path(j.output_file)
-                if p.is_relative_to(course_dir):
-                    rel_path = str(p.relative_to(course_dir))
-                else:
-                    rel_path = p.name
-            except Exception:
-                rel_path = Path(j.output_file).name
-        jobs_data.append(
-            {
-                "id": j.id,
-                "lecture_no": j.lecture_no,
-                "artifact_type": j.artifact_type.value,
-                "status": j.status.value,
-                "custom_prompt": j.custom_prompt,
-                "output_file": j.output_file,
-                "rel_path": rel_path,
-                "error_message": j.error_message,
-                "attempts": j.attempts,
-                "created_at": j.created_at.isoformat() if j.created_at else None,
-                "updated_at": j.updated_at.isoformat() if j.updated_at else None,
-            }
-        )
-    return jobs_data
 
 
 class BatchStudioService:
@@ -222,6 +189,39 @@ class BatchStudioService:
                 f"account allows {limit} sources per notebook; split the course folder"
             )
 
+    async def _read_quota_or_none(self) -> dict[str, Any] | None:
+        """Read the live usage meter, returning None instead of raising when it is unavailable.
+
+        Returns:
+            Quota summary, or None.
+        """
+        try:
+            return await self.notebooklm_client.get_quota_status()
+        except Exception as err:  # the meter is advisory; never block work on it
+            logger.warning("NotebookLM quota meter unavailable: %s", err)
+            return None
+
+    async def _ensure_quota_for(self, job: ArtifactJob) -> None:
+        """Refuse to start a job the live meter says cannot be paid for. Refs: ISSUE-008
+
+        Args:
+            job: Job about to be executed.
+
+        Raises:
+            QuotaExceededError: When the meter reports insufficient quota for this action.
+        """
+        quota = await self._read_quota_or_none()
+        if quota is None:
+            return
+        wait = quota_retry_after(quota, job.artifact_type, datetime.now(UTC))
+        if wait is not None:
+            logger.info("Quota pre-check: %s must wait %ds before starting", job.artifact_type.value, wait)
+            raise QuotaExceededError(
+                f"NotebookLM quota insufficient for {job.artifact_type.value}",
+                artifact_type=job.artifact_type.value,
+                retry_after_seconds=wait,
+            )
+
     async def get_notebooklm_quota(self) -> dict[str, Any]:
         """Return the live NotebookLM usage meter and account limits.
 
@@ -256,10 +256,15 @@ class BatchStudioService:
 
         Returns:
             Output file path or review folder path upon completion.
+
+        Raises:
+            CourseNotFoundError: When the job's course is missing.
+            QuotaExceededError: When the live meter says this action has no quota left.
         """
         course = self.course_repo.get_course(job.course_code)
         if course is None:
             raise CourseNotFoundError(f"Course {job.course_code} not found")
+        await self._ensure_quota_for(job)
         if not course.notebook_id or any(not lec.source_id for lec in course.lectures):
             logger.info("Initializing NotebookLM notebook and sources for course %s", course.code)
             course = await self.setup_notebook_and_sources(course.code)
@@ -369,7 +374,7 @@ class BatchStudioService:
         ]
 
         course_dir = (self.config.courses_output_dir / course.code).resolve()
-        jobs_data = _format_jobs_data(jobs, course_dir)
+        jobs_data = format_jobs_data(jobs, course_dir, self.config.needs_review_dir)
 
         notebook_url = (
             f"https://notebooklm.google.com/notebook/{course.notebook_id}" if course.notebook_id else None
@@ -391,7 +396,7 @@ class BatchStudioService:
             "jobs": jobs_data,
         }
 
-    def preview_course_folders(
+    async def preview_course_folders(
         self,
         folder_paths: list[str],
         chapter_artifacts: list[str] | None = None,
@@ -406,9 +411,11 @@ class BatchStudioService:
 
         Returns:
             List of preview structures detailing course codes, lecture count, detected files,
-            and estimated artifact workload.
+            the job count, and a quota estimate from the live meter (see `estimate_quota_plan`).
         """
         results: list[dict[str, Any]] = []
+        quota: dict[str, Any] | None = None
+        quota_read = False
         for raw in folder_paths:
             path = Path(raw).expanduser().resolve()
             if not path.exists() or not path.is_dir():
@@ -424,13 +431,10 @@ class BatchStudioService:
             try:
                 course = scan_course_directory(path)
                 lecture_count = len(course.lectures)
-                if chapter_artifacts is not None or course_artifacts is not None:
-                    ch_count = len(chapter_artifacts or [])
-                    co_count = len(course_artifacts or [])
-                    estimated_jobs = lecture_count * ch_count + co_count
-                else:
-                    estimated_jobs = lecture_count * 6 + 2 if lecture_count > 0 else 0
-                estimated_days = max(1, round(estimated_jobs / 100 + 0.49))
+                types = preview_job_types(course, chapter_artifacts, course_artifacts)
+                if not quota_read:
+                    quota, quota_read = await self._read_quota_or_none(), True
+                plan = estimate_quota_plan(types, quota)  # Refs: ISSUE-008
                 results.append(
                     {
                         "folder_path": str(path),
@@ -439,8 +443,8 @@ class BatchStudioService:
                         "course_code": course.code,
                         "course_name": course.name,
                         "lecture_count": lecture_count,
-                        "estimated_jobs": estimated_jobs,
-                        "estimated_days": estimated_days,
+                        "estimated_jobs": len(types),
+                        **plan,
                         "lectures": [
                             {"no": lec.no, "topic": lec.topic, "filename": lec.filename}
                             for lec in course.lectures

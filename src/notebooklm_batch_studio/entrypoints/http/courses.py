@@ -59,7 +59,7 @@ def get_course(code: str, request: Request) -> dict[str, Any]:
 
 
 @courses_router.post("/api/courses/preview", tags=["Courses"], operation_id="preview_courses")
-def preview_courses(req: PreviewCoursesRequest, request: Request) -> list[dict[str, Any]]:
+async def preview_courses(req: PreviewCoursesRequest, request: Request) -> list[dict[str, Any]]:
     """Inspect local directories and preview detected course lectures without saving.
 
     Args:
@@ -70,7 +70,7 @@ def preview_courses(req: PreviewCoursesRequest, request: Request) -> list[dict[s
         List of preview results.
     """
     service: BatchStudioService = request.app.state.service
-    return service.preview_course_folders(
+    return await service.preview_course_folders(
         req.folders,
         chapter_artifacts=req.chapter_artifacts,
         course_artifacts=req.course_artifacts,

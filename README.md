@@ -9,7 +9,7 @@
 - 📝 **30 題階梯式題庫**：自動整併基礎題、理解題與模擬考題，支援品質檢驗；題數不足時自動隔離至 `needs_review/`。
 - 📄 **多格式轉檔輸出**：測驗轉為 Markdown 與排版精美的 PDF；閃卡輸出為 Markdown 與 Anki 匯入用格式；心智圖輸出為 Markdown 與 Mermaid 語法。
 - 🔄 **斷點續傳與配額防護**：SQLite 工作佇列追蹤任務進度，遇每日配額上限或 Rate Limit 自動退避，隨時支援一鍵無縫續跑。
-- 🌐 **三大操作入口**：完整 CLI 指令集、FastAPI 本機儀表板（`127.0.0.1:8767`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器與 OpenAPI 路由。
+- 🌐 **三大操作入口**：完整 CLI 指令集、FastAPI 本機儀表板（`127.0.0.1:8768`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器與 OpenAPI 路由。
 
 ---
 
@@ -34,7 +34,7 @@ python3 scripts/agentctl.py doctor --fix
 ```bash
 # 預設位置例如：
 DATA_DIR=/Users/username/Desktop/projects-data/notebooklm-batch-studio
-HTTP_PORT=8767
+HTTP_PORT=8768
 ```
 
 4. 安裝依賴（uv sync 到專案內 `.venv/`）：
@@ -43,7 +43,13 @@ HTTP_PORT=8767
 python3 scripts/agentctl.py setup --install
 ```
 
-5. 登入 NotebookLM（在開啟的本機瀏覽器中手動登入 Google 帳號一次，憑證安全保存於 `~/.config/notebooklm-batch-studio/`，權限 600）：
+5. 登入 NotebookLM（會開啟瀏覽器，由你親自登入 Google 帳號一次；憑證保存於 `~/.config/notebooklm-batch-studio/`，權限 600）：
+
+```bash
+python3 scripts/spike_notebooklm.py login
+```
+
+之後可用下列指令確認憑證是否存在且有效（只檢查，不會開瀏覽器）：
 
 ```bash
 uv run notebooklm-batch-studio login
@@ -82,22 +88,22 @@ uv run notebooklm-batch-studio resume
 
 ### 4. 目錄即時監看 (Watcher)
 
-監聽資料夾，當有新講義 PDF 存入且寫入完成時自動加入處理：
+監聽 `DATA_DIR/input/courses/` 底下所有課程資料夾（不需要也不接受路徑參數），當有新講義 PDF 存入且寫入完成時自動加入處理：
 
 ```bash
-uv run notebooklm-batch-studio watch /path/to/BIO101
+uv run notebooklm-batch-studio watch
 ```
 
 ### 5. 啟動 Web 儀表板與 MCP 伺服器
 
-啟動本機 FastAPI 服務（預設綁定 `http://127.0.0.1:8767`）：
+啟動本機 FastAPI 服務（預設綁定 `http://127.0.0.1:8768`）：
 
 ```bash
 uv run notebooklm-batch-studio web
 ```
 
-- 網頁儀表板：瀏覽器開啟 `http://127.0.0.1:8767/`
-- OpenAPI 規格與文件：`http://127.0.0.1:8767/docs`（可作為 Open WebUI 工具伺服器）
+- 網頁儀表板：瀏覽器開啟 `http://127.0.0.1:8768/`
+- OpenAPI 規格與文件：`http://127.0.0.1:8768/docs`（可作為 Open WebUI 工具伺服器）
 - MCP 端點：供 AI 代理人透過 MCP Client 連線協同
 
 ---
@@ -145,5 +151,5 @@ uv run python -m unittest discover -s tests -v
 - [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-004）
 - [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 NotebookLM 存取機制）
 - [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫
-- [`docs/standards/PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) — 本專案特有規則（領域名詞、埠號 8767、安全禁忌）
+- [`docs/standards/PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) — 本專案特有規則（領域名詞、埠號 8768、安全禁忌）
 - [`alembic/DB.md`](alembic/DB.md) — 資料庫模型遷移指南 (SQLite / SQLAlchemy)

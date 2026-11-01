@@ -6,6 +6,7 @@ and MCP confirmation parameter semantics.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import tempfile
 import unittest
@@ -373,7 +374,7 @@ class TestApiAndMcp(unittest.TestCase):
 
         # add_courses without confirm
         add_fn = mcp._tool_manager._tools["add_courses"].fn  # type: ignore[attr-defined]
-        res_unconfirmed = json.loads(add_fn(["/dummy/path"], "full", False))
+        res_unconfirmed = json.loads(asyncio.run(add_fn(["/dummy/path"], "full", False)))
         self.assertFalse(res_unconfirmed["confirmed"])
         self.assertIn("warning", res_unconfirmed)
 
@@ -421,7 +422,6 @@ class TestApiAndMcp(unittest.TestCase):
 
         # Sync and prompt tools verification
         sync_fn = mcp._tool_manager._tools["sync_course_remote_artifacts"].fn  # type: ignore[attr-defined]
-        import asyncio
 
         sync_unconf = asyncio.run(sync_fn("BIO101", False))
         self.assertIn("Action not confirmed", sync_unconf)

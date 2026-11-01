@@ -20,3 +20,6 @@
 | [ISSUE-005](005-quota-status-ignored.md) | 🟢 已根治 (Resolved) | 配額拒絕以 failed 狀態回傳時未被偵測 | generate 回傳 USER_DISPLAYABLE_ERROR 的 failed 狀態而非例外，程式未檢查，未進 QUOTA_WAIT；冷卻固定猜 1 小時 | `adapters/notebooklm/quota.py`, `adapters/notebooklm/generation.py`, `services/orchestrator.py` |
 | [ISSUE-006](006-reregister-drops-source-ids.md) | 🟢 已根治 (Resolved) | 重新註冊課程會清掉 source_id，導致重複上傳 | save_course 刪除並重建講次紀錄時沒保留 source_id，再跑 batch 或 watcher 觸發時會把所有 PDF 重新上傳到同一本筆記本 | `adapters/db/repository.py` |
 | [ISSUE-007](007-audio-m4a-named-mp3.md) | 🟢 已根治 (Resolved) | 語音檔實際是 MP4/AAC，卻存成 .mp3 | 副檔名寫死 .mp3、網頁宣告 audio/mpeg，部分播放器打不開；同步服務也把資訊圖表猜成 .pdf | `services/artifact_runner.py`, `services/sync_service.py`, `entrypoints/http/artifacts.py`, `entrypoints/static/index.html` |
+| [ISSUE-008](008-quota-blind-scheduling.md) | 🟢 已根治 (Resolved) | 排程不看即時額度，預估天數用猜的 | 額度不足仍送出請求；預覽固定用每天 100 個估算且任務數算錯；每次額度等待都吃掉重試次數 | `services/quota_planner.py`, `services/orchestrator.py`, `adapters/db/repository.py` |
+| [ISSUE-009](009-mock-exam-not-quarantined.md) | 🟢 已根治 (Resolved) | 整門課模擬考題數不足仍標成完成 | `_process_mock_exam` 忽略「是否完整」旗標，不完整的考卷照樣存進正式產出並標 DONE | `services/artifact_runner.py` |
+| [ISSUE-010](010-needs-review-not-downloadable.md) | 🟢 已根治 (Resolved) | needs_review 的檔案在網頁上無法下載 | 隔離檔不在課程產出資料夾內，下載路由找不到；路徑穿越檢查用字串前綴比對 | `services/orchestrator.py`, `entrypoints/http/artifacts.py` |
