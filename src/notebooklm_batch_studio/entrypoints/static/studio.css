@@ -1,0 +1,116 @@
+/* NotebookLM Batch Studio — shared UI layer: toasts, confirm dialog, study plan, light theme, iPad layout.
+   Loaded after the inline styles in index.html, so it can refine them. */
+
+/* ---------- Light theme (explicit toggle, or the system setting when no choice is stored) ---------- */
+:root[data-theme="light"] {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --surface-2: #f1f5f9;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --surface-hover: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --primary: #0284c7;
+    --primary-hover: #0369a1;
+    --surface-2: #f1f5f9;
+  }
+}
+:root { --surface-2: #0f172a; }
+body { background: var(--bg); color: var(--text); }
+/* Older inline dark colours follow the theme variables. */
+.theme-light [style*="background: #0f172a"], .theme-light [style*="background:#0f172a"],
+.theme-light [style*="background: #1e293b"] { background: var(--surface-2) !important; }
+.theme-light [style*="color: #f8fafc"], .theme-light [style*="color: #cbd5e1"] { color: var(--text) !important; }
+.theme-light .card, .theme-light header, .theme-light .modal { background: var(--surface); color: var(--text); }
+.theme-light .flip-card-front, .theme-light .flip-card-back { background: var(--surface); color: var(--text); }
+
+/* ---------- Toasts (non-blocking feedback instead of alert()) ---------- */
+#toastStack { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 3000; max-width: min(420px, calc(100vw - 32px)); }
+.toast { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--primary);
+  border-radius: var(--radius); padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); font-size: 0.9rem; line-height: 1.5;
+  white-space: pre-line; animation: toast-in 0.18s ease-out; }
+.toast.success { border-left-color: var(--success); }
+.toast.warning { border-left-color: var(--warning); }
+.toast.error { border-left-color: var(--danger); }
+@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Confirm dialog (instead of confirm()) ---------- */
+#confirmOverlay { position: fixed; inset: 0; background: rgba(2,6,23,0.6); display: none; align-items: center; justify-content: center; z-index: 2500; padding: 16px; }
+#confirmBox { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 460px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.35); }
+#confirmText { white-space: pre-line; line-height: 1.6; margin-bottom: 16px; }
+#confirmBox .actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn-danger { background: var(--danger) !important; color: #fff !important; border-color: var(--danger) !important; }
+
+/* ---------- "More" menu in the top bar ---------- */
+.more-menu { position: relative; }
+.more-menu summary { list-style: none; cursor: pointer; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.more-menu summary::-webkit-details-marker { display: none; }
+.more-menu .menu { position: absolute; right: 0; top: calc(100% + 6px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px; display: flex; flex-direction: column; gap: 4px; min-width: 200px; z-index: 1500; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.more-menu .menu button, .more-menu .menu a { text-align: left; width: 100%; }
+
+/* ---------- Today / study plan ---------- */
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.plan-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.plan-card h4 { margin: 0 0 6px; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+.plan-card .big { font-size: 1.6rem; font-weight: 700; }
+.plan-card.next { border-color: var(--primary); }
+.chapter-row { display: grid; grid-template-columns: minmax(140px, 220px) 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.chapter-row:last-child { border-bottom: none; }
+.step-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.step-chip { font-size: 0.75rem; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+.step-chip.done { background: rgba(16,185,129,0.15); color: var(--success); border-color: rgba(16,185,129,0.4); }
+.step-chip.todo { color: var(--text); }
+.step-chip.na { opacity: 0.45; cursor: default; }
+.meter { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.meter > span { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 999px; transition: width 0.3s; }
+
+/* ---------- Quiz results ---------- */
+.result-card { background: var(--surface-2); border: 1px solid var(--primary); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.result-card .score { font-size: 2rem; font-weight: 800; }
+.verdict { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 8px; }
+.verdict.ok { background: rgba(16,185,129,0.18); color: var(--success); }
+.verdict.bad { background: rgba(239,68,68,0.18); color: var(--danger); }
+.choice-btn.locked { pointer-events: none; }
+.explain-box { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--surface); border: 1px dashed var(--primary); line-height: 1.6; font-size: 0.9rem; }
+.timer { font-variant-numeric: tabular-nums; font-weight: 700; }
+.timer.low { color: var(--danger); }
+
+/* ---------- Course page: chapter groups ---------- */
+.job-group { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; background: var(--surface-2); }
+.job-group > summary { cursor: pointer; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 600; }
+.job-group > div { padding: 0 8px 8px; overflow-x: auto; }
+
+/* ---------- Add-course wizard ---------- */
+.wizard-steps { display: flex; gap: 6px; margin: 4px 0 12px; flex-wrap: wrap; }
+.wizard-steps span { font-size: 0.8rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-muted); }
+.wizard-steps span.active { border-color: var(--primary); color: var(--primary); font-weight: 700; }
+.wizard-steps span.done { color: var(--success); border-color: rgba(16,185,129,0.4); }
+.wizard-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; }
+
+/* ---------- iPad / small screens ---------- */
+@media (max-width: 1100px) {
+  header { flex-wrap: wrap; gap: 10px; }
+  #studyView > div[style*="display: flex"] { flex-direction: column; }
+  #studyView .card[style*="width: 280px"] { width: 100% !important; }
+  #studyLectureList { display: flex !important; flex-direction: row !important; overflow-x: auto; gap: 6px; }
+  #studyLectureList .study-nav-btn { flex: 0 0 auto; max-width: 240px; }
+  table { display: block; overflow-x: auto; }
+  .chapter-row { grid-template-columns: 1fr; }
+  .modal { max-height: 92vh; overflow-y: auto; }
+}
+@media (pointer: coarse) {
+  button, .btn, select, .choice-btn, .step-chip { min-height: 44px; }
+  .step-chip { min-height: 32px; }
+}

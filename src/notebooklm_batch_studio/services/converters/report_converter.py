@@ -27,6 +27,19 @@ _STYLE = (
 )
 
 
+def markdown_fragment(markdown_text: str) -> str:
+    """Render Markdown to an HTML fragment, escaping any raw HTML in the source first.
+
+    Args:
+        markdown_text: Markdown from NotebookLM.
+
+    Returns:
+        HTML fragment (no page wrapper).
+    """
+    safe_source = markdown_text.replace("&", "&amp;").replace("<", "&lt;")
+    return markdown.markdown(safe_source, extensions=["tables", "sane_lists"])
+
+
 def report_to_html(title: str, markdown_text: str) -> str:
     """Convert report Markdown into a styled HTML document.
 
@@ -37,8 +50,7 @@ def report_to_html(title: str, markdown_text: str) -> str:
     Returns:
         Complete HTML document string.
     """
-    safe_source = markdown_text.replace("&", "&amp;").replace("<", "&lt;")
-    body = markdown.markdown(safe_source, extensions=["tables", "sane_lists"])
+    body = markdown_fragment(markdown_text)
     safe_title = html.escape(title)
     return (
         '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8">'

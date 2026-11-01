@@ -131,6 +131,7 @@ notebooklm-batch-studio/
 │   │   ├── 019-start-checkbox-ignored.md
 │   │   ├── 020-web-field-mismatch.md
 │   │   ├── 021-answer-position-bias.md
+│   │   ├── 022-quiz-submit-resets-view.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -140,6 +141,7 @@ notebooklm-batch-studio/
 │   │   ├── 004-phase2-self-test.md
 │   │   ├── 005-generation-options-and-versions.md
 │   │   ├── 006-per-artifact-settings.md
+│   │   ├── 007-student-experience.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -200,7 +202,9 @@ notebooklm-batch-studio/
 │       │   │   ├── study.py
 │       │   │   └── system.py
 │       │   ├── static/
-│       │   │   └── index.html
+│       │   │   ├── index.html
+│       │   │   ├── studio.css
+│       │   │   └── studio.js
 │       │   ├── __init__.py
 │       │   ├── api.py
 │       │   ├── cli.py

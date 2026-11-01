@@ -22,6 +22,7 @@ from notebooklm_batch_studio.domain.repositories import (
     StudyRepositoryProtocol,
 )
 from notebooklm_batch_studio.domain.study_plan import MARKABLE_STEPS, STUDY_STEPS, ReviewItem, next_schedule
+from notebooklm_batch_studio.services.converters.report_converter import markdown_fragment
 
 logger = logging.getLogger(__name__)
 
@@ -359,7 +360,7 @@ class StudyPlanService:
         ]
         answer = await self.notebooklm_client.ask(course.notebook_id, prompt, sources or None)
         logger.info("Explained a quiz question for %s L%s", code, lecture_no)
-        return {"answer": answer}
+        return {"answer": answer, "html": markdown_fragment(answer)}
 
 
 def card_key(front: str) -> str:

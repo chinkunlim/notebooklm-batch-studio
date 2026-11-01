@@ -23,6 +23,7 @@
       --warning: #f59e0b;
       --danger: #ef4444;
       --radius: 8px;
+      --surface-2: #0f172a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -90,7 +91,7 @@
     .card-title { font-size: 1.125rem; font-weight: 600; }
     .card-subtitle { font-size: 0.8rem; color: var(--text-muted); }
     .progress-bar-bg {
-      background: #0f172a;
+      background: var(--surface-2);
       height: 8px;
       border-radius: 4px;
       overflow: hidden;
@@ -132,7 +133,7 @@
       gap: 16px;
     }
     input[type="text"], input[type="number"], select, textarea {
-      background: #0f172a;
+      background: var(--surface-2);
       border: 1px solid var(--border);
       color: var(--text);
       padding: 8px 12px;
@@ -176,8 +177,8 @@
       display: block;
       width: 100%;
       text-align: left;
-      background: #0f172a;
-      border: 1px solid #334155;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
       padding: 10px 14px;
       margin-bottom: 8px;
       border-radius: 6px;
@@ -186,10 +187,10 @@
       font-size: 0.9rem;
       color: var(--text);
     }
-    .choice-btn:hover { border-color: #38bdf8; }
-    .choice-btn.selected { border-color: #38bdf8; background: #1e3a8a; font-weight: 600; }
-    .choice-btn.correct { border-color: #22c55e; background: #14532d; font-weight: 600; }
-    .choice-btn.wrong { border-color: #ef4444; background: #7f1d1d; }
+    .choice-btn:hover { border-color: var(--primary); }
+    .choice-btn.selected { border-color: var(--primary); background: rgba(56, 189, 248, 0.18); font-weight: 600; }
+    .choice-btn.correct { border-color: #22c55e; background: rgba(34, 197, 94, 0.2); font-weight: 600; }
+    .choice-btn.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.2); }
 
     .flip-card-wrap {
       perspective: 1000px;
@@ -222,14 +223,15 @@
       align-items: center;
       box-sizing: border-box;
     }
-    .flip-card-front { background: #1e293b; color: #f8fafc; }
+    .flip-card-front { background: var(--surface); color: var(--text); }
     .flip-card-back {
-      background: #0f172a;
-      color: #38bdf8;
+      background: var(--surface-2);
+      color: var(--primary);
       transform: rotateY(180deg);
-      border-color: #38bdf8;
+      border-color: var(--primary);
     }
   </style>
+  <link rel="stylesheet" href="/static/studio.css">
 </head>
 <body>
   <header>
@@ -252,10 +254,16 @@
       <button id="btnStartQueue" class="primary" style="background: #10b981; font-weight: 600;" onclick="startQueue()">▶️ 啟動批次生成</button>
       <button id="btnPauseQueue" style="display:none; background: #eab308; color: #000; font-weight: 600;" onclick="pauseQueue()">⏸️ 溫和暫停</button>
       <button id="btnResumeQueue" style="display:none; background: #10b981; font-weight: 600;" onclick="resumeQueue()">▶️ 繼續執行</button>
-      <button onclick="resumeQuota()" title="喚醒因配額暫停的項目">⚡ 喚醒配額</button>
-      <button class="primary" onclick="openAddModal()">➕ 加入課程資料夾</button>
-      <button onclick="openNamingModal()" title="測驗與檔案的命名規則">🏷️ 命名規則</button>
-      <a href="/docs" target="_blank" class="btn">📖 OpenAPI 文件</a>
+      <button class="primary" onclick="openAddModal()">➕ 加入課程</button>
+      <details class="more-menu">
+        <summary aria-label="更多功能">⋯ 更多</summary>
+        <div class="menu">
+          <button onclick="resumeQuota()" title="喚醒因配額暫停的項目">⚡ 立即喚醒等待額度的工作</button>
+          <button onclick="openNamingModal()">🏷️ 命名規則</button>
+          <button id="btnTheme" onclick="toggleTheme()">☀️ 淺色</button>
+          <a href="/docs" target="_blank" class="btn">📖 OpenAPI 文件</a>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -318,7 +326,8 @@
           </div>
           <!-- Top Tabs -->
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            <button id="btnTabAudio" class="study-tab-btn primary" onclick="switchStudyTab('audio')">🎧 語音導讀</button>
+            <button id="btnTabToday" class="study-tab-btn primary" onclick="switchStudyTab('today')">🏠 今天</button>
+            <button id="btnTabAudio" class="study-tab-btn" onclick="switchStudyTab('audio')">🎧 語音導讀</button>
             <button id="btnTabQuiz" class="study-tab-btn" onclick="switchStudyTab('quiz')">📝 互動測驗</button>
             <button id="btnTabMistakes" class="study-tab-btn" onclick="switchStudyTab('mistakes')">📕 弱點錯題集 <span id="badgeMistakeCount" class="badge badge-warning" style="display:none;">0</span></button>
             <button id="btnTabFlashcards" class="study-tab-btn" onclick="switchStudyTab('flashcards')">🗂️ 3D 抽認卡</button>
@@ -326,8 +335,13 @@
           </div>
         </div>
 
+        <!-- Tab 0: Today / study plan -->
+        <div id="tabPanelToday" class="card" style="padding: 24px;">
+          <div id="todayContainer">載入中...</div>
+        </div>
+
         <!-- Tab 1: Audio Player Panel -->
-        <div id="tabPanelAudio" class="card" style="padding: 24px;">
+        <div id="tabPanelAudio" class="card" style="padding: 24px; display: none;">
           <h3 style="font-size: 1.1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
             <span>🎧 NotebookLM Studio 語音導讀 (Audio Overview)</span>
           </h3>
@@ -387,7 +401,9 @@
   <!-- Add Course Modal -->
   <div id="addModal" class="modal-overlay">
     <div class="modal">
-      <h3 style="font-size: 1.25rem;">➕ 加入課程資料夾與精細產出設定</h3>
+      <h3 style="font-size: 1.25rem;">➕ 加入課程</h3>
+      <div id="wizardSteps" class="wizard-steps"></div>
+      <div data-step="1">
       <p style="font-size: 0.85rem; color: var(--text-muted);">
         點選資料夾瀏覽，找到放講義 PDF 的課程資料夾後按「✅ 選這個資料夾」。可以選好幾門課。
       </p>
@@ -406,6 +422,8 @@
         <textarea id="folderPaths" style="display:none;"></textarea>
       </div>
 
+      </div>
+      <div data-step="2">
       <div style="display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 140px;">
           <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">快速配置預設：</label>
@@ -468,11 +486,15 @@
         </div>
       </div>
 
-      <details id="addOptionsBox" style="margin-top: 10px; background: #0f172a; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);">
+      </div>
+      <div data-step="3">
+      <details id="addOptionsBox" open style="margin-top: 10px; background: #0f172a; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);">
         <summary style="cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #38bdf8;">⚙️ 進階產出設定（不改就用預設值；之後也能在課程頁修改）</summary>
         <div id="addOptions" style="margin-top: 10px;">載入中...</div>
       </details>
 
+      </div>
+      <div data-step="4">
       <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
         <input type="checkbox" id="autoStartQueue" checked>
         <span>🚀 加入後立即開始生成（取消勾選：先加入並暫停，設定好再到課程頁按「▶️ 開始生成」）</span>
@@ -483,10 +505,16 @@
       </label>
 
       <div id="previewResults" style="display: none; background: #0f172a; padding: 12px; border-radius: var(--radius); font-size: 0.85rem; border: 1px solid var(--border);"></div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button onclick="previewFolders()">🔍 預覽掃描</button>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+        <button onclick="previewFolders()">🔍 重新估算</button>
         <button class="primary" id="btnConfirmAdd" onclick="confirmAddFolders()" disabled>✅ 確認加入</button>
+      </div>
+      </div>
+      <div class="wizard-nav">
+        <button id="wizardBack" onclick="wizardGo(wizardStep - 1)">⬅️ 上一步</button>
+        <span style="flex: 1;"></span>
         <button onclick="closeAddModal()">取消</button>
+        <button id="wizardNext" class="primary" onclick="wizardGo(wizardStep + 1)">下一步 ➡️</button>
       </div>
     </div>
   </div>
@@ -545,7 +573,7 @@
     let currentCoursesList = [];
     let currentStudyCourse = null;
     let activeStudyLectureNo = null; // null represents course-wide
-    let activeStudyTab = 'audio';
+    let activeStudyTab = 'today';
     let activeQuizVariant = null;
     let currentQuizData = null;
     let currentQuizAnswers = {};
@@ -612,7 +640,7 @@
       }
     }
 
-    async function loadStudyCourseData(code) {
+    async function loadStudyCourseData(code, keepView = false) {
       try {
         const res = await fetch(`/api/courses/${code}`);
         if (!res.ok) throw new Error('無法載入課程');
@@ -646,7 +674,9 @@
         }
 
         renderStudyLectureSidebar(currentStudyCourse, history);
-        // Default to Lecture 1 if available, otherwise Course-wide
+        // After a quiz is saved, stay where the student is (refresh numbers only).
+        if (keepView) return;
+        activeStudyTab = 'today';
         if (currentStudyCourse.lectures && currentStudyCourse.lectures.length > 0) {
           selectStudyLecture(currentStudyCourse.lectures[0].no);
         } else {
@@ -706,7 +736,8 @@
 
     function switchStudyTab(tabName) {
       activeStudyTab = tabName;
-      ['Audio', 'Quiz', 'Mistakes', 'Flashcards', 'Reports'].forEach(t => {
+      stopMockTimer();
+      ['Today', 'Audio', 'Quiz', 'Mistakes', 'Flashcards', 'Reports'].forEach(t => {
         const panel = document.getElementById(`tabPanel${t}`);
         const btn = document.getElementById(`btnTab${t}`);
         if (panel) panel.style.display = 'none';
@@ -716,7 +747,10 @@
       const activeBtn = document.getElementById(`btnTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
       if (activeBtn) activeBtn.className = 'study-tab-btn primary';
 
-      if (tabName === 'audio') {
+      if (tabName === 'today') {
+        document.getElementById('tabPanelToday').style.display = 'block';
+        loadTodayPanel();
+      } else if (tabName === 'audio') {
         document.getElementById('tabPanelAudio').style.display = 'block';
         loadAudioPlayer();
       } else if (tabName === 'quiz') {
@@ -770,11 +804,14 @@
               <div style="display: flex; gap: 8px;">
                 <button class="btn" onclick="jumpAudio(-15)">⏪ -15s</button>
                 <button class="btn" onclick="jumpAudio(15)">+15s ⏩</button>
-                <a href="${streamUrl}" download class="btn primary">📥 下載音檔</a>
+                <a href="${streamUrl}" download class="btn">📥 下載音檔</a>
+                ${isCourse ? '' : `<button class="primary" onclick="markStep('audio')">✅ 我聽完了</button>`}
               </div>
             </div>
           </div>
         `;
+        // Pick up where the student stopped last time, at the same speed (per course and lecture).
+        attachAudioResume(document.getElementById('portalAudio'), `audio:${code}:${activeStudyLectureNo ?? 'course'}`);
       } else {
         container.innerHTML = `
           <div class="empty-state" style="padding: 32px 16px;">
@@ -816,6 +853,7 @@
     }
 
     async function loadQuizForChapter(variant) {
+      stopMockTimer();
       const kinds = availableQuizzes();
       if (!variant || !kinds.some(k => k.variant === variant)) variant = kinds.length ? kinds[0].variant : null;
       activeQuizVariant = variant;
@@ -848,6 +886,13 @@
         }
 
         renderQuizQuestions(currentQuizData.quiz || currentQuizData.json_data, variant);
+        if (variant.startsWith('course_')) {
+          const n = questions.length;
+          document.getElementById('quizContainer').insertAdjacentHTML('afterbegin',
+            `<div class="plan-card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+               <span>📝 模擬考模式：限時 ${Math.round(n * 1.5)} 分鐘、交卷前看不到答案，交卷後顯示各章答對率。</span>
+               <button class="primary" onclick="startMockTimer(${n}); this.closest('.plan-card').remove();">⏱ 開始計時</button></div>`);
+        }
       } catch (e) {
         container.innerHTML = `<div class="empty-state">尚未生成此章節測驗，可在管理控制台排入生成。</div>`;
       }
@@ -863,7 +908,7 @@
         const card = document.createElement('div');
         card.className = 'card';
         card.style.marginBottom = '16px';
-        card.style.background = '#0f172a';
+        card.style.background = 'var(--surface-2)';
 
         let choicesHtml = '';
         (q.choices || []).forEach((c, cIdx) => {
@@ -877,15 +922,15 @@
         });
 
         card.innerHTML = `
-          <div style="font-weight: 600; font-size: 1rem; margin-bottom: 12px; color: #f8fafc;">
+          <div style="font-weight: 600; font-size: 1rem; margin-bottom: 12px; color: var(--text);">
             ${qIdx + 1}. ${escHtml(q.question)}
           </div>
           <div>${choicesHtml}</div>
-          <div id="explanation-${qIdx}" style="display: none; margin-top: 14px; padding: 12px; background: #1e293b; border-left: 4px solid #38bdf8; border-radius: 4px; font-size: 0.9rem; line-height: 1.6;">
+          <div id="explanation-${qIdx}" style="display: none; margin-top: 14px; padding: 12px; background: var(--surface); border-left: 4px solid var(--primary); border-radius: 4px; font-size: 0.9rem; line-height: 1.6;">
             <p style="color: #4ade80; font-weight: 600; margin-bottom: 4px;">
               正確解答：選項 ${String.fromCharCode(65 + q.answer_index)}
             </p>
-            <p style="margin: 0; color: #cbd5e1;">${escHtml(q.explanation || '暫無解析')}</p>
+            <p style="margin: 0; color: var(--text);">${escHtml(q.explanation || '暫無解析')}</p>
           </div>
         `;
         container.appendChild(card);
@@ -921,6 +966,7 @@
       let score = 0;
       const mistakes = [];
 
+      const wrongIndexes = [];
       questions.forEach((q, qIdx) => {
         const selected = currentQuizAnswers[qIdx] !== undefined ? currentQuizAnswers[qIdx] : -1;
         const correct = q.answer_index;
@@ -938,6 +984,7 @@
         if (selected === correct) {
           score++;
         } else {
+          wrongIndexes.push(qIdx);
           mistakes.push({
             question_text: q.question,
             choices: q.choices.map(c => c.text !== undefined ? c.text : c),
@@ -949,8 +996,8 @@
       });
 
       const pct = Math.round((score / total) * 100);
-      document.getElementById('quizScoreHeader').textContent = `🎉 測驗得分：${score} / ${total} (${pct}%)`;
-      alert(`🎉 測驗評分完成！得分：${score} / ${total} (${pct}%)\n錯題已自動記錄至「📕 弱點錯題集」。`);
+      document.getElementById('quizScoreHeader').textContent = `得分：${score} / ${total} (${pct}%)`;
+      renderQuizResult(score, total, wrongIndexes);
 
       // Record to backend SQLite
       const code = currentStudyCourse.code;
@@ -966,7 +1013,8 @@
             mistakes
           })
         });
-        loadStudyCourseData(code);
+        loadStudyCourseData(code, true);
+        if (mistakes.length) showToast(`${mistakes.length} 題錯題已加入「📕 錯題集」`, 'info');
       } catch (e) {
         console.error('Failed to save attempt:', e);
       }
@@ -1079,13 +1127,13 @@
             <div class="flip-card-face flip-card-front">
               <span class="badge badge-neutral" style="position: absolute; top: 16px; left: 16px;">正面・核心概念</span>
               <span style="font-size: 0.8rem; color: var(--text-muted); position: absolute; top: 16px; right: 16px;">點擊翻面 🔄</span>
-              <div style="font-size: 1.3rem; font-weight: 700; line-height: 1.5;">${card.front}</div>
+              <div style="font-size: 1.3rem; font-weight: 700; line-height: 1.5;">${escHtml(card.front)}</div>
             </div>
             <!-- Back -->
             <div class="flip-card-face flip-card-back">
               <span class="badge badge-success" style="position: absolute; top: 16px; left: 16px;">背面・詳細解答</span>
-              <div style="font-size: 1.1rem; line-height: 1.6; max-height: 70%; overflow-y: auto;">${card.back}</div>
-              ${card.source ? `<div style="font-size: 0.8rem; color: #94a3b8; margin-top: 14px;">出處：${card.source}</div>` : ''}
+              <div style="font-size: 1.1rem; line-height: 1.6; max-height: 70%; overflow-y: auto;">${escHtml(card.back)}</div>
+              ${card.source ? `<div style="font-size: 0.8rem; color: #94a3b8; margin-top: 14px;">出處：${escHtml(card.source)}</div>` : ''}
             </div>
           </div>
         </div>
@@ -1096,6 +1144,11 @@
           <span style="font-size: 0.9rem; font-weight: 600; min-width: 80px; text-align: center;">${currentFlashcardIdx + 1} / ${total}</span>
           <button class="btn" onclick="nextFlashcard()" ${currentFlashcardIdx === total - 1 ? 'disabled' : ''}>下一張 ➡️</button>
           <button class="btn" onclick="shuffleFlashcards()">🔀 隨機抽卡</button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">翻面後誠實評估：</span>
+          <button onclick="rateCurrentFlashcard(false)">😕 不記得</button>
+          <button class="primary" onclick="rateCurrentFlashcard(true)">🙂 記得</button>
         </div>
       `;
     }
@@ -1188,7 +1241,8 @@
       const path = job.rel_path || job.output_file.split('/').pop();
       const enc = encodeURI(path);
       const dl = `/api/artifacts/${code}/download/${enc}`;
-      const header = `<div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">v${job.version || 1}${job.status === 'needs_review' ? '・⚠️ 需審查' : ''}・<a href="${dl}" target="_blank">開新分頁 / 下載</a></div>`;
+      const readable = ['guide', 'concept'].includes(kind) && activeStudyLectureNo !== null;
+      const header = `<div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">v${job.version || 1}${job.status === 'needs_review' ? '・⚠️ 需審查' : ''}・<a href="${dl}" target="_blank">開新分頁 / 下載</a>${readable ? `<button class="primary" style="margin-left:auto;" onclick="markStep('guide')">✅ 我讀完了</button>` : ''}</div>`;
       const ext = path.split('.').pop().toLowerCase();
       if (['md', 'opml', 'json'].includes(ext)) {
         container.innerHTML = header + `<iframe src="/api/artifacts/${code}/view/${enc}" style="width:100%; height:620px; border:none; border-radius:var(--radius);"></iframe>`;
@@ -1506,29 +1560,7 @@
           const slot = `${j.lecture_no}|${j.artifact_type}`;
           versionsBySlot[slot] = Math.max(versionsBySlot[slot] || 0, j.version || 1);
         });
-        const jobsTable = `
-          ${renderStatusBar(jobs, data.paused)}
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-            <h4 style="font-size: 1rem; color: #38bdf8;">⚙️ 生成任務佇列與成果下載 <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">（每 15 秒自動更新）</span></h4>
-            <div style="display:flex; gap:8px;">
-              <button class="btn" onclick="syncFromNotebookLM('${code}')" style="background:#0284c7; color:#fff; font-size:0.8rem; font-weight:600;">🔄 從 NotebookLM 同步網頁生成內容</button>
-              <button class="btn" onclick="refinePrompts('${code}')" style="background:#4f46e5; color:#fff; font-size:0.8rem; font-weight:600;">🤖 使用 Ollama Gemma4 潤飾 Prompt</button>
-            </div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>範圍</th>
-                <th>產物種類</th>
-                <th>版本</th>
-                <th>狀態</th>
-                <th>Prompt / 風格指令</th>
-                <th>檔案下載</th>
-                <th>動作</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${jobs.map(j => {
+        const jobRow = j => {
                 const st = STATUS_LABELS[j.status] || { text: j.status, cls: 'badge-neutral' };
                 const scope = j.lecture_no ? `L${String(j.lecture_no).padStart(2, '0')}` : '全課程';
                 const target = j.rel_path || (j.output_file ? j.output_file.split('/').pop() : null);
@@ -1562,12 +1594,46 @@
                     <td>${regenBtn}</td>
                   </tr>
                 `;
-              }).join('')}
-            </tbody>
-          </table>
+};
+        const tableHead = `<table><thead><tr><th>範圍</th><th>產物種類</th><th>版本</th><th>狀態</th><th>Prompt / 設定</th><th>檔案</th><th>動作</th></tr></thead><tbody>`;
+        // One collapsible group per lecture (plus whole-course); unfinished groups open by default.
+        const groups = new Map();
+        jobs.filter(j => j.status !== 'skipped').forEach(j => {
+          const key = j.lecture_no === null ? 'course' : j.lecture_no;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(j);
+        });
+        const lectureTopic = no => ((data.lectures || []).find(l => l.no === no) || {}).topic || '';
+        const groupHtml = [...groups.entries()].sort((a, b) => (a[0] === 'course') - (b[0] === 'course') || a[0] - b[0]).map(([key, list]) => {
+          const done = list.filter(j => j.status === 'done').length;
+          const attention = list.some(j => ['failed', 'needs_review'].includes(j.status));
+          const busy = list.some(j => ['running', 'pending', 'quota_wait'].includes(j.status));
+          const title = key === 'course' ? '🌐 整門課' : `第 ${String(key).padStart(2, '0')} 講・${escHtml(lectureTopic(key))}`;
+          const badge = attention ? 'badge-danger' : done === list.length ? 'badge-success' : 'badge-warning';
+          return `<details class="job-group" ${attention || busy ? 'open' : ''}>
+            <summary><span>${title}</span><span class="badge ${badge}">${done} / ${list.length} 完成${attention ? '・需處理' : ''}</span></summary>
+            <div>${tableHead}${list.map(jobRow).join('')}</tbody></table></div></details>`;
+        }).join('');
+        const jobsTable = `
+          ${renderStatusBar(jobs, data.paused)}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+            <h4 style="font-size: 1rem; color: var(--primary);">⚙️ 生成項目 <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">（依講次分組，每 15 秒自動更新）</span></h4>
+            <details class="more-menu"><summary>🛠️ 進階工具</summary><div class="menu">
+              <button onclick="syncFromNotebookLM('${code}')">🔄 從 NotebookLM 同步網頁上做的產出</button>
+              <button onclick="refinePrompts('${code}')">🤖 用 Ollama Gemma4 潤飾 Prompt</button>
+            </div></details>
+          </div>
+          ${groupHtml}
         `;
 
-        content.innerHTML = lecturesTable + jobsTable;
+        // Technical upload details are rarely needed: keep them collapsed at the bottom.
+        // Keep the groups the user opened or closed when the page refreshes itself.
+        const openState = new Map([...content.querySelectorAll('details.job-group')].map(d => [d.querySelector('summary span').textContent, d.open]));
+        content.innerHTML = jobsTable + `<details class="job-group" style="margin-top:16px;"><summary><span>📄 講義上傳與 NotebookLM 技術資訊</span><span class="badge badge-neutral">${(data.lectures || []).length} 份 PDF</span></summary><div>${lecturesTable}</div></details>`;
+        if (silent) content.querySelectorAll('details.job-group').forEach(d => {
+          const key = d.querySelector('summary span').textContent;
+          if (openState.has(key)) d.open = openState.get(key);
+        });
         document.getElementById('detailCourseActions').innerHTML = (data.paused
           ? `<span class="badge badge-warning" style="margin-right:6px;">⏸ 這門課暫停中</span><button class="primary" onclick="setCoursePaused('${code}', false)">▶️ 開始生成</button>`
           : `<button onclick="setCoursePaused('${code}', true)">⏸ 暫停這門課</button>`) +
@@ -1620,7 +1686,7 @@
     }
 
     async function deleteCourse(code) {
-      if (!confirm(`刪除課程 ${code}？\n\n• 本機的工作紀錄與學習紀錄會刪除\n• 產出檔案移到 DATA_DIR/deleted/（可找回）\n• 講義 PDF 和 NotebookLM 上的筆記本不會動`)) return;
+      if (!(await askConfirm(`刪除課程 ${code}？\n\n• 本機的工作紀錄與學習紀錄會刪除\n• 產出檔案移到 DATA_DIR/deleted/（可找回）\n• 講義 PDF 和 NotebookLM 上的筆記本不會動`, { okLabel: '刪除', danger: true }))) return;
       try {
         const res = await fetch(`/api/courses/${code}`, { method: 'DELETE' });
         const data = await res.json();
@@ -1636,7 +1702,7 @@
 
     async function regenerateArtifact(code, lectureNo, artifactType, label, nextVersion) {
       const scope = lectureNo === null ? '全課程' : `L${String(lectureNo).padStart(2, '0')}`;
-      if (!confirm(`重新生成 ${scope}「${label}」為 v${nextVersion}？\n舊版本會保留，這會使用 NotebookLM 額度。`)) return;
+      if (!(await askConfirm(`重新生成 ${scope}「${label}」為 v${nextVersion}？\n舊版本會保留，這會使用 NotebookLM 額度。`, { okLabel: '重新生成' }))) return;
       try {
         const res = await fetch(`/api/courses/${code}/jobs/regenerate`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1765,7 +1831,7 @@
     }
 
     async function resetCourseOptions(code) {
-      if (!confirm('把這門課的產出設定全部恢復成預設值？')) return;
+      if (!(await askConfirm('把這門課的產出設定全部恢復成預設值？', { okLabel: '恢復預設' }))) return;
       const data = await (await fetch(`/api/courses/${code}/options`)).json();
       await fetch(`/api/courses/${code}/options`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ options: data.defaults }),
@@ -1939,6 +2005,7 @@
       document.getElementById('addModal').style.display = 'flex';
       browseFolder(null);
       loadAddOptions();
+      wizardGo(1);
     }
 
     let currentBrowsePath = null;
@@ -2101,5 +2168,6 @@
       }, 15000);
     });
   </script>
+  <script src="/static/studio.js"></script>
 </body>
 </html>

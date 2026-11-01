@@ -25,6 +25,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(settings): real per-quiz question count (default 30) driving prompt, check and NotebookLM size; mock exam prompt follows its count; defaults marked in the web app with a reset button (by `@claude-code`)
 - feat(courses): settings when adding, per-course pause/start, chapter range for course-wide outputs, delete course, reuse existing notebook; fix study-portal quizzes; split oversized modules (by `@claude-code`)
 - feat(study): study plan with next step and exam countdown, progress marks, spaced review schedule, grounded answer explanations, chapter tags for course exams, editable exam date (by `@claude-code`)
+- feat(web): student experience - Today plan, in-page quiz review with retry-wrong and NotebookLM explanations, spaced flashcard review, mock-exam timer, audio resume, add-course wizard, grouped course page, toasts, light theme and iPad layout (by `@claude-code`)
 
 ### Fixed
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)

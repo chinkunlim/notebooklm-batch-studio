@@ -164,6 +164,11 @@ class PlanTest(PlanFixture):
         self.assertIn("正確答案是 B", args[1])
         with self.assertRaises(ValueError):
             asyncio.run(self.plan.explain("C1", 2, "q", ["a"], 3))
+        # Markdown from NotebookLM is rendered with raw HTML escaped.
+        self.client.ask = mock.AsyncMock(return_value="**重點** <script>x</script>")
+        html = asyncio.run(self.plan.explain("C1", 2, "q", ["a", "b"], 0))["html"]
+        self.assertIn("<strong>重點</strong>", html)
+        self.assertNotIn("<script>", html)
 
     def test_exam_date_setting_and_delete_clears_study_data(self) -> None:
         """Exam date is editable and validated; deleting the course removes progress and reviews."""

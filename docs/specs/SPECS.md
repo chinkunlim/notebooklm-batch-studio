@@ -16,3 +16,4 @@
 | [004-phase2-self-test](004-phase2-self-test.md) | Implemented | 第二階段：學生研讀工作台、錯題本、3D卡牌、語音導讀與 Anki 間隔重複匯出 | TASK-007, ADR-003 |
 | [005-generation-options-and-versions](005-generation-options-and-versions.md) | Implemented | 產出參數設定、重新生成版本、命名說明與網頁進度 | TASK-009, ADR-005 |
 | [006-per-artifact-settings](006-per-artifact-settings.md) | Implemented | 每一項產出各自的生成設定（題型、題量、難度…），三層設定合併 | TASK-009, ADR-005 |
+| [007-student-experience](007-student-experience.md) | Implemented | 學生學習體驗：今天、交卷回饋、間隔複習、模擬考、解釋、介面 | TASK-009 |

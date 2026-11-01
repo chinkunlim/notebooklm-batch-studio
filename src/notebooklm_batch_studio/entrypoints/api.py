@@ -9,11 +9,13 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
+from pathlib import Path
 from typing import Any, cast
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -256,6 +258,7 @@ def create_app(
         service=active_service, study_service=active_study, config=cfg, study_plan=app.state.study_plan
     )
     app.mount("/mcp", mcp_server.streamable_http_app())
+    app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
     app.include_router(system_router)
     app.include_router(courses_router)
