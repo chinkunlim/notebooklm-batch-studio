@@ -7,9 +7,11 @@ generating student exam papers (題目卷.md, no answers) and teacher/study answ
 
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import logging
+import random
 import re
 from pathlib import Path
 from typing import Any
@@ -20,6 +22,33 @@ from notebooklm_batch_studio.services.converters.pdf_renderer import render_quiz
 logger = logging.getLogger(__name__)
 
 CHOICE_LABELS = ["A", "B", "C", "D"]
+
+
+# Options that point at other options ("以上皆是", "A 與 B") only make sense in their original order.
+_POSITIONAL_OPTION = re.compile(
+    r"以上|上述|皆是|皆非|都對|都錯|all of the above|none of the above|\b[A-D]\s*(和|與|及|、|and)", re.I
+)
+
+
+def _shuffle_choices(stem: str, choices: list[Choice]) -> list[Choice]:
+    """Put the options in a stable pseudo-random order so the answer is not always A.
+
+    NotebookLM tends to list the correct option first (about 70% "A" in a real course, ISSUE-021).
+    The order is seeded by the question text, so the same question always shows the same order.
+
+    Args:
+        stem: Question text (seed).
+        choices: Options in NotebookLM's order.
+
+    Returns:
+        Shuffled options, or the original order when an option refers to other options.
+    """
+    if len(choices) < 2 or any(_POSITIONAL_OPTION.search(c.text) for c in choices):
+        return choices
+    seed = int(hashlib.sha256(stem.encode("utf-8")).hexdigest()[:12], 16)
+    shuffled = list(choices)
+    random.Random(seed).shuffle(shuffled)
+    return shuffled
 
 
 def _parse_question_dict(
@@ -47,15 +76,15 @@ def _parse_question_dict(
     choices: list[Choice] = []
     answer_index = 0
 
-    for opt_idx, opt in enumerate(raw_options):
+    for opt in raw_options:
         if not isinstance(opt, dict):
             continue
         opt_text = str(opt.get("text", "")).strip()
         is_corr = bool(opt.get("isCorrect", False))
         rationale = str(opt.get("rationale", "")).strip()
-        if is_corr:
-            answer_index = opt_idx
         choices.append(Choice(text=opt_text, is_correct=is_corr, rationale=rationale))
+    choices = _shuffle_choices(stem, choices)
+    answer_index = next((i for i, c in enumerate(choices) if c.is_correct), 0)
 
     hint = str(q_dict.get("hint", "")).strip()
     explanation = choices[answer_index].rationale if choices and answer_index < len(choices) else ""

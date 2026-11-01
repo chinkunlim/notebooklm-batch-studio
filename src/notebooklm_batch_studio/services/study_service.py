@@ -190,13 +190,14 @@ class StudyTrackerService:
         if not self.config:
             return []
 
+        # Flashcards live in the lecture folder "<NN>_<topic>/flashcards[_vN].json"; the lecture
+        # number is in the folder name, not the file name. Newest version first. Refs: ISSUE-020
         course_dir = self.config.courses_output_dir / course_code
-        pattern = f"*L{lecture_no:02d}*Flashcards*.json"
-        matches = list(course_dir.glob(f"**/{pattern}"))
-        if not matches:
-            # Fallback to general pattern
-            pattern = f"*{lecture_no}*flashcard*.json"
-            matches = list(course_dir.glob(f"**/{pattern}"))
+        matches = sorted(
+            course_dir.glob(f"{lecture_no:02d}_*/flashcards*.json"),
+            key=lambda f: int(f.stem.rpartition("_v")[2]) if "_v" in f.stem else 1,
+            reverse=True,
+        )
 
         if not matches:
             return []

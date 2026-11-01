@@ -1394,8 +1394,9 @@
         }
 
         container.innerHTML = courses.map(c => {
-          const stats = c.stats || {};
-          const total = stats.total || 0;
+          // Field names follow GET /api/courses (counts / total_jobs / lecture_count). Refs: ISSUE-020
+          const stats = c.counts || {};
+          const total = (c.total_jobs || 0) - (stats.skipped || 0);
           const done = stats.done || 0;
           const pct = total > 0 ? Math.round((done / total) * 100) : 0;
           const hasNb = !!c.notebook_id;
@@ -1405,7 +1406,7 @@
               <div class="card-header">
                 <div>
                   <div class="card-title">${c.name} (${c.code}) ${c.paused ? '<span class="badge badge-warning">⏸ 暫停中</span>' : ''}</div>
-                  <div class="card-subtitle">${c.lectures_count} 份講義 PDF</div>
+                  <div class="card-subtitle">${c.lecture_count} 份講義 PDF</div>
                 </div>
                 <span class="badge ${hasNb ? 'badge-success' : 'badge-warning'}">
                   ${hasNb ? '已連線' : '待初始化'}
@@ -1421,9 +1422,11 @@
                 </div>
               </div>
               <div class="status-counts">
-                <span>等待: ${stats.pending || 0}</span>
-                <span>進行中: ${stats.running || 0}</span>
+                <span>排隊: ${stats.pending || 0}</span>
+                <span>生成中: ${stats.running || 0}</span>
                 <span>完成: ${stats.done || 0}</span>
+                ${stats.quota_wait ? `<span style="color: var(--warning)">等待額度: ${stats.quota_wait}</span>` : ''}
+                ${stats.needs_review ? `<span style="color: var(--warning)">需審查: ${stats.needs_review}</span>` : ''}
                 ${stats.failed ? `<span style="color: var(--danger)">失敗: ${stats.failed}</span>` : ''}
               </div>
               <div style="display: flex; gap: 8px; margin-top: 4px;">
@@ -1504,7 +1507,7 @@
           versionsBySlot[slot] = Math.max(versionsBySlot[slot] || 0, j.version || 1);
         });
         const jobsTable = `
-          ${renderStatusBar(jobs)}
+          ${renderStatusBar(jobs, data.paused)}
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
             <h4 style="font-size: 1rem; color: #38bdf8;">⚙️ 生成任務佇列與成果下載 <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">（每 15 秒自動更新）</span></h4>
             <div style="display:flex; gap:8px;">
@@ -1590,13 +1593,15 @@
       return mins > 0 ? `預計 ${hhmm} 自動繼續（約 ${mins} 分鐘後）` : '額度已重置，即將自動繼續';
     }
 
-    function renderStatusBar(jobs) {
+    function renderStatusBar(jobs, paused) {
       const counts = {};
       jobs.forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; });
       const order = ['done', 'running', 'pending', 'quota_wait', 'needs_review', 'failed'];
       const chips = order.map(k => `<span class="badge ${STATUS_LABELS[k].cls}" style="font-size:0.8rem;">${STATUS_LABELS[k].text} ${counts[k] || 0}</span>`).join(' ');
       const waits = jobs.filter(j => j.status === 'quota_wait' && j.cooldown_until).map(j => j.cooldown_until).sort();
-      const resume = waits.length ? `<div style="font-size:0.8rem; color:var(--warning); margin-top:6px;">⏸ 額度用完的工作會等額度重置，${formatResume(waits[0])}。網頁服務開著就會自己接著跑。</div>` : '';
+      const resume = paused
+        ? `<div style="font-size:0.8rem; color:var(--warning); margin-top:6px;">⏸ 這門課暫停中，按右上角「▶️ 開始生成」才會繼續。</div>`
+        : (waits.length ? `<div style="font-size:0.8rem; color:var(--warning); margin-top:6px;">⏸ 額度用完的工作會等額度重置，${formatResume(waits[0])}。網頁服務開著就會自己接著跑。</div>` : '');
       return `<div style="margin-top: 20px; padding: 10px 12px; background:#0f172a; border:1px solid var(--border); border-radius: var(--radius);">
         <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"><strong style="font-size:0.85rem; margin-right:6px;">📊 共 ${jobs.length} 項</strong>${chips}</div>${resume}
       </div>`;

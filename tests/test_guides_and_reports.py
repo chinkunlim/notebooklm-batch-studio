@@ -126,3 +126,71 @@ class UsageGuideTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChoiceShuffleTest(unittest.TestCase):
+    """Quiz options are reordered so the answer is not always A (ISSUE-021)."""
+
+    def test_answers_spread_and_order_is_stable(self) -> None:
+        """Across many questions the answer lands in every position; the same stem keeps its order."""
+        from notebooklm_batch_studio.services.converters.quiz_converter import parse_notebooklm_quiz
+
+        raw = {
+            "questions": [
+                {
+                    "question": f"第 {i} 題：哪一個正確？",
+                    "answerOptions": [
+                        {"text": "正確", "isCorrect": True, "rationale": "對"},
+                        {"text": "錯一", "isCorrect": False, "rationale": ""},
+                        {"text": "錯二", "isCorrect": False, "rationale": ""},
+                        {"text": "錯三", "isCorrect": False, "rationale": ""},
+                    ],
+                }
+                for i in range(40)
+            ]
+        }
+        quiz = parse_notebooklm_quiz(raw, "C", 1)
+        positions = {q.answer_index for q in quiz.questions}
+        self.assertEqual(positions, {0, 1, 2, 3})
+        self.assertTrue(all(q.choices[q.answer_index].text == "正確" for q in quiz.questions))
+        again = parse_notebooklm_quiz(raw, "C", 1)
+        self.assertEqual([q.answer_index for q in quiz.questions], [q.answer_index for q in again.questions])
+
+    def test_positional_options_keep_order(self) -> None:
+        """An option such as 「以上皆是」 keeps the original order."""
+        from notebooklm_batch_studio.services.converters.quiz_converter import parse_notebooklm_quiz
+
+        raw = {
+            "questions": [
+                {
+                    "question": "選哪個？",
+                    "answerOptions": [
+                        {"text": "甲", "isCorrect": False},
+                        {"text": "乙", "isCorrect": False},
+                        {"text": "以上皆是", "isCorrect": True},
+                    ],
+                }
+            ]
+        }
+        self.assertEqual(parse_notebooklm_quiz(raw, "C", 1).questions[0].answer_index, 2)
+
+
+class StudyFlashcardsTest(unittest.TestCase):
+    """The study portal finds a lecture's flashcards in its folder, newest version first (ISSUE-020)."""
+
+    def test_finds_lecture_folder_and_newest_version(self) -> None:
+        """01_<topic>/flashcards_v2.json wins over flashcards.json; other lectures are not mixed in."""
+        from notebooklm_batch_studio.services.study_service import StudyTrackerService
+
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            cfg = AppConfig(data_dir=tmp, log_to_file=False)
+            lec = cfg.courses_output_dir / "C1" / "01_topic"
+            lec.mkdir(parents=True)
+            card = {"cards": [{"front": "舊", "back": "b"}]}
+            (lec / "flashcards.json").write_text(json.dumps(card), encoding="utf-8")
+            card["cards"][0]["front"] = "新"
+            (lec / "flashcards_v2.json").write_text(json.dumps(card), encoding="utf-8")
+            service = StudyTrackerService(study_repo=mock.MagicMock(), config=cfg)
+            self.assertEqual(service.get_lecture_flashcards("C1", 1)[0]["front"], "新")
+            self.assertEqual(service.get_lecture_flashcards("C1", 2), [])

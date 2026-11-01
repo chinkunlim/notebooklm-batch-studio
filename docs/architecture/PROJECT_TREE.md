@@ -128,6 +128,8 @@ notebooklm-batch-studio/
 │   │   ├── 017-quiz-prompts-ten-questions.md
 │   │   ├── 018-study-portal-quiz-missing.md
 │   │   ├── 019-start-checkbox-ignored.md
+│   │   ├── 020-web-field-mismatch.md
+│   │   ├── 021-answer-position-bias.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
