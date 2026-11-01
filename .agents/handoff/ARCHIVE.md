@@ -15,3 +15,15 @@
 ### [2026-10-21 17:12 UTC] 建立任務 `TASK-002`: Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue) (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-10-21 17:20 UTC] 完成任務 `TASK-002` — Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue) (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Phase 1B 完成：實作不可變領域模型、SQLite 佇列與課程資料表、Alembic 遷移、課程目錄智慧推導、2~3 Worker 平行排程池與 Quota 隔離狀態機，單元測試 100% 綠燈
+
+### [2026-10-21 17:47 UTC] 建立任務 `TASK-003`: Phase 1C: 轉檔器與 NotebookLM Adapter (Converters & Adapter) (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-10-21 17:47 UTC] 認領任務 `TASK-003` (Phase 1C: 轉檔器與 NotebookLM Adapter (Converters & Adapter)) (by `antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `antigravity`

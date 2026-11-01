@@ -8,3 +8,4 @@
 
 | 日期 | 建議 | 來源（對話 / 任務） | 狀態 |
 |---|---|---|---|
+| 2026-11-01 | setup_env.py 的 check_dependencies 應利用 IMPORT_HINTS 比對 PyPI 映射名稱（如 PIL -> Pillow），避免誤判未宣告第三方套件 | TASK-009 | 待決定 |

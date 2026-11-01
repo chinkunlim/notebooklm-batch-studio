@@ -5,20 +5,30 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-01 05:35 UTC`
-- **最近操作 Agent**: `claude-code`
+- **最後更新時間**: `2026-11-01 07:10 UTC`
+- **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `8689ed2 fix(queue): pre-check live quota, estimate workloads from real costs, quarantine short mock exams, serve needs_review files, and correct docs [agent:claude-code]`
+- **最新 Git Commit**: `7ac5537 feat(studio): folder picker, change artifact types after adding, study-portal viewers, browser login, numbered quiz batches, 30-question subject-neutral prompts, weekly quota, and report instructions fix [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
-|---|---|---|---|---|---|---|
-| **TASK-009**<br/>Mind map rename, versioned regenerate, generation options, web status and naming guide | 🟢 `in_progress` | `claude-code` | `-` | - | - | - |
+> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-01 07:10 UTC] 完成任務 `TASK-010` — Update all markdown records across repository (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Synchronized all markdown records across repository (README, ARCHITECTURE, PROJECT_RULES, CHANGELOG, LATEST)
+
+### [2026-11-01 07:08 UTC] 建立任務 `TASK-010`: Update all markdown records across repository (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-01 07:08 UTC] 完成任務 `TASK-009` — Mind map rename, versioned regenerate, generation options, web status and naming guide (by `claude-code`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Completed SPEC-005: mind map rename, versioned regenerate, generation options, folder picker, web status, device-sized infographics, and usage guide
 
 ### [2026-11-01 05:35 UTC] 建立任務 `TASK-009`: Mind map rename, versioned regenerate, generation options, web status and naming guide (by `claude-code`)
 - **狀態**: `in_progress`
@@ -95,15 +105,3 @@
 ### [2026-10-21 17:57 UTC] 完成任務 `TASK-003` — Phase 1C: 轉檔器與 NotebookLM Adapter (Converters & Adapter) (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Phase 1C 完成：實作 NotebookLM API Adapter (支援例外轉換與配額偵測)、Quiz 30 題去重合併與題目卷/答案卷 Markdown/PDF 轉檔器、Flashcards Anki CSV 轉檔器、Mind Map OPML 2.0 XML 轉檔器，35 項離線單元測試 100% 通過
-
-### [2026-10-21 17:47 UTC] 認領任務 `TASK-003` (Phase 1C: 轉檔器與 NotebookLM Adapter (Converters & Adapter)) (by `antigravity`)
-- **相關範圍**: `-`
-- **接棒自**: `antigravity`
-
-### [2026-10-21 17:47 UTC] 建立任務 `TASK-003`: Phase 1C: 轉檔器與 NotebookLM Adapter (Converters & Adapter) (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-10-21 17:20 UTC] 完成任務 `TASK-002` — Phase 1B: 核心領域模型與平行工作佇列引擎 (Domain & Parallel Queue) (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Phase 1B 完成：實作不可變領域模型、SQLite 佇列與課程資料表、Alembic 遷移、課程目錄智慧推導、2~3 Worker 平行排程池與 Quota 隔離狀態機，單元測試 100% 綠燈

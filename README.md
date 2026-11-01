@@ -4,11 +4,13 @@
 
 ## 核心特色
 
-- 📚 **資料夾批次映射**：一個資料夾 = 一門課 = 一本 NotebookLM 筆記本，自動剖析講義編號與主題名稱。
+- 📚 **資料夾批次映射**：一個資料夾 = 一門課 = 一本 NotebookLM 筆記本，自動剖析講義編號與主題名稱，支援本機資料夾挑選器。
 - 🎯 **單一來源精準生成**：生成每講教材時只勾選該份 PDF，確保產出內容精確不互相污染。
 - 📝 **30 題階梯式題庫**：自動整併基礎題、理解題與模擬考題，支援品質檢驗；題數不足時自動隔離至 `needs_review/`。
-- 📄 **多格式轉檔輸出**：測驗轉為 Markdown 與排版精美的 PDF；閃卡輸出為 Markdown 與 Anki 匯入用格式；心智圖輸出為 Markdown 與 Mermaid 語法。
-- 🔄 **斷點續傳與配額防護**：SQLite 工作佇列追蹤任務進度，遇每日配額上限或 Rate Limit 自動退避，隨時支援一鍵無縫續跑。
+- 🎓 **學生研讀工作台 (Study Portal)**：線上互動測驗即時評分、個人錯題筆記本、3D 翻轉閃卡、分段音訊播放器與一鍵匯出 Anki 間隔重複牌組。
+- 📄 **多格式轉檔輸出**：測驗轉為 Markdown 與列印用 PDF；閃卡輸出為 Markdown 與 Anki CSV；心智圖輸出為 Markdown 與 Mermaid；資訊圖表自動適配直式、A4 PDF、iPad Air 4 與 MacBook Pro 14 吋；報告輸出排版 HTML。
+- 🔁 **版本化重新生成**：支援在不覆蓋既有產出的前提下生成新版本（v2、v3…），筆記本與檔名同步自動版號管理。
+- 🔄 **斷點續傳與配額防護**：讀取 NotebookLM 即時額度表，支援 5 小時與每週額度窗預估，額度用盡自動進入安全等待並排程無縫續跑。
 - 🌐 **三大操作入口**：完整 CLI 指令集、FastAPI 本機儀表板（`127.0.0.1:8768`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器與 OpenAPI 路由。
 
 ---
@@ -160,8 +162,8 @@ uv run python -m unittest discover -s tests -v
 - [`.agents/handoff/LATEST.md`](.agents/handoff/LATEST.md) — 即時交接看板與歷史記錄
 - [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) — 系統架構圖、五層依賴與核心流程
 - [`docs/architecture/PROJECT_TREE.md`](docs/architecture/PROJECT_TREE.md) — 完整目錄樹與檔案標記
-- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-004）
-- [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 NotebookLM 存取機制）
+- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-005）
+- [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-005）
 - [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫
 - [`docs/standards/PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) — 本專案特有規則（領域名詞、埠號 8768、安全禁忌）
 - [`alembic/DB.md`](alembic/DB.md) — 資料庫模型遷移指南 (SQLite / SQLAlchemy)
