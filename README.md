@@ -46,7 +46,7 @@ python3 scripts/agentctl.py setup --install
 5. 登入 NotebookLM（會開啟瀏覽器，由你親自登入 Google 帳號一次；憑證保存於 `~/.config/notebooklm-batch-studio/`，權限 600）：
 
 ```bash
-python3 scripts/spike_notebooklm.py login
+uv run notebooklm-batch-studio login --browser
 ```
 
 之後可用下列指令確認憑證是否存在且有效（只檢查，不會開瀏覽器）：

@@ -23,6 +23,7 @@ from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
+from notebooklm_batch_studio.services.folder_browser import browse_folders
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
@@ -534,6 +535,77 @@ def _register_regenerate_tools(mcp: MCPServer, active_service: BatchStudioServic
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
 
+def _register_selection_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register tools that read or change which artifact types a course generates.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+
+    @mcp.tool()
+    def list_folders(path: str = "") -> str:
+        """List sub-folders and their PDF counts, to find course folders (read-only).
+
+        Args:
+            path: Absolute folder inside the home directory; empty for the starting shortcuts.
+
+        Returns:
+            JSON string with the folder, its parent and sub-folders.
+        """
+        try:
+            config = active_service.config
+            return json.dumps(
+                browse_folders(path or None, config.courses_input_dir), ensure_ascii=False, indent=2
+            )
+        except ValueError as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+    @mcp.tool()
+    def get_course_artifact_types(code: str) -> str:
+        """Read which artifact types a course generates (read-only).
+
+        Args:
+            code: Course code.
+
+        Returns:
+            JSON string with selected chapter / course types and the choices.
+        """
+        try:
+            result = active_service.course_settings.get_artifact_selection(code)
+            return json.dumps(result, ensure_ascii=False, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+    @mcp.tool()
+    def set_course_artifact_types(
+        code: str, chapter: list[str], course: list[str], confirm: bool = False
+    ) -> str:
+        """Change which artifact types a course generates (requires confirm=True).
+
+        Added types are queued (spending NotebookLM quota); removed types have unstarted jobs skipped.
+
+        Args:
+            code: Course code.
+            chapter: Per-lecture artifact type values.
+            course: Course-wide artifact type values.
+            confirm: Must be True to apply.
+
+        Returns:
+            JSON string with queued / revived / skipped counts, or a confirmation warning.
+        """
+        if not confirm:
+            return json.dumps(
+                {"confirmed": False, "warning": "Set confirm=True to apply; added types spend quota."},
+                ensure_ascii=False,
+            )
+        try:
+            result = active_service.course_settings.set_artifact_selection(code, chapter, course)
+            return json.dumps(result, ensure_ascii=False)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
 def build_mcp_server(
     service: BatchStudioService | None = None,
     study_service: StudyTrackerService | None = None,
@@ -588,6 +660,7 @@ def build_mcp_server(
     _register_study_weakness_tools(mcp, active_study)
     _register_settings_tools(mcp, active_service)
     _register_regenerate_tools(mcp, active_service)
+    _register_selection_tools(mcp, active_service)
     return mcp
 
 

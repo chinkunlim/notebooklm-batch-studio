@@ -186,10 +186,14 @@ class ArtifactRunner:
             if job.artifact_type in MIND_MAP_TYPES
             else self.notebooklm_client.rename_artifact
         )
-        for artifact_id in artifact_ids:
+        total = len(artifact_ids)
+        for index, artifact_id in enumerate(artifact_ids, start=1):
+            # A quiz collected over several batches gets "(1/3)", "(2/3)"... so the batches of one
+            # quiz are told apart on NotebookLM instead of showing identical titles.
+            batch_title = f"{title} ({index}/{total})" if total > 1 else title
             try:
-                await rename(nb_id, artifact_id, title)
-                logger.info("Renamed artifact %s to '%s'", artifact_id, title)
+                await rename(nb_id, artifact_id, batch_title)
+                logger.info("Renamed artifact %s to '%s'", artifact_id, batch_title)
             except Exception as err:
                 logger.warning("Could not rename artifact %s on NotebookLM: %s", artifact_id, err)
 

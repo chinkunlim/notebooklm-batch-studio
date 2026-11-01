@@ -18,11 +18,17 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    JobStatus,
     merge_generation_options,
 )
 from notebooklm_batch_studio.domain.naming import label_for
 from notebooklm_batch_studio.domain.repositories import CourseRepositoryProtocol, QueueRepositoryProtocol
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
+from notebooklm_batch_studio.services.worker_pool import generate_jobs_for_course
+
+CHAPTER_TYPES = [t.value for t in ArtifactType if not t.value.startswith("course_")]
+COURSE_TYPES = [t.value for t in ArtifactType if t.value.startswith("course_")]
+UNSTARTED = [JobStatus.PENDING, JobStatus.QUOTA_WAIT, JobStatus.FAILED]
 
 logger = logging.getLogger(__name__)
 
@@ -134,3 +140,60 @@ class CourseSettingsService:
         self.queue_repo.enqueue_jobs([job])
         logger.info("Enqueued %s v%d for %s L%s", art_type.value, version, code, lecture_no)
         return {"job_id": job.id, "version": version, "label": label_for(art_type), "lecture_no": lecture_no}
+
+    def get_artifact_selection(self, code: str) -> dict[str, Any]:
+        """Return which artifact types a course generates, with labels for every choice.
+
+        Args:
+            code: Course code.
+
+        Returns:
+            Dictionary with `chapter` and `course` (selected type values) and `choices`
+            (type value and label for each scope).
+        """
+        course = self._course(code)
+        types = {j.artifact_type.value for j in generate_jobs_for_course(course)}
+        if course.selected_chapter_artifacts or course.selected_course_artifacts:
+            types = set(course.selected_chapter_artifacts) | set(course.selected_course_artifacts)
+        return {
+            "chapter": [t for t in CHAPTER_TYPES if t in types],
+            "course": [t for t in COURSE_TYPES if t in types],
+            "choices": {
+                "chapter": [{"value": t, "label": label_for(t)} for t in CHAPTER_TYPES],
+                "course": [{"value": t, "label": label_for(t)} for t in COURSE_TYPES],
+            },
+        }
+
+    def set_artifact_selection(self, code: str, chapter: list[str], whole: list[str]) -> dict[str, Any]:
+        """Change which artifact types a course generates after it was added.
+
+        Newly chosen types are queued (skipped jobs of that type are revived); unchosen types have
+        their unstarted jobs skipped. Finished outputs are never deleted.
+
+        Args:
+            code: Course code.
+            chapter: Per-lecture artifact type values to generate.
+            whole: Course-wide artifact type values to generate.
+
+        Returns:
+            Counts of queued, revived and skipped jobs plus the new selection.
+
+        Raises:
+            ValueError: When a value is not a known type of the right scope.
+        """
+        bad = [t for t in chapter if t not in CHAPTER_TYPES] + [t for t in whole if t not in COURSE_TYPES]
+        if bad:
+            raise ValueError(f"Unknown or wrong-scope artifact types: {', '.join(bad)}")
+        before = self.get_artifact_selection(code)
+        old = set(before["chapter"]) | set(before["course"])
+        new = set(chapter) | set(whole)
+        self.course_repo.update_artifact_selection(code, list(chapter), list(whole))
+        removed, added = sorted(old - new), sorted(new - old)
+        skipped = self.queue_repo.set_types_status(code, removed, UNSTARTED, JobStatus.SKIPPED)
+        revived = self.queue_repo.set_types_status(code, added, [JobStatus.SKIPPED], JobStatus.PENDING)
+        course = self._course(code)
+        queued = self.queue_repo.enqueue_jobs(
+            [j for j in generate_jobs_for_course(course) if j.artifact_type.value in added]
+        )
+        logger.info("Artifact selection for %s: +%s -%s", code, added, removed)
+        return {"queued": queued, "revived": revived, "skipped": skipped, **self.get_artifact_selection(code)}

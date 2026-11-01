@@ -14,10 +14,10 @@ from notebooklm_batch_studio.domain.repositories import OllamaClientProtocol
 logger = logging.getLogger(__name__)
 
 # Master Style Blueprint: System rules applied across all chapters to maintain style consistency
-MASTER_STYLE_SYSTEM_PROMPT = """你是一位具備頂尖心理學與量化研究法教學經驗的大學教授。
+MASTER_STYLE_SYSTEM_PROMPT = """你是一位熟悉本課程領域、具備豐富大學教學經驗的教授。
 你的任務是根據特定的章節主題與產出物類型，為 Google NotebookLM 撰寫精準、具學術水準的提示詞。
 核心規範：
-1. 難度定位：一律設定為大學高年級至研究所碩士班水準，著重於觀念辨析、方法學取捨與效度威脅。
+1. 難度定位：依各產出要求的難度出題，著重觀念辨析與應用。
 2. 語言規範：一律使用繁體中文 (zh-TW)，專有名詞在首次出現時須以括號附註英文原名。
 3. 風格一致性：格式結構需嚴謹統一，禁止出現過度口語或風格斷層的語調。
 4. 選項規範（針對測驗）：四個選項長度相仿、各具理論誘答力，禁止使用「以上皆是」或「以上皆非」。
@@ -34,30 +34,33 @@ def _get_quiz_prompts(base_rules: str) -> dict[str, str]:
         Mapping of quiz artifact types to prompt text.
     """
     return {
+        # Every quiz asks for 30 questions: the runner needs 30, and asking for fewer forces
+        # extra generation batches (duplicate titles, wasted quota). Wording is subject-neutral.
         ArtifactType.QUIZ_ACADEMIC.value: (
-            f"{base_rules}請根據本講義生成 30 題【高階學術精研測驗 (Academic Advanced Quiz)】單選題。"
-            "難度設定為研究所/大學高年級水準，著重於研究設計抉擇、效度威脅、方法學批判、統計推論陷阱與實務情境推理。"
-            "每題提供 4 個長度相仿且具學術誘答力之選項，標明正解並提供深度學術解析與講義依據。"
+            f"{base_rules}請根據本講義生成 30 題【學術精研測驗 (Academic Advanced Quiz)】單選題。"
+            "難度為研究所／大學高年級：比較不同理論或做法的優缺點、分析與批判論證、"
+            "在複雜情境中推理判斷、跨概念整合。"
+            "每題提供 4 個長度相仿且具誘答力之選項，標明正解並提供深度解析與講義依據。"
         ),
         ArtifactType.QUIZ_CONCEPT.value: (
-            f"{base_rules}請根據本講義生成 30 題【核心概念刷題測驗 (Concept Drill Quiz)】單選題。"
-            "著重於關鍵名詞定義、核心機制運作、高頻易混淆概念辨析、公式與流程步驟速測。"
-            "每題提供 4 個選項，題幹精簡明確，標明正解並附詳盡觀念診斷解析。"
+            f"{base_rules}請根據本講義生成 30 題【概念刷題測驗 (Concept Drill Quiz)】單選題。"
+            "著重快速檢查觀念：關鍵名詞定義、容易混淆的概念比較、流程或步驟的順序、核心原理。"
+            "每題提供 4 個選項，題幹精簡明確，標明正解並附觀念診斷解析。"
         ),
         ArtifactType.QUIZ_1.value: (
-            f"{base_rules}請根據本講義生成 10 題【測驗 1 - 基礎記憶與核心定義】單選題。"
-            "著重於研究假設、變項定義（操作型定義）、基本假說與概念辨析。"
-            "每題提供 4 個長度相仿且具誘答力的選項，標明正確答案並附詳細學術解析與講義依據。"
+            f"{base_rules}請根據本講義生成 30 題【測驗 1 - 基礎記憶與核心定義】單選題。"
+            "著重本講的重要名詞、定義、基本事實與基本原理，確認是否記得並分得清楚。"
+            "每題提供 4 個長度相仿且具誘答力的選項，標明正確答案並附詳細解析與講義依據。"
         ),
         ArtifactType.QUIZ_2.value: (
-            f"{base_rules}請根據本講義生成 10 題【測驗 2 - 理解應用與研究設計】單選題。"
-            "題幹必須融入具體實驗、問卷或觀察情境，考核研究方法抉擇、抽樣限制與潛在混淆變項。"
-            "每題提供 4 個長度相仿之選項，標明答案並提供深度學術解析。"
+            f"{base_rules}請根據本講義生成 30 題【測驗 2 - 理解與應用】單選題。"
+            "題幹必須放進具體情境或例子，考核能否用本講的概念解釋現象、選擇合適做法或判斷結果。"
+            "每題提供 4 個長度相仿之選項，標明答案並提供深度解析。"
         ),
         ArtifactType.QUIZ_3.value: (
-            f"{base_rules}請根據本講義生成 10 題【測驗 3 - 模擬實戰與效度威脅】高階單選題。"
-            "聚焦於統計結論效度、內外在效度威脅、研究倫理情境判斷與反思題。"
-            "選項應具備高度理論辨析度，詳細說明正確理由與各干擾選項之錯誤根因。"
+            f"{base_rules}請根據本講義生成 30 題【測驗 3 - 模擬考】高難度單選題。"
+            "模擬正式考試：綜合多個概念、比較易混淆觀念、分析限制與例外、需要多步推理的題目。"
+            "選項應具高度辨析度，詳細說明正確理由與各干擾選項錯在哪裡。"
         ),
     }
 
@@ -135,13 +138,13 @@ def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, st
     """
     return {
         ArtifactType.COURSE_MOCK_EXAM.value: (
-            f"本課程為【{course_name}】全範圍綜合期末考。難度設定為研究所入學考水準。"
-            f"{lang_instruction}請生成 50 題跨章節整合單選題，涵蓋核心脈絡與綜合研究設計分析。"
+            f"本課程為【{course_name}】全範圍綜合期末考。難度設定為期末考水準，簡單、中等、困難題目都要有。"
+            f"{lang_instruction}請生成 50 題跨章節整合單選題，涵蓋各章核心概念與跨章節的綜合應用。"
             "每題附詳細學術解析、診斷提示與各選項辨析。"
         ),
         ArtifactType.COURSE_QUIZ_ACADEMIC.value: (
             f"本課程為【{course_name}】全範圍學術精研期末考。難度設定為研究所入學考水準。"
-            f"{lang_instruction}請生成 50 題跨章節深度學術單選題，著重跨概念統整、方法批判與研究效度。"
+            f"{lang_instruction}請生成 50 題跨章節深度學術單選題，著重跨概念統整、理論比較與批判分析。"
             "每題附完整解析與選項理論辨析。"
         ),
         ArtifactType.COURSE_QUIZ_CONCEPT.value: (
@@ -159,7 +162,7 @@ def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, st
         ),
         ArtifactType.COURSE_AUDIO.value: (
             f"本課程為【{course_name}】。{lang_instruction}請產出全課程總回顧語音導讀腳本。"
-            "貫穿全學期講授之心理學研究方法體系，串聯各章關鍵概念與研究思維精華。"
+            "貫穿全學期的知識體系，串聯各章關鍵概念與核心思維。"
         ),
         ArtifactType.COURSE_REPORTS_BRIEFING.value: (
             f"本課程為【{course_name}】全範圍學術總結報告。{lang_instruction}"
@@ -212,15 +215,13 @@ class PromptGenerator:
             Structured prompt string matching the master academic blueprint.
         """
         type_val = artifact_type.value if isinstance(artifact_type, ArtifactType) else str(artifact_type)
-        lang_instruction = "請一律以標準繁體中文 (zh-TW) 輸出，重要心理學與統計學名詞於括號附註英文。"
+        lang_instruction = "請一律以標準繁體中文 (zh-TW) 輸出，重要專有名詞於括號附註英文。"
         if language == "en":
             lang_instruction = "Please output strictly in formal academic English."
         elif language == "bilingual":
             lang_instruction = "請採用中英雙語對照輸出 (Traditional Chinese and English bilingual format)。"
 
-        base_rules = (
-            f"本講義主題為【{course_name} — {topic}】。難度設定為研究所/大學高年級水準。{lang_instruction} "
-        )
+        base_rules = f"本講義主題為【{course_name} — {topic}】。{lang_instruction} "
 
         all_prompts = _get_chapter_prompts(base_rules)
         all_prompts.update(_get_course_prompts(course_name, lang_instruction))

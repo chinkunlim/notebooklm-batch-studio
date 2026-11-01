@@ -10,6 +10,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import subprocess
+import sys
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -30,23 +32,48 @@ from notebooklm_batch_studio.services.worker_pool import WorkerPool
 logger = logging.getLogger(__name__)
 
 
-def _handle_login(config: AppConfig) -> int:
-    """Check NotebookLM login credentials status.
+def _browser_login(config: AppConfig, storage_path: Path) -> int:
+    """Open a browser so the user signs in to Google personally; notebooklm-py saves the session.
+
+    The program never sees or stores the password: the user types it in the browser window and
+    notebooklm-py only writes the resulting session cookies to `storage_path` (ADR-002).
+
+    Args:
+        config: Application configuration (credential folder).
+        storage_path: Where notebooklm-py stores the session state.
+
+    Returns:
+        Exit code of the notebooklm login command.
+    """
+    notebooklm_cli = Path(sys.executable).with_name("notebooklm")
+    print(f"🌐 開啟瀏覽器登入 NotebookLM，請在視窗中親自登入 Google。憑證會存到：{storage_path}")
+    logger.info("Starting browser login, storage=%s", storage_path)
+    # load_config() already exported NOTEBOOKLM_HOME, so the child process inherits it.
+    return subprocess.call([str(notebooklm_cli), "login", "--storage", str(storage_path)])
+
+
+def _handle_login(config: AppConfig, browser: bool = False) -> int:
+    """Check NotebookLM login credentials, or sign in through the browser with `--browser`.
 
     Args:
         config: Application configuration.
+        browser: Open the browser login flow instead of only checking.
 
     Returns:
         Exit code (0 on success, 1 on missing auth).
     """
     adapter = NotebookLMAdapter(config)
+    if browser:
+        code = _browser_login(config, adapter.storage_path)
+        if code != 0:
+            return code
     if adapter.check_auth():
         print(f"✅ NotebookLM 認證檔案存在且有效：{adapter.storage_path}")
         return 0
 
     print("❌ 尚未找到有效登入憑證！")
     print(f"   預期存放路徑：{adapter.storage_path}")
-    print("   請執行 `python3 scripts/spike_notebooklm.py login` 完成瀏覽器手動登入。")
+    print("   請執行 `uv run notebooklm-batch-studio login --browser` 在瀏覽器親自登入。")
     return 1
 
 
@@ -257,7 +284,7 @@ def _dispatch_command(args: argparse.Namespace, config: AppConfig) -> int:
         Exit code integer.
     """
     if args.command == "login":
-        return _handle_login(config)
+        return _handle_login(config, args.browser)
     if args.command == "status":
         return _handle_status(config, course_code=args.course)
     if args.command == "resume":
@@ -318,7 +345,10 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     subparsers = parser.add_subparsers(dest="command", help="子命令")
-    subparsers.add_parser("login", help="檢查 NotebookLM 登入憑證")
+    login_parser = subparsers.add_parser(
+        "login", help="檢查 NotebookLM 登入憑證（加 --browser 開瀏覽器登入）"
+    )
+    login_parser.add_argument("--browser", action="store_true", help="開啟瀏覽器，由你親自登入 Google")
 
     status_parser = subparsers.add_parser("status", help="檢視課程與工作佇列狀態")
     status_parser.add_argument("--course", default=None, help="過濾特定課程代碼")

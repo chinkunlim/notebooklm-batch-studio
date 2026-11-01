@@ -205,6 +205,19 @@ class AdapterGenerationTest(unittest.IsolatedAsyncioTestCase):
         ):
             self.assertEqual(arts.called(name)[0]["language"], "zh_Hant", name)
 
+    async def test_report_instructions_and_concept_format(self) -> None:
+        """Preset formats get our prompt as extra_instructions; concept is sent as CUSTOM. Refs: ISSUE-016"""
+        from notebooklm import ReportFormat
+
+        arts = FakeArtifactsAPI(_status("a1", "pending"))
+        with self._patch(arts):
+            await self.adapter.generate_report("nb", ["s1"], prompt="P", report_format="briefing_doc")
+            await self.adapter.generate_report("nb", ["s1"], prompt="P", report_format="concept_explanation")
+        first, second = arts.called("generate_report")
+        self.assertIn("P", first["extra_instructions"])
+        self.assertEqual(second["report_format"], ReportFormat.CUSTOM)
+        self.assertIn("key concepts", second["custom_prompt"])
+
     async def test_english_course_keeps_english(self) -> None:
         """language='en' maps to the library's 'en' code."""
         arts = FakeArtifactsAPI(_status("a1", "pending"))

@@ -459,7 +459,9 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
         q1_prompt = gen.get_base_blueprint_prompt(
             ArtifactType.QUIZ_1, "科學研究導論", "心理學研究法", language="zh-TW"
         )
-        self.assertIn("研究所/大學高年級水準", q1_prompt)
+        # The basic quiz must not be forced to graduate level, and asks for the full 30 questions.
+        self.assertNotIn("研究所", q1_prompt)
+        self.assertIn("30 題", q1_prompt)
         self.assertIn("標準繁體中文 (zh-TW)", q1_prompt)
         self.assertIn("測驗 1 - 基礎記憶與核心定義", q1_prompt)
 
@@ -481,13 +483,13 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
         acad_prompt = gen.get_base_blueprint_prompt(
             ArtifactType.QUIZ_ACADEMIC, "推論統計", "心理學研究法", language="zh-TW"
         )
-        self.assertIn("高階學術精研測驗", acad_prompt)
+        self.assertIn("學術精研測驗", acad_prompt)
         self.assertIn("30 題", acad_prompt)
 
         concept_prompt = gen.get_base_blueprint_prompt(
             ArtifactType.QUIZ_CONCEPT, "推論統計", "心理學研究法", language="zh-TW"
         )
-        self.assertIn("核心概念刷題測驗", concept_prompt)
+        self.assertIn("概念刷題測驗", concept_prompt)
         self.assertIn("30 題", concept_prompt)
 
         report_prompt = gen.get_base_blueprint_prompt(

@@ -143,8 +143,7 @@ notebooklm-batch-studio/
 │   │   └── TESTING_AND_QUALITY.md          # 測試金字塔與 DoD 驗收清單
 │   └── TEMPLATE_FEEDBACK.md
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
-│   ├── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
-│   └── spike_notebooklm.py
+│   └── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── notebooklm_batch_studio/
 │       ├── adapters/
@@ -206,6 +205,7 @@ notebooklm-batch-studio/
 │       │   ├── artifact_runner.py
 │       │   ├── course_parser.py
 │       │   ├── course_settings.py
+│       │   ├── folder_browser.py
 │       │   ├── job_views.py
 │       │   ├── orchestrator.py
 │       │   ├── prompt_generator.py
@@ -234,6 +234,7 @@ notebooklm-batch-studio/
 │   ├── test_notebooklm_generation.py
 │   ├── test_quota_and_limits.py
 │   ├── test_remaining_fixes.py
+│   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py
 │   ├── test_study_service.py
 │   └── test_versions_and_options.py

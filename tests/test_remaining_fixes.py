@@ -77,11 +77,11 @@ class QuotaPlannerTest(unittest.TestCase):
         self.assertIsNone(quota_retry_after({"status": "disabled"}, ArtifactType.AUDIO, NOW))
 
     def test_estimate_uses_live_costs(self) -> None:
-        """Six audio jobs cost 60% of a window; with 50% left one extra window is needed."""
-        plan = estimate_quota_plan([ArtifactType.AUDIO] * 6, make_quota(five_hour_remaining=50.0))
+        """Six audio jobs cost 60% of a window; with 50% left the wait is until the reset (2 h)."""
+        plan = estimate_quota_plan([ArtifactType.AUDIO] * 6, make_quota(five_hour_remaining=50.0), now=NOW)
         self.assertEqual(plan["estimated_quota_percent"], 60.0)
         self.assertEqual(plan["estimated_windows"], 2)
-        self.assertEqual(plan["estimated_wait_hours"], 5)
+        self.assertEqual(plan["estimated_wait_hours"], 2.0)  # until the current window resets
         self.assertEqual(plan["estimated_days"], 1)
         self.assertFalse(estimate_quota_plan([ArtifactType.AUDIO], None)["quota_estimate_available"])
 

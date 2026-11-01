@@ -44,6 +44,13 @@ from notebooklm_batch_studio.domain.models import GenerationOptions
 
 logger = logging.getLogger(__name__)
 
+# Same directive notebooklm-py uses for its (web-disabled) Concept Explanation report format.
+CONCEPT_EXPLANATION_DIRECTIVE = (
+    "Explain the key concepts from the provided sources clearly and comprehensively. "
+    "Define important terms, connect related ideas, use examples where helpful, and "
+    "address common misconceptions."
+)
+
 T = TypeVar("T")
 
 
@@ -433,18 +440,26 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
         Returns:
             The completed report artifact id.
         """
+        # notebooklm-py only reads `custom_prompt` for the CUSTOM format; preset formats take our
+        # instructions through `extra_instructions`. Its web backend also refuses CONCEPT_EXPLANATION,
+        # so that format is sent as CUSTOM with the same concept-explanation directive. Refs: ISSUE-016
+        instructions = build_language_instruction(prompt, language)
         formats = {
             "study_guide": ReportFormat.STUDY_GUIDE,
             "blog_post": ReportFormat.BLOG_POST,
-            "concept_explanation": ReportFormat.CONCEPT_EXPLANATION,
         }
+        kwargs: dict[str, Any] = {"extra_instructions": instructions}
+        fmt = formats.get(report_format, ReportFormat.BRIEFING_DOC)
+        if report_format == "concept_explanation":
+            fmt = ReportFormat.CUSTOM
+            kwargs = {"custom_prompt": f"{CONCEPT_EXPLANATION_DIRECTIVE}\n\n{instructions}"}
         async with self._client() as client:
             status = await client.artifacts.generate_report(
                 notebook_id=notebook_id,
-                report_format=formats.get(report_format, ReportFormat.BRIEFING_DOC),
+                report_format=fmt,
                 source_ids=source_ids,
                 language=to_nlm_language(language),
-                custom_prompt=build_language_instruction(prompt, language),
+                **kwargs,
             )
             return await finish_generation(client, notebook_id, status, f"report ({report_format})")
 

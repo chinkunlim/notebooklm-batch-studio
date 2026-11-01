@@ -279,6 +279,22 @@ class CourseRepository:
             result.append(_to_domain_course(r, lectures))
         return result
 
+    def update_artifact_selection(self, code: str, chapter: list[str], whole: list[str]) -> None:
+        """Replace a course's chosen per-lecture and course-wide artifact types.
+
+        Args:
+            code: Course code.
+            chapter: Per-lecture artifact type values.
+            whole: Course-wide artifact type values.
+        """
+        record = self.session.get(CourseRecord, code)
+        if record:
+            record.selected_chapter_artifacts = json.dumps(chapter)
+            record.selected_course_artifacts = json.dumps(whole)
+            record.updated_at = utc_now()
+            self.session.flush()
+            self.session.commit()
+
     def update_generation_options(self, code: str, options: GenerationOptions) -> None:
         """Store a course's NotebookLM generation options.
 
@@ -436,6 +452,42 @@ class QueueRepository:
             record.artifact_ids = json.dumps(list(artifact_ids))
             self.session.flush()
             self.session.commit()
+
+    def set_types_status(
+        self,
+        course_code: str,
+        artifact_types: list[str],
+        from_statuses: list[JobStatus],
+        to_status: JobStatus,
+    ) -> int:
+        """Move a course's jobs of the given types from some statuses to another.
+
+        Used to skip unstarted jobs of types the user removed, and to revive skipped jobs of types
+        the user added back. Running, finished and reviewed jobs are never touched.
+
+        Args:
+            course_code: Course code.
+            artifact_types: Artifact type values to change.
+            from_statuses: Only jobs currently in these statuses change.
+            to_status: New status.
+
+        Returns:
+            Number of jobs changed.
+        """
+        if not artifact_types:
+            return 0
+        stmt = select(ArtifactJobRecord).where(
+            ArtifactJobRecord.course_code == course_code,
+            ArtifactJobRecord.artifact_type.in_(artifact_types),
+            ArtifactJobRecord.status.in_([s.value for s in from_statuses]),
+        )
+        records = self.session.scalars(stmt).all()
+        for record in records:
+            record.status = to_status.value
+            record.updated_at = utc_now()
+        self.session.flush()
+        self.session.commit()
+        return len(records)
 
     def max_version(self, course_code: str, lecture_no: int | None, artifact_type: ArtifactType) -> int:
         """Return the highest version generated so far for one artifact slot.

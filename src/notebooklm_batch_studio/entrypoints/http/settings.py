@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
-from notebooklm_batch_studio.entrypoints.schemas import RegenerateRequest, UpdateOptionsRequest
+from notebooklm_batch_studio.entrypoints.schemas import (
+    ArtifactSelectionRequest,
+    RegenerateRequest,
+    UpdateOptionsRequest,
+)
+from notebooklm_batch_studio.services.folder_browser import browse_folders
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
 settings_router = APIRouter()
@@ -104,3 +109,75 @@ def regenerate_artifact(code: str, req: RegenerateRequest, request: Request) -> 
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@settings_router.get(
+    "/api/courses/{code}/artifact-types", tags=["Settings"], operation_id="get_course_artifact_types"
+)
+def get_course_artifact_types(code: str, request: Request) -> dict[str, Any]:
+    """Read which artifact types a course generates and every type that can be chosen.
+
+    Args:
+        code: Course code.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Selected chapter / course types and the labelled choices.
+
+    Raises:
+        HTTPException: 404 when the course does not exist.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return service.course_settings.get_artifact_selection(code)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@settings_router.put(
+    "/api/courses/{code}/artifact-types", tags=["Settings"], operation_id="set_course_artifact_types"
+)
+def set_course_artifact_types(code: str, req: ArtifactSelectionRequest, request: Request) -> dict[str, Any]:
+    """Change which artifact types a course generates: added types are queued, removed types skipped.
+
+    Args:
+        code: Course code.
+        req: Chosen chapter and course-wide types.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Counts of queued / revived / skipped jobs and the new selection.
+
+    Raises:
+        HTTPException: 404 for an unknown course, 422 for an invalid type.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return service.course_settings.set_artifact_selection(code, req.chapter, req.course)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@settings_router.get("/api/folders", tags=["Settings"], operation_id="browse_folders")
+def get_folders(
+    request: Request,
+    path: str | None = Query(default=None, description="Folder to open; empty for shortcuts"),
+) -> dict[str, Any]:
+    """List sub-folders (with PDF counts) so course folders can be picked by clicking.
+
+    Args:
+        request: Incoming HTTP request context.
+        path: Absolute folder path inside the home directory, or empty for the shortcuts.
+
+    Returns:
+        Current folder, its parent, and its visible sub-folders.
+
+    Raises:
+        HTTPException: 400 when the folder is outside the home directory or unreadable.
+    """
+    try:
+        return browse_folders(path, request.app.state.config.courses_input_dir)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

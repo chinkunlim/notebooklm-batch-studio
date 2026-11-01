@@ -275,6 +275,10 @@
         <button onclick="closeDetail()">✖ 關閉詳細資訊</button>
       </div>
       <div id="detailContent" class="card"></div>
+      <details id="detailSelectionBox" class="card" style="margin-top: 16px;">
+        <summary style="cursor: pointer; font-weight: 600; color: #38bdf8;">🧩 產出內容（這門課要生成哪些；新增的會排入佇列，取消的不再生成，已完成的檔案不會刪）</summary>
+        <div id="detailSelection" style="margin-top: 12px;">載入中...</div>
+      </details>
       <details id="detailOptionsBox" class="card" style="margin-top: 16px;">
         <summary style="cursor: pointer; font-weight: 600; color: #38bdf8;">⚙️ 產出設定（之後生成的內容才會套用；已生成的請按「重新生成」）</summary>
         <div id="detailOptions" style="margin-top: 12px;">載入中...</div>
@@ -315,7 +319,7 @@
             <button id="btnTabQuiz" class="study-tab-btn" onclick="switchStudyTab('quiz')">📝 互動測驗</button>
             <button id="btnTabMistakes" class="study-tab-btn" onclick="switchStudyTab('mistakes')">📕 弱點錯題集 <span id="badgeMistakeCount" class="badge badge-warning" style="display:none;">0</span></button>
             <button id="btnTabFlashcards" class="study-tab-btn" onclick="switchStudyTab('flashcards')">🗂️ 3D 抽認卡</button>
-            <button id="btnTabReports" class="study-tab-btn" onclick="switchStudyTab('reports')">📑 研讀報告/心智圖</button>
+            <button id="btnTabReports" class="study-tab-btn" onclick="switchStudyTab('reports')">📑 報告・圖表・心智圖</button>
           </div>
         </div>
 
@@ -372,12 +376,7 @@
         <!-- Tab 5: Reports & Mind Map Panel -->
         <div id="tabPanelReports" class="card" style="display: none; padding: 24px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-            <div style="display: flex; gap: 8px;">
-              <button id="btnRepStudyGuide" class="primary" onclick="loadReportInViewer('reports_study_guide')">📑 Study Guide (研讀指南)</button>
-              <button id="btnRepBriefing" onclick="loadReportInViewer('reports_briefing')">📋 Briefing Doc (簡報)</button>
-              <button id="btnRepBlogPost" onclick="loadReportInViewer('reports_blog_post')">✍️ Blog Post (文章)</button>
-              <button id="btnRepMindMap" onclick="loadReportInViewer('mind_map')">🧠 Mind Map (心智圖)</button>
-            </div>
+            <div id="reportKindButtons" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
           </div>
           <div id="reportContentContainer" style="min-height: 400px; background: #0f172a; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto;"></div>
         </div>
@@ -390,11 +389,21 @@
     <div class="modal">
       <h3 style="font-size: 1.25rem;">➕ 加入課程資料夾與精細產出設定</h3>
       <p style="font-size: 0.85rem; color: var(--text-muted);">
-        輸入本機課程講義 PDF 資料夾路徑（例如：<code>../../projects-data/notebooklm-batch-studio/input/courses/115-1 心理學研究法</code>）。
+        點選資料夾瀏覽，找到放講義 PDF 的課程資料夾後按「✅ 選這個資料夾」。可以選好幾門課。
       </p>
-      <div>
-        <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">資料夾路徑（每行一個）：</label>
-        <textarea id="folderPaths" rows="2" placeholder="/path/to/course_folder"></textarea>
+      <div style="background:#0f172a; border:1px solid var(--border); border-radius: var(--radius); padding: 10px;">
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+          <button type="button" onclick="browseFolder(null)" style="padding:4px 10px; font-size:0.8rem;">🏠 開始位置</button>
+          <button type="button" id="btnFolderUp" onclick="browseFolder(currentBrowseParent)" style="padding:4px 10px; font-size:0.8rem;">⬆️ 上一層</button>
+          <span id="folderCurrent" style="font-size:0.8rem; color:var(--text-muted); word-break:break-all;"></span>
+          <button type="button" id="btnPickFolder" class="primary" onclick="pickCurrentFolder()" style="padding:4px 10px; font-size:0.8rem; margin-left:auto;">✅ 選這個資料夾</button>
+        </div>
+        <div id="folderList" style="max-height: 220px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; font-size:0.85rem;"></div>
+      </div>
+      <div style="margin-top:8px;">
+        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">已選的課程資料夾：</span>
+        <div id="pickedFolders" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; font-size:0.8rem;"><span style="color:var(--text-muted);">（還沒選）</span></div>
+        <textarea id="folderPaths" style="display:none;"></textarea>
       </div>
 
       <div style="display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap;">
@@ -429,8 +438,8 @@
           <label><input type="checkbox" name="chap_art" value="reports_study_guide" checked> 📑 Reports: Study Guide</label>
           <label><input type="checkbox" name="chap_art" value="reports_blog_post"> 📑 Reports: Blog Post</label>
           <label><input type="checkbox" name="chap_art" value="reports_concept_explanation" checked> 📑 Reports: 概念解說</label>
-          <label><input type="checkbox" name="chap_art" value="quiz_academic" checked> 📝 Quiz: 研究所/高年級深入版</label>
-          <label><input type="checkbox" name="chap_art" value="quiz_concept" checked> ⚡ Quiz: 考概念刷題風格版</label>
+          <label><input type="checkbox" name="chap_art" value="quiz_academic"> 📝 進階・學術精研（研究所程度）</label>
+          <label><input type="checkbox" name="chap_art" value="quiz_concept"> ⚡ 進階・概念刷題（快速複習）</label>
           <label><input type="checkbox" name="chap_art" value="data_table"> 📊 Data Table</label>
           <label><input type="checkbox" name="chap_art" value="slide_deck"> 📑 Slide Deck</label>
           <label><input type="checkbox" name="chap_art" value="mind_map" checked> 🧠 Mind Map</label>
@@ -450,8 +459,8 @@
           <label><input type="checkbox" name="course_art" value="course_reports_study_guide" checked> 📑 全課 Study Guide</label>
           <label><input type="checkbox" name="course_art" value="course_reports_blog_post"> 📑 全課 Blog Post</label>
           <label><input type="checkbox" name="course_art" value="course_reports_concept_explanation"> 📑 全課 概念解說</label>
-          <label><input type="checkbox" name="course_art" value="course_quiz_academic" checked> 📝 全課期末考: 研究所深入版</label>
-          <label><input type="checkbox" name="course_art" value="course_quiz_concept" checked> ⚡ 全課期末考: 考概念刷題版</label>
+          <label><input type="checkbox" name="course_art" value="course_quiz_academic"> 📝 全課進階・學術精研考</label>
+          <label><input type="checkbox" name="course_art" value="course_quiz_concept"> ⚡ 全課進階・概念刷題考</label>
           <label><input type="checkbox" name="course_art" value="course_mind_map" checked> 🧠 全課跨章 Mind Map</label>
           <label><input type="checkbox" name="course_art" value="course_slide_deck"> 📑 全課 Slide Deck</label>
           <label><input type="checkbox" name="course_art" value="course_data_table"> 📊 全課 Data Table</label>
@@ -699,7 +708,7 @@
         loadFlashcardsViewer();
       } else if (tabName === 'reports') {
         document.getElementById('tabPanelReports').style.display = 'block';
-        loadReportInViewer('reports_study_guide');
+        loadReportInViewer('guide');
       }
     }
 
@@ -1083,49 +1092,83 @@
       }
     }
 
-    async function loadReportInViewer(reportType) {
-      ['btnRepStudyGuide', 'btnRepBriefing', 'btnRepBlogPost', 'btnRepMindMap'].forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) btn.className = '';
-      });
+    // Study-portal viewers for every document-like output (newest finished version first).
+    const REPORT_KINDS = {
+      guide: { label: '📘 讀書指南', types: ['study_guide', 'reports_study_guide'] },
+      concept: { label: '💡 概念解說', types: ['reports_concept_explanation'] },
+      briefing: { label: '📋 簡報文件', types: ['reports_briefing'] },
+      blog: { label: '✍️ 部落格文章', types: ['reports_blog_post'] },
+      infographic: { label: '🎨 資訊圖表', types: ['infographic'] },
+      table: { label: '📊 資料表', types: ['data_table'] },
+      mindmap: { label: '🧠 心智圖', types: ['mind_map'] },
+      slides: { label: '🖥️ 投影片', types: ['slide_deck'] },
+    };
 
-      const map = {
-        'reports_study_guide': 'btnRepStudyGuide',
-        'reports_briefing': 'btnRepBriefing',
-        'reports_blog_post': 'btnRepBlogPost',
-        'mind_map': 'btnRepMindMap'
-      };
-      if (map[reportType]) {
-        const activeBtn = document.getElementById(map[reportType]);
-        if (activeBtn) activeBtn.className = 'primary';
-      }
-
-      const container = document.getElementById('reportContentContainer');
-      container.innerHTML = '<div style="color:var(--text-muted);">正在搜尋報告產出物...</div>';
-      const code = currentStudyCourse.code;
+    function pickLatestJob(types) {
       const isCourse = activeStudyLectureNo === null;
-      const targetType = isCourse ? `course_${reportType}` : reportType;
+      const wanted = types.map(t => (isCourse ? `course_${t}` : t));
+      return (currentStudyCourse.jobs || [])
+        .filter(j => wanted.includes(j.artifact_type) && j.output_file && ['done', 'needs_review'].includes(j.status)
+          && (isCourse ? j.lecture_no === null : j.lecture_no === activeStudyLectureNo))
+        .sort((a, b) => (b.version || 1) - (a.version || 1))[0];
+    }
 
-      const job = (currentStudyCourse.jobs || []).find(j => 
-        j.artifact_type === targetType && (isCourse ? j.lecture_no === null : j.lecture_no === activeStudyLectureNo)
-      );
+    function parseCsv(text) {
+      const rows = []; let row = []; let cell = ''; let quoted = false;
+      text = text.replace(/^\uFEFF/, '');
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (quoted) {
+          if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+          else if (ch === '"') quoted = false;
+          else cell += ch;
+        } else if (ch === '"') quoted = true;
+        else if (ch === ',') { row.push(cell); cell = ''; }
+        else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+        else if (ch !== '\r') cell += ch;
+      }
+      if (cell || row.length) { row.push(cell); rows.push(row); }
+      return rows;
+    }
 
-      if (job && job.output_file) {
-        const filePath = job.rel_path || job.output_file.split('/').pop();
-        const fileUrl = `/api/artifacts/${code}/download/${encodeURIComponent(filePath)}`;
-        if (filePath.endsWith('.html')) {
-          container.innerHTML = `<iframe src="${fileUrl}" style="width:100%; height:550px; border:none; border-radius:var(--radius); background:#fff;"></iframe>`;
-        } else {
-          try {
-            const res = await fetch(fileUrl);
-            const text = await res.text();
-            container.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; line-height:1.6; font-size:0.95rem;">${escHtml(text)}</pre>`;
-          } catch (e) {
-            container.innerHTML = `無法載入檔案內容。`;
-          }
+    async function loadReportInViewer(kind) {
+      const buttons = document.getElementById('reportKindButtons');
+      buttons.innerHTML = Object.entries(REPORT_KINDS).map(([key, k]) =>
+        `<button class="${key === kind ? 'primary' : ''}" onclick="loadReportInViewer('${key}')">${k.label}</button>`).join('');
+      const container = document.getElementById('reportContentContainer');
+      const spec = REPORT_KINDS[kind] || REPORT_KINDS.guide;
+      const job = pickLatestJob(spec.types);
+      if (!job) {
+        container.innerHTML = `<div class="empty-state">這個範圍還沒有「${spec.label}」。可到管理控制台的「🧩 產出內容」勾選後生成。</div>`;
+        return;
+      }
+      const code = currentStudyCourse.code;
+      const path = job.rel_path || job.output_file.split('/').pop();
+      const enc = encodeURI(path);
+      const dl = `/api/artifacts/${code}/download/${enc}`;
+      const header = `<div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">v${job.version || 1}${job.status === 'needs_review' ? '・⚠️ 需審查' : ''}・<a href="${dl}" target="_blank">開新分頁 / 下載</a></div>`;
+      const ext = path.split('.').pop().toLowerCase();
+      if (['md', 'opml', 'json'].includes(ext)) {
+        container.innerHTML = header + `<iframe src="/api/artifacts/${code}/view/${enc}" style="width:100%; height:620px; border:none; border-radius:var(--radius);"></iframe>`;
+      } else if (ext === 'png') {
+        const stem = path.replace(/\.png$/, '');
+        const extras = [['_A4.pdf', 'A4 PDF'], ['_iPadAir4.png', 'iPad Air 4'], ['_MacBookPro14.png', 'MacBook Pro 14']];
+        const links = [];
+        for (const [suffix, name] of extras) {
+          const url = `/api/artifacts/${code}/download/${encodeURI(stem + suffix)}`;
+          try { if ((await fetch(url, { method: 'HEAD' })).ok) links.push(`<a class="btn" href="${url}" target="_blank" style="padding:2px 8px; font-size:0.75rem;">${name}</a>`); } catch (e) { /* optional copy */ }
         }
+        container.innerHTML = header + (links.length ? `<div style="display:flex; gap:6px; margin-bottom:10px;">裝置版本：${links.join('')}</div>` : '') +
+          `<img src="${dl}" alt="${escHtml(spec.label)}" style="max-width:100%; border-radius:var(--radius); background:#fff;">`;
+      } else if (ext === 'csv') {
+        const rows = parseCsv(await (await fetch(dl)).text()).filter(r => r.some(c => c.trim()));
+        const [head, ...body] = rows;
+        container.innerHTML = header + `<table><thead><tr>${(head || []).map(c => `<th>${escHtml(c)}</th>`).join('')}</tr></thead>
+          <tbody>${body.map(r => `<tr>${r.map(c => `<td>${escHtml(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      } else if (ext === 'pdf' || ext === 'html') {
+        container.innerHTML = header + `<iframe src="${dl}" style="width:100%; height:620px; border:none; border-radius:var(--radius); background:#fff;"></iframe>`;
       } else {
-        container.innerHTML = `<div class="empty-state">此章節尚未生成該類型報告 (${reportType})，可至管理控制台勾選並生成。</div>`;
+        container.innerHTML = header + `<div class="empty-state">這個格式（.${escHtml(ext)}）無法在網頁預覽，請用上方連結下載。</div>`;
       }
     }
 
@@ -1365,6 +1408,7 @@
         content.innerHTML = '<div style="color:var(--text-muted);">載入中...</div>';
         sec.scrollIntoView({ behavior: 'smooth' });
         loadCourseOptions(code);
+        loadArtifactSelection(code);
       }
 
       try {
@@ -1566,6 +1610,40 @@
       }
     }
 
+    async function loadArtifactSelection(code) {
+      const box = document.getElementById('detailSelection');
+      try {
+        const res = await fetch(`/api/courses/${code}/artifact-types`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        const grid = (scope, title) => `
+          <div style="font-weight:600; margin: 8px 0 6px;">${title}</div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; font-size: 0.85rem;">
+            ${data.choices[scope].map(c => `<label><input type="checkbox" data-scope="${scope}" value="${c.value}" ${data[scope].includes(c.value) ? 'checked' : ''}> ${escHtml(c.label)}</label>`).join('')}
+          </div>`;
+        box.innerHTML = grid('chapter', '📌 每一講各自產生') + grid('course', '🌐 整門課合併產生') +
+          `<div style="display:flex; justify-content:flex-end; margin-top: 12px;"><button class="primary" onclick="saveArtifactSelection('${code}')">💾 儲存產出內容</button></div>`;
+      } catch (e) {
+        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
+      }
+    }
+
+    async function saveArtifactSelection(code) {
+      const pick = scope => [...document.querySelectorAll(`#detailSelection input[data-scope="${scope}"]:checked`)].map(b => b.value);
+      try {
+        const res = await fetch(`/api/courses/${code}/artifact-types`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chapter: pick('chapter'), course: pick('course') }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        alert(`已儲存：新排入 ${data.queued + data.revived} 項、取消 ${data.skipped} 項尚未開始的工作。已完成的檔案都保留。`);
+        await viewCourseDetail(code, true);
+      } catch (e) {
+        alert('儲存失敗：' + e.message);
+      }
+    }
+
     async function saveCourseOptions(code) {
       const options = {};
       document.querySelectorAll('#detailOptions [data-opt]').forEach(el => {
@@ -1689,18 +1767,70 @@
 
     function openAddModal() {
       document.getElementById('addModal').style.display = 'flex';
+      browseFolder(null);
+    }
+
+    let currentBrowsePath = null;
+    let currentBrowseParent = null;
+    let pickedFolders = [];
+
+    async function browseFolder(path) {
+      const list = document.getElementById('folderList');
+      try {
+        const res = await fetch('/api/folders' + (path ? `?path=${encodeURIComponent(path)}` : ''));
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        currentBrowsePath = data.path;
+        currentBrowseParent = data.parent;
+        document.getElementById('folderCurrent').textContent = data.path ? `📂 ${data.path}（${data.pdf_count} 個 PDF）` : '從這裡開始找課程資料夾';
+        document.getElementById('btnFolderUp').disabled = !data.parent;
+        document.getElementById('btnPickFolder').disabled = !data.path || data.pdf_count === 0;
+        list.innerHTML = data.folders.length ? data.folders.map((f, i) => `
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button type="button" data-idx="${i}" class="folder-open" style="flex:1; text-align:left; padding:6px 10px;">📁 ${escHtml(f.name)} ${f.pdf_count ? `<span class="badge badge-success">${f.pdf_count} 個 PDF</span>` : ''}</button>
+            ${f.pdf_count ? `<button type="button" data-idx="${i}" class="folder-pick primary" style="padding:6px 10px;">✅ 選</button>` : ''}
+          </div>`).join('') : '<div style="color:var(--text-muted);">（這裡沒有子資料夾）</div>';
+        list.querySelectorAll('.folder-open').forEach(b => b.onclick = () => browseFolder(data.folders[b.dataset.idx].path));
+        list.querySelectorAll('.folder-pick').forEach(b => b.onclick = () => addPickedFolder(data.folders[b.dataset.idx].path));
+      } catch (e) {
+        list.innerHTML = `<div style="color:var(--danger)">無法開啟：${escHtml(e.message)}</div>`;
+      }
+    }
+
+    function pickCurrentFolder() {
+      if (currentBrowsePath) addPickedFolder(currentBrowsePath);
+    }
+
+    function addPickedFolder(path) {
+      if (!pickedFolders.includes(path)) pickedFolders.push(path);
+      renderPickedFolders();
+    }
+
+    function removePickedFolder(idx) {
+      pickedFolders.splice(idx, 1);
+      renderPickedFolders();
+    }
+
+    function renderPickedFolders() {
+      document.getElementById('folderPaths').value = pickedFolders.join('\n');
+      document.getElementById('btnConfirmAdd').disabled = true;
+      const box = document.getElementById('pickedFolders');
+      box.innerHTML = pickedFolders.length ? pickedFolders.map((p, i) =>
+        `<span class="badge badge-neutral" style="text-transform:none; font-size:0.8rem;">📚 ${escHtml(p.split('/').pop())} <a href="#" onclick="removePickedFolder(${i}); return false;" style="color:var(--danger); margin-left:4px;">✕</a></span>`).join('')
+        : '<span style="color:var(--text-muted);">（還沒選）</span>';
     }
     function closeAddModal() {
       document.getElementById('addModal').style.display = 'none';
       document.getElementById('previewResults').style.display = 'none';
-      document.getElementById('btnConfirmAdd').disabled = true;
+      pickedFolders = [];
+      renderPickedFolders();
     }
 
     async function previewFolders() {
       const raw = document.getElementById('folderPaths').value;
       const folders = raw.split('\n').map(s => s.trim()).filter(Boolean);
       if (folders.length === 0) {
-        alert('請先輸入資料夾路徑！');
+        alert('請先點選至少一個課程資料夾！');
         return;
       }
       const { chapterArts, courseArts } = getSelectedArtifacts();
@@ -1720,7 +1850,7 @@
         box.innerHTML = results.map(r => `
           <div style="margin-bottom:8px;">
             <strong>${r.is_valid ? '✅ ' + r.course_code + ' (' + r.course_name + ')' : '❌ 無效資料夾'}</strong>
-            <div>${r.is_valid ? '掃描到 ' + r.lecture_count + ' 講次，依目前勾選預估 ' + r.estimated_jobs + ' 項任務' + (r.quota_estimate_available ? '，約用 ' + r.estimated_quota_percent + '% 的 5 小時額度（目前剩 ' + r.five_hour_remaining_percent + '%）' + (r.estimated_wait_hours > 0 ? '，需等額度重置約 ' + r.estimated_wait_hours + ' 小時' : '，目前額度足夠') : '（無法讀取額度，未估算時間）') : r.error}</div>
+            <div>${r.is_valid ? '掃描到 ' + r.lecture_count + ' 講次，依目前勾選預估 ' + r.estimated_jobs + ' 項任務' + (r.quota_estimate_available ? '，約用 ' + r.estimated_quota_percent + '% 的 5 小時額度（目前剩 ' + r.five_hour_remaining_percent + '%）' + (r.estimated_wait_hours > 0 ? '，需等額度重置約 ' + r.estimated_wait_hours + ' 小時' : '，目前額度足夠') + (r.weekly_remaining_percent !== null ? '；本週額度剩 ' + r.weekly_remaining_percent + '%' : '') + (r.weekly_warning ? '<br>⚠️ ' + r.weekly_warning : '') : '（無法讀取額度，未估算時間）') : r.error}</div>
           </div>
         `).join('');
         document.getElementById('btnConfirmAdd').disabled = !results.some(r => r.is_valid);

@@ -81,7 +81,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ### 2.1 入口層 (`entrypoints`)
 負責協調外部使用者與外部代理人的請求輸入，不包含業務規則：
-- `cli.py`：命令列工具入口，支援 `login`（檢查登入憑證；實際登入用 `scripts/spike_notebooklm.py login`）、`batch`（批次掃描建立）、`status`（即時進度總覽）、`resume`（中斷重試續跑）、`watch`（守護進程監控）與 `web`（啟動 Web 與 MCP 服務）。
+- `cli.py`：命令列工具入口，支援 `login`（檢查登入憑證；加 `--browser` 開瀏覽器由使用者親自登入）、`batch`（批次掃描建立）、`status`（即時進度總覽）、`resume`（中斷重試續跑）、`watch`（守護進程監控）與 `web`（啟動 Web 與 MCP 服務）。
 - `api.py` 與 `entrypoints/http/`：FastAPI 應用程式，掛載子路由（`courses.py`, `queue.py`, `artifacts.py`, `study.py`, `system.py`），提供靜態儀表板模板與 OpenAPI 規範接口（供 Open WebUI 整合）。
 - `mcp_server.py`：Model Context Protocol (MCP) 伺服器，對外公開課程註冊、佇列執行、產出查詢等 Tool 與 Resource，包含對破壞性操作之 `confirm` 確認機制。
 

@@ -154,3 +154,15 @@ class RegenerateRequest(BaseModel):
 
     artifact_type: str = Field(..., description="Artifact type value, e.g. 'infographic'")
     lecture_no: int | None = Field(default=None, description="Lecture number; null for course-wide")
+
+
+class ArtifactSelectionRequest(BaseModel):
+    """Payload choosing which artifact types a course generates.
+
+    Attributes:
+        chapter: Per-lecture artifact type values.
+        course: Course-wide artifact type values.
+    """
+
+    chapter: list[str] = Field(default_factory=list, description="Per-lecture artifact types")
+    course: list[str] = Field(default_factory=list, description="Course-wide artifact types")

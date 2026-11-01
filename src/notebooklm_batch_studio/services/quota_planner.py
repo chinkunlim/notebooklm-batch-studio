@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 MIN_RETRY_SECONDS = 60
 FIVE_HOUR_WINDOW_HOURS = 5
+WEEKLY_WARNING_PERCENT = 15.0
 
 # Mock exams target ~50 questions, so they usually take two quiz generations.
 GENERATIONS_PER_JOB = {
@@ -100,12 +101,15 @@ def quota_retry_after(quota: dict[str, Any], art_type: ArtifactType, now: dateti
     return max(MIN_RETRY_SECONDS, math.ceil((max(resets) - now).total_seconds()))
 
 
-def estimate_quota_plan(types: list[ArtifactType], quota: dict[str, Any] | None) -> dict[str, Any]:
+def estimate_quota_plan(
+    types: list[ArtifactType], quota: dict[str, Any] | None, now: datetime | None = None
+) -> dict[str, Any]:
     """Estimate the quota a workload needs, using the live per-action costs.
 
     Args:
         types: Artifact type of every job in the workload.
         quota: Quota summary from the NotebookLM adapter, or None when it is unavailable.
+        now: Current time (defaults to now; tests pass a fixed time).
 
     Returns:
         Dictionary with `estimated_quota_percent` (of one five-hour window),
@@ -119,6 +123,8 @@ def estimate_quota_plan(types: list[ArtifactType], quota: dict[str, Any] | None)
         "estimated_windows": None,
         "estimated_wait_hours": None,
         "estimated_days": None,
+        "weekly_remaining_percent": None,
+        "weekly_warning": None,
     }
     if not quota or quota.get("status") != "ready":
         return empty
@@ -131,7 +137,21 @@ def estimate_quota_plan(types: list[ArtifactType], quota: dict[str, Any] | None)
     five_hour = next((w for w in quota.get("windows", []) if w.get("kind") == "five_hour"), None)
     remaining = float(five_hour["remaining_percent"]) if five_hour else 100.0
     extra_windows = math.ceil((total - remaining) / 100.0) if total > remaining else 0
-    wait_hours = extra_windows * FIVE_HOUR_WINDOW_HOURS
+    # The first wait lasts only until the current window resets; each further window adds 5 hours.
+    first_wait = float(FIVE_HOUR_WINDOW_HOURS)
+    if five_hour and five_hour.get("resets_at"):
+        until_reset = datetime.fromisoformat(five_hour["resets_at"]) - (now or datetime.now(UTC))
+        first_wait = max(0.0, until_reset.total_seconds() / 3600)
+    wait_hours = round(first_wait + (extra_windows - 1) * FIVE_HOUR_WINDOW_HOURS, 1) if extra_windows else 0
+    weekly = next((w for w in quota.get("windows", []) if w.get("kind") == "weekly"), None)
+    weekly_left = round(float(weekly["remaining_percent"]), 1) if weekly else None
+    # The meter prices actions only against the 5-hour window, so the weekly cap is shown as-is
+    # and flagged when it is nearly used up rather than converted into a guessed job count.
+    warning = (
+        f"本週額度只剩 {weekly_left}%，可能在 {weekly['resets_at'][:10]} 重置前用完"
+        if weekly and weekly_left is not None and weekly_left < WEEKLY_WARNING_PERCENT
+        else None
+    )
     return {
         "quota_estimate_available": True,
         "estimated_quota_percent": round(total, 1),
@@ -139,6 +159,8 @@ def estimate_quota_plan(types: list[ArtifactType], quota: dict[str, Any] | None)
         "estimated_windows": extra_windows + 1,
         "estimated_wait_hours": wait_hours,
         "estimated_days": max(1, math.ceil(wait_hours / 24)),
+        "weekly_remaining_percent": weekly_left,
+        "weekly_warning": warning,
     }
 
 

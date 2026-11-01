@@ -86,6 +86,26 @@ class QueueRepositoryProtocol(Protocol):
         """
         ...
 
+    def set_types_status(
+        self,
+        course_code: str,
+        artifact_types: list[str],
+        from_statuses: list[JobStatus],
+        to_status: JobStatus,
+    ) -> int:
+        """Move a course's jobs of the given types from some statuses to another.
+
+        Args:
+            course_code: Course code.
+            artifact_types: Artifact type values.
+            from_statuses: Statuses that may change.
+            to_status: New status.
+
+        Returns:
+            Number of jobs changed.
+        """
+        ...
+
     def max_version(self, course_code: str, lecture_no: int | None, artifact_type: ArtifactType) -> int:
         """Return the highest version generated so far for one artifact slot.
 
@@ -225,6 +245,16 @@ class CourseRepositoryProtocol(Protocol):
 
         Returns:
             List of domain Course entities.
+        """
+        ...
+
+    def update_artifact_selection(self, code: str, chapter: list[str], whole: list[str]) -> None:
+        """Replace a course's chosen per-lecture and course-wide artifact types.
+
+        Args:
+            code: Course code.
+            chapter: Per-lecture artifact type values.
+            whole: Course-wide artifact type values.
         """
         ...
 

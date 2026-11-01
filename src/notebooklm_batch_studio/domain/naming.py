@@ -33,22 +33,34 @@ class ArtifactNaming:
 _GUIDE: tuple[ArtifactNaming, ...] = (
     ArtifactNaming("audio", "語音摘要", "雙人對談 Deep Dive，繁體中文旁白", "<課程>_L01_audio.m4a"),
     ArtifactNaming(
-        "quiz_1", "測驗 1・基礎", "記憶與定義，難度 easy，30 題", "quiz_1_題目卷.pdf / quiz_1_答案卷.pdf"
+        "quiz_1",
+        "測驗 1・基礎",
+        "確認記得重要名詞、定義與基本原理。難度 easy，30 題",
+        "quiz_1_題目卷.pdf / quiz_1_答案卷.pdf",
     ),
     ArtifactNaming(
-        "quiz_2", "測驗 2・理解", "理解與應用，難度 medium，30 題", "quiz_2_題目卷.pdf / quiz_2_答案卷.pdf"
+        "quiz_2",
+        "測驗 2・理解",
+        "把概念用在具體情境或例子裡。難度 medium，30 題",
+        "quiz_2_題目卷.pdf / quiz_2_答案卷.pdf",
     ),
     ArtifactNaming(
-        "quiz_3", "測驗 3・模擬考", "考試情境，難度 hard，30 題", "quiz_3_題目卷.pdf / quiz_3_答案卷.pdf"
+        "quiz_3",
+        "測驗 3・模擬考",
+        "模擬正式考試：綜合多個概念、多步推理。難度 hard，30 題",
+        "quiz_3_題目卷.pdf / quiz_3_答案卷.pdf",
     ),
     ArtifactNaming(
         "quiz_academic",
         "測驗・學術精研",
-        "研究所 / 高年級深入版，難度 hard，30 題",
+        "進階選用：研究所程度，比較理論、批判論證、複雜情境推理。難度 hard，30 題",
         "quiz_academic_題目卷.pdf",
     ),
     ArtifactNaming(
-        "quiz_concept", "測驗・概念刷題", "觀念快速刷題，難度 medium，30 題", "quiz_concept_題目卷.pdf"
+        "quiz_concept",
+        "測驗・概念刷題",
+        "進階選用：快速檢查觀念，名詞定義、易混淆概念、步驟順序。難度 medium，30 題",
+        "quiz_concept_題目卷.pdf",
     ),
     ArtifactNaming("flashcards", "閃卡", "重點名詞與概念，可匯入 Anki", "flashcards.json / anki.csv"),
     ArtifactNaming("mind_map", "心智圖", "單講概念結構", "mindmap.opml / mindmap.md"),
@@ -77,13 +89,13 @@ _GUIDE: tuple[ArtifactNaming, ...] = (
     ArtifactNaming(
         "course_quiz_academic",
         "全課程・學術精研考",
-        "所有講次，研究所深入版，目標 50 題",
+        "進階選用：全課程的學術精研版（研究所程度），目標 50 題",
         "course_quiz_academic_題目卷.pdf",
     ),
     ArtifactNaming(
         "course_quiz_concept",
         "全課程・概念刷題考",
-        "所有講次，觀念刷題，目標 50 題",
+        "進階選用：全課程的概念刷題版（考前快速複習），目標 50 題",
         "course_quiz_concept_題目卷.pdf",
     ),
     ArtifactNaming("course_mind_map", "全課程心智圖", "跨章節概念結構", "_course_synthesis/mindmap.opml"),
