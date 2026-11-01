@@ -131,7 +131,7 @@
       flex-direction: column;
       gap: 16px;
     }
-    input[type="text"], select, textarea {
+    input[type="text"], input[type="number"], select, textarea {
       background: #0f172a;
       border: 1px solid var(--border);
       color: var(--text);
@@ -1623,7 +1623,7 @@
         return `<label style="grid-column: 1 / -1;">${label}<textarea data-opt="${key}" rows="2" style="margin-top:4px;" placeholder="${inherit !== undefined ? '留空就只用課程的補充指示' : '例如：考試以申論題為主；重點放在第 3 章的公式'}">${escHtml(value || '')}</textarea></label>`;
       }
       if (names === 'text') {
-        return `<label>${label}<input data-opt="${key}" value="${escHtml(value || '')}" style="margin-top:4px;"></label>`;
+        return `<label>${label}<input type="text" data-opt="${key}" value="${escHtml(value || '')}" style="margin-top:4px;"></label>`;
       }
       if (names === 'number') {
         return `<label>${label}<input type="number" min="10" max="100" data-opt="${key}" data-num="1" value="${value ?? ''}" style="margin-top:4px;"></label>`;
