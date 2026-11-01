@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-01 14:57 UTC`
+- **最後更新時間**: `2026-11-01 15:08 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `e282cd5 docs(docs): update docs documentation (ADR-001, ADR-002, ADR-003, ADR-005, ADR-006, ISSUE-001, ISSUE-016, ISSUE-021, ISSUE-024, TASK-001, TASK-003, TASK-004, TASK-005) [agent:antigravity]`
+- **最新 Git Commit**: `3f8c6c8 fix(test): set SO_REUSEADDR on test server socket for Linux TIME_WAIT reuse (ISSUE-025) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-01 15:08 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: Diagnose GitHub Actions CI failure and fix Linux TCP socket TIME_WAIT test issue (ISSUE-025)
+- **錯誤與根因**: CI failed on Ubuntu runner in test_recently_closed_port_is_free -> Linux kernel requires prior socket to have SO_REUSEADDR set before bind to allow subsequent T
+- **下一步**: CI is now 100% green; submit midterm course deliverables and repo URL to course portal
+- **交接備註**: Resolved GitHub Actions CI failure (ISSUE-025), tests green across both Linux and macOS
+- **本機對話紀錄**: `.agents/conversations/2026-11-01-2308-antigravity-summary.md`（只在這台電腦）
 
 ### [2026-11-01 14:57 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
 - **檢查結果**: 測試與 Code Review Guard 通過
@@ -123,7 +131,3 @@
 ### [2026-10-22 00:47 UTC] 完成任務 `TASK-005` — Phase 1E: 本機網頁、OpenAPI 與 MCP 伺服器 (Web UI, FastAPI & MCP Server) (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Phase 1E 完成：實作 FastAPI 本機 REST 服務 (127.0.0.1:8767)、OpenAPI 規格路由、MCP 伺服器 (stdio 與 Streamable HTTP)、純原生響應式網頁管理介面，以及 Host/CORS 與路徑穿越防護，50 項單元測試 100% 通過
-
-### [2026-10-21 18:16 UTC] 認領任務 `TASK-005` (Phase 1E: 本機網頁、OpenAPI 與 MCP 伺服器 (Web UI, FastAPI & MCP Server)) (by `antigravity`)
-- **相關範圍**: `-`
-- **接棒自**: `antigravity`
