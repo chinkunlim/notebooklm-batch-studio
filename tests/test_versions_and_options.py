@@ -109,6 +109,13 @@ class OptionsMappingTest(unittest.TestCase):
         )
         self.assertEqual(generation_kwargs("report", None), {})
 
+    def test_short_video_forces_auto_style(self) -> None:
+        """Short videos have a fixed style, so any chosen style is replaced by AUTO_SELECT."""
+        from notebooklm import VideoStyle
+
+        kwargs = generation_kwargs("video", GenerationOptions(video_format="short", video_style="anime"))
+        self.assertEqual(kwargs["video_style"], VideoStyle.AUTO_SELECT)
+
 
 class ImageFitterTest(unittest.TestCase):
     """Device versions keep the whole image (no cropping)."""
@@ -254,6 +261,21 @@ class RegenerateAndOptionsTest(ServiceFixture):
         self.assertEqual(self.queue_repo.get_job("v1").status, JobStatus.DONE)  # type: ignore[union-attr]
         with self.assertRaises(ValueError):
             self.service.course_settings.regenerate("BIO101", 9, "infographic")
+
+    def test_regenerate_uses_current_blueprint_not_stale_prompt(self) -> None:
+        """A regenerated quiz gets today's 30-question prompt, not the older version's stored prompt."""
+        old_job = ArtifactJob(
+            id="q1",
+            course_code="BIO101",
+            lecture_no=1,
+            artifact_type=ArtifactType.QUIZ_2,
+            custom_prompt="出 10 題",
+        )
+        self.queue_repo.enqueue_jobs([old_job])
+        new_id = self.service.course_settings.regenerate("BIO101", 1, "quiz_2")["job_id"]
+        prompt = self.queue_repo.get_job(new_id).custom_prompt  # type: ignore[union-attr]
+        self.assertIn("30 題", prompt)
+        self.assertNotIn("出 10 題", prompt)
 
     def test_options_validate_persist_and_survive_reregistration(self) -> None:
         """Valid changes are saved; invalid values are refused; re-scanning keeps them."""

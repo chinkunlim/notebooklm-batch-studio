@@ -110,7 +110,8 @@ def generation_kwargs(kind: str, options: GenerationOptions | None) -> dict[str,
         },
         "video": {
             "video_format": to_enum(VideoFormat, o.video_format),
-            "video_style": to_enum(VideoStyle, o.video_style),
+            # Short (vertical) videos have a fixed style; notebooklm-py rejects any other style.
+            "video_style": to_enum(VideoStyle, "auto_select" if o.video_format == "short" else o.video_style),
         },
         "quiz": {"quantity": to_enum(QuizQuantity, o.quiz_quantity)},
         "flashcards": {

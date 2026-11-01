@@ -118,17 +118,10 @@ class CourseSettingsService:
             raise ValueError(f"Lecture {lecture_no} not found in course {code}")
 
         version = self.queue_repo.max_version(code, lecture_no, art_type) + 1
-        previous = [
-            j
-            for j in self.queue_repo.list_jobs(course_code=code)
-            if j.lecture_no == lecture_no and j.artifact_type == art_type
-        ]
-        prompt = max(previous, key=lambda j: j.version).custom_prompt if previous else None
-        if prompt is None:
-            topic = lecture.topic if lecture else f"{course.code} 全範圍整合"
-            prompt = PromptGenerator().get_base_blueprint_prompt(
-                art_type, topic, course.name, course.language
-            )
+        # Always start from the current blueprint: an older version's stored prompt may predate
+        # prompt fixes (e.g. the 10-question quizzes, ISSUE-017). Edit the queued job to customize.
+        topic = lecture.topic if lecture else f"{course.code} 全範圍整合"
+        prompt = PromptGenerator().get_base_blueprint_prompt(art_type, topic, course.name, course.language)
         job = ArtifactJob(
             id=str(uuid.uuid4()),
             course_code=code,
