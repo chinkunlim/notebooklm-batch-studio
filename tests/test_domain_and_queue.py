@@ -538,6 +538,29 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("submitAll()", html)
         self.assertIn("交卷評分", html)
 
+        # Verify XSS sanitization in title and JSON data payload
+        quiz_xss = Quiz(
+            course_code="CS101",
+            lecture_no=1,
+            variant="學術精研",
+            title="CS101 <script>alert(1)</script>",
+            source_pdf="01.pdf",
+            prompt_version="v2",
+            questions=[
+                Question(
+                    id="Q1",
+                    question="何謂 <script>alert('xss')</script>?",
+                    choices=[Choice(text="<b>Bold</b>", is_correct=True)],
+                    answer_index=0,
+                    explanation="<img src=x onerror=alert(1)>",
+                )
+            ],
+        )
+        html_xss = to_interactive_html(quiz_xss)
+        self.assertNotIn("<h1>CS101 <script>alert(1)</script></h1>", html_xss)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html_xss)
+        self.assertIn("\\u003cscript\\u003ealert('xss')\\u003c/script\\u003e", html_xss)
+
     async def test_remote_sync_helpers_and_service(self) -> None:
         """Verify remote sync inference, kind mapping, and sync execution."""
         self.assertEqual(infer_lecture_no_from_title("[Ch02] Quiz 1", 10), 2)

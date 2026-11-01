@@ -13,4 +13,4 @@
 | [001-batch-generation](001-batch-generation.md) | Implemented | 資料夾 → notebook、每份 PDF 複習包、產出組合、命名、佇列與每日上限 | TASK-002, TASK-004 |
 | [002-export-downloads](002-export-downloads.md) | Implemented | 下載與轉檔（quiz / mind map / flashcards / pdf）＋技術驗證 | TASK-001, TASK-003 |
 | [003-web-and-ai-tools](003-web-and-ai-tools.md) | Implemented | 本機網頁、OpenAPI（Open WebUI）、MCP 工具 | TASK-005 |
-| [004-phase2-self-test](004-phase2-self-test.md) | Planned | 第二階段：本機做題、錯題本、間隔複習（後續規劃） | - |
+| [004-phase2-self-test](004-phase2-self-test.md) | Implemented | 第二階段：學生研讀工作台、錯題本、3D卡牌、語音導讀與 Anki 間隔重複匯出 | TASK-007, ADR-003 |

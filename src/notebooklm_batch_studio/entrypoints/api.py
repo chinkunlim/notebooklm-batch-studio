@@ -14,6 +14,7 @@ from typing import Any, cast
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import Engine
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -70,12 +71,17 @@ class HostValidationMiddleware(BaseHTTPMiddleware):
         return cast(Response, res)
 
 
-def _resolve_service(service: BatchStudioService | None, cfg: AppConfig) -> BatchStudioService:
+def _resolve_service(
+    service: BatchStudioService | None,
+    cfg: AppConfig,
+    engine: Engine | None = None,
+) -> BatchStudioService:
     """Resolve or construct orchestrator service.
 
     Args:
         service: Optional injected service instance.
         cfg: Application configuration.
+        engine: Optional shared database engine.
 
     Returns:
         Active BatchStudioService instance.
@@ -83,8 +89,8 @@ def _resolve_service(service: BatchStudioService | None, cfg: AppConfig) -> Batc
     if service is not None:
         return service
 
-    engine = create_db_engine(cfg.database_url)
-    session = scoped_session(sessionmaker(bind=engine, expire_on_commit=False))
+    eng = engine or create_db_engine(cfg.database_url)
+    session = scoped_session(sessionmaker(bind=eng, expire_on_commit=False))
     course_repo = CourseRepository(cast(Session, session))
     queue_repo = QueueRepository(cast(Session, session))
     adapter = NotebookLMAdapter(cfg)
@@ -96,7 +102,7 @@ def _resolve_service(service: BatchStudioService | None, cfg: AppConfig) -> Batc
         Yields:
             QueueRepository bound to an active transaction.
         """
-        with session_scope(engine) as s:
+        with session_scope(eng) as s:
             yield QueueRepository(s)
 
     return BatchStudioService(
@@ -111,12 +117,14 @@ def _resolve_service(service: BatchStudioService | None, cfg: AppConfig) -> Batc
 def _resolve_study_service(
     study_service: StudyTrackerService | None,
     cfg: AppConfig,
+    engine: Engine | None = None,
 ) -> StudyTrackerService:
     """Resolve or construct study tracking service.
 
     Args:
         study_service: Optional injected service instance.
         cfg: Application configuration.
+        engine: Optional shared database engine.
 
     Returns:
         Active StudyTrackerService instance.
@@ -124,8 +132,8 @@ def _resolve_study_service(
     if study_service is not None:
         return study_service
 
-    engine = create_db_engine(cfg.database_url)
-    session = scoped_session(sessionmaker(bind=engine, expire_on_commit=False))
+    eng = engine or create_db_engine(cfg.database_url)
+    session = scoped_session(sessionmaker(bind=eng, expire_on_commit=False))
     study_repo = StudyRepository(cast(Session, session))
     return StudyTrackerService(study_repo=study_repo, config=cfg)
 
@@ -146,8 +154,12 @@ def create_app(
         Configured FastAPI instance ready for serving or TestClient testing.
     """
     cfg = config or load_config()
-    active_service = _resolve_service(service, cfg)
-    active_study = _resolve_study_service(study_service, cfg)
+    shared_engine = None
+    if service is None or study_service is None:
+        shared_engine = create_db_engine(cfg.database_url)
+
+    active_service = _resolve_service(service, cfg, engine=shared_engine)
+    active_study = _resolve_study_service(study_service, cfg, engine=shared_engine)
 
     app = FastAPI(
         title="NotebookLM Batch Studio",

@@ -24,6 +24,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(web): switch default HTTP port from 8767 to 8768 to prevent collision with literature-parser (by `@antigravity`)
 - fix(web): wire up background worker pool, auto-setup NotebookLM and add queue controls (by `@antigravity`)
 - fix: resolve audit report issues across quiz variants, prompts, remote sync, study portal, and mcp tools (by `@antigravity`)
+- fix(api,quiz): share database engine between services, sanitize json script tags, and document spec 004 (by `@antigravity`)
 
 ### Documentation
 - docs(adr): add ADR-002 (session token authentication) and ADR-003 (student study portal and spaced repetition) (by `@antigravity`)

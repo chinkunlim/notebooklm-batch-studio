@@ -457,9 +457,9 @@ def to_interactive_html(quiz: Quiz) -> str:
             for q in quiz.questions
         ],
     }
-    quiz_json = json.dumps(quiz_data, ensure_ascii=False)
+    safe_quiz_json = json.dumps(quiz_data, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e")
     css = _get_interactive_quiz_css()
-    js = _get_interactive_quiz_js(quiz_json)
+    js = _get_interactive_quiz_js(safe_quiz_json)
     safe_title = html.escape(quiz.title)
     html_lines = [
         "<!DOCTYPE html>",
