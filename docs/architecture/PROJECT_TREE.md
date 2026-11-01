@@ -42,6 +42,10 @@ notebooklm-batch-studio/
 │   │   │   ├── scripts/
 │   │   │   │   └── review_guard.py
 │   │   │   └── SKILL.md
+│   │   ├── design-psychology-master/
+│   │   │   ├── scripts/
+│   │   │   │   └── design_audit.py
+│   │   │   └── SKILL.md
 │   │   ├── project-auditor/
 │   │   │   ├── scripts/
 │   │   │   │   └── audit_project_integrity.py
@@ -111,6 +115,7 @@ notebooklm-batch-studio/
 │   │   ├── 004-artifact-id-targeting.md
 │   │   ├── 005-job-versions-and-generation-options.md
 │   │   ├── 006-gemini-notebook-display-name.md
+│   │   ├── 007-study-studio-visual-tiering-and-agency-architecture.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -142,6 +147,7 @@ notebooklm-batch-studio/
 │   │   ├── 023-db-connection-leak.md
 │   │   ├── 024-buttons-calling-missing-routes.md
 │   │   ├── 025-linux-time-wait-so-reuseaddr.md
+│   │   ├── 026-mobile-simulator-viewport-media-query-mismatch.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -153,7 +159,9 @@ notebooklm-batch-studio/
 │   │   ├── 006-per-artifact-settings.md
 │   │   ├── 007-student-experience.md
 │   │   ├── 008-learning-aids.md
+│   │   ├── 009-study-studio-ui-redesign.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
+│   │   ├── SPEC-009-STUDY-STUDIO-UI-REDESIGN.md
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
 │   │   ├── ARCHITECTURE_RULES.md           # 分層依賴與系統架構守則

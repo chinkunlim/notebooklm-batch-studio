@@ -51,3 +51,7 @@
 ### [2026-10-21 18:16 UTC] 認領任務 `TASK-005` (Phase 1E: 本機網頁、OpenAPI 與 MCP 伺服器 (Web UI, FastAPI & MCP Server)) (by `antigravity`)
 - **相關範圍**: `-`
 - **接棒自**: `antigravity`
+
+### [2026-10-22 00:47 UTC] 完成任務 `TASK-005` — Phase 1E: 本機網頁、OpenAPI 與 MCP 伺服器 (Web UI, FastAPI & MCP Server) (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Phase 1E 完成：實作 FastAPI 本機 REST 服務 (127.0.0.1:8767)、OpenAPI 規格路由、MCP 伺服器 (stdio 與 Streamable HTTP)、純原生響應式網頁管理介面，以及 Host/CORS 與路徑穿越防護，50 項單元測試 100% 通過

@@ -48,6 +48,11 @@
       "tier": "core",
       "trigger": "專案結案、交付或發布版本前，審查所有對話紀錄與架構/問題檔案是否完整無遺漏",
       "command": "python3 .agents/skills/project-auditor/scripts/audit_project_integrity.py"
+    },
+    "design-psychology-master": {
+      "tier": "core",
+      "trigger": "設計或重構介面、教材排版，需融合認知心理學、視覺階層、動靜平衡與使用者掌控感時",
+      "command": "python3 .agents/skills/design-psychology-master/scripts/design_audit.py"
     }
   }
 }

@@ -6,6 +6,9 @@ All notable changes to **notebooklm-batch-studio** are documented here
 ## [Unreleased]
 
 ### Added
+- docs(specs): add SPEC-009 for Study Studio UI Redesign, 9-tool matrix, dedicated customize tab, luxury turntable, and avatar customization (ADR-007) (by `@antigravity`)
+- feat(skills): add design-psychology-master cognitive audit tool (by `@antigravity`)
+- docs(archive): preserve Version 1 through Version 4 standalone prototypes and index map in designs_archive/ (by `@antigravity`)
 - docs(midterm): complete midterm project deliverables in DATA_DIR/midterm-submission/ including 9-page report (docx/pdf), 12-slide presentation with speaker notes (pptx/pdf), AI collaboration summary (md/pdf), and 1440x900 walkthrough video with clean subtitles (mp4) (by `@antigravity`)
 - feat(study,mcp): add student study portal MCP tools, spaced repetition weakness tracking, and remote sync tools (TASK-007) (by `@antigravity`)
 - feat(spike): scaffold notebooklm spike script, sample pdf generator, and standard DATA_DIR paths (TASK-001) (`TASK-001`, by `@antigravity`)
@@ -38,6 +41,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - style: wrap the memory-strength usage line (by `@claude-code`)
 
 ### Fixed
+- fix(web): resolve mobile simulator viewport mismatch when toggling iPhone 416px on desktop displays (ISSUE-026) (by `@antigravity`)
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)
 - fix(web): switch default HTTP port from 8767 to 8768 to prevent collision with literature-parser (by `@antigravity`)
 - fix(web): wire up background worker pool, auto-setup NotebookLM and add queue controls (by `@antigravity`)
@@ -69,6 +73,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs: synchronize all documentation, architecture, specs, and records (by `@antigravity`)
 - docs(docs): update docs documentation (ADR-001, ADR-002, ADR-003, ADR-005, ADR-006, ISSUE-001, ISSUE-016, ISSUE-021, ISSUE-024, TASK-001, TASK-003, TASK-004, TASK-005) (by `@antigravity`)
 - docs(standards): sync web app and architecture rules from template (by `@antigravity`)
+- docs(adr/docs): update adr/docs documentation (ADR-004, ADR-005, ADR-006, ADR-007, ISSUE-022, ISSUE-023, ISSUE-024, ISSUE-025, ISSUE-026, TASK-001, TASK-005, TASK-007, TASK-009) (by `@antigravity`)
 
 ### Chore
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)
