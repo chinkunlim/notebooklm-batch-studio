@@ -56,6 +56,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(web): every button works - add job prompt view/edit routes (HTTP+MCP), wake-quota button uses /api/queue/resume, downloads answer HEAD; dialogs close with X, outside click or Esc; header splits status from actions; title returns home; quiz choices reshuffle on every attempt; offline banner instead of Failed to fetch (by `@claude-code`)
 - fix: port check uses SO_REUSEADDR like uvicorn so a just-stopped server's TIME_WAIT port does not block the launcher (by `@claude-code`)
 - fix(learning): live test fixes - quote matching ignores punctuation and empty text pieces (12/12 Gemini Notebook key points found), points fade only after their pages are drawn, citation markers stripped from tutor replies and explanations (by `@claude-code`)
+- fix(test): set SO_REUSEADDR on test server socket for Linux TIME_WAIT reuse (ISSUE-025) (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

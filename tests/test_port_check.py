@@ -24,8 +24,11 @@ class PortCheckTest(unittest.TestCase):
         self.assertTrue(port_is_free("127.0.0.1", port))
 
     def test_recently_closed_port_is_free(self) -> None:
-        """A port whose server just closed (connections in TIME_WAIT) counts as free, like uvicorn sees it."""
+        """A port whose server just closed counts as free, like uvicorn sees it. Refs: ISSUE-025"""
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Real servers (like uvicorn) set SO_REUSEADDR before bind; on Linux this is required
+        # for a subsequent SO_REUSEADDR socket to bind while a connection remains in TIME_WAIT.
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind(("127.0.0.1", 0))
         server.listen()
         port = server.getsockname()[1]

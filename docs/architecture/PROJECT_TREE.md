@@ -137,6 +137,7 @@ notebooklm-batch-studio/
 │   │   ├── 022-quiz-submit-resets-view.md
 │   │   ├── 023-db-connection-leak.md
 │   │   ├── 024-buttons-calling-missing-routes.md
+│   │   ├── 025-linux-time-wait-so-reuseaddr.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
