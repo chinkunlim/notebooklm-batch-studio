@@ -601,3 +601,138 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
                 jobs = queue_repo.list_jobs(course_code="PSY200")
                 self.assertEqual(len(jobs), 2)
                 self.assertTrue(all(j.source_origin == "remote_sync" for j in jobs))
+                self.assertTrue(res["items"][0]["path"].endswith("01_Intro/[Ch01] Manual Web Quiz.json"))
+                self.assertTrue(res["items"][1]["path"].endswith("manual_artifacts/Course Wide Summary.html"))
+
+                # Test deduplication on second run
+                res_repeat = await sync_svc.sync_course("PSY200")
+                self.assertEqual(res_repeat["synced_count"], 0)
+
+    async def test_quiz_variants_preserve_separate_files_and_use_prompt(self) -> None:
+        """Verify quiz variants write separate files and use job.custom_prompt."""
+        import json
+        import tempfile
+        from unittest.mock import AsyncMock, MagicMock
+
+        from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
+
+        mock_client = MagicMock()
+        mock_client.generate_quiz = AsyncMock(return_value="task-quiz-1")
+        mock_client.generate_audio = AsyncMock(return_value="task-audio-1")
+        mock_client.generate_flashcards = AsyncMock(return_value="task-fc-1")
+        mock_client.generate_mind_map = AsyncMock(return_value="task-mm-1")
+        mock_client.find_latest_artifact = AsyncMock(return_value="art-123")
+        mock_client.rename_artifact = AsyncMock()
+
+        sample_quiz_payload = {
+            "questions": [
+                {
+                    "question": f"Sample Question {i}?",
+                    "choices": ["A", "B", "C", "D"],
+                    "answer_index": 0,
+                    "explanation": "Sample Explanation",
+                }
+                for i in range(30)
+            ]
+        }
+
+        async def fake_download_quiz(notebook_id: str, path: str, artifact_id: str | None = None) -> None:
+            Path(path).write_text(json.dumps(sample_quiz_payload), encoding="utf-8")
+
+        async def fake_download_audio(notebook_id: str, path: str, artifact_id: str | None = None) -> None:
+            Path(path).write_bytes(b"MP3")
+
+        async def fake_download_fc(notebook_id: str, path: str, artifact_id: str | None = None) -> None:
+            Path(path).write_text(json.dumps({"cards": [{"front": "Q", "back": "A"}]}), encoding="utf-8")
+
+        async def fake_download_mm(notebook_id: str, path: str, artifact_id: str | None = None) -> None:
+            Path(path).write_text(json.dumps({"root": "Topic"}), encoding="utf-8")
+
+        mock_client.download_quiz = AsyncMock(side_effect=fake_download_quiz)
+        mock_client.download_audio = AsyncMock(side_effect=fake_download_audio)
+        mock_client.download_flashcards = AsyncMock(side_effect=fake_download_fc)
+        mock_client.download_mind_map = AsyncMock(side_effect=fake_download_mm)
+
+        runner = ArtifactRunner(mock_client)
+        course = Course(
+            code="BIO101",
+            name="General Biology",
+            source_dir="/mock",
+            notebook_id="nb-1",
+            language="zh-TW",
+            lectures=[Lecture(no=1, topic="Membranes", filename="01.pdf", sha256="h1")],
+        )
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_dir = Path(tmp_dir) / "01_Membranes"
+            out_dir.mkdir(parents=True)
+
+            # 1. Run Academic Quiz
+            job_acad = ArtifactJob(
+                id="job-acad",
+                course_code="BIO101",
+                lecture_no=1,
+                artifact_type=ArtifactType.QUIZ_ACADEMIC,
+                custom_prompt="Custom Academic Blueprint Prompt 123",
+            )
+            res_acad = await runner.process_job(job_acad, course, "nb-1", ["src-1"], out_dir)
+
+            # Check prompt was passed to generate_quiz
+            mock_client.generate_quiz.assert_called_with(
+                "nb-1", ["src-1"], prompt="Custom Academic Blueprint Prompt 123"
+            )
+
+            # 2. Run Concept Quiz on the same directory
+            job_conc = ArtifactJob(
+                id="job-conc",
+                course_code="BIO101",
+                lecture_no=1,
+                artifact_type=ArtifactType.QUIZ_CONCEPT,
+                custom_prompt="Custom Concept Drill Prompt 456",
+            )
+            res_conc = await runner.process_job(job_conc, course, "nb-1", ["src-1"], out_dir)
+
+            # Check prompt was passed to generate_quiz
+            mock_client.generate_quiz.assert_called_with(
+                "nb-1", ["src-1"], prompt="Custom Concept Drill Prompt 456"
+            )
+
+            # Crucial check: both files must coexist and not overwrite each other!
+            self.assertNotEqual(res_acad, res_conc)
+            self.assertTrue(Path(res_acad).exists())
+            self.assertTrue(Path(res_conc).exists())
+
+            # 3. Check Audio, Flashcards, Mind Map custom prompt forwarding
+            job_audio = ArtifactJob(
+                id="job-audio",
+                course_code="BIO101",
+                lecture_no=1,
+                artifact_type=ArtifactType.AUDIO,
+                custom_prompt="Custom Audio Prompt 789",
+            )
+            await runner.process_job(job_audio, course, "nb-1", ["src-1"], out_dir)
+            mock_client.generate_audio.assert_called_with("nb-1", ["src-1"], prompt="Custom Audio Prompt 789")
+
+            job_fc = ArtifactJob(
+                id="job-fc",
+                course_code="BIO101",
+                lecture_no=1,
+                artifact_type=ArtifactType.FLASHCARDS,
+                custom_prompt="Custom Flashcards Prompt 999",
+            )
+            await runner.process_job(job_fc, course, "nb-1", ["src-1"], out_dir)
+            mock_client.generate_flashcards.assert_called_with(
+                "nb-1", ["src-1"], prompt="Custom Flashcards Prompt 999"
+            )
+
+            job_mm = ArtifactJob(
+                id="job-mm",
+                course_code="BIO101",
+                lecture_no=1,
+                artifact_type=ArtifactType.MIND_MAP,
+                custom_prompt="Custom MindMap Prompt 888",
+            )
+            await runner.process_job(job_mm, course, "nb-1", ["src-1"], out_dir)
+            mock_client.generate_mind_map.assert_called_with(
+                "nb-1", ["src-1"], prompt="Custom MindMap Prompt 888"
+            )

@@ -79,6 +79,79 @@ def map_remote_kind_to_artifact_type(kind: str) -> ArtifactType:
     return ArtifactType.QUIZ_ACADEMIC
 
 
+def get_extension_for_kind(kind: str) -> str:
+    """Determine file extension based on NotebookLM artifact kind.
+
+    Args:
+        kind: Artifact kind string.
+
+    Returns:
+        Appropriate file extension with leading dot.
+    """
+    k = kind.lower()
+    if "audio" in k:
+        return ".mp3"
+    if "video" in k:
+        return ".mp4"
+    if "slide" in k or "infographic" in k:
+        return ".pdf"
+    if "report" in k or "briefing" in k or "study_guide" in k or "blog" in k:
+        return ".html"
+    return ".json"
+
+
+def extract_synced_art_ids(jobs: list[ArtifactJob]) -> set[str]:
+    """Extract set of already synchronized remote artifact IDs from jobs.
+
+    Args:
+        jobs: List of ArtifactJob entities.
+
+    Returns:
+        Set of remote artifact ID strings.
+    """
+    ids: set[str] = set()
+    for j in jobs:
+        if j.source_origin == "remote_sync" and j.custom_prompt and "[" in j.custom_prompt:
+            try:
+                aid = j.custom_prompt.split("[", 1)[1].split("]", 1)[0]
+                ids.add(aid)
+            except IndexError:
+                pass
+    return ids
+
+
+def resolve_artifact_destination(
+    course: Any, course_out: Path, title: str, art_id: str, kind: str
+) -> tuple[int | None, ArtifactType, Path]:
+    """Determine lecture number, artifact type, and local destination file path.
+
+    Args:
+        course: Course entity.
+        course_out: Base course output directory.
+        title: Artifact title string.
+        art_id: Remote artifact identifier.
+        kind: Artifact kind string.
+
+    Returns:
+        Tuple of (inferred lecture sequence number or None, ArtifactType, destination Path).
+    """
+    lec_no = infer_lecture_no_from_title(title, len(course.lectures))
+    art_type = map_remote_kind_to_artifact_type(kind)
+
+    if lec_no is not None:
+        lec = next((item for item in course.lectures if item.no == lec_no), None)
+        lec_dir_name = f"{lec_no:02d}_{lec.topic}" if lec else f"lecture_{lec_no:02d}"
+        dest_dir = course_out / lec_dir_name
+    else:
+        dest_dir = course_out / "manual_artifacts"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_title = re.sub(r"[^\w\s\-\[\]]", "_", title).strip() or art_id
+    ext = get_extension_for_kind(kind)
+    output_file = dest_dir / f"{safe_title}{ext}"
+    return lec_no, art_type, output_file
+
+
 class RemoteSyncService:
     """Synchronizes remote NotebookLM artifacts back into local repository and disk."""
 
@@ -124,26 +197,26 @@ class RemoteSyncService:
         synced_items: list[dict[str, Any]] = []
         course_out = self.output_base_dir / "courses" / course_code
 
+        existing_jobs = self.queue_repo.list_jobs(course_code=course_code)
+        existing_output_files = {j.output_file for j in existing_jobs if j.output_file}
+        existing_art_ids = extract_synced_art_ids(existing_jobs)
+
         for art in remote_artifacts:
             art_id = art["id"]
             title = art["title"]
             kind = art["kind"]
 
-            # Infer lecture number
-            lec_no = infer_lecture_no_from_title(title, len(course.lectures))
-            art_type = map_remote_kind_to_artifact_type(kind)
+            if art_id in existing_art_ids:
+                logger.info("Skipping already synchronized remote artifact %s (%s)", art_id, title)
+                continue
 
-            if lec_no:
-                dest_dir = course_out / f"lecture_{lec_no:02d}"
-            else:
-                dest_dir = course_out / "manual_artifacts"
-            dest_dir.mkdir(parents=True, exist_ok=True)
+            lec_no, art_type, output_file = resolve_artifact_destination(
+                course, course_out, title, art_id, kind
+            )
 
-            safe_title = re.sub(r"[^\w\s\-\[\]]", "_", title).strip() or art_id
-            output_file = dest_dir / f"{safe_title}.bin"
-
-            # Check if this artifact is already downloaded
-            if output_file.exists():
+            # Check if this artifact is already downloaded or tracked
+            if str(output_file) in existing_output_files or output_file.exists():
+                logger.info("Artifact file already exists at %s, skipping download", output_file)
                 continue
 
             try:
@@ -162,7 +235,7 @@ class RemoteSyncService:
                     status=JobStatus.DONE,
                     output_file=downloaded_path,
                     source_origin="remote_sync",
-                    custom_prompt=f"Synced from NotebookLM: {title}",
+                    custom_prompt=f"Synced from NotebookLM [{art_id}]: {title}",
                 )
                 self.queue_repo.enqueue_jobs([job])
                 synced_items.append({"id": art_id, "title": title, "path": downloaded_path})

@@ -242,18 +242,19 @@ class NotebookLMAdapter:
             return str(task_id)
 
     @_translate_errors
-    async def download_quiz(self, notebook_id: str, output_path: str) -> None:
+    async def download_quiz(self, notebook_id: str, output_path: str, artifact_id: str | None = None) -> None:
         """Download generated quiz JSON to a local file.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Optional artifact identifier to download a specific artifact.
         """
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
         async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
             logger.info("Downloading quiz from notebook %s to %s", notebook_id, out)
-            await client.artifacts.download_quiz(notebook_id, str(out))
+            await client.artifacts.download_quiz(notebook_id, str(out), artifact_id=artifact_id)
 
     @_translate_errors
     async def generate_flashcards(
@@ -283,18 +284,21 @@ class NotebookLMAdapter:
             return str(task_id)
 
     @_translate_errors
-    async def download_flashcards(self, notebook_id: str, output_path: str) -> None:
+    async def download_flashcards(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Download generated flashcards JSON to a local file.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Optional artifact identifier.
         """
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
         async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
             logger.info("Downloading flashcards from notebook %s to %s", notebook_id, out)
-            await client.artifacts.download_flashcards(notebook_id, str(out))
+            await client.artifacts.download_flashcards(notebook_id, str(out), artifact_id=artifact_id)
 
     @_translate_errors
     async def generate_mind_map(
@@ -323,18 +327,21 @@ class NotebookLMAdapter:
             return str(task_id)
 
     @_translate_errors
-    async def download_mind_map(self, notebook_id: str, output_path: str) -> None:
+    async def download_mind_map(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Download generated mind map JSON to a local file.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Optional artifact identifier.
         """
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
         async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
             logger.info("Downloading mind map from notebook %s to %s", notebook_id, out)
-            await client.artifacts.download_mind_map(notebook_id, str(out))
+            await client.artifacts.download_mind_map(notebook_id, str(out), artifact_id=artifact_id)
 
     @_translate_errors
     async def generate_audio(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
@@ -361,13 +368,21 @@ class NotebookLMAdapter:
             return str(task_id)
 
     @_translate_errors
-    async def download_audio(self, notebook_id: str, output_path: str) -> None:
+    async def download_audio(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Download generated Audio MP3 file to local storage.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Local filesystem path where MP3 should be saved.
+            artifact_id: Optional artifact identifier.
         """
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+            logger.info("Downloading audio from notebook %s to %s", notebook_id, out)
+            await client.artifacts.download_audio(notebook_id, str(out), artifact_id=artifact_id)
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
         async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:

@@ -42,6 +42,46 @@ from notebooklm_batch_studio.services.worker_pool import (
 logger = logging.getLogger(__name__)
 
 
+def _format_jobs_data(jobs: list[ArtifactJob], course_dir: Path) -> list[dict[str, Any]]:
+    """Format artifact jobs for API representation including relative paths.
+
+    Args:
+        jobs: List of ArtifactJob entities.
+        course_dir: Base directory of the course output.
+
+    Returns:
+        List of formatted job dictionaries.
+    """
+    jobs_data = []
+    for j in jobs:
+        rel_path = None
+        if j.output_file:
+            try:
+                p = Path(j.output_file)
+                if p.is_relative_to(course_dir):
+                    rel_path = str(p.relative_to(course_dir))
+                else:
+                    rel_path = p.name
+            except Exception:
+                rel_path = Path(j.output_file).name
+        jobs_data.append(
+            {
+                "id": j.id,
+                "lecture_no": j.lecture_no,
+                "artifact_type": j.artifact_type.value,
+                "status": j.status.value,
+                "custom_prompt": j.custom_prompt,
+                "output_file": j.output_file,
+                "rel_path": rel_path,
+                "error_message": j.error_message,
+                "attempts": j.attempts,
+                "created_at": j.created_at.isoformat() if j.created_at else None,
+                "updated_at": j.updated_at.isoformat() if j.updated_at else None,
+            }
+        )
+    return jobs_data
+
+
 class BatchStudioService:
     """Core domain service for orchestrating course batch operations."""
 
@@ -293,21 +333,8 @@ class BatchStudioService:
             for lec in course.lectures
         ]
 
-        jobs_data = [
-            {
-                "id": j.id,
-                "lecture_no": j.lecture_no,
-                "artifact_type": j.artifact_type.value,
-                "status": j.status.value,
-                "custom_prompt": j.custom_prompt,
-                "output_file": j.output_file,
-                "error_message": j.error_message,
-                "attempts": j.attempts,
-                "created_at": j.created_at.isoformat() if j.created_at else None,
-                "updated_at": j.updated_at.isoformat() if j.updated_at else None,
-            }
-            for j in jobs
-        ]
+        course_dir = (self.config.courses_output_dir / course.code).resolve()
+        jobs_data = _format_jobs_data(jobs, course_dir)
 
         notebook_url = (
             f"https://notebooklm.google.com/notebook/{course.notebook_id}" if course.notebook_id else None
@@ -463,25 +490,42 @@ class BatchStudioService:
         if course is None:
             raise CourseNotFoundError(f"Course not found: {course_code}")
 
-        lec = next((item for item in course.lectures if item.no == lecture_no), None)
-        lec_topic = lec.topic if lec else "lecture"
-        lec_dir_name = f"{lecture_no:02d}_{lec_topic}"
-        quiz_dir = self.config.courses_output_dir / course.code / lec_dir_name
+        if lecture_no == 0:
+            quiz_dir = self.config.courses_output_dir / course.code / "_course_synthesis"
+        else:
+            lec = next((item for item in course.lectures if item.no == lecture_no), None)
+            lec_topic = lec.topic if lec else "lecture"
+            lec_dir_name = f"{lecture_no:02d}_{lec_topic}"
+            quiz_dir = self.config.courses_output_dir / course.code / lec_dir_name
 
-        md_filename = "答案卷.md" if with_answers else "題目卷.md"
-        md_file = quiz_dir / md_filename
+        suffix = "答案卷.md" if with_answers else "題目卷.md"
+        candidates = [variant, f"quiz_{variant}", variant.replace("quiz_", "")]
+        md_file = quiz_dir / suffix
+        for c in candidates:
+            v_md = quiz_dir / f"{c}_{suffix}"
+            if v_md.exists():
+                md_file = v_md
+                break
+
         json_file = quiz_dir / "quiz.json"
+        for c in candidates:
+            v_json = quiz_dir / f"{c}_quiz.json"
+            if v_json.exists():
+                json_file = v_json
+                break
 
         if not md_file.exists():
             raise FileNotFoundError(f"Quiz artifact not found for {course_code} L{lecture_no} ({variant})")
 
+        json_content = json.loads(json_file.read_text(encoding="utf-8")) if json_file.exists() else None
         return {
             "course_code": course_code,
             "lecture_no": lecture_no,
             "variant": variant,
             "with_answers": with_answers,
             "markdown": md_file.read_text(encoding="utf-8"),
-            "json_data": json.loads(json_file.read_text(encoding="utf-8")) if json_file.exists() else None,
+            "json_data": json_content,
+            "quiz": json_content,
         }
 
     def list_artifact_files(self, course_code: str, lecture_no: int | None = None) -> list[dict[str, Any]]:

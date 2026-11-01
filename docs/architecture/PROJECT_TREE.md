@@ -90,6 +90,8 @@ notebooklm-batch-studio/
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
 │   │   ├── 001-notebooklm-access.md
+│   │   ├── 002-session-token-auth.md
+│   │   ├── 003-student-study-portal-spaced-repetition.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]

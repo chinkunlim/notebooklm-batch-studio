@@ -15,10 +15,12 @@ from mcp.server.mcpserver import MCPServer
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
+from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 logger = logging.getLogger(__name__)
 
@@ -253,14 +255,175 @@ def _register_maintenance_tools(mcp: MCPServer, active_service: BatchStudioServi
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
 
+def _register_sync_and_prompt_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register remote sync and prompt optimization tools.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+
+    @mcp.tool()
+    async def sync_course_remote_artifacts(course_code: str, confirm: bool = False) -> str:
+        """Synchronize manually generated artifacts from NotebookLM to local storage (requires confirm=True).
+
+        Args:
+            course_code: Course identifier (e.g. 'BIO101').
+            confirm: Must be set to True to execute remote download and database registration.
+
+        Returns:
+            JSON string describing synchronized items and count.
+        """
+        if not confirm:
+            return (
+                f"Action not confirmed. Pass confirm=True to sync remote NotebookLM "
+                f"artifacts for course '{course_code}'."
+            )
+        try:
+            res = await active_service.sync_course_artifacts(course_code)
+            return json.dumps(res, ensure_ascii=False, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+    @mcp.tool()
+    def refine_prompts_with_ollama(course_code: str, confirm: bool = False) -> str:
+        """Refine pending job prompts for a course using Ollama (requires confirm=True).
+
+        Args:
+            course_code: Course identifier (e.g. 'BIO101').
+            confirm: Must be set to True to execute Ollama prompt refinement.
+
+        Returns:
+            JSON string with updated job count.
+        """
+        if not confirm:
+            return (
+                f"Action not confirmed. Pass confirm=True to refine prompts using "
+                f"Ollama for course '{course_code}'."
+            )
+        try:
+            count = active_service.refine_course_prompts_with_ollama(course_code)
+            return json.dumps(
+                {
+                    "course_code": course_code,
+                    "refined_count": count,
+                    "message": f"Successfully refined {count} prompts using Ollama.",
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+def _register_study_history_tools(mcp: MCPServer, active_study: StudyTrackerService) -> None:
+    """Register student quiz attempt history tools.
+
+    Args:
+        mcp: MCPServer instance.
+        active_study: Study tracker service.
+    """
+
+    @mcp.tool()
+    def get_study_history(course_code: str, lecture_no: int | None = None) -> str:
+        """Retrieve student quiz attempt history for a course or specific lecture.
+
+        Args:
+            course_code: Course identifier (e.g. 'BIO101').
+            lecture_no: Optional sequence number to filter attempts by lecture.
+
+        Returns:
+            JSON string containing list of quiz attempts and scores.
+        """
+        attempts = active_study.get_study_history(course_code, lecture_no=lecture_no)
+        res = [
+            {
+                "id": a.id,
+                "course_code": a.course_code,
+                "lecture_no": a.lecture_no,
+                "quiz_variant": a.quiz_variant,
+                "score": a.score,
+                "total_questions": a.total_questions,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            }
+            for a in attempts
+        ]
+        return json.dumps(res, ensure_ascii=False, indent=2)
+
+
+def _register_study_weakness_tools(mcp: MCPServer, active_study: StudyTrackerService) -> None:
+    """Register student weakness notebook and mistake resolution tools.
+
+    Args:
+        mcp: MCPServer instance.
+        active_study: Study tracker service.
+    """
+
+    @mcp.tool()
+    def get_weaknesses(
+        course_code: str,
+        lecture_no: int | None = None,
+        only_unresolved: bool = True,
+    ) -> str:
+        """Retrieve student mistake questions from the weakness notebook.
+
+        Args:
+            course_code: Course identifier (e.g. 'BIO101').
+            lecture_no: Optional sequence number filter.
+            only_unresolved: If True, only returns mistakes not yet mastered.
+
+        Returns:
+            JSON string containing wrong questions, answers, and academic rationales.
+        """
+        mistakes = active_study.get_weaknesses(
+            course_code, lecture_no=lecture_no, only_unresolved=only_unresolved
+        )
+        res = [
+            {
+                "id": m.id,
+                "course_code": m.course_code,
+                "lecture_no": m.lecture_no,
+                "question_text": m.question_text,
+                "choices": m.choices,
+                "correct_index": m.correct_index,
+                "selected_index": m.selected_index,
+                "explanation": m.explanation,
+                "is_resolved": m.is_resolved,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in mistakes
+        ]
+        return json.dumps(res, ensure_ascii=False, indent=2)
+
+    @mcp.tool()
+    def resolve_weakness_mistake(mistake_id: str, confirm: bool = False) -> str:
+        """Mark a weakness mistake question as resolved/mastered (requires confirm=True).
+
+        Args:
+            mistake_id: Mistake record UUID.
+            confirm: Must be explicitly set to True to resolve the mistake.
+
+        Returns:
+            Status message.
+        """
+        if not confirm:
+            return f"Action not confirmed. Pass confirm=True to mark mistake {mistake_id} as resolved."
+        ok = active_study.resolve_weakness(mistake_id)
+        if ok:
+            return f"Mistake {mistake_id} successfully marked as resolved."
+        return f"Mistake {mistake_id} not found."
+
+
 def build_mcp_server(
     service: BatchStudioService | None = None,
+    study_service: StudyTrackerService | None = None,
     config: AppConfig | None = None,
 ) -> MCPServer:
     """Build and configure the MCPServer instance with all batch studio tools.
 
     Args:
         service: Optional pre-configured BatchStudioService instance.
+        study_service: Optional pre-configured StudyTrackerService instance.
         config: Application configuration.
 
     Returns:
@@ -268,20 +431,30 @@ def build_mcp_server(
     """
     cfg = config or load_config()
 
-    if service is None:
+    if service is None or study_service is None:
         engine = create_db_engine(cfg.database_url)
         with session_scope(engine) as session:
             course_repo = CourseRepository(session)
             queue_repo = QueueRepository(session)
+            study_repo = StudyRepository(session)
             adapter = NotebookLMAdapter(cfg)
-            active_service = BatchStudioService(
-                course_repo=course_repo,
-                queue_repo=queue_repo,
-                notebooklm_client=adapter,
-                config=cfg,
-            )
+            if service is None:
+                active_service = BatchStudioService(
+                    course_repo=course_repo,
+                    queue_repo=queue_repo,
+                    notebooklm_client=adapter,
+                    config=cfg,
+                )
+            else:
+                active_service = service
+
+            if study_service is None:
+                active_study = StudyTrackerService(study_repo=study_repo, config=cfg)
+            else:
+                active_study = study_service
     else:
         active_service = service
+        active_study = study_service
 
     mcp = MCPServer("notebooklm-batch-studio")
     _register_course_query_tools(mcp, active_service)
@@ -289,6 +462,9 @@ def build_mcp_server(
     _register_import_tools(mcp, active_service)
     _register_queue_tools(mcp, active_service)
     _register_maintenance_tools(mcp, active_service)
+    _register_sync_and_prompt_tools(mcp, active_service)
+    _register_study_history_tools(mcp, active_study)
+    _register_study_weakness_tools(mcp, active_study)
     return mcp
 
 

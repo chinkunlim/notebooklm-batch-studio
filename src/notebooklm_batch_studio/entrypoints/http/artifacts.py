@@ -93,5 +93,10 @@ def download_artifact(code: str, file_path: str, request: Request) -> FileRespon
     if not str(target_path).startswith(str(course_dir)):
         raise HTTPException(status_code=403, detail="Access denied: path traversal detected")
     if not target_path.exists() or not target_path.is_file():
-        raise HTTPException(status_code=404, detail="Requested file not found")
+        # Fallback: search recursively inside course_dir for file_path's filename
+        candidates = list(course_dir.rglob(target_path.name))
+        if candidates and candidates[0].is_file():
+            target_path = candidates[0]
+        else:
+            raise HTTPException(status_code=404, detail="Requested file not found")
     return FileResponse(path=target_path, filename=target_path.name)

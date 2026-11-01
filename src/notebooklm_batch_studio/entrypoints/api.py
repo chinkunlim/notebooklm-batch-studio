@@ -14,7 +14,7 @@ from typing import Any, cast
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
@@ -84,9 +84,9 @@ def _resolve_service(service: BatchStudioService | None, cfg: AppConfig) -> Batc
         return service
 
     engine = create_db_engine(cfg.database_url)
-    session = Session(bind=engine, expire_on_commit=False)
-    course_repo = CourseRepository(session)
-    queue_repo = QueueRepository(session)
+    session = scoped_session(sessionmaker(bind=engine, expire_on_commit=False))
+    course_repo = CourseRepository(cast(Session, session))
+    queue_repo = QueueRepository(cast(Session, session))
     adapter = NotebookLMAdapter(cfg)
 
     @contextmanager
@@ -125,8 +125,8 @@ def _resolve_study_service(
         return study_service
 
     engine = create_db_engine(cfg.database_url)
-    session = Session(bind=engine, expire_on_commit=False)
-    study_repo = StudyRepository(session)
+    session = scoped_session(sessionmaker(bind=engine, expire_on_commit=False))
+    study_repo = StudyRepository(cast(Session, session))
     return StudyTrackerService(study_repo=study_repo, config=cfg)
 
 
@@ -170,7 +170,7 @@ def create_app(
         allow_headers=["*"],
     )
 
-    mcp_server = build_mcp_server(service=active_service, config=cfg)
+    mcp_server = build_mcp_server(service=active_service, study_service=active_study, config=cfg)
     app.mount("/mcp", mcp_server.streamable_http_app())
 
     app.include_router(system_router)

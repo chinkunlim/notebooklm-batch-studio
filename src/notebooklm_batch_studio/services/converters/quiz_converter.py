@@ -7,6 +7,7 @@ generating student exam papers (題目卷.md, no answers) and teacher/study answ
 
 from __future__ import annotations
 
+import html
 import json
 import logging
 import re
@@ -405,15 +406,16 @@ def _get_interactive_quiz_js(quiz_json: str) -> str:
     """
     js_lines = [
         f"<script>const data={quiz_json};const answers={{}};",
+        "function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}",
         "const container=document.getElementById('quiz-container');",
         "data.questions.forEach((q,qIdx)=>{const card=document.createElement('div');card.className='q-card';",
-        "let h=`<div class='q-title'>${qIdx+1}. ${q.question}</div>`;",
+        "let h=`<div class='q-title'>${qIdx+1}. ${esc(q.question)}</div>`;",
         "q.choices.forEach((c,cIdx)=>{const l=String.fromCharCode(65+cIdx);",
         "h+=`<div class='choice' id='c-${qIdx}-${cIdx}' onclick='selectChoice(${qIdx},${cIdx})'>`",
-        "+ `${l}. ${c}</div>`;});",
+        "+ `${l}. ${esc(c)}</div>`;});",
         "h+=`<div class='explanation' id='exp-${qIdx}'><p style='color:#4ade80;margin:0 0 6px 0;'>`",
         "+ `<strong>正確解答：${String.fromCharCode(65+q.answer_index)}</strong></p>`",
-        "+ `<p style='margin:0;'>${q.explanation}</p></div>`;",
+        "+ `<p style='margin:0;'>${esc(q.explanation)}</p></div>`;",
         "card.innerHTML=h;container.appendChild(card);});",
         "function selectChoice(qIdx,cIdx){answers[qIdx]=cIdx;const q=data.questions[qIdx];",
         "for(let i=0;i<q.choices.length;i++){const el=document.getElementById(`c-${qIdx}-${i}`);",
@@ -458,12 +460,13 @@ def to_interactive_html(quiz: Quiz) -> str:
     quiz_json = json.dumps(quiz_data, ensure_ascii=False)
     css = _get_interactive_quiz_css()
     js = _get_interactive_quiz_js(quiz_json)
+    safe_title = html.escape(quiz.title)
     html_lines = [
         "<!DOCTYPE html>",
-        f'<html lang="zh-TW"><head><meta charset="utf-8"><title>{quiz.title} — 互動測驗</title>',
+        f'<html lang="zh-TW"><head><meta charset="utf-8"><title>{safe_title} — 互動測驗</title>',
         f'<meta name="viewport" content="width=device-width, initial-scale=1">{css}</head>',
         '<body><div class="container"><div class="header">',
-        f"<h1>{quiz.title}</h1>",
+        f"<h1>{safe_title}</h1>",
         f'<p style="color:#94a3b8;">共 {len(quiz.questions)} 題・即時互動答題與學術解析</p></div>',
         '<div id="quiz-container"></div><div class="score-bar">',
         f'<div id="score-text">已作答: 0 / {len(quiz.questions)}</div>',

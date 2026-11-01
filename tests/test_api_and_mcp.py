@@ -10,18 +10,21 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 from starlette.testclient import TestClient
 
 from notebooklm_batch_studio.adapters.db.base import Base
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
+from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.models import Course, Lecture, ProfileName
 from notebooklm_batch_studio.domain.repositories import NotebookLMClientProtocol
 from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 
 class MockNotebookLMClient(NotebookLMClientProtocol):
@@ -147,6 +150,17 @@ class MockNotebookLMClient(NotebookLMClientProtocol):
         """Mock find latest artifact."""
         return "mock-artifact-id-api"
 
+    async def list_artifacts(self, notebook_id: str) -> list[dict[str, Any]]:
+        """Mock list remote artifacts."""
+        return [{"id": "remote-art-1", "title": "[Ch01] Remote Quiz", "kind": "quiz", "is_completed": True}]
+
+    async def download_artifact_by_kind(
+        self, notebook_id: str, artifact_id: str, kind: str, output_path: str
+    ) -> str:
+        """Mock download remote artifact by kind."""
+        Path(output_path).write_text("{}", encoding="utf-8")
+        return output_path
+
 
 class TestApiAndMcp(unittest.TestCase):
     """Test suite for HTTP REST API and MCP Tool Server."""
@@ -175,6 +189,7 @@ class TestApiAndMcp(unittest.TestCase):
 
         self.course_repo = CourseRepository(self.session)
         self.queue_repo = QueueRepository(self.session)
+        self.study_repo = StudyRepository(self.session)
         self.client_mock = MockNotebookLMClient()
 
         self.service = BatchStudioService(
@@ -183,6 +198,7 @@ class TestApiAndMcp(unittest.TestCase):
             notebooklm_client=self.client_mock,
             config=self.config,
         )
+        self.study_service = StudyTrackerService(study_repo=self.study_repo, config=self.config)
 
         # Seed initial test course
         self.course = Course(
@@ -207,7 +223,7 @@ class TestApiAndMcp(unittest.TestCase):
         (quiz_dir / "quiz.json").write_text(json.dumps({"questions": []}), encoding="utf-8")
         (quiz_dir / "sample.pdf").write_bytes(b"%PDF-1.4 test")
 
-        self.app = create_app(config=self.config, service=self.service)
+        self.app = create_app(config=self.config, service=self.service, study_service=self.study_service)
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -329,7 +345,7 @@ class TestApiAndMcp(unittest.TestCase):
 
     def test_mcp_server_tools(self) -> None:
         """Verify MCP tools registration, query responses, and confirm safety protocol."""
-        mcp = build_mcp_server(service=self.service, config=self.config)
+        mcp = build_mcp_server(service=self.service, study_service=self.study_service, config=self.config)
 
         # list_courses
         list_fn = mcp._tool_manager._tools["list_courses"].fn  # type: ignore[attr-defined]
@@ -362,3 +378,46 @@ class TestApiAndMcp(unittest.TestCase):
         start_fn = mcp._tool_manager._tools["start_queue"].fn  # type: ignore[attr-defined]
         self.assertIn("Action not confirmed", start_fn(False))
         self.assertIn("started successfully", start_fn(True))
+
+        # Study tools verification
+        self.study_service.record_quiz_attempt(
+            course_code="BIO101",
+            lecture_no=1,
+            quiz_variant="academic",
+            score=9,
+            total_questions=10,
+            mistakes_data=[
+                {
+                    "question_text": "What is ATP?",
+                    "choices": ["Energy", "DNA", "Protein", "Lipid"],
+                    "correct_index": 0,
+                    "selected_index": 1,
+                    "explanation": "ATP is the energy currency.",
+                }
+            ],
+        )
+
+        history_fn = mcp._tool_manager._tools["get_study_history"].fn  # type: ignore[attr-defined]
+        history_res = json.loads(history_fn("BIO101"))
+        self.assertEqual(len(history_res), 1)
+        self.assertEqual(history_res[0]["score"], 9)
+
+        weak_fn = mcp._tool_manager._tools["get_weaknesses"].fn  # type: ignore[attr-defined]
+        weak_res = json.loads(weak_fn("BIO101"))
+        self.assertEqual(len(weak_res), 1)
+        self.assertEqual(weak_res[0]["question_text"], "What is ATP?")
+
+        resolve_fn = mcp._tool_manager._tools["resolve_weakness_mistake"].fn  # type: ignore[attr-defined]
+        unconf_resolve = resolve_fn("fake-id", False)
+        self.assertIn("Action not confirmed", unconf_resolve)
+
+        # Sync and prompt tools verification
+        sync_fn = mcp._tool_manager._tools["sync_course_remote_artifacts"].fn  # type: ignore[attr-defined]
+        import asyncio
+
+        sync_unconf = asyncio.run(sync_fn("BIO101", False))
+        self.assertIn("Action not confirmed", sync_unconf)
+
+        refine_fn = mcp._tool_manager._tools["refine_prompts_with_ollama"].fn  # type: ignore[attr-defined]
+        refine_unconf = refine_fn("BIO101", False)
+        self.assertIn("Action not confirmed", refine_unconf)

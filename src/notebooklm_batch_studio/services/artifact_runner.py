@@ -54,22 +54,24 @@ from notebooklm_batch_studio.services.converters.quiz_converter import (
 logger = logging.getLogger(__name__)
 
 
-def _save_quiz_files(out_dir: Path, quiz: Quiz) -> str:
+def _save_quiz_files(out_dir: Path, quiz: Quiz, file_prefix: str = "") -> str:
     """Save quiz markdown, JSON, interactive HTML, and PDF files to target directory.
 
     Args:
         out_dir: Destination folder.
         quiz: Domain Quiz entity.
+        file_prefix: Optional prefix to prevent overwriting between variants.
 
     Returns:
-        Path string of quiz.json.
+        Path string of primary quiz.json.
     """
-    exam_md = out_dir / "題目卷.md"
-    ans_md = out_dir / "答案卷.md"
-    final_json = out_dir / "quiz.json"
-    interactive_html = out_dir / "interactive_quiz.html"
-    exam_pdf = out_dir / "題目卷.pdf"
-    ans_pdf = out_dir / "答案卷.pdf"
+    prefix = f"{file_prefix}_" if file_prefix and not file_prefix.endswith("_") else file_prefix
+    exam_md = out_dir / f"{prefix}題目卷.md"
+    ans_md = out_dir / f"{prefix}答案卷.md"
+    final_json = out_dir / f"{prefix}quiz.json"
+    interactive_html = out_dir / f"{prefix}interactive_quiz.html"
+    exam_pdf = out_dir / f"{prefix}題目卷.pdf"
+    ans_pdf = out_dir / f"{prefix}答案卷.pdf"
 
     exam_md.write_text(to_exam_markdown(quiz), encoding="utf-8")
     ans_md.write_text(to_answer_markdown(quiz), encoding="utf-8")
@@ -77,6 +79,13 @@ def _save_quiz_files(out_dir: Path, quiz: Quiz) -> str:
     interactive_html.write_text(to_interactive_html(quiz), encoding="utf-8")
     to_pdf(quiz, exam_pdf, is_answer_key=False)
     to_pdf(quiz, ans_pdf, is_answer_key=True)
+
+    compat_json = out_dir / "quiz.json"
+    if not compat_json.exists():
+        compat_json.write_text(quiz_to_json(quiz), encoding="utf-8")
+    compat_ans_md = out_dir / "答案卷.md"
+    if not compat_ans_md.exists():
+        compat_ans_md.write_text(to_answer_markdown(quiz), encoding="utf-8")
 
     return str(final_json)
 
@@ -214,7 +223,7 @@ class ArtifactRunner:
         Returns:
             Path string of the saved audio file.
         """
-        await self.notebooklm_client.generate_audio(nb_id, source_ids)
+        await self.notebooklm_client.generate_audio(nb_id, source_ids, prompt=job.custom_prompt)
         if is_course_wide or job.lecture_no is None:
             audio_file = out_dir / f"{job.course_code}_course_audio.mp3"
         else:
@@ -245,12 +254,16 @@ class ArtifactRunner:
             ArtifactType.QUIZ_CONCEPT: "概念刷題",
         }
         variant = variant_map.get(job.artifact_type, "1-基礎")
+        variant_prefix = job.artifact_type.value
         batches: list[Quiz] = []
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             for attempt in range(3):
                 tmp_json = Path(tmp_dir) / f"quiz_attempt_{attempt}.json"
-                prompt = f"Generate rigorous questions for {variant} in language: {course.language}"
+                prompt = (
+                    job.custom_prompt
+                    or f"Generate rigorous questions for {variant} in language: {course.language}"
+                )
                 await self.notebooklm_client.generate_quiz(nb_id, source_ids, prompt=prompt)
                 await self.notebooklm_client.download_quiz(nb_id, str(tmp_json))
 
@@ -271,9 +284,9 @@ class ArtifactRunner:
 
         merged_quiz, is_complete = merge_and_deduplicate_quizzes(batches, target_count=30)
         if not is_complete:
-            review_dir = self.config.needs_review_dir / f"{course.code}_L{job.lecture_no}_{variant}"
+            review_dir = self.config.needs_review_dir / f"{course.code}_L{job.lecture_no}_{variant_prefix}"
             review_dir.mkdir(parents=True, exist_ok=True)
-            incomplete_json = review_dir / "quiz.json"
+            incomplete_json = review_dir / f"{variant_prefix}_quiz.json"
             incomplete_json.write_text(quiz_to_json(merged_quiz), encoding="utf-8")
             logger.warning(
                 "Quiz incomplete (%d questions), quarantined to %s",
@@ -282,7 +295,7 @@ class ArtifactRunner:
             )
             return str(incomplete_json)
 
-        return _save_quiz_files(out_dir, merged_quiz)
+        return _save_quiz_files(out_dir, merged_quiz, file_prefix=variant_prefix)
 
     async def _process_flashcards(
         self, job: ArtifactJob, course: Course, nb_id: str, source_ids: list[str], out_dir: Path
@@ -301,7 +314,7 @@ class ArtifactRunner:
         """
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_json = Path(tmp_dir) / "flashcards.json"
-            await self.notebooklm_client.generate_flashcards(nb_id, source_ids)
+            await self.notebooklm_client.generate_flashcards(nb_id, source_ids, prompt=job.custom_prompt)
             await self.notebooklm_client.download_flashcards(nb_id, str(tmp_json))
             raw_data = json.loads(tmp_json.read_text(encoding="utf-8"))
 
@@ -331,7 +344,7 @@ class ArtifactRunner:
         """
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_json = Path(tmp_dir) / "mindmap.json"
-            await self.notebooklm_client.generate_mind_map(nb_id, source_ids)
+            await self.notebooklm_client.generate_mind_map(nb_id, source_ids, prompt=job.custom_prompt)
             await self.notebooklm_client.download_mind_map(nb_id, str(tmp_json))
             raw_data = json.loads(tmp_json.read_text(encoding="utf-8"))
 
@@ -362,6 +375,7 @@ class ArtifactRunner:
         """
         target_q = course.mock_exam_questions or 50
         batches: list[Quiz] = []
+        variant_prefix = job.artifact_type.value
         variant_title = (
             f"[{course.code}] 全課程學術精研期末考"
             if job.artifact_type == ArtifactType.COURSE_QUIZ_ACADEMIC
@@ -373,10 +387,11 @@ class ArtifactRunner:
         with tempfile.TemporaryDirectory() as tmp_dir:
             for attempt in range(5):
                 tmp_json = Path(tmp_dir) / f"mock_attempt_{attempt}.json"
-                prompt = (
-                    f"Comprehensive final exam batch {attempt + 1}, target={target_q}, "
-                    f"language={course.language}"
+                default_prompt = (
+                    f"Comprehensive final exam batch {attempt + 1}, "
+                    f"target={target_q}, language={course.language}"
                 )
+                prompt = job.custom_prompt or default_prompt
                 await self.notebooklm_client.generate_quiz(nb_id, source_ids, prompt=prompt)
                 await self.notebooklm_client.download_quiz(nb_id, str(tmp_json))
                 if tmp_json.exists():
@@ -395,7 +410,7 @@ class ArtifactRunner:
                     break
 
         final_quiz, _ = merge_and_deduplicate_quizzes(batches, target_count=target_q)
-        return _save_quiz_files(out_dir, final_quiz)
+        return _save_quiz_files(out_dir, final_quiz, file_prefix=variant_prefix)
 
     async def _process_study_guide(
         self,

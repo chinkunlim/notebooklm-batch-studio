@@ -300,12 +300,13 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
-    async def download_quiz(self, notebook_id: str, output_path: str) -> None:
+    async def download_quiz(self, notebook_id: str, output_path: str, artifact_id: str | None = None) -> None:
         """Download generated quiz JSON to a local file.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Optional artifact identifier.
         """
         ...
 
@@ -324,12 +325,15 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
-    async def download_flashcards(self, notebook_id: str, output_path: str) -> None:
+    async def download_flashcards(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Download generated flashcards JSON to a local file.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Optional artifact identifier.
         """
         ...
 
@@ -348,12 +352,15 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
-    async def download_mind_map(self, notebook_id: str, output_path: str) -> None:
+    async def download_mind_map(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Download generated mind map JSON to a local file.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Optional artifact identifier.
         """
         ...
 
@@ -370,12 +377,15 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
-    async def download_audio(self, notebook_id: str, output_path: str) -> None:
+    async def download_audio(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Download generated Audio MP3 file to local storage.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Local filesystem path where MP3 should be saved.
+            artifact_id: Optional artifact identifier.
         """
         ...
 

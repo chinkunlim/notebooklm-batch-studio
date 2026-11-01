@@ -343,7 +343,7 @@
               <p style="font-size: 0.85rem; color: var(--text-muted);">自動記錄做錯的題目，提供重測演練並支援一鍵匯出 Anki 錯題包。</p>
             </div>
             <div style="display: flex; gap: 8px;">
-              <button class="primary" onclick="downloadWeaknessAnki()">📥 匯出租錯題專屬 Anki 卡牌 (.csv)</button>
+              <button class="primary" onclick="downloadWeaknessAnki()">📥 匯出錯題專屬 Anki 卡牌 (.csv)</button>
             </div>
           </div>
           <div id="mistakesListContainer"></div>
@@ -478,10 +478,18 @@
     let currentStudyCourse = null;
     let activeStudyLectureNo = null; // null represents course-wide
     let activeStudyTab = 'audio';
+    let activeQuizVariant = 'quiz_academic';
     let currentQuizData = null;
     let currentQuizAnswers = {};
     let currentFlashcards = [];
     let currentFlashcardIdx = 0;
+
+    function escHtml(s) {
+      if (s === null || s === undefined) return '';
+      const d = document.createElement('div');
+      d.textContent = String(s);
+      return d.innerHTML;
+    }
 
     function switchMainView(mode) {
       const adminView = document.getElementById('adminView');
@@ -673,8 +681,8 @@
       );
 
       if (job && job.output_file) {
-        const filename = job.output_file.split('/').pop();
-        const streamUrl = `/api/artifacts/${code}/download/${filename}`;
+        const streamPath = job.rel_path || job.output_file.split('/').pop();
+        const streamUrl = `/api/artifacts/${code}/download/${encodeURIComponent(streamPath)}`;
         container.innerHTML = `
           <div style="background: #0f172a; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border);">
             <div style="font-weight: 600; margin-bottom: 8px;">🎙️ ${isCourse ? '全課統整語音導讀' : '本講義語音總覽'}</div>
@@ -719,6 +727,7 @@
     }
 
     async function loadQuizForChapter(variant) {
+      activeQuizVariant = variant;
       const btnAcad = document.getElementById('btnQuizAcademic');
       const btnConc = document.getElementById('btnQuizConcept');
       if (variant === 'quiz_academic') {
@@ -737,19 +746,20 @@
       container.innerHTML = '<div style="color:var(--text-muted);">正在載入題目與解析...</div>';
 
       const code = currentStudyCourse.code;
-      const lecNo = activeStudyLectureNo || 1;
+      const lecNo = activeStudyLectureNo !== null ? activeStudyLectureNo : 0;
       try {
         const res = await fetch(`/api/courses/${code}/lectures/${lecNo}/quiz/${variant}?with_answers=true`);
         if (!res.ok) throw new Error('尚無此風格測驗資料');
         currentQuizData = await res.json();
         currentQuizAnswers = {};
 
-        if (!currentQuizData.quiz || !currentQuizData.quiz.questions || currentQuizData.quiz.questions.length === 0) {
+        const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
+        if (!questions || questions.length === 0) {
           container.innerHTML = '<div class="empty-state">此章節尚未生成測驗題目，請至管理控制台啟動。</div>';
           return;
         }
 
-        renderQuizQuestions(currentQuizData.quiz, variant);
+        renderQuizQuestions(currentQuizData.quiz || currentQuizData.json_data, variant);
       } catch (e) {
         container.innerHTML = `<div class="empty-state">尚未生成此章節測驗，可在管理控制台排入生成。</div>`;
       }
@@ -770,23 +780,24 @@
         let choicesHtml = '';
         (q.choices || []).forEach((c, cIdx) => {
           const letter = String.fromCharCode(65 + cIdx);
+          const choiceText = c.text !== undefined ? c.text : c;
           choicesHtml += `
             <div class="choice-btn" id="choice-${qIdx}-${cIdx}" onclick="selectChoice(${qIdx}, ${cIdx})">
-              <strong>${letter}.</strong> ${c.text || c}
+              <strong>${letter}.</strong> ${escHtml(choiceText)}
             </div>
           `;
         });
 
         card.innerHTML = `
           <div style="font-weight: 600; font-size: 1rem; margin-bottom: 12px; color: #f8fafc;">
-            ${qIdx + 1}. ${q.question}
+            ${qIdx + 1}. ${escHtml(q.question)}
           </div>
           <div>${choicesHtml}</div>
           <div id="explanation-${qIdx}" style="display: none; margin-top: 14px; padding: 12px; background: #1e293b; border-left: 4px solid #38bdf8; border-radius: 4px; font-size: 0.9rem; line-height: 1.6;">
             <p style="color: #4ade80; font-weight: 600; margin-bottom: 4px;">
               正確解答：選項 ${String.fromCharCode(65 + q.answer_index)}
             </p>
-            <p style="margin: 0; color: #cbd5e1;">${q.explanation || '暫無解析'}</p>
+            <p style="margin: 0; color: #cbd5e1;">${escHtml(q.explanation || '暫無解析')}</p>
           </div>
         `;
         container.appendChild(card);
@@ -798,7 +809,8 @@
 
     function selectChoice(qIdx, cIdx) {
       currentQuizAnswers[qIdx] = cIdx;
-      const choices = currentQuizData.quiz.questions[qIdx].choices;
+      const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
+      const choices = questions[qIdx].choices;
       for (let i = 0; i < choices.length; i++) {
         const el = document.getElementById(`choice-${qIdx}-${i}`);
         if (el) el.classList.remove('selected');
@@ -809,17 +821,19 @@
     }
 
     function updateQuizProgress() {
-      const total = currentQuizData.quiz.questions.length;
+      const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
+      const total = questions.length;
       const answered = Object.keys(currentQuizAnswers).length;
       document.getElementById('quizProgressText').textContent = `已作答：${answered} / ${total} 題`;
     }
 
     async function submitQuizAttempt() {
-      const total = currentQuizData.quiz.questions.length;
+      const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
+      const total = questions.length;
       let score = 0;
       const mistakes = [];
 
-      currentQuizData.quiz.questions.forEach((q, qIdx) => {
+      questions.forEach((q, qIdx) => {
         const selected = currentQuizAnswers[qIdx] !== undefined ? currentQuizAnswers[qIdx] : -1;
         const correct = q.answer_index;
         const expEl = document.getElementById(`explanation-${qIdx}`);
@@ -838,7 +852,7 @@
         } else {
           mistakes.push({
             question_text: q.question,
-            choices: q.choices.map(c => c.text || c),
+            choices: q.choices.map(c => c.text !== undefined ? c.text : c),
             correct_index: correct,
             selected_index: selected,
             explanation: q.explanation || ''
@@ -858,7 +872,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             lecture_no: activeStudyLectureNo,
-            quiz_variant: 'quiz',
+            quiz_variant: activeQuizVariant,
             score,
             total_questions: total,
             mistakes
@@ -898,7 +912,7 @@
                 ✅ 我已精通此題 (消除)
               </button>
             </div>
-            <div style="font-weight: 600; font-size: 0.95rem; margin-top: 6px;">${m.question_text}</div>
+            <div style="font-weight: 600; font-size: 0.95rem; margin-top: 6px;">${escHtml(m.question_text)}</div>
             <div style="margin-top: 8px;">
               ${(m.choices || []).map((c, idx) => {
                 const letter = String.fromCharCode(65 + idx);
@@ -906,11 +920,11 @@
                 if (idx === m.correct_index) style += ' background: #14532d; color: #4ade80; font-weight: 600;';
                 else if (idx === m.selected_index) style += ' background: #7f1d1d; color: #fca5a5;';
                 else style += ' background: #1e293b; color: #94a3b8;';
-                return `<div style="${style}">${letter}. ${c}</div>`;
+                return `<div style="${style}">${letter}. ${escHtml(c)}</div>`;
               }).join('')}
             </div>
             <div style="margin-top: 10px; padding: 10px; background: #1e293b; border-left: 3px solid #38bdf8; font-size: 0.85rem; color: #cbd5e1;">
-              <strong>解析：</strong> ${m.explanation}
+              <strong>解析：</strong> ${escHtml(m.explanation)}
             </div>
           </div>
         `).join('');
@@ -1024,8 +1038,9 @@
       const lecNo = activeStudyLectureNo || 1;
       const job = (currentStudyCourse.jobs || []).find(j => j.artifact_type === 'flashcards' && j.lecture_no === lecNo);
       if (job && job.output_file) {
-        const csvName = job.output_file.split('/').pop().replace('.json', '.csv');
-        window.location.href = `/api/artifacts/${code}/download/${csvName}`;
+        const target = job.rel_path || job.output_file.split('/').pop();
+        const csvName = target.replace('.json', '.csv');
+        window.location.href = `/api/artifacts/${code}/download/${encodeURIComponent(csvName)}`;
       } else {
         alert('尚未生成該章節抽認卡 CSV。');
       }
@@ -1059,14 +1074,15 @@
       );
 
       if (job && job.output_file) {
-        const filename = job.output_file.split('/').pop();
-        if (filename.endsWith('.html')) {
-          container.innerHTML = `<iframe src="/api/artifacts/${code}/download/${filename}" style="width:100%; height:550px; border:none; border-radius:var(--radius); background:#fff;"></iframe>`;
+        const filePath = job.rel_path || job.output_file.split('/').pop();
+        const fileUrl = `/api/artifacts/${code}/download/${encodeURIComponent(filePath)}`;
+        if (filePath.endsWith('.html')) {
+          container.innerHTML = `<iframe src="${fileUrl}" style="width:100%; height:550px; border:none; border-radius:var(--radius); background:#fff;"></iframe>`;
         } else {
           try {
-            const res = await fetch(`/api/artifacts/${code}/download/${filename}`);
+            const res = await fetch(fileUrl);
             const text = await res.text();
-            container.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; line-height:1.6; font-size:0.95rem;">${text}</pre>`;
+            container.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; line-height:1.6; font-size:0.95rem;">${escHtml(text)}</pre>`;
           } catch (e) {
             container.innerHTML = `無法載入檔案內容。`;
           }
