@@ -23,6 +23,19 @@ class PortCheckTest(unittest.TestCase):
             self.assertIn("PORTS.md", message)
         self.assertTrue(port_is_free("127.0.0.1", port))
 
+    def test_recently_closed_port_is_free(self) -> None:
+        """A port whose server just closed (connections in TIME_WAIT) counts as free, like uvicorn sees it."""
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind(("127.0.0.1", 0))
+        server.listen()
+        port = server.getsockname()[1]
+        client = socket.create_connection(("127.0.0.1", port))
+        conn, _ = server.accept()
+        conn.close()  # the server side closes first, so its socket goes to TIME_WAIT
+        client.close()
+        server.close()
+        self.assertTrue(port_is_free("127.0.0.1", port))
+
 
 if __name__ == "__main__":
     unittest.main()

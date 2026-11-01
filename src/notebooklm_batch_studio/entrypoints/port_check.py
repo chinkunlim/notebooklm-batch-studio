@@ -23,6 +23,9 @@ def port_is_free(host: str, port: int) -> bool:
         True when nothing is listening there.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        # Same option uvicorn uses: a port left in TIME_WAIT by a server that just stopped is free,
+        # while a port with a live listener still fails to bind.
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind((host, port))
         except OSError:
