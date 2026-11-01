@@ -15,3 +15,4 @@
 | [ADR-001](001-notebooklm-access.md) | 以 notebooklm-py 為主、Playwright 補位操作 NotebookLM | Accepted | 2026-10-21 | `src/notebooklm_batch_studio/adapters/notebooklm/` |
 | [ADR-002](002-session-token-auth.md) | 以 session storage_state 驗證取代 .env 明文帳密 | Accepted | 2026-11-01 | `src/notebooklm_batch_studio/adapters/notebooklm/` |
 | [ADR-003](003-student-study-portal-spaced-repetition.md) | 以 SQLite 與 Anki CSV 整合學生研讀工作台與間隔重複 | Accepted | 2026-11-01 | `src/notebooklm_batch_studio/adapters/db/study_repository.py, src/notebooklm_batch_studio/services/study_service.py` |
+| [ADR-004](004-artifact-id-targeting.md) | 以 generate 回傳的 artifact_id 精準下載與改名，取代取最新一份 | Accepted | 2026-11-01 | `src/notebooklm_batch_studio/adapters/notebooklm/`, `src/notebooklm_batch_studio/services/artifact_runner.py` |

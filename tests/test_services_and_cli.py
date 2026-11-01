@@ -41,6 +41,7 @@ class MockNotebookLMClient:
         self.sources_uploaded: list[tuple[str, str]] = []
         self.renamed_artifacts: list[tuple[str, str, str]] = []
         self.storage_path = Path("/mock/storage_state.json")
+        self.source_limit: int | None = 50
 
     def check_auth(self) -> bool:
         """Mock check auth."""
@@ -62,11 +63,17 @@ class MockNotebookLMClient:
         """Mock wait source ready."""
         pass
 
-    async def generate_quiz(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
+    async def generate_quiz(
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        difficulty: str | None = None,
+    ) -> str:
         """Mock generate quiz."""
         return "task-quiz-1"
 
-    async def download_quiz(self, notebook_id: str, output_path: str) -> None:
+    async def download_quiz(self, notebook_id: str, output_path: str, artifact_id: str | None = None) -> None:
         """Mock download quiz writing sample fixture."""
         sample_quiz_file = FIXTURES_DIR / "sample_quiz.json"
         content = sample_quiz_file.read_text(encoding="utf-8")
@@ -78,29 +85,37 @@ class MockNotebookLMClient:
         """Mock generate flashcards."""
         return "task-fc-1"
 
-    async def download_flashcards(self, notebook_id: str, output_path: str) -> None:
+    async def download_flashcards(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Mock download flashcards."""
         sample_fc_file = FIXTURES_DIR / "sample_flashcards.json"
         content = sample_fc_file.read_text(encoding="utf-8")
         Path(output_path).write_text(content, encoding="utf-8")
 
     async def generate_mind_map(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
         """Mock generate mind map."""
         return "task-mm-1"
 
-    async def download_mind_map(self, notebook_id: str, output_path: str) -> None:
+    async def download_mind_map(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Mock download mind map."""
         sample_mm_file = FIXTURES_DIR / "sample_mindmap.json"
         content = sample_mm_file.read_text(encoding="utf-8")
         Path(output_path).write_text(content, encoding="utf-8")
 
-    async def generate_audio(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
+    async def generate_audio(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
         """Mock generate audio."""
         return "task-audio-1"
 
-    async def download_audio(self, notebook_id: str, output_path: str) -> None:
+    async def download_audio(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
         """Mock download audio."""
         Path(output_path).write_bytes(b"MOCK_AUDIO_DATA")
 
@@ -168,9 +183,13 @@ class MockNotebookLMClient:
         """Mock download video."""
         Path(output_path).write_bytes(b"MOCK_MP4")
 
-    async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
-        """Mock find latest artifact."""
-        return "mock-artifact-id-123"
+    async def get_source_limit(self) -> int | None:
+        """Mock per-notebook source limit."""
+        return self.source_limit
+
+    async def get_quota_status(self) -> dict[str, object]:
+        """Mock quota status."""
+        return {"status": "ready", "windows": [], "actions": [], "source_limit": self.source_limit}
 
 
 class TestCourseReporter(unittest.TestCase):

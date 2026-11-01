@@ -246,6 +246,7 @@
     <div class="controls" id="adminControls">
       <span id="authBadge" class="badge badge-neutral">檢查認證中...</span>
       <span id="queueBadge" class="badge badge-neutral">佇列閒置</span>
+      <span id="quotaBadge" class="badge badge-neutral" title="NotebookLM 生成額度（5 小時 / 每週）">額度讀取中...</span>
       <button id="btnStartQueue" class="primary" style="background: #10b981; font-weight: 600;" onclick="startQueue()">▶️ 啟動批次生成</button>
       <button id="btnPauseQueue" style="display:none; background: #eab308; color: #000; font-weight: 600;" onclick="pauseQueue()">⏸️ 溫和暫停</button>
       <button id="btnResumeQueue" style="display:none; background: #10b981; font-weight: 600;" onclick="resumeQueue()">▶️ 繼續執行</button>
@@ -1135,6 +1136,29 @@
       }
     }
 
+    async function fetchQuota() {
+      const badge = document.getElementById('quotaBadge');
+      try {
+        const res = await fetch('/api/notebooklm/quota');
+        const data = await res.json();
+        if (!res.ok) {
+          badge.className = 'badge badge-neutral';
+          badge.textContent = '額度：無法讀取';
+          badge.title = data.detail || '';
+          return;
+        }
+        const names = { five_hour: '5小時', weekly: '每週' };
+        const parts = (data.windows || []).map(w => `${names[w.kind] || w.kind} ${Math.round(w.remaining_percent)}%`);
+        const low = (data.windows || []).some(w => w.remaining_percent <= 0);
+        badge.className = low ? 'badge badge-danger' : 'badge badge-success';
+        badge.textContent = parts.length ? `額度剩餘：${parts.join(' / ')}` : '額度：未提供';
+        badge.title = (data.windows || []).map(w => `${names[w.kind] || w.kind} 重置：${new Date(w.resets_at).toLocaleString()}`).join('\n')
+          + (data.source_limit ? `\n每本筆記本來源上限：${data.source_limit}` : '');
+      } catch (e) {
+        badge.textContent = '額度：無法讀取';
+      }
+    }
+
     async function startQueue() {
       try {
         await fetch('/api/queue/start', { method: 'POST' });
@@ -1542,7 +1566,9 @@
     window.addEventListener('DOMContentLoaded', () => {
       fetchStatus();
       fetchCourses();
+      fetchQuota();
       setInterval(fetchStatus, 5000);
+      setInterval(fetchQuota, 60000);
     });
   </script>
 </body>

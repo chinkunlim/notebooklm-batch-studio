@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from notebooklm_batch_studio.domain.exceptions import AuthExpiredError, StudioError
 from notebooklm_batch_studio.entrypoints.schemas import StatusResponse
 from notebooklm_batch_studio.entrypoints.web_template import get_dashboard_html
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
@@ -49,3 +50,26 @@ def get_status(request: Request) -> dict[str, Any]:
         "total_courses": len(courses),
         "queue_counts": counts,
     }
+
+
+@system_router.get("/api/notebooklm/quota", tags=["System"], operation_id="get_notebooklm_quota")
+async def get_notebooklm_quota(request: Request) -> dict[str, Any]:
+    """Read the live NotebookLM usage meter (5-hour and weekly windows) and account limits.
+
+    Args:
+        request: Incoming HTTP request context.
+
+    Returns:
+        Quota summary: windows with remaining percent and reset time, per-action availability,
+        notebook limit, and per-notebook source limit.
+
+    Raises:
+        HTTPException: 401 when NotebookLM login is missing or expired, 503 on other NotebookLM errors.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return await service.get_notebooklm_quota()
+    except AuthExpiredError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except StudioError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

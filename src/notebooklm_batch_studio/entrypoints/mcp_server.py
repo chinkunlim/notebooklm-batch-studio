@@ -60,6 +60,19 @@ def _register_course_query_tools(mcp: MCPServer, active_service: BatchStudioServ
         except Exception as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
+    @mcp.tool()
+    async def get_notebooklm_quota() -> str:
+        """Read the live NotebookLM usage meter and account limits (read-only).
+
+        Returns:
+            JSON string with 5-hour/weekly window usage and reset times, per-action
+            availability, notebook limit, and per-notebook source limit.
+        """
+        try:
+            return json.dumps(await active_service.get_notebooklm_quota(), ensure_ascii=False, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
 
 def _register_artifact_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
     """Register artifact and quiz querying tools.

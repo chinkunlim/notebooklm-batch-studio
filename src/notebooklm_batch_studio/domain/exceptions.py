@@ -60,6 +60,10 @@ class OllamaUnavailableError(StudioError):
     """Raised when an operation needs local Ollama but no client is configured or it is unreachable."""
 
 
+class SourceLimitExceededError(StudioError):
+    """Raised when a course has more lectures than the account allows sources per notebook."""
+
+
 class CourseNotFoundError(StudioError):
     """Raised when an operation targets a course code that does not exist."""
 

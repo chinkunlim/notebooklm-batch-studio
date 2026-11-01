@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Coroutine, TypeVar
 
@@ -19,10 +20,17 @@ from notebooklm import (
     ArtifactTimeoutError,
     AuthError,
     NotebookLMClient,
+    QuizQuantity,
     RateLimitError,
     ReportFormat,
 )
 
+from notebooklm_batch_studio.adapters.notebooklm.generation import (
+    finish_generation,
+    to_nlm_language,
+    to_quiz_difficulty,
+)
+from notebooklm_batch_studio.adapters.notebooklm.quota import retry_after_from_usage, usage_to_dict
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.exceptions import (
     AuthExpiredError,
@@ -71,6 +79,8 @@ def _map_exception(err: Exception) -> Exception:
     Returns:
         Mapped domain exception.
     """
+    if isinstance(err, StudioError):
+        return err
     if isinstance(err, RateLimitError):
         logger.warning("NotebookLM Rate Limit exceeded: %s", err)
         return QuotaExceededError(
@@ -123,8 +133,14 @@ def _translate_errors(func: Callable[..., Coroutine[Any, Any, T]]) -> Callable[.
             return await func(*args, **kwargs)
         except Exception as err:
             mapped = _map_exception(err)
+            if isinstance(mapped, QuotaExceededError) and args and isinstance(args[0], NotebookLMAdapter):
+                retry_after = await args[0].quota_retry_after()
+                if retry_after is not None:
+                    mapped.retry_after_seconds = retry_after
             if mapped is not err:
                 raise mapped from err
+            if isinstance(err, StudioError):
+                raise
             logger.exception("Unexpected error communicating with NotebookLM: %s", err)
             raise
 
@@ -132,7 +148,12 @@ def _translate_errors(func: Callable[..., Coroutine[Any, Any, T]]) -> Callable[.
 
 
 class NotebookLMAdapter:
-    """Adapter implementing NotebookLMClientProtocol using official notebooklm-py client."""
+    """Adapter implementing NotebookLMClientProtocol using official notebooklm-py client.
+
+    Every `generate_*` passes the course output language, checks the returned status, waits for
+    completion, and returns the artifact id; downloads take that id so parallel workers never
+    fetch another lecture's artifact. Refs: ADR-004
+    """
 
     def __init__(
         self,
@@ -150,6 +171,14 @@ class NotebookLMAdapter:
             self.config.notebooklm_home / "profiles" / "default" / "storage_state.json"
         )
 
+    def _client(self) -> Any:
+        """Open a notebooklm-py client from the stored browser session.
+
+        Returns:
+            Async context manager yielding a `NotebookLMClient`.
+        """
+        return NotebookLMClient.from_storage(path=str(self.storage_path))
+
     def check_auth(self) -> bool:
         """Check whether local authentication credentials exist and are non-empty.
 
@@ -159,6 +188,46 @@ class NotebookLMAdapter:
         if self.storage_path.exists() and self.storage_path.stat().st_size > 0:
             return True
         return False
+
+    async def quota_retry_after(self) -> int | None:
+        """Read the live usage meter and compute seconds until quota resets.
+
+        Returns:
+            Seconds until the exhausted window resets, or None if unknown (never raises).
+        """
+        try:
+            async with self._client() as client:
+                usage = await client.settings.get_usage()
+            return retry_after_from_usage(usage, datetime.now(timezone.utc))
+        except Exception as err:
+            logger.warning("Could not read NotebookLM usage meter: %s", err)
+            return None
+
+    @_translate_errors
+    async def get_quota_status(self) -> dict[str, Any]:
+        """Return the live NotebookLM usage meter and account limits.
+
+        Returns:
+            Dictionary with usage windows, per-action availability, and notebook/source limits.
+        """
+        async with self._client() as client:
+            usage = await client.settings.get_usage()
+            limits = await client.settings.get_account_limits()
+        summary = usage_to_dict(usage)
+        summary["notebook_limit"] = limits.notebook_limit
+        summary["source_limit"] = limits.source_limit
+        return summary
+
+    @_translate_errors
+    async def get_source_limit(self) -> int | None:
+        """Return the maximum number of sources allowed per notebook for this account.
+
+        Returns:
+            Source limit, or None when NotebookLM does not report it.
+        """
+        async with self._client() as client:
+            limits = await client.settings.get_account_limits()
+        return None if limits.source_limit is None else int(limits.source_limit)
 
     @_translate_errors
     async def create_notebook(self, title: str) -> str:
@@ -170,7 +239,7 @@ class NotebookLMAdapter:
         Returns:
             The created notebook identifier string.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+        async with self._client() as client:
             logger.info("Creating notebook: %s", title)
             nb = await client.notebooks.create(title)
             logger.info("Created notebook with ID: %s", nb.id)
@@ -191,7 +260,7 @@ class NotebookLMAdapter:
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF source file does not exist: {file_path}")
 
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+        async with self._client() as client:
             logger.info("Uploading source %s to notebook %s", pdf_path.name, notebook_id)
             source = await client.sources.add_file(notebook_id, pdf_path)
             logger.info("Source uploaded: ID=%s", source.id)
@@ -206,7 +275,7 @@ class NotebookLMAdapter:
             source_id: The source identifier.
             timeout_seconds: Maximum time to wait in seconds.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+        async with self._client() as client:
             logger.info("Waiting for source %s in notebook %s to be ready...", source_id, notebook_id)
             await asyncio.wait_for(
                 client.sources.wait_until_ready(notebook_id, source_id),
@@ -215,52 +284,42 @@ class NotebookLMAdapter:
             logger.info("Source %s is ready.", source_id)
 
     @_translate_errors
-    async def generate_quiz(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
-        """Request generation of a quiz from selected sources.
+    async def generate_quiz(
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        difficulty: str | None = None,
+    ) -> str:
+        """Generate a quiz from selected sources and wait for it to complete.
+
+        Quizzes have no language parameter in NotebookLM; language is steered by the prompt.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for the quiz generation.
+            difficulty: 'easy', 'medium', 'hard', or None for the NotebookLM default.
 
         Returns:
-            The task identifier for tracking progress.
+            The completed quiz artifact id.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Generating quiz in notebook %s from %d sources", notebook_id, len(source_ids))
-            instructions = (
-                prompt or "Generate multiple choice questions with 4 options and detailed rationale."
-            )
+        instructions = prompt or "Generate multiple choice questions with 4 options and detailed rationale."
+        async with self._client() as client:
             status = await client.artifacts.generate_quiz(
                 notebook_id=notebook_id,
                 source_ids=source_ids,
                 instructions=instructions,
+                quantity=QuizQuantity.MORE,
+                difficulty=to_quiz_difficulty(difficulty),
             )
-            task_id = getattr(status, "task_id", str(status))
-            logger.info("Quiz task submitted: %s, waiting for completion...", task_id)
-            await client.artifacts.wait_for_completion(notebook_id, task_id)
-            return str(task_id)
-
-    @_translate_errors
-    async def download_quiz(self, notebook_id: str, output_path: str, artifact_id: str | None = None) -> None:
-        """Download generated quiz JSON to a local file.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Local filesystem path where JSON should be saved.
-            artifact_id: Optional artifact identifier to download a specific artifact.
-        """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Downloading quiz from notebook %s to %s", notebook_id, out)
-            await client.artifacts.download_quiz(notebook_id, str(out), artifact_id=artifact_id)
+            return await finish_generation(client, notebook_id, status, "quiz")
 
     @_translate_errors
     async def generate_flashcards(
         self, notebook_id: str, source_ids: list[str], prompt: str | None = None
     ) -> str:
-        """Request generation of flashcards from selected sources.
+        """Generate flashcards from selected sources and wait for them to complete.
 
         Args:
             notebook_id: The notebook identifier.
@@ -268,165 +327,70 @@ class NotebookLMAdapter:
             prompt: Optional instructional prompt for flashcards generation.
 
         Returns:
-            The task identifier for tracking progress.
+            The completed flashcards artifact id.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Generating flashcards in notebook %s", notebook_id)
-            instructions = prompt or "Extract key vocabulary, core concepts, and biochemical mechanisms."
+        instructions = prompt or "Extract key vocabulary, core concepts, and biochemical mechanisms."
+        async with self._client() as client:
             status = await client.artifacts.generate_flashcards(
-                notebook_id=notebook_id,
-                source_ids=source_ids,
-                instructions=instructions,
+                notebook_id=notebook_id, source_ids=source_ids, instructions=instructions
             )
-            task_id = getattr(status, "task_id", str(status))
-            logger.info("Flashcards task submitted: %s, waiting for completion...", task_id)
-            await client.artifacts.wait_for_completion(notebook_id, task_id)
-            return str(task_id)
-
-    @_translate_errors
-    async def download_flashcards(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download generated flashcards JSON to a local file.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Local filesystem path where JSON should be saved.
-            artifact_id: Optional artifact identifier.
-        """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Downloading flashcards from notebook %s to %s", notebook_id, out)
-            await client.artifacts.download_flashcards(notebook_id, str(out), artifact_id=artifact_id)
+            return await finish_generation(client, notebook_id, status, "flashcards")
 
     @_translate_errors
     async def generate_mind_map(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
-        """Request generation of a mind map from selected sources.
+        """Generate a note-backed mind map (synchronous in NotebookLM).
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for mind map generation.
+            language: Course language ('zh-TW', 'en', 'bilingual').
 
         Returns:
-            The task identifier or status string.
+            The id of the note the mind map was saved to.
+
+        Raises:
+            IncompleteArtifactError: When NotebookLM returned no mind map note.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Generating mind map in notebook %s", notebook_id)
-            instructions = prompt or "Create a detailed hierarchical mind map organizing concepts."
-            status = await client.artifacts.generate_mind_map(
+        instructions = prompt or "Create a detailed hierarchical mind map organizing concepts."
+        async with self._client() as client:
+            result = await client.artifacts.generate_mind_map(
                 notebook_id=notebook_id,
                 source_ids=source_ids,
+                language=to_nlm_language(language),
                 instructions=instructions,
             )
-            task_id = getattr(status, "task_id", str(status))
-            logger.info("Mind map task submitted: %s", task_id)
-            return str(task_id)
+        if not result.note_id:
+            raise IncompleteArtifactError("NotebookLM returned no mind map note")
+        logger.info("Mind map saved as note %s", result.note_id)
+        return str(result.note_id)
 
     @_translate_errors
-    async def download_mind_map(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download generated mind map JSON to a local file.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Local filesystem path where JSON should be saved.
-            artifact_id: Optional artifact identifier.
-        """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Downloading mind map from notebook %s to %s", notebook_id, out)
-            await client.artifacts.download_mind_map(notebook_id, str(out), artifact_id=artifact_id)
-
-    @_translate_errors
-    async def generate_audio(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
-        """Request generation of Deep Dive Audio overview.
+    async def generate_audio(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Generate a Deep Dive audio overview and wait for it to complete.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional customization prompt for audio discussion.
+            language: Course language ('zh-TW', 'en', 'bilingual').
 
         Returns:
-            Task identifier or status string for audio generation.
+            The completed audio artifact id.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Generating audio overview in notebook %s", notebook_id)
-            instructions = prompt or "Discuss key points, mechanisms, and exam takeaways."
+        instructions = prompt or "Discuss key points, mechanisms, and exam takeaways."
+        async with self._client() as client:
             status = await client.artifacts.generate_audio(
                 notebook_id=notebook_id,
                 source_ids=source_ids,
+                language=to_nlm_language(language),
                 instructions=instructions,
             )
-            task_id = getattr(status, "task_id", str(status))
-            logger.info("Audio generation task submitted: %s", task_id)
-            return str(task_id)
-
-    @_translate_errors
-    async def download_audio(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download generated Audio MP3 file to local storage.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Local filesystem path where MP3 should be saved.
-            artifact_id: Optional artifact identifier.
-        """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Downloading audio from notebook %s to %s", notebook_id, out)
-            await client.artifacts.download_audio(notebook_id, str(out), artifact_id=artifact_id)
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Downloading audio overview from notebook %s to %s", notebook_id, out)
-            await client.artifacts.download_audio(notebook_id, str(out))
-
-    @_translate_errors
-    async def rename_artifact(self, notebook_id: str, artifact_id: str, title: str) -> None:
-        """Rename an artifact within NotebookLM for readability.
-
-        Args:
-            notebook_id: The notebook identifier.
-            artifact_id: The artifact identifier to rename.
-            title: The new title string (e.g. '[03] Quiz 1-基礎').
-        """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            logger.info("Renaming artifact %s to '%s' in notebook %s", artifact_id, title, notebook_id)
-            try:
-                await client.artifacts.rename(notebook_id, artifact_id, title)
-            except Exception as err:
-                logger.warning("Could not rename artifact %s on NotebookLM: %s", artifact_id, err)
-
-    @_translate_errors
-    async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
-        """Find the most recently generated artifact ID in a notebook.
-
-        Args:
-            notebook_id: The notebook identifier.
-            artifact_type: Optional filter string for artifact kind.
-
-        Returns:
-            Artifact ID string, or None if not found.
-        """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            arts = await client.artifacts.list(notebook_id)
-            if not arts:
-                return None
-            sorted_arts = sorted(
-                arts,
-                key=lambda a: getattr(a, "created_at", None) or getattr(a, "last_modified_at", None) or "",
-                reverse=True,
-            )
-            top = sorted_arts[0]
-            return str(getattr(top, "id", "")) or None
+            return await finish_generation(client, notebook_id, status, "audio")
 
     @_translate_errors
     async def generate_report(
@@ -437,238 +401,270 @@ class NotebookLMAdapter:
         language: str = "zh-TW",
         report_format: str = "briefing_doc",
     ) -> str:
-        """Request generation of a report in NotebookLM.
+        """Generate a report (briefing doc, study guide, blog post) and wait for it to complete.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language ('zh-TW', 'en', 'bilingual').
-            report_format: Format key (briefing_doc, study_guide, blog_post).
+            language: Course language ('zh-TW', 'en', 'bilingual').
+            report_format: Format key (briefing_doc, study_guide, blog_post, concept_explanation).
 
         Returns:
-            Task or artifact identifier.
+            The completed report artifact id.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            instructions = build_language_instruction(prompt, language)
-            logger.info("Generating report (%s) in notebook %s", report_format, notebook_id)
-            fmt_enum = ReportFormat.BRIEFING_DOC
-            if report_format == "study_guide":
-                fmt_enum = ReportFormat.STUDY_GUIDE
-            elif report_format == "blog_post":
-                fmt_enum = ReportFormat.BLOG_POST
-            elif report_format == "concept_explanation":
-                fmt_enum = ReportFormat.CONCEPT_EXPLANATION
-
+        formats = {
+            "study_guide": ReportFormat.STUDY_GUIDE,
+            "blog_post": ReportFormat.BLOG_POST,
+            "concept_explanation": ReportFormat.CONCEPT_EXPLANATION,
+        }
+        async with self._client() as client:
             status = await client.artifacts.generate_report(
                 notebook_id=notebook_id,
-                report_format=fmt_enum,
+                report_format=formats.get(report_format, ReportFormat.BRIEFING_DOC),
                 source_ids=source_ids,
-                language="zh-TW" if language == "zh-TW" else "en",
-                custom_prompt=instructions,
+                language=to_nlm_language(language),
+                custom_prompt=build_language_instruction(prompt, language),
             )
-            task_id = getattr(status, "task_id", str(status))
-            return str(task_id)
-
-    @_translate_errors
-    async def wait_for_completion(self, notebook_id: str, task_id: str, timeout_seconds: int = 300) -> None:
-        """Wait for an artifact generation task to finish.
-
-        Args:
-            notebook_id: The notebook identifier.
-            task_id: Task identifier.
-            timeout_seconds: Maximum wait time.
-        """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            await client.artifacts.wait_for_completion(
-                notebook_id=notebook_id,
-                task_id=task_id,
-                timeout=float(timeout_seconds),
-            )
-
-    @_translate_errors
-    async def download_report(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download report/study guide content to a local file.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Optional artifact identifier.
-        """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            await client.artifacts.download_report(notebook_id, str(out), artifact_id=artifact_id)
+            return await finish_generation(client, notebook_id, status, f"report ({report_format})")
 
     @_translate_errors
     async def generate_slide_deck(
         self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
-        """Request generation of slide deck presentation outline.
+        """Generate a slide deck and wait for it to complete.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language.
+            language: Course language ('zh-TW', 'en', 'bilingual').
 
         Returns:
-            Task or artifact identifier.
+            The completed slide deck artifact id.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            instructions = build_language_instruction(prompt, language)
-            logger.info("Generating slide deck in notebook %s", notebook_id)
+        async with self._client() as client:
             status = await client.artifacts.generate_slide_deck(
                 notebook_id=notebook_id,
                 source_ids=source_ids,
-                instructions=instructions,
+                language=to_nlm_language(language),
+                instructions=build_language_instruction(prompt, language),
             )
-            task_id = getattr(status, "task_id", str(status))
-            return str(task_id)
-
-    @_translate_errors
-    async def download_slide_deck(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download slide deck outline to a local file.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Optional artifact identifier.
-        """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            await client.artifacts.download_slide_deck(notebook_id, str(out), artifact_id=artifact_id)
+            return await finish_generation(client, notebook_id, status, "slide deck")
 
     @_translate_errors
     async def generate_infographic(
         self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
-        """Request generation of an infographic.
+        """Generate an infographic and wait for it to complete.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language.
+            language: Course language ('zh-TW', 'en', 'bilingual').
 
         Returns:
-            Task or artifact identifier.
+            The completed infographic artifact id.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            instructions = build_language_instruction(prompt, language)
-            logger.info("Generating infographic in notebook %s", notebook_id)
+        async with self._client() as client:
             status = await client.artifacts.generate_infographic(
                 notebook_id=notebook_id,
                 source_ids=source_ids,
-                instructions=instructions,
+                language=to_nlm_language(language),
+                instructions=build_language_instruction(prompt, language),
             )
-            task_id = getattr(status, "task_id", str(status))
-            return str(task_id)
-
-    @_translate_errors
-    async def download_infographic(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download infographic to a local file.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Optional artifact identifier.
-        """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            await client.artifacts.download_infographic(notebook_id, str(out), artifact_id=artifact_id)
+            return await finish_generation(client, notebook_id, status, "infographic")
 
     @_translate_errors
     async def generate_data_table(
         self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
-        """Request generation of comparison data table.
+        """Generate a comparison data table and wait for it to complete.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language.
+            language: Course language ('zh-TW', 'en', 'bilingual').
 
         Returns:
-            Task or artifact identifier.
+            The completed data table artifact id.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            instructions = build_language_instruction(prompt, language)
-            logger.info("Generating data table in notebook %s", notebook_id)
+        async with self._client() as client:
             status = await client.artifacts.generate_data_table(
                 notebook_id=notebook_id,
                 source_ids=source_ids,
-                instructions=instructions,
+                language=to_nlm_language(language),
+                instructions=build_language_instruction(prompt, language),
             )
-            task_id = getattr(status, "task_id", str(status))
-            return str(task_id)
-
-    @_translate_errors
-    async def download_data_table(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download data table content to a local file.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Optional artifact identifier.
-        """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            await client.artifacts.download_data_table(notebook_id, str(out), artifact_id=artifact_id)
+            return await finish_generation(client, notebook_id, status, "data table")
 
     @_translate_errors
     async def generate_video(
         self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
-        """Request generation of cinematic video overview.
+        """Generate a video overview and wait for it to complete.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language.
+            language: Course language ('zh-TW', 'en', 'bilingual').
 
         Returns:
-            Task or artifact identifier.
+            The completed video artifact id.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            instructions = build_language_instruction(prompt, language)
-            logger.info("Generating video in notebook %s", notebook_id)
+        async with self._client() as client:
             status = await client.artifacts.generate_video(
                 notebook_id=notebook_id,
                 source_ids=source_ids,
-                instructions=instructions,
+                language=to_nlm_language(language),
+                instructions=build_language_instruction(prompt, language),
             )
-            task_id = getattr(status, "task_id", str(status))
-            return str(task_id)
+            return await finish_generation(client, notebook_id, status, "video", timeout=1800.0)
 
     @_translate_errors
-    async def download_video(
+    async def download_artifact(
+        self, kind: str, notebook_id: str, output_path: str, artifact_id: str
+    ) -> None:
+        """Download one specific artifact with the notebooklm-py downloader for its kind.
+
+        Args:
+            kind: Downloader suffix (quiz, flashcards, mind_map, audio, report, slide_deck,
+                infographic, data_table, video).
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem destination.
+            artifact_id: Artifact (or mind map note) id returned by the generate call.
+        """
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        async with self._client() as client:
+            logger.info("Downloading %s %s from notebook %s to %s", kind, artifact_id, notebook_id, out)
+            downloader = getattr(client.artifacts, f"download_{kind}")
+            await downloader(notebook_id, str(out), artifact_id=artifact_id)
+
+    async def download_quiz(self, notebook_id: str, output_path: str, artifact_id: str | None = None) -> None:
+        """Download a quiz JSON.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Artifact id returned by generate_quiz.
+        """
+        await self.download_artifact("quiz", notebook_id, output_path, artifact_id or "")
+
+    async def download_flashcards(
         self, notebook_id: str, output_path: str, artifact_id: str | None = None
     ) -> None:
-        """Download generated video to a local file.
+        """Download a flashcards JSON.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Artifact id returned by generate_flashcards.
+        """
+        await self.download_artifact("flashcards", notebook_id, output_path, artifact_id or "")
+
+    async def download_mind_map(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download a mind map JSON.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem path where JSON should be saved.
+            artifact_id: Mind map note id returned by generate_mind_map.
+        """
+        await self.download_artifact("mind_map", notebook_id, output_path, artifact_id or "")
+
+    async def download_audio(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download an audio overview (MP3/MP4 audio).
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Local filesystem path where audio should be saved.
+            artifact_id: Artifact id returned by generate_audio.
+        """
+        await self.download_artifact("audio", notebook_id, output_path, artifact_id or "")
+
+    async def download_report(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download a report / study guide as Markdown.
 
         Args:
             notebook_id: The notebook identifier.
             output_path: Target filesystem destination.
-            artifact_id: Optional artifact identifier.
+            artifact_id: Artifact id returned by generate_report.
         """
-        out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
-            await client.artifacts.download_video(notebook_id, str(out), artifact_id=artifact_id)
+        await self.download_artifact("report", notebook_id, output_path, artifact_id or "")
+
+    async def download_slide_deck(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download a slide deck.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Artifact id returned by generate_slide_deck.
+        """
+        await self.download_artifact("slide_deck", notebook_id, output_path, artifact_id or "")
+
+    async def download_infographic(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download an infographic image.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Artifact id returned by generate_infographic.
+        """
+        await self.download_artifact("infographic", notebook_id, output_path, artifact_id or "")
+
+    async def download_data_table(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download a data table.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Artifact id returned by generate_data_table.
+        """
+        await self.download_artifact("data_table", notebook_id, output_path, artifact_id or "")
+
+    async def download_video(
+        self, notebook_id: str, output_path: str, artifact_id: str | None = None
+    ) -> None:
+        """Download a video overview.
+
+        Args:
+            notebook_id: The notebook identifier.
+            output_path: Target filesystem destination.
+            artifact_id: Artifact id returned by generate_video.
+        """
+        await self.download_artifact("video", notebook_id, output_path, artifact_id or "")
+
+    @_translate_errors
+    async def rename_artifact(self, notebook_id: str, artifact_id: str, title: str) -> None:
+        """Rename an artifact within NotebookLM for readability.
+
+        Args:
+            notebook_id: The notebook identifier.
+            artifact_id: The artifact identifier to rename.
+            title: The new title string (e.g. '[03] Quiz 1-基礎').
+        """
+        async with self._client() as client:
+            logger.info("Renaming artifact %s to '%s' in notebook %s", artifact_id, title, notebook_id)
+            try:
+                await client.artifacts.rename(notebook_id, artifact_id, title)
+            except Exception as err:
+                logger.warning("Could not rename artifact %s on NotebookLM: %s", artifact_id, err)
 
     @_translate_errors
     async def list_artifacts(self, notebook_id: str) -> list[dict[str, Any]]:
@@ -680,7 +676,7 @@ class NotebookLMAdapter:
         Returns:
             List of dictionary summaries of artifacts.
         """
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+        async with self._client() as client:
             artifacts = await client.artifacts.list(notebook_id)
             results: list[dict[str, Any]] = []
             for a in artifacts:
@@ -714,7 +710,7 @@ class NotebookLMAdapter:
         """
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
-        async with NotebookLMClient.from_storage(path=str(self.storage_path)) as client:
+        async with self._client() as client:
             k = kind.lower()
             if "quiz" in k or "exam" in k:
                 await client.artifacts.download_quiz(notebook_id, str(out), artifact_id=artifact_id)

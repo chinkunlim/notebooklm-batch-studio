@@ -16,7 +16,11 @@ from pathlib import Path
 from typing import Any
 
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
-from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError, OllamaUnavailableError
+from notebooklm_batch_studio.domain.exceptions import (
+    CourseNotFoundError,
+    OllamaUnavailableError,
+    SourceLimitExceededError,
+)
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     Course,
@@ -151,10 +155,13 @@ class BatchStudioService:
 
         Raises:
             CourseNotFoundError: If course code does not exist.
+            SourceLimitExceededError: If the course has more lectures than the account's
+                per-notebook source limit (checked before anything is created or uploaded).
         """
         course = self.course_repo.get_course(course_code)
         if course is None:
             raise CourseNotFoundError(f"Course not found: {course_code}")
+        await self._check_source_limit(course)
 
         notebook_id = course.notebook_id
         if not notebook_id:
@@ -198,6 +205,30 @@ class BatchStudioService:
 
         updated = self.course_repo.get_course(course_code)
         return updated or course
+
+    async def _check_source_limit(self, course: Course) -> None:
+        """Refuse courses whose lecture count exceeds NotebookLM's per-notebook source limit.
+
+        Args:
+            course: Course about to be set up.
+
+        Raises:
+            SourceLimitExceededError: When lectures exceed the account's source limit.
+        """
+        limit = await self.notebooklm_client.get_source_limit()
+        if limit is not None and len(course.lectures) > limit:
+            raise SourceLimitExceededError(
+                f"Course {course.code} has {len(course.lectures)} lectures but this NotebookLM "
+                f"account allows {limit} sources per notebook; split the course folder"
+            )
+
+    async def get_notebooklm_quota(self) -> dict[str, Any]:
+        """Return the live NotebookLM usage meter and account limits.
+
+        Returns:
+            Quota summary from the NotebookLM adapter.
+        """
+        return await self.notebooklm_client.get_quota_status()
 
     def enqueue_course_artifacts(self, course_code: str) -> int:
         """Generate artifact jobs based on active profile and enqueue into database.

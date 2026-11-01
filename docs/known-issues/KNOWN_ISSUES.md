@@ -15,3 +15,6 @@
 |---|---|---|---|---|
 | [ISSUE-001](001-ollama-refine-noop.md) | 🟢 已根治 (Resolved) | Ollama 提示詞改寫實際上沒有呼叫 Ollama | refine_course_prompts_with_ollama 回報成功改寫 N 筆，但 prompt 內容其實沒變 | `services/orchestrator.py`, `entrypoints/api.py`, `entrypoints/mcp_server.py` |
 | [ISSUE-002](002-quiz-needs-review-status.md) | 🟢 已根治 (Resolved) | 題數不足的測驗被標成 DONE 而非 NEEDS_REVIEW | 湊不滿 30 題的測驗已隔離到 needs_review/，但工作狀態是 DONE，總覽報告看不到需審查警告 | `services/artifact_runner.py`, `services/worker_pool.py`, `adapters/db/repository.py` |
+| [ISSUE-003](003-nlm-output-language-english.md) | 🟢 已根治 (Resolved) | NotebookLM 產出語言預設為英文 | 語音、投影片、資訊圖表等未傳 language，函式庫預設 en；報告傳了無效代碼 zh-TW | `adapters/notebooklm/generation.py`, `adapters/notebooklm/client.py` |
+| [ISSUE-004](004-artifact-wrong-lecture.md) | 🟢 已根治 (Resolved) | 下載與改名可能對到別的講次或未完成的產出 | 下載未帶 artifact_id、多數類型未等完成就下載、改名取最新一份、download_audio 下載兩次 | `adapters/notebooklm/client.py`, `services/artifact_runner.py` |
+| [ISSUE-005](005-quota-status-ignored.md) | 🟢 已根治 (Resolved) | 配額拒絕以 failed 狀態回傳時未被偵測 | generate 回傳 USER_DISPLAYABLE_ERROR 的 failed 狀態而非例外，程式未檢查，未進 QUOTA_WAIT；冷卻固定猜 1 小時 | `adapters/notebooklm/quota.py`, `adapters/notebooklm/generation.py`, `services/orchestrator.py` |

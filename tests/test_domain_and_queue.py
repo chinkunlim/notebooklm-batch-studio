@@ -644,7 +644,6 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
         mock_client.generate_audio = AsyncMock(return_value="task-audio-1")
         mock_client.generate_flashcards = AsyncMock(return_value="task-fc-1")
         mock_client.generate_mind_map = AsyncMock(return_value="task-mm-1")
-        mock_client.find_latest_artifact = AsyncMock(return_value="art-123")
         mock_client.rename_artifact = AsyncMock()
 
         sample_quiz_payload = {
@@ -702,7 +701,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
 
             # Check prompt was passed to generate_quiz
             mock_client.generate_quiz.assert_called_with(
-                "nb-1", ["src-1"], prompt="Custom Academic Blueprint Prompt 123"
+                "nb-1", ["src-1"], prompt="Custom Academic Blueprint Prompt 123", difficulty="hard"
             )
 
             # 2. Run Concept Quiz on the same directory
@@ -717,7 +716,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
 
             # Check prompt was passed to generate_quiz
             mock_client.generate_quiz.assert_called_with(
-                "nb-1", ["src-1"], prompt="Custom Concept Drill Prompt 456"
+                "nb-1", ["src-1"], prompt="Custom Concept Drill Prompt 456", difficulty="medium"
             )
 
             # Crucial check: both files must coexist and not overwrite each other!
@@ -734,7 +733,9 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
                 custom_prompt="Custom Audio Prompt 789",
             )
             await runner.process_job(job_audio, course, "nb-1", ["src-1"], out_dir)
-            mock_client.generate_audio.assert_called_with("nb-1", ["src-1"], prompt="Custom Audio Prompt 789")
+            mock_client.generate_audio.assert_called_with(
+                "nb-1", ["src-1"], prompt="Custom Audio Prompt 789", language="zh-TW"
+            )
 
             job_fc = ArtifactJob(
                 id="job-fc",
@@ -757,5 +758,5 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
             )
             await runner.process_job(job_mm, course, "nb-1", ["src-1"], out_dir)
             mock_client.generate_mind_map.assert_called_with(
-                "nb-1", ["src-1"], prompt="Custom MindMap Prompt 888"
+                "nb-1", ["src-1"], prompt="Custom MindMap Prompt 888", language="zh-TW"
             )

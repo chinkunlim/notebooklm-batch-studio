@@ -254,7 +254,11 @@ class CourseRepositoryProtocol(Protocol):
 
 
 class NotebookLMClientProtocol(Protocol):
-    """Abstract interface for Google NotebookLM operations and artifact generation."""
+    """Abstract interface for Google NotebookLM operations and artifact generation.
+
+    Every `generate_*` waits for completion and returns the artifact id; callers pass that id
+    to the matching `download_*` and to `rename_artifact`. Refs: ADR-004
+    """
 
     def check_auth(self) -> bool:
         """Check whether local authentication session is valid.
@@ -297,16 +301,39 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
-    async def generate_quiz(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
-        """Request generation of a quiz from selected sources.
+    async def get_source_limit(self) -> int | None:
+        """Return the maximum number of sources allowed per notebook.
+
+        Returns:
+            Source limit, or None when unknown.
+        """
+        ...
+
+    async def get_quota_status(self) -> dict[str, Any]:
+        """Return the live usage meter and account limits.
+
+        Returns:
+            JSON-friendly quota summary.
+        """
+        ...
+
+    async def generate_quiz(
+        self,
+        notebook_id: str,
+        source_ids: list[str],
+        prompt: str | None = None,
+        difficulty: str | None = None,
+    ) -> str:
+        """Generate a quiz from selected sources and wait for completion.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for the quiz generation.
+            difficulty: 'easy', 'medium', 'hard', or None for the default.
 
         Returns:
-            Task identifier or artifact identifier for the quiz.
+            The completed quiz artifact id.
         """
         ...
 
@@ -331,7 +358,7 @@ class NotebookLMClientProtocol(Protocol):
             prompt: Optional instructional prompt for flashcards generation.
 
         Returns:
-            Task identifier or artifact identifier for the flashcards.
+            The completed flashcards artifact id.
         """
         ...
 
@@ -348,17 +375,18 @@ class NotebookLMClientProtocol(Protocol):
         ...
 
     async def generate_mind_map(
-        self, notebook_id: str, source_ids: list[str], prompt: str | None = None
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
     ) -> str:
-        """Request generation of a mind map from selected sources.
+        """Generate a mind map from selected sources.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for mind map generation.
+            language: Course language ('zh-TW', 'en', 'bilingual').
 
         Returns:
-            Task identifier or artifact identifier for the mind map.
+            The mind map note id (pass it to download_mind_map).
         """
         ...
 
@@ -374,16 +402,19 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
-    async def generate_audio(self, notebook_id: str, source_ids: list[str], prompt: str | None = None) -> str:
-        """Request generation of Deep Dive Audio overview.
+    async def generate_audio(
+        self, notebook_id: str, source_ids: list[str], prompt: str | None = None, language: str = "zh-TW"
+    ) -> str:
+        """Generate a Deep Dive audio overview and wait for completion.
 
         Args:
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional customization prompt for audio discussion.
+            language: Course language ('zh-TW', 'en', 'bilingual').
 
         Returns:
-            Task identifier or status string for audio generation.
+            The completed audio artifact id.
         """
         ...
 
@@ -428,16 +459,6 @@ class NotebookLMClientProtocol(Protocol):
 
         Returns:
             Task or artifact identifier.
-        """
-        ...
-
-    async def wait_for_completion(self, notebook_id: str, task_id: str, timeout_seconds: int = 300) -> None:
-        """Wait for an artifact generation task to finish.
-
-        Args:
-            notebook_id: The notebook identifier.
-            task_id: Task identifier.
-            timeout_seconds: Maximum wait time.
         """
         ...
 
@@ -562,18 +583,6 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             output_path: Target filesystem destination.
             artifact_id: Optional artifact identifier.
-        """
-        ...
-
-    async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
-        """Find the most recently generated artifact ID in a notebook.
-
-        Args:
-            notebook_id: The notebook identifier.
-            artifact_type: Optional filter string for artifact kind.
-
-        Returns:
-            Artifact ID string, or None if not found.
         """
         ...
 

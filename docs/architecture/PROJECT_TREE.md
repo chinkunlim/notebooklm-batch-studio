@@ -58,7 +58,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-004-phase-1d-cli-batch-orchestrator-.json
 │   │   ├── TASK-005-phase-1e-openapi-mcp-web-ui-fast.json
 │   │   ├── TASK-006-update-all-documentation-and-arc.json
-│   │   └── TASK-007-fix-ollama-prompt-refinement-and.json
+│   │   ├── TASK-007-fix-ollama-prompt-refinement-and.json
+│   │   └── TASK-008-fix-notebooklm-language-artifact.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -94,6 +95,7 @@ notebooklm-batch-studio/
 │   │   ├── 001-notebooklm-access.md
 │   │   ├── 002-session-token-auth.md
 │   │   ├── 003-student-study-portal-spaced-repetition.md
+│   │   ├── 004-artifact-id-targeting.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -102,6 +104,9 @@ notebooklm-batch-studio/
 │   ├── known-issues/                       # [已知問題庫] 一問題一檔案
 │   │   ├── 001-ollama-refine-noop.md
 │   │   ├── 002-quiz-needs-review-status.md
+│   │   ├── 003-nlm-output-language-english.md
+│   │   ├── 004-artifact-wrong-lecture.md
+│   │   ├── 005-quota-status-ignored.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -137,7 +142,9 @@ notebooklm-batch-studio/
 │       │   │   └── study_repository.py
 │       │   ├── notebooklm/
 │       │   │   ├── __init__.py
-│       │   │   └── client.py
+│       │   │   ├── client.py
+│       │   │   ├── generation.py
+│       │   │   └── quota.py
 │       │   ├── ollama/
 │       │   │   ├── __init__.py
 │       │   │   └── client.py
@@ -200,6 +207,8 @@ notebooklm-batch-studio/
 │   ├── test_greeting.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_notebooklm_adapter.py
+│   ├── test_notebooklm_generation.py
+│   ├── test_quota_and_limits.py
 │   ├── test_services_and_cli.py
 │   └── test_study_service.py
 ├── .editorconfig

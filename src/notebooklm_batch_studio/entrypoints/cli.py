@@ -21,7 +21,7 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
-from notebooklm_batch_studio.domain.models import GreetingRequest, JobStatus
+from notebooklm_batch_studio.domain.models import GreetingRequest, JobStatus, ProfileName
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.services.greeting import create_greeting
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
@@ -149,13 +149,14 @@ async def _execute_batch_pipeline(
             print(f"📄 已產出課程總覽: {md_path.name}, {html_path.name}")
 
 
-def _handle_batch(config: AppConfig, paths: list[str], workers: int) -> int:
+def _handle_batch(config: AppConfig, paths: list[str], workers: int, profile: str = "full") -> int:
     """Process one or more course folders end-to-end.
 
     Args:
         config: Application configuration.
         paths: List of course directory paths.
         workers: Number of parallel worker threads.
+        profile: Output profile ('full', 'quiz-only', 'exam-prep').
 
     Returns:
         Exit code (0 on success).
@@ -168,11 +169,8 @@ def _handle_batch(config: AppConfig, paths: list[str], workers: int) -> int:
         queue_repo = QueueRepository(session)
         service = BatchStudioService(course_repo, queue_repo, adapter, config)
 
-        courses_to_run: list[str] = []
-        for p in paths:
-            course = service.register_course_folder(Path(p))
-            service.enqueue_course_artifacts(course.code)
-            courses_to_run.append(course.code)
+        registered = service.add_course_folders(paths, profile=profile)
+        courses_to_run = [item["code"] for item in registered]
 
     print(f"✅ 已排入 {len(courses_to_run)} 門課程至工作佇列。啟動 {workers} 個 Worker...")
     asyncio.run(_execute_batch_pipeline(engine, adapter, config, courses_to_run, workers))
@@ -259,7 +257,7 @@ def _dispatch_command(args: argparse.Namespace, config: AppConfig) -> int:
     if args.command == "resume":
         return _handle_resume(config)
     if args.command == "batch":
-        return _handle_batch(config, args.paths, args.workers)
+        return _handle_batch(config, args.paths, args.workers, args.profile)
     if args.command == "watch":
         return _handle_watch(config)
     if args.command == "web":
@@ -325,6 +323,12 @@ def main(argv: list[str] | None = None) -> int:
     batch_parser = subparsers.add_parser("batch", help="批次掃描課程並執行生成")
     batch_parser.add_argument("paths", nargs="+", help="課程資料夾路徑")
     batch_parser.add_argument("--workers", type=int, default=2, help="平行 Worker 數量")
+    batch_parser.add_argument(
+        "--profile",
+        choices=[p.value for p in ProfileName],
+        default=ProfileName.FULL.value,
+        help="產出組合：full / quiz-only / exam-prep",
+    )
 
     subparsers.add_parser("watch", help="啟動資料夾監控守護")
     subparsers.add_parser("web", help="啟動本機網頁管理伺服器 (127.0.0.1:8768)")
