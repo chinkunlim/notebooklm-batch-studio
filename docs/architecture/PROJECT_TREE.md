@@ -86,6 +86,7 @@ notebooklm-batch-studio/
 │   │   ├── 20260101_0001_create_greetings.py
 │   │   ├── 20261022_0645db844501_add_source_id_to_lectures.py
 │   │   ├── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
+│   │   ├── 20261101_17572899c2da_add_saved_explanations.py
 │   │   ├── 20261101_3dbb5819dc15_add_style_options_interactive_path_and_.py
 │   │   ├── 20261101_4985a300eaa2_add_quiz_attempts_and_mistakes.py
 │   │   ├── 20261101_7b0938de08f1_drop_template_greetings_table.py
@@ -132,6 +133,7 @@ notebooklm-batch-studio/
 │   │   ├── 020-web-field-mismatch.md
 │   │   ├── 021-answer-position-bias.md
 │   │   ├── 022-quiz-submit-resets-view.md
+│   │   ├── 023-db-connection-leak.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

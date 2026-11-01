@@ -7,7 +7,12 @@ from datetime import datetime
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from notebooklm_batch_studio.adapters.db.models import ReviewItemRecord, StudyProgressRecord, utc_now
+from notebooklm_batch_studio.adapters.db.models import (
+    ExplanationRecord,
+    ReviewItemRecord,
+    StudyProgressRecord,
+    utc_now,
+)
 from notebooklm_batch_studio.domain.study_plan import ReviewItem
 
 
@@ -181,8 +186,69 @@ class ReviewRepository:
         )
         return {kind: int(n) for kind, n in self.session.execute(stmt)}
 
+    def save_explanation(
+        self, course_code: str, lecture_no: int | None, question_key: str, question: str, answer_md: str
+    ) -> None:
+        """Save (or replace) NotebookLM's explanation of one question.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Lecture number, or None.
+            question_key: Hash of the question text.
+            question: Question text.
+            answer_md: Answer in Markdown.
+        """
+        item_id = f"{course_code}:{question_key}"
+        record = self.session.get(ExplanationRecord, item_id)
+        if record is None:
+            record = ExplanationRecord(id=item_id, course_code=course_code, question_key=question_key)
+            self.session.add(record)
+        record.lecture_no = lecture_no
+        record.question = question
+        record.answer_md = answer_md
+        record.created_at = utc_now()
+        self.session.flush()
+        self.session.commit()
+
+    def get_explanation(self, course_code: str, question_key: str) -> dict[str, object] | None:
+        """Load a saved explanation.
+
+        Args:
+            course_code: Course code.
+            question_key: Hash of the question text.
+
+        Returns:
+            Dictionary with question, answer_md, lecture_no and created_at, or None.
+        """
+        record = self.session.get(ExplanationRecord, f"{course_code}:{question_key}")
+        if record is None:
+            return None
+        return {
+            "key": record.question_key,
+            "lecture_no": record.lecture_no,
+            "question": record.question,
+            "answer_md": record.answer_md,
+            "created_at": (_aware(record.created_at) or utc_now()).isoformat(),
+        }
+
+    def list_explanations(self, course_code: str, lecture_no: int | None = None) -> list[dict[str, object]]:
+        """List saved explanations, newest first.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Optional lecture filter.
+
+        Returns:
+            Saved explanations (same shape as `get_explanation`).
+        """
+        stmt = select(ExplanationRecord).where(ExplanationRecord.course_code == course_code)
+        if lecture_no is not None:
+            stmt = stmt.where(ExplanationRecord.lecture_no == lecture_no)
+        rows = self.session.scalars(stmt.order_by(ExplanationRecord.created_at.desc()))
+        return [self.get_explanation(course_code, r.question_key) or {} for r in rows]
+
     def delete_course(self, course_code: str) -> None:
-        """Remove a course's progress marks and review items.
+        """Remove a course's progress marks, review items and saved explanations.
 
         Args:
             course_code: Course code.
@@ -191,5 +257,6 @@ class ReviewRepository:
             delete(StudyProgressRecord).where(StudyProgressRecord.course_code == course_code)
         )
         self.session.execute(delete(ReviewItemRecord).where(ReviewItemRecord.course_code == course_code))
+        self.session.execute(delete(ExplanationRecord).where(ExplanationRecord.course_code == course_code))
         self.session.flush()
         self.session.commit()

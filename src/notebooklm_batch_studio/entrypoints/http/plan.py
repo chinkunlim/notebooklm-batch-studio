@@ -55,12 +55,14 @@ class ExplainIn(BaseModel):
         question: Question text.
         choices: Options in display order.
         answer_index: Index of the correct option.
+        force: Ask NotebookLM again even when an explanation is saved.
     """
 
     lecture_no: int | None = None
     question: str
     choices: list[str]
     answer_index: int
+    force: bool = False
 
 
 def _plan(request: Request) -> StudyPlanService:
@@ -175,10 +177,29 @@ async def explain_question(code: str, req: ExplainIn, request: Request) -> dict[
         HTTPException: 404 for an unknown course, 422 for bad input, 502 when NotebookLM fails.
     """
     try:
-        return await _plan(request).explain(code, req.lecture_no, req.question, req.choices, req.answer_index)
+        return await _plan(request).explain(
+            code, req.lecture_no, req.question, req.choices, req.answer_index, req.force
+        )
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except StudioError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@plan_router.get("/explanations", operation_id="get_saved_explanations")
+def get_saved_explanations(
+    code: str, request: Request, lecture_no: int | None = Query(default=None)
+) -> list[dict[str, Any]]:
+    """Saved NotebookLM explanations (shown again without spending quota).
+
+    Args:
+        code: Course code.
+        request: Incoming request.
+        lecture_no: Optional lecture filter.
+
+    Returns:
+        Saved explanations, newest first.
+    """
+    return _plan(request).list_explanations(code, lecture_no)

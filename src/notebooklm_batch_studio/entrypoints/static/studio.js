@@ -177,7 +177,8 @@ function quizQuestions() {
  * @param {number} total Question count
  * @param {Array<number>} wrong Indexes of wrong answers
  */
-function renderQuizResult(score, total, wrong) {
+async function renderQuizResult(score, total, wrong) {
+  await loadSavedExplanations();
   stopMockTimer();
   const pct = Math.round((score / total) * 100);
   lastWrongIndexes = wrong;
@@ -216,8 +217,8 @@ function renderQuizResult(score, total, wrong) {
       title.insertAdjacentHTML('beforeend', wrong.includes(i) ? '<span class="verdict bad">✗ 答錯</span>' : '<span class="verdict ok">✓ 答對</span>');
     }
     const exp = document.getElementById(`explanation-${i}`);
-    if (exp && !exp.querySelector('.why-btn')) {
-      exp.insertAdjacentHTML('beforeend', `<button class="why-btn" style="margin-top:8px;font-size:0.8rem;" onclick="explainQuestion(${i}, this)">🤔 為什麼？問 NotebookLM</button>`);
+    if (exp && !exp.querySelector('.why-btn, .explain-box')) {
+      exp.insertAdjacentHTML('beforeend', explanationSlot(q.question, `explainQuestion(${i}, this)`, `explainQuestion(${i}, this, true)`));
     }
     document.querySelectorAll(`[id^="choice-${i}-"]`).forEach(el => el.classList.add('locked'));
   });
@@ -238,37 +239,110 @@ function retryWrongOnly() {
   showToast(`只重做錯的 ${subset.length} 題`, 'info');
 }
 
+let savedExplanations = new Map();
+
 /**
- * Ask NotebookLM why the answer to one question is correct and show the explanation under it.
- * @param {number} index Question index
- * @param {HTMLButtonElement} button The button that was pressed
+ * Load the explanations already saved for this course, keyed by question text.
+ * @returns {Promise<Map<string, object>>} Question text to saved explanation
+ */
+async function loadSavedExplanations() {
+  try {
+    const res = await fetch(`/api/courses/${currentStudyCourse.code}/study/explanations`);
+    const items = res.ok ? await res.json() : [];
+    savedExplanations = new Map(items.map(i => [String(i.question || '').trim(), i]));
+  } catch (e) {
+    savedExplanations = new Map();
+  }
+  return savedExplanations;
+}
+
+/**
+ * HTML for an explanation box with its source label and an "ask again" button.
+ * @param {string} html Rendered explanation (escaped and rendered by the server)
+ * @param {string} savedAt ISO time it was saved
+ * @param {string} askAgain JavaScript to run for "ask again"
+ * @returns {string} Box HTML
+ */
+function explanationBox(html, savedAt, askAgain) {
+  const when = savedAt ? new Date(savedAt).toLocaleString('zh-TW', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  return `<div class="explain-box"><div class="explain-head">📖 NotebookLM 解釋${when ? `（已儲存 ${escHtml(when)}）` : ''}
+    <button class="link-btn" onclick="${askAgain}">🔁 重新問</button></div>${html}</div>`;
+}
+
+/**
+ * Ask NotebookLM (or reuse the saved answer) why a question's answer is correct, and show it.
+ * @param {{question: string, choices: Array, answer_index: number, lecture_no: (number|null)}} q Question
+ * @param {HTMLElement} anchor Element to put the explanation after (replaced when it is a button)
+ * @param {boolean} force Ask again even if an explanation is saved
+ * @param {string} askAgain JavaScript for the "ask again" button
  * @returns {Promise<void>} Resolves when shown or failed
  */
-async function explainQuestion(index, button) {
-  const q = quizQuestions()[index];
-  if (!q) return;
-  button.disabled = true;
-  button.textContent = '⏳ NotebookLM 回答中…';
+async function askExplanation(q, anchor, force, askAgain) {
+  const original = anchor.textContent;
+  if (anchor.tagName === 'BUTTON') { anchor.disabled = true; anchor.textContent = '⏳ NotebookLM 回答中…'; }
   try {
     const res = await fetch(`/api/courses/${currentStudyCourse.code}/study/explain`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        lecture_no: activeStudyLectureNo,
+        lecture_no: q.lecture_no,
         question: q.question,
         choices: (q.choices || []).map(c => (c.text !== undefined ? c.text : c)),
         answer_index: q.answer_index,
+        force,
       }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || res.statusText);
-    // The server escapes NotebookLM's text before rendering its Markdown, so the HTML is safe to insert.
-    button.insertAdjacentHTML('afterend', `<div class="explain-box">${data.html || escHtml(data.answer)}</div>`);
-    button.remove();
+    savedExplanations.set(q.question.trim(), { answer_md: data.answer, html: data.html, created_at: data.saved_at });
+    const box = explanationBox(data.html || escHtml(data.answer), data.saved_at, askAgain);
+    const holder = anchor.closest('.explain-box') || anchor;
+    holder.insertAdjacentHTML('afterend', box);
+    holder.remove();
+    if (!data.from_cache) showToast('已向 NotebookLM 詢問並儲存，下次直接顯示', 'success', 2500);
   } catch (e) {
-    button.disabled = false;
-    button.textContent = '🤔 為什麼？問 NotebookLM';
+    if (anchor.tagName === 'BUTTON') { anchor.disabled = false; anchor.textContent = original; }
     showToast('NotebookLM 沒有回應：' + e.message, 'error');
   }
+}
+
+/**
+ * Explain one question of the quiz on screen.
+ * @param {number} index Question index
+ * @param {HTMLElement} anchor Button or explanation box to replace
+ * @param {boolean} force Ask again even if saved
+ * @returns {Promise<void>} Resolves when shown
+ */
+function explainQuestion(index, anchor, force = false) {
+  const q = quizQuestions()[index];
+  if (!q) return Promise.resolve();
+  return askExplanation({ ...q, lecture_no: activeStudyLectureNo }, anchor, force, `explainQuestion(${index}, this, true)`);
+}
+
+/**
+ * Explain one question from the mistake notebook.
+ * @param {string} mistakeId Mistake id
+ * @param {HTMLElement} anchor Button or explanation box to replace
+ * @param {boolean} force Ask again even if saved
+ * @returns {Promise<void>} Resolves when shown
+ */
+function explainMistake(mistakeId, anchor, force = false) {
+  const m = (window.currentMistakes || []).find(x => x.id === mistakeId);
+  if (!m) return Promise.resolve();
+  const q = { question: m.question_text, choices: m.choices, answer_index: m.correct_index, lecture_no: m.lecture_no };
+  return askExplanation(q, anchor, force, `explainMistake('${mistakeId}', this, true)`);
+}
+
+/**
+ * Explanation area for a question: the saved explanation, or a "why?" button.
+ * @param {string} question Question text
+ * @param {string} askJs JavaScript (with `this`) that asks for it
+ * @param {string} askAgainJs JavaScript that asks again
+ * @returns {string} HTML
+ */
+function explanationSlot(question, askJs, askAgainJs) {
+  const saved = savedExplanations.get(String(question).trim());
+  if (saved) return explanationBox(saved.html || escHtml(saved.answer_md || ''), saved.created_at, askAgainJs);
+  return `<button class="why-btn" style="margin-top:8px;font-size:0.8rem;" onclick="${askJs}">🤔 為什麼？問 NotebookLM</button>`;
 }
 
 /**

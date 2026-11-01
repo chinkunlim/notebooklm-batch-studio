@@ -1029,6 +1029,8 @@
       try {
         const res = await fetch(`/api/courses/${code}/study/mistakes?only_unresolved=true${lecQuery}`);
         const mistakes = await res.json();
+        window.currentMistakes = mistakes;
+        await loadSavedExplanations();
 
         if (!mistakes || mistakes.length === 0) {
           container.innerHTML = `
@@ -1041,7 +1043,7 @@
         }
 
         container.innerHTML = mistakes.map(m => `
-          <div class="card" id="mistakeCard-${m.id}" style="background: #0f172a; margin-bottom: 14px;">
+          <div class="card" id="mistakeCard-${m.id}" style="background: var(--surface-2); margin-bottom: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <span class="badge badge-warning">講義第 ${m.lecture_no || '全課'} 講錯題</span>
               <button class="btn" style="padding: 4px 10px; font-size: 0.8rem; border-color: #10b981; color: #10b981;" onclick="resolveMistake('${m.id}')">
@@ -1053,15 +1055,16 @@
               ${(m.choices || []).map((c, idx) => {
                 const letter = String.fromCharCode(65 + idx);
                 let style = 'padding: 6px 12px; margin-bottom: 4px; border-radius: 4px; font-size: 0.85rem;';
-                if (idx === m.correct_index) style += ' background: #14532d; color: #4ade80; font-weight: 600;';
-                else if (idx === m.selected_index) style += ' background: #7f1d1d; color: #fca5a5;';
-                else style += ' background: #1e293b; color: #94a3b8;';
+                if (idx === m.correct_index) style += ' background: rgba(34,197,94,0.2); border: 1px solid #22c55e; font-weight: 600;';
+                else if (idx === m.selected_index) style += ' background: rgba(239,68,68,0.2); border: 1px solid #ef4444;';
+                else style += ' background: var(--surface); color: var(--text-muted);';
                 return `<div style="${style}">${letter}. ${escHtml(c)}</div>`;
               }).join('')}
             </div>
-            <div style="margin-top: 10px; padding: 10px; background: #1e293b; border-left: 3px solid #38bdf8; font-size: 0.85rem; color: #cbd5e1;">
+            <div style="margin-top: 10px; padding: 10px; background: var(--surface); border-left: 3px solid var(--primary); font-size: 0.85rem;">
               <strong>解析：</strong> ${escHtml(m.explanation)}
             </div>
+            ${explanationSlot(m.question_text, `explainMistake('${m.id}', this)`, `explainMistake('${m.id}', this, true)`)}
           </div>
         `).join('');
       } catch (e) {
@@ -1860,7 +1863,7 @@
         const data = await (await fetch('/api/naming-guide')).json();
         box.innerHTML = `<ul style="margin: 0 0 12px 18px; line-height: 1.7;">${data.rules.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
           <table><thead><tr><th>代碼</th><th>名稱</th><th>意思</th><th>NotebookLM 標題</th><th>本機檔名</th></tr></thead><tbody>
-          ${data.artifacts.map(a => `<tr><td><code>${a.artifact_type}</code></td><td style="white-space:nowrap;">${escHtml(a.label)}</td><td style="min-width:180px;">${escHtml(a.meaning)}</td><td><code>${escHtml(a.notebooklm_title)}</code></td><td><code>${escHtml(a.local_files)}</code></td></tr>`).join('')}
+          ${data.artifacts.map(a => `<tr><td><code>${a.artifact_type}</code></td><td>${escHtml(a.label)}</td><td style="min-width:180px;">${escHtml(a.meaning)}</td><td><code>${escHtml(a.notebooklm_title)}</code></td><td><code>${escHtml(a.local_files)}</code></td></tr>`).join('')}
           </tbody></table>`;
       } catch (e) {
         box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;

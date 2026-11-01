@@ -35,3 +35,4 @@
 | [ISSUE-020](020-web-field-mismatch.md) | 🟢 已根治 (Resolved) | 網頁課程卡片與學習專區閃卡讀錯欄位／路徑 | 卡片讀不存在的欄位；閃卡以檔名找講次但講次在資料夾名稱 | `entrypoints/static/index.html`, `services/study_service.py` |
 | [ISSUE-021](021-answer-position-bias.md) | 🟢 已根治 (Resolved) | 測驗正確答案大多是 A | NotebookLM 傾向把正解放第一個；解析時改為固定種子打亂 | `services/converters/quiz_converter.py` |
 | [ISSUE-022](022-quiz-submit-resets-view.md) | 🟢 已根治 (Resolved) | 交卷後測驗被重置並跳回第 1 講 | 交卷後更新統計的函式會選回第一講並重繪分頁 | `entrypoints/static/index.html` |
+| [ISSUE-023](023-db-connection-leak.md) | 🟢 已根治 (Resolved) | 網頁用久了出現 Failed to fetch（資料庫連線耗盡） | scoped_session 以執行緒為範圍，執行緒池每條執行緒都佔住一條連線 | `entrypoints/api.py` |

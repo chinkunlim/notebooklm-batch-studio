@@ -56,6 +56,22 @@ def _register_read_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
         """
         return json.dumps(plan.due_reviews(code, lecture_no), ensure_ascii=False, indent=2)
 
+    @mcp.tool()
+    def get_saved_explanations(code: str, lecture_no: int | None = None) -> str:
+        """Saved NotebookLM explanations of quiz questions (read-only, no quota).
+
+        Args:
+            code: Course code.
+            lecture_no: Optional lecture filter.
+
+        Returns:
+            JSON string with saved explanations (Markdown).
+        """
+        items = [
+            {k: v for k, v in i.items() if k != "html"} for i in plan.list_explanations(code, lecture_no)
+        ]
+        return json.dumps(items, ensure_ascii=False, indent=2, default=str)
+
 
 def _register_write_tools(mcp: MCPServer, plan: StudyPlanService) -> None:
     """Register study-plan tools that save data or call NotebookLM (confirm required).

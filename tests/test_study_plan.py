@@ -170,6 +170,20 @@ class PlanTest(PlanFixture):
         self.assertIn("<strong>重點</strong>", html)
         self.assertNotIn("<script>", html)
 
+    def test_explanations_are_saved_and_reused(self) -> None:
+        """The second request for the same question uses the saved answer; force asks again."""
+        first = asyncio.run(self.plan.explain("C1", 1, "什麼是假設？", ["a", "b"], 0))
+        second = asyncio.run(self.plan.explain("C1", 1, "什麼是假設？", ["a", "b"], 0))
+        self.assertFalse(first["from_cache"])
+        self.assertTrue(second["from_cache"])
+        self.assertEqual(self.client.ask.await_count, 1)
+        asyncio.run(self.plan.explain("C1", 1, "什麼是假設？", ["a", "b"], 0, force=True))
+        self.assertEqual(self.client.ask.await_count, 2)
+        saved = self.plan.list_explanations("C1", 1)
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0]["question"], "什麼是假設？")
+        self.assertIn("<p>", saved[0]["html"])
+
     def test_exam_date_setting_and_delete_clears_study_data(self) -> None:
         """Exam date is editable and validated; deleting the course removes progress and reviews."""
         service = BatchStudioService(self.course_repo, self.queue_repo, mock.MagicMock(), self.config)
@@ -179,8 +193,10 @@ class PlanTest(PlanFixture):
             service.course_settings.set_options("C1", {"exam_date": "next week"})
         self.plan.mark_step("C1", 1, "audio")
         self.plan.record_review("C1", "flashcard", "k", True, 1, "f", "b", now=NOW)
+        asyncio.run(self.plan.explain("C1", 1, "q?", ["a"], 0))
         service.course_settings.delete_course("C1")
         self.assertEqual(ReviewRepository(self.session).list_steps("C1"), set())
+        self.assertEqual(ReviewRepository(self.session).list_explanations("C1"), [])
         self.assertEqual(self.plan.due_reviews("C1", now=NOW + timedelta(days=5)), [])
 
 
@@ -227,3 +243,26 @@ class EntrypointTest(PlanFixture):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SessionLeakTest(unittest.TestCase):
+    """Request-scoped sessions: many requests never exhaust the connection pool (ISSUE-023)."""
+
+    def test_many_requests_release_connections(self) -> None:
+        """60 requests through the real app (real sessions, file DB) all succeed and none stay open."""
+        from notebooklm_batch_studio.adapters.db.base import Base as DbBase
+        from notebooklm_batch_studio.entrypoints import api as api_module
+
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            db_url = f"sqlite:///{tmp / 'app.db'}"
+            engine = create_db_engine(db_url)
+            DbBase.metadata.create_all(engine)
+            cfg = AppConfig(
+                data_dir=tmp, database_url=db_url, log_to_file=False, http_allowed_hosts=("testserver",)
+            )
+            with mock.patch.object(api_module, "create_db_engine", return_value=engine):
+                http = TestClient(create_app(config=cfg))
+            for _ in range(60):
+                self.assertEqual(http.get("/api/courses").status_code, 200)
+            self.assertEqual(engine.pool.checkedout(), 0)

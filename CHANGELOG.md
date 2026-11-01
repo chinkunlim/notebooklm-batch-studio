@@ -42,6 +42,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix: short videos use auto style, and regenerating uses the current prompt blueprint instead of a stale stored prompt (by `@claude-code`)
 - fix(web): style number and text inputs in the settings panels (by `@claude-code`)
 - fix: shuffle quiz options (answers were 72% A), course card fields, study flashcards lookup, paused status message (by `@claude-code`)
+- fix: request-scoped DB sessions (connection pool exhaustion caused Failed to fetch); save and reuse NotebookLM explanations; render their Markdown; no horizontal scrolling at any width (by `@claude-code`)
 
 ### Documentation
 - docs(adr): add ADR-002 (session token authentication) and ADR-003 (student study portal and spaced repetition) (by `@antigravity`)

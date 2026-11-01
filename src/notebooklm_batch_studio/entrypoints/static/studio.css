@@ -90,7 +90,7 @@ body { background: var(--bg); color: var(--text); }
 /* ---------- Course page: chapter groups ---------- */
 .job-group { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; background: var(--surface-2); }
 .job-group > summary { cursor: pointer; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; align-items: center; font-weight: 600; }
-.job-group > div { padding: 0 8px 8px; overflow-x: auto; }
+.job-group > div { padding: 0 8px 8px; }
 
 /* ---------- Add-course wizard ---------- */
 .wizard-steps { display: flex; gap: 6px; margin: 4px 0 12px; flex-wrap: wrap; }
@@ -104,13 +104,49 @@ body { background: var(--bg); color: var(--text); }
   header { flex-wrap: wrap; gap: 10px; }
   #studyView > div[style*="display: flex"] { flex-direction: column; }
   #studyView .card[style*="width: 280px"] { width: 100% !important; }
-  #studyLectureList { display: flex !important; flex-direction: row !important; overflow-x: auto; gap: 6px; }
-  #studyLectureList .study-nav-btn { flex: 0 0 auto; max-width: 240px; }
-  table { display: block; overflow-x: auto; }
+  /* Chapters wrap onto several lines instead of scrolling sideways. */
+  #studyLectureList { display: flex !important; flex-direction: row !important; flex-wrap: wrap; gap: 6px; }
+  #studyLectureList .study-nav-btn { flex: 1 1 200px; max-width: none; }
+  /* Job tables become stacked cards: one row = one card, nothing wider than the screen. */
+  .job-group table, .job-group thead, .job-group tbody, .job-group tr, .job-group td { display: block; width: 100%; }
+  .job-group thead { display: none; }
+  .job-group tr { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .job-group td { width: auto; border: none; padding: 0; }
+  .job-group td:first-child { display: none; }
   .chapter-row { grid-template-columns: 1fr; }
   .modal { max-height: 92vh; overflow-y: auto; }
 }
 @media (pointer: coarse) {
   button, .btn, select, .choice-btn, .step-chip { min-height: 44px; }
   .step-chip { min-height: 32px; }
+}
+
+/* Saved NotebookLM explanation: readable Markdown, nothing wider than the page. */
+.explain-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700; color: var(--primary); margin-bottom: 6px; font-size: 0.85rem; }
+.link-btn { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.8rem; padding: 2px 4px; min-height: 0; }
+.explain-box h1, .explain-box h2, .explain-box h3, .explain-box h4 { font-size: 1rem; margin: 12px 0 6px; }
+.explain-box p { margin: 6px 0; }
+.explain-box ul, .explain-box ol { margin: 6px 0 6px 20px; padding: 0; }
+.explain-box li { margin: 4px 0; }
+.explain-box hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+.explain-box strong { color: var(--text); }
+
+/* ---------- No horizontal scrolling anywhere: long words and tables wrap ---------- */
+html, body { max-width: 100%; overflow-x: hidden; }
+table { width: 100%; max-width: 100%; }
+td, th { overflow-wrap: anywhere; word-break: break-word; }
+code, pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+#reportContentContainer { overflow-x: visible !important; overflow-wrap: anywhere; }
+#reportContentContainer table { table-layout: fixed; }
+.modal table { table-layout: fixed; }
+img, iframe, video, audio { max-width: 100%; }
+audio { width: 100%; }
+
+/* Phones: let the study column shrink and tighten padding so nothing is wider than the screen. */
+@media (max-width: 600px) {
+  #studyView div[style*="min-width: 340px"], #studyView div[style*="min-width: 280px"] { min-width: 0 !important; }
+  #studyView .card, #tabPanelToday, #tabPanelAudio, #tabPanelQuiz, #tabPanelMistakes, #tabPanelFlashcards, #tabPanelReports { padding: 14px !important; }
+  .plan-grid { grid-template-columns: 1fr; }
+  #studyView > div[style*="display: flex"] > div { flex: 1 1 100% !important; width: 100% !important; min-width: 0 !important; }
+  main, #studyView { padding-left: 10px; padding-right: 10px; }
 }

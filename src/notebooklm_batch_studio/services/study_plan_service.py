@@ -110,6 +110,44 @@ class ReviewStoreProtocol(Protocol):
         """
         ...
 
+    def save_explanation(
+        self, course_code: str, lecture_no: int | None, question_key: str, question: str, answer_md: str
+    ) -> None:
+        """Save an explanation.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Lecture number or None.
+            question_key: Hash of the question.
+            question: Question text.
+            answer_md: Answer Markdown.
+        """
+        ...
+
+    def get_explanation(self, course_code: str, question_key: str) -> dict[str, object] | None:
+        """Load a saved explanation.
+
+        Args:
+            course_code: Course code.
+            question_key: Hash of the question.
+
+        Returns:
+            Saved explanation or None.
+        """
+        ...
+
+    def list_explanations(self, course_code: str, lecture_no: int | None = None) -> list[dict[str, object]]:
+        """List saved explanations.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Optional lecture filter.
+
+        Returns:
+            Saved explanations.
+        """
+        ...
+
 
 def days_until(exam_date: str | None, today: date) -> int | None:
     """Days from today to the exam date.
@@ -323,9 +361,18 @@ class StudyPlanService:
         ]
 
     async def explain(
-        self, code: str, lecture_no: int | None, question: str, choices: list[str], answer_index: int
+        self,
+        code: str,
+        lecture_no: int | None,
+        question: str,
+        choices: list[str],
+        answer_index: int,
+        force: bool = False,
     ) -> dict[str, Any]:
-        """Ask NotebookLM why an answer is correct, using only this lecture's sources (or the course's).
+        """Explain why an answer is correct: the saved explanation, or ask NotebookLM and save it.
+
+        Every NotebookLM answer is kept, so the same question never spends quota twice unless the
+        student asks again on purpose (`force`).
 
         Args:
             code: Course code.
@@ -333,14 +380,25 @@ class StudyPlanService:
             question: Question text.
             choices: Answer options in display order.
             answer_index: Index of the correct option.
+            force: Ask NotebookLM again even if an explanation is saved.
 
         Returns:
-            The explanation text.
+            Dictionary with `answer` (Markdown), `html`, `saved_at` and `from_cache`.
 
         Raises:
             ValueError: When the course has no notebook yet or the answer index is invalid.
         """
         course = self._course(code)
+        key = card_key(question)
+        cached = None if force else self.review_repo.get_explanation(code, key)
+        if cached:
+            answer_md = str(cached["answer_md"])
+            return {
+                "answer": answer_md,
+                "html": markdown_fragment(answer_md),
+                "saved_at": cached["created_at"],
+                "from_cache": True,
+            }
         if not course.notebook_id:
             raise ValueError("This course has no NotebookLM notebook yet")
         if not 0 <= answer_index < len(choices):
@@ -359,8 +417,28 @@ class StudyPlanService:
             if lec.source_id and (lecture_no is None or lec.no == lecture_no)
         ]
         answer = await self.notebooklm_client.ask(course.notebook_id, prompt, sources or None)
-        logger.info("Explained a quiz question for %s L%s", code, lecture_no)
-        return {"answer": answer, "html": markdown_fragment(answer)}
+        self.review_repo.save_explanation(code, lecture_no, key, question, answer)
+        logger.info("Explained and saved a quiz question for %s L%s", code, lecture_no)
+        saved = self.review_repo.get_explanation(code, key) or {}
+        return {
+            "answer": answer,
+            "html": markdown_fragment(answer),
+            "saved_at": saved.get("created_at"),
+            "from_cache": False,
+        }
+
+    def list_explanations(self, code: str, lecture_no: int | None = None) -> list[dict[str, Any]]:
+        """Saved NotebookLM explanations for a course (or one lecture), newest first, with HTML.
+
+        Args:
+            code: Course code.
+            lecture_no: Optional lecture filter.
+
+        Returns:
+            Explanations with key, question, answer, html and saved time.
+        """
+        items = self.review_repo.list_explanations(code, lecture_no)
+        return [{**item, "html": markdown_fragment(str(item.get("answer_md", "")))} for item in items]
 
 
 def card_key(front: str) -> str:

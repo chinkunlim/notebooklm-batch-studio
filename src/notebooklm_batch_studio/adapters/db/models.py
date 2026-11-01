@@ -261,3 +261,27 @@ class ReviewItemRecord(Base):
     stage: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ExplanationRecord(Base):
+    """A saved NotebookLM explanation of one quiz question (table `explanations`).
+
+    Attributes:
+        id: "<course>:<question key>" primary key.
+        course_code: Course identifier.
+        lecture_no: Lecture number, or None for course-wide questions.
+        question_key: Hash of the question text.
+        question: Question text.
+        answer_md: NotebookLM's answer (Markdown).
+        created_at: When it was asked (UTC).
+    """
+
+    __tablename__ = "explanations"
+
+    id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    course_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    lecture_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    question_key: Mapped[str] = mapped_column(String(40), nullable=False)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    answer_md: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)

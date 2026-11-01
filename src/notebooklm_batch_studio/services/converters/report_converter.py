@@ -22,7 +22,8 @@ _STYLE = (
     "table{border-collapse:collapse;width:100%;margin:1em 0;}th,td{border:1px solid #334155;padding:6px 10px;"
     "text-align:left;vertical-align:top;}th{background:#1e293b;}"
     "code{background:#1e293b;padding:1px 5px;border-radius:4px;}"
-    "pre{background:#1e293b;padding:14px;border-radius:8px;overflow-x:auto;}"
+    "pre{background:#1e293b;padding:14px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;}"
+    "td,th{overflow-wrap:anywhere;}img{max-width:100%;}"
     "@media print{body{background:#fff;color:#111;}h1,h2,h3,h4,strong{color:#111;}th{background:#eee;}}"
 )
 

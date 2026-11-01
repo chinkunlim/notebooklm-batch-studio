@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, cast
 
@@ -42,6 +43,50 @@ from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 logger = logging.getLogger(__name__)
+
+
+# Each HTTP request gets its own database session, released when the request ends. Without this,
+# sessions were per thread: FastAPI's thread pool kept one open connection per worker thread and
+# the pool ran out ("QueuePool limit reached") after enough requests. Refs: ISSUE-023
+_DB_SCOPE: ContextVar[object] = ContextVar("db_scope", default="background")
+_SCOPED_REGISTRIES: list[scoped_session[Session]] = []
+
+
+def _request_scoped(factory: sessionmaker[Session]) -> scoped_session[Session]:
+    """Create a session registry whose sessions live for one request (or the background scope).
+
+    Args:
+        factory: Session factory.
+
+    Returns:
+        Scoped session registry, also remembered so the request middleware can release it.
+    """
+    registry = scoped_session(factory, scopefunc=_DB_SCOPE.get)
+    _SCOPED_REGISTRIES.append(registry)
+    return registry
+
+
+class DbSessionScopeMiddleware(BaseHTTPMiddleware):
+    """Give every request its own session scope and close the sessions when it finishes."""
+
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Any]) -> Response:
+        """Run the request inside a fresh session scope.
+
+        Args:
+            request: Incoming HTTP request.
+            call_next: Next request handler in pipeline.
+
+        Returns:
+            HTTP response from downstream handler.
+        """
+        token = _DB_SCOPE.set(object())
+        try:
+            res = await call_next(request)
+            return cast(Response, res)
+        finally:
+            for registry in _SCOPED_REGISTRIES:
+                registry.remove()
+            _DB_SCOPE.reset(token)
 
 
 class HostValidationMiddleware(BaseHTTPMiddleware):
@@ -97,7 +142,7 @@ def _resolve_service(
         return service
 
     eng = engine or create_db_engine(cfg.database_url)
-    session = scoped_session(sessionmaker(bind=eng, expire_on_commit=False))
+    session = _request_scoped(sessionmaker(bind=eng, expire_on_commit=False))
     course_repo = CourseRepository(cast(Session, session))
     queue_repo = QueueRepository(cast(Session, session))
     adapter = NotebookLMAdapter(cfg)
@@ -141,7 +186,7 @@ def _resolve_study_service(
         return study_service
 
     eng = engine or create_db_engine(cfg.database_url)
-    session = scoped_session(sessionmaker(bind=eng, expire_on_commit=False))
+    session = _request_scoped(sessionmaker(bind=eng, expire_on_commit=False))
     study_repo = StudyRepository(cast(Session, session))
     return StudyTrackerService(study_repo=study_repo, config=cfg)
 
@@ -194,7 +239,7 @@ def _build_study_plan(
     Returns:
         StudyPlanService.
     """
-    session = scoped_session(
+    session = _request_scoped(
         sessionmaker(bind=engine or create_db_engine(cfg.database_url), expire_on_commit=False)
     )
     return StudyPlanService(
@@ -246,6 +291,7 @@ def create_app(
     app.state.config = cfg
 
     app.add_middleware(HostValidationMiddleware, allowed_hosts=cfg.http_allowed_hosts)
+    app.add_middleware(DbSessionScopeMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(cfg.http_allowed_origins),

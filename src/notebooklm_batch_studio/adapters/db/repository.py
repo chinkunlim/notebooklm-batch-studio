@@ -13,6 +13,7 @@ from notebooklm_batch_studio.adapters.db.mappers import to_domain_course, to_dom
 from notebooklm_batch_studio.adapters.db.models import (
     ArtifactJobRecord,
     CourseRecord,
+    ExplanationRecord,
     LectureRecord,
     QuizAttemptRecord,
     QuizMistakeRecord,
@@ -215,6 +216,7 @@ class CourseRepository:
             QuizAttemptRecord,
             StudyProgressRecord,
             ReviewItemRecord,
+            ExplanationRecord,
             ArtifactJobRecord,
             LectureRecord,
         ):
