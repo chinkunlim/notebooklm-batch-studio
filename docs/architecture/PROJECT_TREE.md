@@ -87,6 +87,7 @@ notebooklm-batch-studio/
 │   │   ├── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
 │   │   ├── 20261101_3dbb5819dc15_add_style_options_interactive_path_and_.py
 │   │   ├── 20261101_4985a300eaa2_add_quiz_attempts_and_mistakes.py
+│   │   ├── 20261101_7b0938de08f1_drop_template_greetings_table.py
 │   │   ├── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
 │   │   ├── 20261101_d0a82d2914ab_persist_course_artifact_selections.py
 │   │   └── 20261101_d6e896ae4e2c_add_job_version_artifact_ids_and_course_.py
@@ -143,7 +144,6 @@ notebooklm-batch-studio/
 │   └── TEMPLATE_FEEDBACK.md
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
 │   ├── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
-│   ├── generate_sample_pdf.py
 │   └── spike_notebooklm.py
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── notebooklm_batch_studio/
@@ -206,7 +206,6 @@ notebooklm-batch-studio/
 │       │   ├── artifact_runner.py
 │       │   ├── course_parser.py
 │       │   ├── course_settings.py
-│       │   ├── greeting.py
 │       │   ├── job_views.py
 │       │   ├── orchestrator.py
 │       │   ├── prompt_generator.py
@@ -229,7 +228,6 @@ notebooklm-batch-studio/
 │   ├── test_course_reregistration.py
 │   ├── test_db.py
 │   ├── test_domain_and_queue.py
-│   ├── test_greeting.py
 │   ├── test_guides_and_reports.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_notebooklm_adapter.py

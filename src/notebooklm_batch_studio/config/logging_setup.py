@@ -1,7 +1,7 @@
 """Logging setup shared by every entrypoint, built for tracing one run or one request.
 
 Every line looks like
-    2026-10-20 09:15:02,481 INFO    [3f9a1c2e] app.services.greeting:create_greeting:24 - greeting user='Ann'
+    2026-10-20 09:15:02,481 INFO    [3f9a1c2e] notebooklm_batch_studio.services.worker_pool:start:212 - ...
 so you can see when, how serious, which run / request, and exactly which function and line.
 
 - Run id: one short id per process run (`setup_logging()` creates it); inside an HTTP request

@@ -447,22 +447,6 @@ class ArtifactJob:
     artifact_ids: tuple[str, ...] = ()
 
 
-# Backward-compatibility for initial bootstrap tests
-@dataclass(frozen=True)
-class GreetingRequest:
-    """A request to greet one user."""
-
-    user_name: str
-
-
-@dataclass(frozen=True)
-class GreetingResult:
-    """The greeting produced by the service layer."""
-
-    message: str
-    environment: str
-
-
 @dataclass
 class QuizMistake:
     """A single wrong question record from a student quiz attempt.

@@ -39,6 +39,9 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs(adr): document empirical verification results for NotebookLM single-source selection and artifact downloads (TASK-001) (`TASK-001`, by `@antigravity`)
 - docs: update README, ARCHITECTURE, and SPECS to reflect Phase 1 implementation (TASK-006) (by `@antigravity`)
 
+### Chore
+- chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)
+
 ## [0.1.0] - 2026-10-21
 ### Added
 - Initial project scaffold (framework v3.3.0).

@@ -21,9 +21,8 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
-from notebooklm_batch_studio.domain.models import GreetingRequest, JobStatus, ProfileName
+from notebooklm_batch_studio.domain.models import JobStatus, ProfileName
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
-from notebooklm_batch_studio.services.greeting import create_greeting
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.watcher import CourseWatcher
 from notebooklm_batch_studio.services.worker_pool import WorkerPool
@@ -317,7 +316,6 @@ def main(argv: list[str] | None = None) -> int:
         prog="notebooklm-batch-studio",
         description="NotebookLM Batch Studio — 批次課程筆記本自動化生成系統",
     )
-    parser.add_argument("--name", default=None, help="Greeting test argument")
 
     subparsers = parser.add_subparsers(dest="command", help="子命令")
     subparsers.add_parser("login", help="檢查 NotebookLM 登入憑證")
@@ -349,11 +347,6 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     config = load_config()
     setup_logging(config.log_level, config.logs_dir if config.log_to_file else None)
-
-    if args.name is not None and args.command is None:
-        result = create_greeting(GreetingRequest(user_name=args.name), config)
-        print(result.message)
-        return 0
 
     if args.command:
         return _dispatch_command(args, config)

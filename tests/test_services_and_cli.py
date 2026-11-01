@@ -392,14 +392,6 @@ class TestCliCommands(unittest.TestCase):
         self.patcher.stop()
         self.tmpdir.cleanup()
 
-    def test_cli_greeting(self) -> None:
-        """Verify bootstrap greeting argument."""
-        out = io.StringIO()
-        with redirect_stdout(out):
-            code = main(["--name", "Developer"])
-        self.assertEqual(code, 0)
-        self.assertIn("Hello, Developer!", out.getvalue())
-
     def test_cli_status(self) -> None:
         """Verify status command executes and prints header."""
         out = io.StringIO()
