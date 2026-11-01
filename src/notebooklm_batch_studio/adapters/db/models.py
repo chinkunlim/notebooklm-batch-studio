@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from notebooklm_batch_studio.adapters.db.base import Base
@@ -210,3 +210,54 @@ class QuizMistakeRecord(Base):
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
     is_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class StudyProgressRecord(Base):
+    """One finished study step, e.g. "listened to the Ch01 audio" (table `study_progress`).
+
+    Attributes:
+        id: Primary key.
+        course_code: Course identifier.
+        lecture_no: Lecture number, or None for course-wide steps.
+        step: Step key ('audio', 'guide', 'flashcards', ...).
+        done_at: When the student marked it done (UTC).
+    """
+
+    __tablename__ = "study_progress"
+    __table_args__ = (UniqueConstraint("course_code", "lecture_no", "step", name="uq_study_progress_step"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    course_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    lecture_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    step: Mapped[str] = mapped_column(String(40), nullable=False)
+    done_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class ReviewItemRecord(Base):
+    """A flashcard or mistake on a spaced-review schedule (table `review_items`).
+
+    Attributes:
+        id: "<kind>:<course>:<key>" primary key.
+        course_code: Course identifier.
+        lecture_no: Lecture number, or None for course-wide items.
+        kind: 'flashcard' or 'mistake'.
+        item_key: Stable key of the item (hash of the card front, or the mistake id).
+        front: Prompt side shown to the student.
+        back: Answer side.
+        stage: Index into the review intervals (0 = new / forgotten).
+        due_at: When the item should be reviewed next (UTC).
+        last_reviewed_at: Last review time (UTC).
+    """
+
+    __tablename__ = "review_items"
+
+    id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    course_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    lecture_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    item_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    front: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    back: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    stage: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

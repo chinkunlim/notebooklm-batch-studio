@@ -294,13 +294,16 @@ class CourseRepositoryProtocol(Protocol):
         """
         ...
 
-    def update_course_basics(self, code: str, language: str, mock_exam_questions: int) -> None:
-        """Change a course's output language and mock exam question target.
+    def update_course_basics(
+        self, code: str, language: str, mock_exam_questions: int, exam_date: str | None = None
+    ) -> None:
+        """Change a course's output language, mock exam question target and exam date.
 
         Args:
             code: Course code.
             language: Output language.
             mock_exam_questions: Mock exam question target.
+            exam_date: 'YYYY-MM-DD' or None.
         """
         ...
 

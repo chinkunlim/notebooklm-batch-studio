@@ -26,6 +26,19 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
+    async def ask(self, notebook_id: str, question: str, source_ids: list[str] | None = None) -> str:
+        """Ask the notebook a question grounded in its sources.
+
+        Args:
+            notebook_id: Notebook identifier.
+            question: Question text.
+            source_ids: Limit to these sources (None = all).
+
+        Returns:
+            Answer text.
+        """
+        ...
+
     async def find_notebook_by_title(self, title: str) -> str | None:
         """Find an existing notebook whose title matches exactly.
 

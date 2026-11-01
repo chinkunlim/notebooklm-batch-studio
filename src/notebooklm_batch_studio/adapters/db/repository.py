@@ -17,6 +17,8 @@ from notebooklm_batch_studio.adapters.db.models import (
     QuizAttemptRecord,
     QuizMistakeRecord,
     QuotaRecord,
+    ReviewItemRecord,
+    StudyProgressRecord,
     utc_now,
 )
 from notebooklm_batch_studio.domain.models import (
@@ -131,7 +133,8 @@ class CourseRepository:
                 existing.notebook_id = course.notebook_id
             existing.profile = course.profile.value
             existing.language = course.language
-            existing.exam_date = course.exam_date
+            if course.exam_date:  # a rescan without course.toml keeps a date set in the web app
+                existing.exam_date = course.exam_date
             existing.watch = course.watch
             existing.mock_exam_questions = course.mock_exam_questions
             existing.updated_at = utc_now()
@@ -207,7 +210,14 @@ class CourseRepository:
             Number of jobs that were removed.
         """
         removed = 0
-        for model in (QuizMistakeRecord, QuizAttemptRecord, ArtifactJobRecord, LectureRecord):
+        for model in (
+            QuizMistakeRecord,
+            QuizAttemptRecord,
+            StudyProgressRecord,
+            ReviewItemRecord,
+            ArtifactJobRecord,
+            LectureRecord,
+        ):
             result = self.session.execute(delete(model).where(model.course_code == code))
             if model is ArtifactJobRecord:
                 removed = int(getattr(result, "rowcount", 0) or 0)
@@ -230,18 +240,22 @@ class CourseRepository:
             self.session.flush()
             self.session.commit()
 
-    def update_course_basics(self, code: str, language: str, mock_exam_questions: int) -> None:
-        """Change a course's output language and course mock exam question target.
+    def update_course_basics(
+        self, code: str, language: str, mock_exam_questions: int, exam_date: str | None = None
+    ) -> None:
+        """Change a course's output language, mock exam question target and exam date.
 
         Args:
             code: Course code.
             language: 'zh-TW', 'en' or 'bilingual'.
             mock_exam_questions: Target number of questions in the course mock exam.
+            exam_date: 'YYYY-MM-DD', or None for no date.
         """
         record = self.session.get(CourseRecord, code)
         if record:
             record.language = language
             record.mock_exam_questions = mock_exam_questions
+            record.exam_date = exam_date
             record.updated_at = utc_now()
             self.session.flush()
             self.session.commit()

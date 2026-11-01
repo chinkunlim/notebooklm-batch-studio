@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
+from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
@@ -28,12 +29,14 @@ from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.entrypoints.http.artifacts import artifacts_router
 from notebooklm_batch_studio.entrypoints.http.courses import courses_router
+from notebooklm_batch_studio.entrypoints.http.plan import plan_router
 from notebooklm_batch_studio.entrypoints.http.queue import queue_router
 from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 logger = logging.getLogger(__name__)
@@ -175,10 +178,37 @@ def _build_lifespan(service: BatchStudioService, cfg: AppConfig) -> Callable[[Fa
     return lifespan
 
 
+def _build_study_plan(
+    service: BatchStudioService, study: StudyTrackerService, cfg: AppConfig, engine: Engine | None
+) -> StudyPlanService:
+    """Create the study-plan service on the same repositories as the other services.
+
+    Args:
+        service: Orchestrator (course / queue repositories and NotebookLM client).
+        study: Study tracker (quiz attempts and mistakes).
+        cfg: Application configuration.
+        engine: Shared engine, or None to open one from the configured database URL.
+
+    Returns:
+        StudyPlanService.
+    """
+    session = scoped_session(
+        sessionmaker(bind=engine or create_db_engine(cfg.database_url), expire_on_commit=False)
+    )
+    return StudyPlanService(
+        course_repo=service.course_repo,
+        queue_repo=service.queue_repo,
+        study_repo=study.study_repo,
+        review_repo=ReviewRepository(cast(Session, session)),
+        notebooklm_client=service.notebooklm_client,
+    )
+
+
 def create_app(
     config: AppConfig | None = None,
     service: BatchStudioService | None = None,
     study_service: StudyTrackerService | None = None,
+    study_plan: StudyPlanService | None = None,
 ) -> FastAPI:
     """Construct and configure the FastAPI application.
 
@@ -186,6 +216,7 @@ def create_app(
         config: Application configuration (defaults to loaded config).
         service: Optional pre-configured BatchStudioService instance for testing.
         study_service: Optional pre-configured StudyTrackerService instance.
+        study_plan: Optional pre-configured StudyPlanService instance.
 
     Returns:
         Configured FastAPI instance ready for serving or TestClient testing.
@@ -209,6 +240,7 @@ def create_app(
 
     app.state.service = active_service
     app.state.study_service = active_study
+    app.state.study_plan = study_plan or _build_study_plan(active_service, active_study, cfg, shared_engine)
     app.state.config = cfg
 
     app.add_middleware(HostValidationMiddleware, allowed_hosts=cfg.http_allowed_hosts)
@@ -220,7 +252,9 @@ def create_app(
         allow_headers=["*"],
     )
 
-    mcp_server = build_mcp_server(service=active_service, study_service=active_study, config=cfg)
+    mcp_server = build_mcp_server(
+        service=active_service, study_service=active_study, config=cfg, study_plan=app.state.study_plan
+    )
     app.mount("/mcp", mcp_server.streamable_http_app())
 
     app.include_router(system_router)
@@ -229,6 +263,7 @@ def create_app(
     app.include_router(queue_router)
     app.include_router(study_router)
     app.include_router(settings_router)
+    app.include_router(plan_router)
 
     return app
 

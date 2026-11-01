@@ -89,6 +89,7 @@ notebooklm-batch-studio/
 │   │   ├── 20261101_3dbb5819dc15_add_style_options_interactive_path_and_.py
 │   │   ├── 20261101_4985a300eaa2_add_quiz_attempts_and_mistakes.py
 │   │   ├── 20261101_7b0938de08f1_drop_template_greetings_table.py
+│   │   ├── 20261101_b6ac72489fc1_add_study_progress_and_review_items.py
 │   │   ├── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
 │   │   ├── 20261101_d0a82d2914ab_persist_course_artifact_selections.py
 │   │   ├── 20261101_d21a28b5d5a0_add_course_paused_and_reuse_notebook_.py
@@ -162,6 +163,7 @@ notebooklm-batch-studio/
 │       │   │   ├── mappers.py
 │       │   │   ├── models.py
 │       │   │   ├── repository.py
+│       │   │   ├── review_repository.py
 │       │   │   ├── session.py
 │       │   │   └── study_repository.py
 │       │   ├── notebooklm/
@@ -185,12 +187,14 @@ notebooklm-batch-studio/
 │       │   ├── naming.py
 │       │   ├── notebooklm_protocol.py
 │       │   ├── repositories.py
+│       │   ├── study_plan.py
 │       │   └── usage_guide.py
 │       ├── entrypoints/
 │       │   ├── http/
 │       │   │   ├── __init__.py
 │       │   │   ├── artifacts.py
 │       │   │   ├── courses.py
+│       │   │   ├── plan.py
 │       │   │   ├── queue.py
 │       │   │   ├── settings.py
 │       │   │   ├── study.py
@@ -201,6 +205,7 @@ notebooklm-batch-studio/
 │       │   ├── api.py
 │       │   ├── cli.py
 │       │   ├── mcp_server.py
+│       │   ├── mcp_study_plan.py
 │       │   ├── schemas.py
 │       │   └── web_template.py
 │       ├── services/
@@ -223,6 +228,7 @@ notebooklm-batch-studio/
 │       │   ├── quiz_reader.py
 │       │   ├── quota_planner.py
 │       │   ├── reporter.py
+│       │   ├── study_plan_service.py
 │       │   ├── study_service.py
 │       │   ├── sync_service.py
 │       │   ├── watcher.py
@@ -250,6 +256,7 @@ notebooklm-batch-studio/
 │   ├── test_remaining_fixes.py
 │   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py
+│   ├── test_study_plan.py
 │   ├── test_study_service.py
 │   └── test_versions_and_options.py
 ├── .editorconfig

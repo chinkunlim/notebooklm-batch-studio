@@ -140,17 +140,17 @@ def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, st
         ArtifactType.COURSE_MOCK_EXAM.value: (
             f"本課程為【{course_name}】全範圍綜合期末考。難度設定為期末考水準，簡單、中等、困難題目都要有。"
             f"{lang_instruction}請生成 50 題跨章節整合單選題，涵蓋各章核心概念與跨章節的綜合應用。"
-            "每題附詳細學術解析、診斷提示與各選項辨析。"
+            "每題附詳細學術解析、診斷提示與各選項辨析。每題題幹開頭標註出處講次，格式為【Ch03】。"
         ),
         ArtifactType.COURSE_QUIZ_ACADEMIC.value: (
             f"本課程為【{course_name}】全範圍學術精研期末考。難度設定為研究所入學考水準。"
             f"{lang_instruction}請生成 50 題跨章節深度學術單選題，著重跨概念統整、理論比較與批判分析。"
-            "每題附完整解析與選項理論辨析。"
+            "每題附完整解析與選項理論辨析。每題題幹開頭標註出處講次，格式為【Ch03】。"
         ),
         ArtifactType.COURSE_QUIZ_CONCEPT.value: (
             f"本課程為【{course_name}】全範圍核心觀念刷題考。"
             f"{lang_instruction}請生成 50 題跨章節核心觀念刷題單選題，快速檢驗各章定義、機制與關鍵考點。"
-            "題幹精準簡潔，附重點診斷解析。"
+            "題幹精準簡潔，附重點診斷解析。每題題幹開頭標註出處講次，格式為【Ch03】。"
         ),
         ArtifactType.COURSE_MIND_MAP.value: (
             f"本課程為【{course_name}】。{lang_instruction}請繪製貫穿全部講義之【全課程總架構心智圖】。"

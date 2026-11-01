@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 CHOICE_LABELS = ["A", "B", "C", "D"]
 
 
+_CHAPTER_TAG = re.compile(r"^\s*[【\[]\s*((?:Ch|L)\s*\d+|第\s*\d+\s*講)\s*[】\]]\s*", re.I)
+
 # Options that point at other options ("以上皆是", "A 與 B") only make sense in their original order.
 _POSITIONAL_OPTION = re.compile(
     r"以上|上述|皆是|皆非|都對|都錯|all of the above|none of the above|\b[A-D]\s*(和|與|及|、|and)", re.I
@@ -69,6 +71,12 @@ def _parse_question_dict(
         Populated Question entity, or None if invalid.
     """
     stem = str(q_dict.get("question", "")).strip()
+    # Course-wide exams ask NotebookLM to start each stem with its chapter, e.g. "【Ch03】"; keep it
+    # as the question's source so results can be scored per chapter.
+    tag = _CHAPTER_TAG.match(stem)
+    if tag:
+        stem = stem[tag.end() :].strip()
+        source_pdf = re.sub(r"\s+", "", tag.group(1))
     if not stem:
         return None
 

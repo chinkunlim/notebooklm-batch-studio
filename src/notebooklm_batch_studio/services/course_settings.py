@@ -13,7 +13,7 @@ import logging
 import re
 import shutil
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
@@ -91,7 +91,7 @@ def default_options() -> dict[str, Any]:
         Option name to default value, including the course-level language and mock exam size.
     """
     defaults = dataclasses.asdict(GenerationOptions())
-    defaults.update(language="zh-TW", mock_exam_questions=50)
+    defaults.update(language="zh-TW", mock_exam_questions=50, exam_date="")
     return defaults
 
 
@@ -205,11 +205,16 @@ class CourseSettingsService:
         """
         course = self._course(code)
         options = dataclasses.asdict(course.generation_options)
-        options.update(language=course.language, mock_exam_questions=course.mock_exam_questions)
+        options.update(
+            language=course.language,
+            mock_exam_questions=course.mock_exam_questions,
+            exam_date=course.exam_date or "",
+        )
         choices = option_choices()
         choices.update(
             language=list(LANGUAGES),
             mock_exam_questions={"min": MOCK_EXAM_RANGE[0], "max": MOCK_EXAM_RANGE[1]},
+            exam_date="date",
         )
         return {"options": options, "choices": choices, "defaults": default_options()}
 
@@ -230,6 +235,12 @@ class CourseSettingsService:
         changes = dict(changes)
         language = changes.pop("language", course.language)
         mock = changes.pop("mock_exam_questions", course.mock_exam_questions)
+        exam_date = str(changes.pop("exam_date", course.exam_date or "") or "").strip() or None
+        if exam_date is not None:
+            try:
+                date.fromisoformat(exam_date)
+            except ValueError as err:
+                raise ValueError("exam_date must look like 2026-12-20") from err
         if language not in LANGUAGES:
             raise ValueError(f"language must be one of {', '.join(LANGUAGES)}")
         if (
@@ -243,8 +254,8 @@ class CourseSettingsService:
             )
         updated = merge_generation_options(course.generation_options, changes)
         self.course_repo.update_generation_options(code, updated)
-        if (language, mock) != (course.language, course.mock_exam_questions):
-            self.course_repo.update_course_basics(code, language, mock)
+        if (language, mock, exam_date) != (course.language, course.mock_exam_questions, course.exam_date):
+            self.course_repo.update_course_basics(code, language, mock, exam_date)
         logger.info("Updated generation options for %s: %s", code, sorted(changes))
         return self.get_options(code)
 

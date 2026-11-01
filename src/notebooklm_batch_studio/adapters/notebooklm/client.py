@@ -240,6 +240,22 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
         return None if limits.source_limit is None else int(limits.source_limit)
 
     @_translate_errors
+    async def ask(self, notebook_id: str, question: str, source_ids: list[str] | None = None) -> str:
+        """Ask the notebook a question grounded in its sources (NotebookLM chat).
+
+        Args:
+            notebook_id: Notebook identifier.
+            question: Question text.
+            source_ids: Limit the answer to these sources (None = all).
+
+        Returns:
+            The answer text.
+        """
+        async with self._client() as client:
+            result = await client.chat.ask(notebook_id, question, source_ids=source_ids)
+        return str(result.answer)
+
+    @_translate_errors
     async def find_notebook_by_title(self, title: str) -> str | None:
         """Find an existing notebook whose title matches exactly (most recent first).
 

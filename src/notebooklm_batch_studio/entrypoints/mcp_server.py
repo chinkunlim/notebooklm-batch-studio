@@ -15,6 +15,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
+from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
@@ -23,8 +24,10 @@ from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
+from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
 from notebooklm_batch_studio.services.folder_browser import browse_folders
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 logger = logging.getLogger(__name__)
@@ -714,6 +717,7 @@ def build_mcp_server(
     service: BatchStudioService | None = None,
     study_service: StudyTrackerService | None = None,
     config: AppConfig | None = None,
+    study_plan: StudyPlanService | None = None,
 ) -> MCPServer:
     """Build and configure the MCPServer instance with all batch studio tools.
 
@@ -721,6 +725,8 @@ def build_mcp_server(
         service: Optional pre-configured BatchStudioService instance.
         study_service: Optional pre-configured StudyTrackerService instance.
         config: Application configuration.
+        study_plan: Optional study-plan service (built from the database when omitted and the
+            other services are built here too).
 
     Returns:
         Configured MCPServer with registered tool handlers.
@@ -749,6 +755,10 @@ def build_mcp_server(
                 active_study = StudyTrackerService(study_repo=study_repo, config=cfg)
             else:
                 active_study = study_service
+            if study_plan is None:
+                study_plan = StudyPlanService(
+                    course_repo, queue_repo, study_repo, ReviewRepository(session), adapter
+                )
     else:
         active_service = service
         active_study = study_service
@@ -767,6 +777,8 @@ def build_mcp_server(
     _register_selection_tools(mcp, active_service)
     _register_job_option_tools(mcp, active_service)
     _register_course_admin_tools(mcp, active_service)
+    if study_plan is not None:
+        register_study_plan_tools(mcp, study_plan)
     return mcp
 
 
