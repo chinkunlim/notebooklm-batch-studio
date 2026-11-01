@@ -158,3 +158,59 @@ class GreetingRecord(Base):
     user_name: Mapped[str] = mapped_column(String(100), nullable=False)
     message: Mapped[str] = mapped_column(String(200), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class QuizAttemptRecord(Base):
+    """Database record of a student quiz submission (table `quiz_attempts`).
+
+    Attributes:
+        id: Primary key UUID string.
+        course_code: Foreign key to course.
+        lecture_no: Lecture sequence number or None for course-wide.
+        quiz_variant: Variant of quiz (e.g., academic, concept).
+        score: Score achieved.
+        total_questions: Total number of questions.
+        created_at: Submission timestamp in UTC.
+    """
+
+    __tablename__ = "quiz_attempts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    course_code: Mapped[str] = mapped_column(ForeignKey("courses.code"), nullable=False, index=True)
+    lecture_no: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    quiz_variant: Mapped[str] = mapped_column(String(50), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    total_questions: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class QuizMistakeRecord(Base):
+    """Database record for student mistakes in quizzes (table `quiz_mistakes`).
+
+    Attributes:
+        id: Primary key UUID string.
+        attempt_id: Foreign key to quiz attempt.
+        course_code: Course identifier.
+        lecture_no: Lecture sequence number or None for course-wide.
+        question_text: Full text of the mistaken question.
+        choices_json: JSON serialized list of choices.
+        correct_index: 0-based index of the correct answer.
+        selected_index: 0-based index of the student's selected answer.
+        explanation: Detailed academic rationale.
+        is_resolved: Whether the student has retaken and mastered the question.
+        created_at: Creation timestamp in UTC.
+    """
+
+    __tablename__ = "quiz_mistakes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    attempt_id: Mapped[str] = mapped_column(ForeignKey("quiz_attempts.id"), nullable=False, index=True)
+    course_code: Mapped[str] = mapped_column(ForeignKey("courses.code"), nullable=False, index=True)
+    lecture_no: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    choices_json: Mapped[str] = mapped_column(Text, nullable=False)
+    correct_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    selected_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    is_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)

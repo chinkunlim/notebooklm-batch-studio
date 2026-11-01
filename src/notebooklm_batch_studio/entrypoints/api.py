@@ -19,6 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
+from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
@@ -26,9 +27,11 @@ from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.entrypoints.http.artifacts import artifacts_router
 from notebooklm_batch_studio.entrypoints.http.courses import courses_router
 from notebooklm_batch_studio.entrypoints.http.queue import queue_router
+from notebooklm_batch_studio.entrypoints.http.study import study_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 logger = logging.getLogger(__name__)
 
@@ -105,21 +108,46 @@ def _resolve_service(service: BatchStudioService | None, cfg: AppConfig) -> Batc
     )
 
 
+def _resolve_study_service(
+    study_service: StudyTrackerService | None,
+    cfg: AppConfig,
+) -> StudyTrackerService:
+    """Resolve or construct study tracking service.
+
+    Args:
+        study_service: Optional injected service instance.
+        cfg: Application configuration.
+
+    Returns:
+        Active StudyTrackerService instance.
+    """
+    if study_service is not None:
+        return study_service
+
+    engine = create_db_engine(cfg.database_url)
+    session = Session(bind=engine, expire_on_commit=False)
+    study_repo = StudyRepository(session)
+    return StudyTrackerService(study_repo=study_repo, config=cfg)
+
+
 def create_app(
     config: AppConfig | None = None,
     service: BatchStudioService | None = None,
+    study_service: StudyTrackerService | None = None,
 ) -> FastAPI:
     """Construct and configure the FastAPI application.
 
     Args:
         config: Application configuration (defaults to loaded config).
         service: Optional pre-configured BatchStudioService instance for testing.
+        study_service: Optional pre-configured StudyTrackerService instance.
 
     Returns:
         Configured FastAPI instance ready for serving or TestClient testing.
     """
     cfg = config or load_config()
     active_service = _resolve_service(service, cfg)
+    active_study = _resolve_study_service(study_service, cfg)
 
     app = FastAPI(
         title="NotebookLM Batch Studio",
@@ -130,6 +158,7 @@ def create_app(
     )
 
     app.state.service = active_service
+    app.state.study_service = active_study
     app.state.config = cfg
 
     app.add_middleware(HostValidationMiddleware, allowed_hosts=cfg.http_allowed_hosts)
@@ -148,6 +177,7 @@ def create_app(
     app.include_router(courses_router)
     app.include_router(artifacts_router)
     app.include_router(queue_router)
+    app.include_router(study_router)
 
     return app
 

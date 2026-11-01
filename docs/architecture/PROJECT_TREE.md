@@ -82,6 +82,7 @@ notebooklm-batch-studio/
 │   │   ├── 20261022_0645db844501_add_source_id_to_lectures.py
 │   │   ├── 20261022_7c7fdb56abf2_create_course_lecture_artifact_jobs_and_.py
 │   │   ├── 20261101_3dbb5819dc15_add_style_options_interactive_path_and_.py
+│   │   ├── 20261101_4985a300eaa2_add_quiz_attempts_and_mistakes.py
 │   │   └── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
 │   ├── DB.md
 │   ├── env.py
@@ -126,7 +127,8 @@ notebooklm-batch-studio/
 │       │   │   ├── base.py
 │       │   │   ├── models.py
 │       │   │   ├── repository.py
-│       │   │   └── session.py
+│       │   │   ├── session.py
+│       │   │   └── study_repository.py
 │       │   ├── notebooklm/
 │       │   │   ├── __init__.py
 │       │   │   └── client.py
@@ -149,6 +151,7 @@ notebooklm-batch-studio/
 │       │   │   ├── artifacts.py
 │       │   │   ├── courses.py
 │       │   │   ├── queue.py
+│       │   │   ├── study.py
 │       │   │   └── system.py
 │       │   ├── static/
 │       │   │   └── index.html
@@ -172,6 +175,7 @@ notebooklm-batch-studio/
 │       │   ├── orchestrator.py
 │       │   ├── prompt_generator.py
 │       │   ├── reporter.py
+│       │   ├── study_service.py
 │       │   ├── sync_service.py
 │       │   ├── watcher.py
 │       │   └── worker_pool.py
@@ -189,7 +193,8 @@ notebooklm-batch-studio/
 │   ├── test_domain_and_queue.py
 │   ├── test_greeting.py
 │   ├── test_notebooklm_adapter.py
-│   └── test_services_and_cli.py
+│   ├── test_services_and_cli.py
+│   └── test_study_service.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取

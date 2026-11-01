@@ -9,6 +9,8 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactType,
     Course,
     JobStatus,
+    QuizAttempt,
+    QuizMistake,
 )
 
 
@@ -579,5 +581,58 @@ class NotebookLMClientProtocol(Protocol):
 
         Returns:
             Target output path string.
+        """
+        ...
+
+
+class StudyRepositoryProtocol(Protocol):
+    """Abstract interface for student study progress, quiz submissions, and mistake tracking."""
+
+    def record_attempt(self, attempt: QuizAttempt) -> None:
+        """Persist a completed quiz attempt along with any mistake records.
+
+        Args:
+            attempt: Domain QuizAttempt entity containing mistakes.
+        """
+        ...
+
+    def list_attempts(self, course_code: str, lecture_no: int | None = None) -> list[QuizAttempt]:
+        """List quiz attempts for a course or lecture.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Optional lecture number filter.
+
+        Returns:
+            List of domain QuizAttempt entities.
+        """
+        ...
+
+    def list_mistakes(
+        self,
+        course_code: str,
+        lecture_no: int | None = None,
+        only_unresolved: bool = True,
+    ) -> list[QuizMistake]:
+        """List recorded mistakes for a course or lecture.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Optional lecture number filter.
+            only_unresolved: Whether to include only unresolved mistakes.
+
+        Returns:
+            List of domain QuizMistake entities.
+        """
+        ...
+
+    def resolve_mistake(self, mistake_id: str) -> bool:
+        """Mark a quiz mistake as resolved.
+
+        Args:
+            mistake_id: UUID of the mistake record.
+
+        Returns:
+            True if updated, False if not found.
         """
         ...

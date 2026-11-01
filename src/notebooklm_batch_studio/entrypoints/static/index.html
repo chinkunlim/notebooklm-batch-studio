@@ -1,6 +1,6 @@
 <!--
-用途：NotebookLM Batch Studio 本機管理介面與課程儀表板 (Single Page Application)。
-提供課程瀏覽、資料夾預覽與加入、工作佇列進度檢視與成果下載。
+用途：NotebookLM Batch Studio 本機管理介面與學生研讀專區 (Single Page Application)。
+提供課程批次生成管理、即時佇列監控、學生研讀工作台、3D 翻轉卡牌、語音導讀播放器與 Anki 匯出。
 -->
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -9,6 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NotebookLM Batch Studio</title>
   <style>
+    /* 全域色彩與元件樣式表 */
     :root {
       --bg: #0f172a;
       --surface: #1e293b;
@@ -71,7 +72,7 @@
       gap: 6px;
     }
     button:hover, .btn:hover { background: var(--surface-hover); border-color: var(--primary); }
-    button.primary, .btn.primary { background: var(--primary); color: #0f172a; border-color: var(--primary); }
+    button.primary, .btn.primary { background: var(--primary); color: #0f172a; border-color: var(--primary); font-weight: 600; }
     button.primary:hover, .btn.primary:hover { background: var(--primary-hover); }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 32px; }
     .card {
@@ -150,6 +151,83 @@
       border-radius: var(--radius);
       margin-bottom: 24px;
     }
+
+    /* 研讀工作台專屬樣式 */
+    .study-nav-btn {
+      text-align: left;
+      background: transparent;
+      border: 1px solid transparent;
+      padding: 9px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      transition: all 0.15s ease;
+    }
+    .study-nav-btn:hover { background: var(--surface-hover); }
+    .study-nav-btn.active { background: #1e3a8a; border-color: #38bdf8; font-weight: 600; color: #fff; }
+
+    .choice-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #0f172a;
+      border: 1px solid #334155;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    .choice-btn:hover { border-color: #38bdf8; }
+    .choice-btn.selected { border-color: #38bdf8; background: #1e3a8a; font-weight: 600; }
+    .choice-btn.correct { border-color: #22c55e; background: #14532d; font-weight: 600; }
+    .choice-btn.wrong { border-color: #ef4444; background: #7f1d1d; }
+
+    .flip-card-wrap {
+      perspective: 1000px;
+      width: 100%;
+      max-width: 580px;
+      height: 320px;
+      cursor: pointer;
+    }
+    .flip-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+    .flip-card-inner.flipped { transform: rotateY(180deg); }
+    .flip-card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    .flip-card-front { background: #1e293b; color: #f8fafc; }
+    .flip-card-back {
+      background: #0f172a;
+      color: #38bdf8;
+      transform: rotateY(180deg);
+      border-color: #38bdf8;
+    }
   </style>
 </head>
 <body>
@@ -158,7 +236,14 @@
       <h1>NotebookLM Batch Studio</h1>
       <span style="font-size: 0.85rem; color: var(--text-muted);">本機課程自動化學習產出套裝 (127.0.0.1:8768)</span>
     </div>
-    <div class="controls">
+
+    <!-- 視角切換器 -->
+    <div style="display: flex; gap: 6px; background: #0f172a; padding: 4px; border-radius: var(--radius); border: 1px solid var(--border);">
+      <button id="btnViewAdmin" class="primary" onclick="switchMainView('admin')" style="padding: 6px 14px; font-size: 0.85rem;">⚙️ 管理控制台</button>
+      <button id="btnViewStudy" onclick="switchMainView('study')" style="padding: 6px 14px; font-size: 0.85rem;">🎓 學生研讀專區</button>
+    </div>
+
+    <div class="controls" id="adminControls">
       <span id="authBadge" class="badge badge-neutral">檢查認證中...</span>
       <span id="queueBadge" class="badge badge-neutral">佇列閒置</span>
       <button id="btnStartQueue" class="primary" style="background: #10b981; font-weight: 600;" onclick="startQueue()">▶️ 啟動批次生成</button>
@@ -170,7 +255,8 @@
     </div>
   </header>
 
-  <main>
+  <!-- ================= 管理控制台視角 (Admin View) ================= -->
+  <main id="adminView">
     <section>
       <h2 style="font-size: 1.2rem; margin-bottom: 12px;">📚 已註冊課程</h2>
       <div id="courseContainer" class="grid">
@@ -188,6 +274,109 @@
     </section>
   </main>
 
+  <!-- ================= 學生研讀專區視角 (Student Study Portal) ================= -->
+  <div id="studyView" style="display: none;">
+    <!-- Course Selector & Overall Stats -->
+    <div class="card" style="margin-bottom: 20px; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 12px; min-width: 280px;">
+        <label style="font-weight: 600; font-size: 0.95rem; white-space: nowrap;">📖 研讀課程：</label>
+        <select id="studyCourseSelect" onchange="onStudyCourseSelected()" style="max-width: 320px; font-weight: 600; color: #38bdf8;"></select>
+      </div>
+      <div id="studySummaryStats" style="display: flex; gap: 16px; font-size: 0.85rem; color: var(--text-muted); align-items: center;"></div>
+    </div>
+
+    <!-- 2-Column Study Layout -->
+    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+      <!-- Left Sidebar: Lecture Navigation -->
+      <div class="card" style="width: 280px; flex-shrink: 0; padding: 14px;">
+        <h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--primary);">📚 章節課綱導覽</h3>
+        <div id="studyLectureList" style="display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow-y: auto;"></div>
+      </div>
+
+      <!-- Right Main: Study Workspace -->
+      <div style="flex: 1; min-width: 340px; display: flex; flex-direction: column; gap: 16px;">
+        <!-- Active Chapter Title Bar -->
+        <div class="card" style="padding: 14px 20px; flex-direction: row; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 id="studyActiveChapterTitle" style="font-size: 1.2rem; font-weight: 700;">載入中...</h2>
+            <p id="studyActiveChapterSub" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+          </div>
+          <!-- Top Tabs -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button id="btnTabAudio" class="study-tab-btn primary" onclick="switchStudyTab('audio')">🎧 語音導讀</button>
+            <button id="btnTabQuiz" class="study-tab-btn" onclick="switchStudyTab('quiz')">📝 互動測驗</button>
+            <button id="btnTabMistakes" class="study-tab-btn" onclick="switchStudyTab('mistakes')">📕 弱點錯題集 <span id="badgeMistakeCount" class="badge badge-warning" style="display:none;">0</span></button>
+            <button id="btnTabFlashcards" class="study-tab-btn" onclick="switchStudyTab('flashcards')">🗂️ 3D 抽認卡</button>
+            <button id="btnTabReports" class="study-tab-btn" onclick="switchStudyTab('reports')">📑 研讀報告/心智圖</button>
+          </div>
+        </div>
+
+        <!-- Tab 1: Audio Player Panel -->
+        <div id="tabPanelAudio" class="card" style="padding: 24px;">
+          <h3 style="font-size: 1.1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>🎧 NotebookLM Studio 語音導讀 (Audio Overview)</span>
+          </h3>
+          <div id="audioPlayerContainer"></div>
+        </div>
+
+        <!-- Tab 2: Interactive Quiz Panel -->
+        <div id="tabPanelQuiz" class="card" style="display: none; padding: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 8px;">
+              <button id="btnQuizAcademic" class="primary" onclick="loadQuizForChapter('quiz_academic')">🎓 研究所深入版 (Academic)</button>
+              <button id="btnQuizConcept" onclick="loadQuizForChapter('quiz_concept')">⚡ 考概念刷題版 (Concept Drill)</button>
+            </div>
+            <div id="quizScoreHeader" style="font-size: 0.95rem; font-weight: 600; color: #4ade80;"></div>
+          </div>
+          <div id="quizContainer"></div>
+          <div id="quizActionBar" style="position: sticky; bottom: 10px; background: #1e293b; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--primary); display: none; justify-content: space-between; align-items: center; margin-top: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+            <div id="quizProgressText" style="font-size: 0.95rem; font-weight: 600;">已作答：0 / 0 題</div>
+            <button class="primary" style="font-weight: 600; padding: 8px 18px;" onclick="submitQuizAttempt()">交卷評分並記錄作答歷程</button>
+          </div>
+        </div>
+
+        <!-- Tab 3: Weakness Notebook Panel -->
+        <div id="tabPanelMistakes" class="card" style="display: none; padding: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3 style="font-size: 1.1rem;">📕 弱點錯題集 (Weakness Notebook)</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">自動記錄做錯的題目，提供重測演練並支援一鍵匯出 Anki 錯題包。</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="primary" onclick="downloadWeaknessAnki()">📥 匯出租錯題專屬 Anki 卡牌 (.csv)</button>
+            </div>
+          </div>
+          <div id="mistakesListContainer"></div>
+        </div>
+
+        <!-- Tab 4: 3D Flashcards Panel -->
+        <div id="tabPanelFlashcards" class="card" style="display: none; padding: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3 style="font-size: 1.1rem;">🗂️ 3D 抽認卡 (Interactive Flashcards)</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">點擊卡片正面/背面可 3D 翻轉，背面附帶講義出處標註。</p>
+            </div>
+            <button class="primary" onclick="downloadFlashcardsAnki()">📥 下載本章標準 Anki CSV</button>
+          </div>
+          <div id="flashcardsViewerContainer" style="display: flex; flex-direction: column; align-items: center; gap: 16px;"></div>
+        </div>
+
+        <!-- Tab 5: Reports & Mind Map Panel -->
+        <div id="tabPanelReports" class="card" style="display: none; padding: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 8px;">
+              <button id="btnRepStudyGuide" class="primary" onclick="loadReportInViewer('reports_study_guide')">📑 Study Guide (研讀指南)</button>
+              <button id="btnRepBriefing" onclick="loadReportInViewer('reports_briefing')">📋 Briefing Doc (簡報)</button>
+              <button id="btnRepBlogPost" onclick="loadReportInViewer('reports_blog_post')">✍️ Blog Post (文章)</button>
+              <button id="btnRepMindMap" onclick="loadReportInViewer('mind_map')">🧠 Mind Map (心智圖)</button>
+            </div>
+          </div>
+          <div id="reportContentContainer" style="min-height: 400px; background: #0f172a; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Course Modal -->
   <div id="addModal" class="modal-overlay">
     <div class="modal">
@@ -200,159 +389,59 @@
         <textarea id="folderPaths" rows="2" placeholder="/path/to/course_folder"></textarea>
       </div>
 
-      <!-- Language and Template controls -->
-      <div style="display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 220px;">
-          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">🌐 生成語言設定 (Language)：</label>
-          <select id="courseLanguage">
-            <option value="zh-TW" selected>繁體中文 (Traditional Chinese)</option>
-            <option value="en">English (英文標準)</option>
-            <option value="bilingual">雙語對照 (Bilingual 中英雙語對照)</option>
+      <div style="display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 140px;">
+          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">快速配置預設：</label>
+          <div style="display: flex; gap: 6px; margin-top: 4px;">
+            <button type="button" onclick="setPreset('full')">全功能</button>
+            <button type="button" onclick="setPreset('dual')">標準研讀</button>
+            <button type="button" onclick="setPreset('quiz')">純刷題</button>
+          </div>
+        </div>
+        <div style="flex: 1; min-width: 140px;">
+          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">產出語言：</label>
+          <select id="courseLanguage" style="margin-top: 4px;">
+            <option value="zh-TW" selected>繁體中文 (zh-TW)</option>
+            <option value="en">English (en)</option>
           </select>
         </div>
-        <div style="flex: 2; min-width: 320px;">
-          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">⚡ 快速設定範本：</label>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
-            <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.75rem;" onclick="applyTemplate('all')">🌟 全選</button>
-            <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.75rem;" onclick="applyTemplate('chapters')">📖 僅獨立章節</button>
-            <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.75rem;" onclick="applyTemplate('course')">🌐 僅全課整合</button>
-            <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.75rem;" onclick="applyTemplate('dual')">⚡ 雙版本皆要</button>
-            <button type="button" class="btn" style="padding: 4px 8px; font-size: 0.75rem;" onclick="applyTemplate('quiz')">🎯 核心題庫組</button>
-          </div>
+      </div>
+
+      <!-- Chapter Artifacts -->
+      <div style="margin-top: 10px; background: #0f172a; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);">
+        <span style="font-size: 0.85rem; font-weight: 600; color: #38bdf8;">📌 獨立 PDF 對應產出 (每份講義各自獨立產生)：</span>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; font-size: 0.85rem;">
+          <label><input type="checkbox" name="chap_art" value="audio" checked> 🎙️ Audio Overview</label>
+          <label><input type="checkbox" name="chap_art" value="video"> 🎬 Video Overview</label>
+          <label><input type="checkbox" name="chap_art" value="reports_briefing" checked> 📑 Reports: Briefing Doc</label>
+          <label><input type="checkbox" name="chap_art" value="reports_study_guide" checked> 📑 Reports: Study Guide</label>
+          <label><input type="checkbox" name="chap_art" value="reports_blog_post"> 📑 Reports: Blog Post</label>
+          <label><input type="checkbox" name="chap_art" value="quiz_academic" checked> 📝 Quiz: 研究所/高年級深入版</label>
+          <label><input type="checkbox" name="chap_art" value="quiz_concept" checked> ⚡ Quiz: 考概念刷題風格版</label>
+          <label><input type="checkbox" name="chap_art" value="data_table"> 📊 Data Table</label>
+          <label><input type="checkbox" name="chap_art" value="slide_deck"> 📑 Slide Deck</label>
+          <label><input type="checkbox" name="chap_art" value="mind_map" checked> 🧠 Mind Map</label>
+          <label><input type="checkbox" name="chap_art" value="flashcards" checked> 🗂️ Flashcards (Anki)</label>
+          <label><input type="checkbox" name="chap_art" value="infographic"> 🎨 Infographic</label>
         </div>
       </div>
 
-      <!-- Dual Column Matrix -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 4px;">
-        <!-- Left: Chapter Specific -->
-        <div style="background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px;">
-          <div style="font-weight: 600; font-size: 0.88rem; color: var(--primary); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">
-            📄 獨立章節版 (Per-Chapter)
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem;" id="chapterArtifactsList">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="audio" checked> Audio Overview (語音導讀) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時/配額</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="quiz_academic" checked> Quiz - Academic (🎓 研究所/高年級精研版，30題)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="quiz_concept" checked> Quiz - Concept Drill (⚡ 概念考點刷題版，30題)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="flashcards" checked> Flashcards (重點名詞閃卡，Anki CSV)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="mind_map" checked> Mind Map (知識架構心智圖)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="reports_briefing" checked> Reports - Briefing Doc (📑 高階研究摘要報告)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="reports_study_guide" checked> Reports - Study Guide (📖 研讀指南與檢驗題)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="reports_blog_post"> Reports - Blog Post (✍️ 知識精華專文)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="slide_deck"> Slide Deck (投影片大綱)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="infographic"> Infographic (資訊圖表視覺文本)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="data_table"> Data Table (比較分析資料表)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="chap_art" value="video"> Video Overview (劇院影音導讀) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時</span>
-            </label>
-          </div>
+      <!-- Course-wide Artifacts -->
+      <div style="margin-top: 10px; background: #0f172a; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);">
+        <span style="font-size: 0.85rem; font-weight: 600; color: #38bdf8;">🌐 全課程 PDF 整合產出 (合併所有章節統整產生)：</span>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; font-size: 0.85rem;">
+          <label><input type="checkbox" name="course_art" value="course_audio" checked> 🎙️ 全課 Audio Overview</label>
+          <label><input type="checkbox" name="course_art" value="course_video"> 🎬 全課 Video Overview</label>
+          <label><input type="checkbox" name="course_art" value="course_reports_briefing" checked> 📑 全課 Briefing Doc</label>
+          <label><input type="checkbox" name="course_art" value="course_reports_study_guide" checked> 📑 全課 Study Guide</label>
+          <label><input type="checkbox" name="course_art" value="course_reports_blog_post"> 📑 全課 Blog Post</label>
+          <label><input type="checkbox" name="course_art" value="course_quiz_academic" checked> 📝 全課期末考: 研究所深入版</label>
+          <label><input type="checkbox" name="course_art" value="course_quiz_concept" checked> ⚡ 全課期末考: 考概念刷題版</label>
+          <label><input type="checkbox" name="course_art" value="course_mind_map" checked> 🧠 全課跨章 Mind Map</label>
+          <label><input type="checkbox" name="course_art" value="course_slide_deck"> 📑 全課 Slide Deck</label>
+          <label><input type="checkbox" name="course_art" value="course_data_table"> 📊 全課 Data Table</label>
+          <label><input type="checkbox" name="course_art" value="course_infographic"> 🎨 全課 Infographic</label>
         </div>
-
-        <!-- Right: Course Wide -->
-        <div style="background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px;">
-          <div style="font-weight: 600; font-size: 0.88rem; color: #a78bfa; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">
-            🌐 全範圍整合版 (Ch01-ChNN)
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem;" id="courseArtifactsList">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_quiz_academic" checked> Comprehensive Mock Exam - Academic (🎓 全課學術精研期末考 50題)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_quiz_concept" checked> Comprehensive Mock Exam - Concept (⚡ 全課概念刷題考 50題)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_mind_map" checked> Course Mind Map (全課程總架構心智圖)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_reports_briefing" checked> Course Reports - Briefing Doc (全課高階摘要報告)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_reports_study_guide" checked> Course Reports - Synthesis Study Guide (全課期末總複習指南)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_reports_blog_post"> Course Reports - Blog Post (全課程知識精華專文)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_audio"> Course Audio Overview (全課綜合語音導讀) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時/配額</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_slide_deck"> Summary Slide Deck (全課程複習投影片大綱)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_infographic"> Comprehensive Infographic (全課程總覽資訊圖表)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_data_table"> Master Data Table (全課程概念對照資料表)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="course_art" value="course_video"> Course Video Overview (全課影音導讀) <span class="badge badge-warning" style="font-size: 0.65rem;">⏱️ 耗時</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Studio Advanced Params Accordion -->
-      <details style="background: #0f172a; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-top: 10px; font-size: 0.82rem;">
-        <summary style="cursor: pointer; font-weight: 600; color: #38bdf8;">⚙️ Studio 進階參數設定 (可展開自訂風格、方向與長度)</summary>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
-          <div>
-            <label style="color: var(--text-muted); display: block; margin-bottom: 2px;">資訊圖視覺風格 (Infographic Style)：</label>
-            <select id="advInfographicStyle" style="width: 100%; padding: 4px 6px; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border); border-radius: 4px;">
-              <option value="Scientific" selected>Scientific (科學嚴謹，預設推薦)</option>
-              <option value="Professional">Professional (商務專業)</option>
-              <option value="Bento Grid">Bento Grid (便當盒網格)</option>
-              <option value="Sketch Note">Sketch Note (手繪塗鴉筆記)</option>
-              <option value="Editorial">Editorial (社論出版品)</option>
-              <option value="Instructional">Instructional (教學說明書)</option>
-            </select>
-          </div>
-          <div>
-            <label style="color: var(--text-muted); display: block; margin-bottom: 2px;">資訊圖版面方向 (Orientation)：</label>
-            <select id="advInfographicOrient" style="width: 100%; padding: 4px 6px; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border); border-radius: 4px;">
-              <option value="Landscape" selected>Landscape (橫式，預設推薦)</option>
-              <option value="Portrait">Portrait (直式)</option>
-              <option value="Square">Square (正方形)</option>
-            </select>
-          </div>
-          <div>
-            <label style="color: var(--text-muted); display: block; margin-bottom: 2px;">投影片形式 (Slide Deck Format)：</label>
-            <select id="advSlideFormat" style="width: 100%; padding: 4px 6px; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border); border-radius: 4px;">
-              <option value="Detailed Deck" selected>Detailed Deck (完整研讀投影片，預設推薦)</option>
-              <option value="Presenter Slides">Presenter Slides (演講者簡報)</option>
-            </select>
-          </div>
-          <div>
-            <label style="color: var(--text-muted); display: block; margin-bottom: 2px;">語音導讀模式 (Audio Overview Format)：</label>
-            <select id="advAudioFormat" style="width: 100%; padding: 4px 6px; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border); border-radius: 4px;">
-              <option value="Deep Dive" selected>Deep Dive (雙主持人深度探討，預設推薦)</option>
-              <option value="Brief">Brief (快速精華摘要)</option>
-              <option value="Critique">Critique (批判性同儕審查)</option>
-              <option value="Debate">Debate (正反觀點辯論)</option>
-            </select>
-          </div>
-        </div>
-      </details>
       </div>
 
       <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
@@ -385,7 +474,609 @@
   <script>
     let activeJobId = null;
     let activeCourseCode = null;
+    let currentCoursesList = [];
+    let currentStudyCourse = null;
+    let activeStudyLectureNo = null; // null represents course-wide
+    let activeStudyTab = 'audio';
+    let currentQuizData = null;
+    let currentQuizAnswers = {};
+    let currentFlashcards = [];
+    let currentFlashcardIdx = 0;
 
+    function switchMainView(mode) {
+      const adminView = document.getElementById('adminView');
+      const studyView = document.getElementById('studyView');
+      const btnAdmin = document.getElementById('btnViewAdmin');
+      const btnStudy = document.getElementById('btnViewStudy');
+      const adminControls = document.getElementById('adminControls');
+
+      if (mode === 'study') {
+        adminView.style.display = 'none';
+        studyView.style.display = 'block';
+        btnAdmin.className = '';
+        btnStudy.className = 'primary';
+        adminControls.style.display = 'none';
+        initStudyPortal();
+      } else {
+        studyView.style.display = 'none';
+        adminView.style.display = 'block';
+        btnStudy.className = '';
+        btnAdmin.className = 'primary';
+        adminControls.style.display = 'flex';
+        fetchCourses();
+      }
+    }
+
+    async function initStudyPortal() {
+      const select = document.getElementById('studyCourseSelect');
+      select.innerHTML = '';
+      if (!currentCoursesList || currentCoursesList.length === 0) {
+        await fetchCourses();
+      }
+      if (currentCoursesList.length === 0) {
+        select.innerHTML = '<option value="">尚無註冊課程</option>';
+        return;
+      }
+      currentCoursesList.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.code;
+        opt.textContent = `${c.code} — ${c.name}`;
+        select.appendChild(opt);
+      });
+      const targetCode = currentCoursesList[0].code;
+      select.value = targetCode;
+      await loadStudyCourseData(targetCode);
+    }
+
+    async function onStudyCourseSelected() {
+      const select = document.getElementById('studyCourseSelect');
+      const code = select.value;
+      if (code) {
+        await loadStudyCourseData(code);
+      }
+    }
+
+    async function loadStudyCourseData(code) {
+      try {
+        const res = await fetch(`/api/courses/${code}`);
+        if (!res.ok) throw new Error('無法載入課程');
+        currentStudyCourse = await res.json();
+
+        // Fetch study history and mistakes count
+        const [histRes, mistRes] = await Promise.all([
+          fetch(`/api/courses/${code}/study/history`),
+          fetch(`/api/courses/${code}/study/mistakes?only_unresolved=true`)
+        ]);
+        const history = histRes.ok ? await histRes.json() : [];
+        const mistakes = mistRes.ok ? await mistRes.json() : [];
+
+        // Update overall summary stats
+        const avgScore = history.length > 0 
+          ? Math.round(history.reduce((acc, h) => acc + (h.score / h.total_questions) * 100, 0) / history.length)
+          : null;
+        document.getElementById('studySummaryStats').innerHTML = `
+          <span>📖 講義數: <strong>${currentStudyCourse.lectures.length}</strong> 講</span>
+          <span>📝 測驗作答: <strong>${history.length}</strong> 次</span>
+          <span>🎯 平均表現: <strong>${avgScore !== null ? avgScore + '%' : '尚未測驗'}</strong></span>
+          <span>📕 待複習錯題: <strong style="color: ${mistakes.length > 0 ? '#f59e0b' : '#10b981'};">${mistakes.length}</strong> 題</span>
+        `;
+
+        const badgeMistake = document.getElementById('badgeMistakeCount');
+        if (mistakes.length > 0) {
+          badgeMistake.style.display = 'inline-block';
+          badgeMistake.textContent = mistakes.length;
+        } else {
+          badgeMistake.style.display = 'none';
+        }
+
+        renderStudyLectureSidebar(currentStudyCourse, history);
+        // Default to Lecture 1 if available, otherwise Course-wide
+        if (currentStudyCourse.lectures && currentStudyCourse.lectures.length > 0) {
+          selectStudyLecture(currentStudyCourse.lectures[0].no);
+        } else {
+          selectStudyLecture(null);
+        }
+      } catch (e) {
+        console.error('Failed to load study course:', e);
+      }
+    }
+
+    function renderStudyLectureSidebar(course, history) {
+      const list = document.getElementById('studyLectureList');
+      list.innerHTML = '';
+
+      // Course-wide option
+      const courseBtn = document.createElement('button');
+      courseBtn.className = `study-nav-btn ${activeStudyLectureNo === null ? 'active' : ''}`;
+      courseBtn.onclick = () => selectStudyLecture(null);
+      courseBtn.innerHTML = `<span>🌐 全課跨章總複習</span>`;
+      list.appendChild(courseBtn);
+
+      // Chapter options
+      (course.lectures || []).forEach(lec => {
+        const attempts = history.filter(h => h.lecture_no === lec.no);
+        const best = attempts.length > 0 ? Math.max(...attempts.map(a => Math.round((a.score / a.total_questions) * 100))) : null;
+
+        const btn = document.createElement('button');
+        btn.className = `study-nav-btn ${activeStudyLectureNo === lec.no ? 'active' : ''}`;
+        btn.id = `navLec-${lec.no}`;
+        btn.onclick = () => selectStudyLecture(lec.no);
+        btn.innerHTML = `
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;">
+            第 ${String(lec.no).padStart(2, '0')} 講: ${lec.topic}
+          </span>
+          ${best !== null ? `<span class="badge badge-success" style="font-size:0.7rem;">${best}%</span>` : ''}
+        `;
+        list.appendChild(btn);
+      });
+    }
+
+    function selectStudyLecture(lectureNo) {
+      activeStudyLectureNo = lectureNo;
+      document.querySelectorAll('.study-nav-btn').forEach(btn => btn.classList.remove('active'));
+      if (lectureNo === null) {
+        document.querySelector('.study-nav-btn')?.classList.add('active');
+        document.getElementById('studyActiveChapterTitle').textContent = `🌐 全課跨章節統整`;
+        document.getElementById('studyActiveChapterSub').textContent = `跨章節綜合分析、全課期末考與跨章心智圖`;
+      } else {
+        const activeBtn = document.getElementById(`navLec-${lectureNo}`);
+        if (activeBtn) activeBtn.classList.add('active');
+        const lec = (currentStudyCourse.lectures || []).find(l => l.no === lectureNo);
+        document.getElementById('studyActiveChapterTitle').textContent = `第 ${String(lectureNo).padStart(2, '0')} 講：${lec ? lec.topic : ''}`;
+        document.getElementById('studyActiveChapterSub').textContent = lec ? `講義來源：${lec.filename}` : '';
+      }
+      switchStudyTab(activeStudyTab);
+    }
+
+    function switchStudyTab(tabName) {
+      activeStudyTab = tabName;
+      ['Audio', 'Quiz', 'Mistakes', 'Flashcards', 'Reports'].forEach(t => {
+        const panel = document.getElementById(`tabPanel${t}`);
+        const btn = document.getElementById(`btnTab${t}`);
+        if (panel) panel.style.display = 'none';
+        if (btn) btn.className = 'study-tab-btn';
+      });
+
+      const activeBtn = document.getElementById(`btnTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      if (activeBtn) activeBtn.className = 'study-tab-btn primary';
+
+      if (tabName === 'audio') {
+        document.getElementById('tabPanelAudio').style.display = 'block';
+        loadAudioPlayer();
+      } else if (tabName === 'quiz') {
+        document.getElementById('tabPanelQuiz').style.display = 'block';
+        loadQuizForChapter('quiz_academic');
+      } else if (tabName === 'mistakes') {
+        document.getElementById('tabPanelMistakes').style.display = 'block';
+        loadWeaknessNotebook();
+      } else if (tabName === 'flashcards') {
+        document.getElementById('tabPanelFlashcards').style.display = 'block';
+        loadFlashcardsViewer();
+      } else if (tabName === 'reports') {
+        document.getElementById('tabPanelReports').style.display = 'block';
+        loadReportInViewer('reports_study_guide');
+      }
+    }
+
+    async function loadAudioPlayer() {
+      const container = document.getElementById('audioPlayerContainer');
+      container.innerHTML = '<div style="color:var(--text-muted);">正在搜尋音訊檔案...</div>';
+      if (!currentStudyCourse) return;
+
+      const code = currentStudyCourse.code;
+      const isCourse = activeStudyLectureNo === null;
+      const targetType = isCourse ? 'course_audio' : 'audio';
+
+      // Find job or artifact file
+      const job = (currentStudyCourse.jobs || []).find(j => 
+        j.artifact_type === targetType && (isCourse ? j.lecture_no === null : j.lecture_no === activeStudyLectureNo)
+      );
+
+      if (job && job.output_file) {
+        const filename = job.output_file.split('/').pop();
+        const streamUrl = `/api/artifacts/${code}/download/${filename}`;
+        container.innerHTML = `
+          <div style="background: #0f172a; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border);">
+            <div style="font-weight: 600; margin-bottom: 8px;">🎙️ ${isCourse ? '全課統整語音導讀' : '本講義語音總覽'}</div>
+            <audio id="portalAudio" controls style="width: 100%; margin-bottom: 14px;">
+              <source src="${streamUrl}" type="audio/mpeg">
+              您的瀏覽器不支援 HTML5 音訊標籤。
+            </audio>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">播放速度：</span>
+                <button class="btn" onclick="setAudioSpeed(0.75)" style="padding:4px 8px; font-size:0.75rem;">0.75x</button>
+                <button class="btn primary" onclick="setAudioSpeed(1.0)" style="padding:4px 8px; font-size:0.75rem;">1.0x</button>
+                <button class="btn" onclick="setAudioSpeed(1.25)" style="padding:4px 8px; font-size:0.75rem;">1.25x</button>
+                <button class="btn" onclick="setAudioSpeed(1.5)" style="padding:4px 8px; font-size:0.75rem;">1.5x</button>
+                <button class="btn" onclick="setAudioSpeed(2.0)" style="padding:4px 8px; font-size:0.75rem;">2.0x</button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn" onclick="jumpAudio(-15)">⏪ -15s</button>
+                <button class="btn" onclick="jumpAudio(15)">+15s ⏩</button>
+                <a href="${streamUrl}" download class="btn primary">📥 下載音檔</a>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="empty-state" style="padding: 32px 16px;">
+            <p>🎧 該講次語音導讀尚未生成或仍在排隊佇列中。</p>
+            <p style="font-size:0.8rem; margin-top:8px;">可點擊頂部「⚙️ 管理控制台」確認任務生成狀態。</p>
+          </div>
+        `;
+      }
+    }
+
+    function setAudioSpeed(rate) {
+      const audio = document.getElementById('portalAudio');
+      if (audio) audio.playbackRate = rate;
+    }
+    function jumpAudio(secs) {
+      const audio = document.getElementById('portalAudio');
+      if (audio) audio.currentTime += secs;
+    }
+
+    async function loadQuizForChapter(variant) {
+      const btnAcad = document.getElementById('btnQuizAcademic');
+      const btnConc = document.getElementById('btnQuizConcept');
+      if (variant === 'quiz_academic') {
+        btnAcad.className = 'primary';
+        btnConc.className = '';
+      } else {
+        btnConc.className = 'primary';
+        btnAcad.className = '';
+      }
+
+      const container = document.getElementById('quizContainer');
+      const scoreHeader = document.getElementById('quizScoreHeader');
+      const actionBar = document.getElementById('quizActionBar');
+      scoreHeader.textContent = '';
+      actionBar.style.display = 'none';
+      container.innerHTML = '<div style="color:var(--text-muted);">正在載入題目與解析...</div>';
+
+      const code = currentStudyCourse.code;
+      const lecNo = activeStudyLectureNo || 1;
+      try {
+        const res = await fetch(`/api/courses/${code}/lectures/${lecNo}/quiz/${variant}?with_answers=true`);
+        if (!res.ok) throw new Error('尚無此風格測驗資料');
+        currentQuizData = await res.json();
+        currentQuizAnswers = {};
+
+        if (!currentQuizData.quiz || !currentQuizData.quiz.questions || currentQuizData.quiz.questions.length === 0) {
+          container.innerHTML = '<div class="empty-state">此章節尚未生成測驗題目，請至管理控制台啟動。</div>';
+          return;
+        }
+
+        renderQuizQuestions(currentQuizData.quiz, variant);
+      } catch (e) {
+        container.innerHTML = `<div class="empty-state">尚未生成此章節測驗，可在管理控制台排入生成。</div>`;
+      }
+    }
+
+    function renderQuizQuestions(quiz, variant) {
+      const container = document.getElementById('quizContainer');
+      const actionBar = document.getElementById('quizActionBar');
+      container.innerHTML = '';
+      currentQuizAnswers = {};
+
+      quiz.questions.forEach((q, qIdx) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.marginBottom = '16px';
+        card.style.background = '#0f172a';
+
+        let choicesHtml = '';
+        (q.choices || []).forEach((c, cIdx) => {
+          const letter = String.fromCharCode(65 + cIdx);
+          choicesHtml += `
+            <div class="choice-btn" id="choice-${qIdx}-${cIdx}" onclick="selectChoice(${qIdx}, ${cIdx})">
+              <strong>${letter}.</strong> ${c.text || c}
+            </div>
+          `;
+        });
+
+        card.innerHTML = `
+          <div style="font-weight: 600; font-size: 1rem; margin-bottom: 12px; color: #f8fafc;">
+            ${qIdx + 1}. ${q.question}
+          </div>
+          <div>${choicesHtml}</div>
+          <div id="explanation-${qIdx}" style="display: none; margin-top: 14px; padding: 12px; background: #1e293b; border-left: 4px solid #38bdf8; border-radius: 4px; font-size: 0.9rem; line-height: 1.6;">
+            <p style="color: #4ade80; font-weight: 600; margin-bottom: 4px;">
+              正確解答：選項 ${String.fromCharCode(65 + q.answer_index)}
+            </p>
+            <p style="margin: 0; color: #cbd5e1;">${q.explanation || '暫無解析'}</p>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      actionBar.style.display = 'flex';
+      updateQuizProgress();
+    }
+
+    function selectChoice(qIdx, cIdx) {
+      currentQuizAnswers[qIdx] = cIdx;
+      const choices = currentQuizData.quiz.questions[qIdx].choices;
+      for (let i = 0; i < choices.length; i++) {
+        const el = document.getElementById(`choice-${qIdx}-${i}`);
+        if (el) el.classList.remove('selected');
+      }
+      const selectedEl = document.getElementById(`choice-${qIdx}-${cIdx}`);
+      if (selectedEl) selectedEl.classList.add('selected');
+      updateQuizProgress();
+    }
+
+    function updateQuizProgress() {
+      const total = currentQuizData.quiz.questions.length;
+      const answered = Object.keys(currentQuizAnswers).length;
+      document.getElementById('quizProgressText').textContent = `已作答：${answered} / ${total} 題`;
+    }
+
+    async function submitQuizAttempt() {
+      const total = currentQuizData.quiz.questions.length;
+      let score = 0;
+      const mistakes = [];
+
+      currentQuizData.quiz.questions.forEach((q, qIdx) => {
+        const selected = currentQuizAnswers[qIdx] !== undefined ? currentQuizAnswers[qIdx] : -1;
+        const correct = q.answer_index;
+        const expEl = document.getElementById(`explanation-${qIdx}`);
+        if (expEl) expEl.style.display = 'block';
+
+        (q.choices || []).forEach((c, cIdx) => {
+          const el = document.getElementById(`choice-${qIdx}-${cIdx}`);
+          if (el) {
+            if (cIdx === correct) el.classList.add('correct');
+            else if (cIdx === selected) el.classList.add('wrong');
+          }
+        });
+
+        if (selected === correct) {
+          score++;
+        } else {
+          mistakes.push({
+            question_text: q.question,
+            choices: q.choices.map(c => c.text || c),
+            correct_index: correct,
+            selected_index: selected,
+            explanation: q.explanation || ''
+          });
+        }
+      });
+
+      const pct = Math.round((score / total) * 100);
+      document.getElementById('quizScoreHeader').textContent = `🎉 測驗得分：${score} / ${total} (${pct}%)`;
+      alert(`🎉 測驗評分完成！得分：${score} / ${total} (${pct}%)\n錯題已自動記錄至「📕 弱點錯題集」。`);
+
+      // Record to backend SQLite
+      const code = currentStudyCourse.code;
+      try {
+        await fetch(`/api/courses/${code}/study/quiz-attempts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lecture_no: activeStudyLectureNo,
+            quiz_variant: 'quiz',
+            score,
+            total_questions: total,
+            mistakes
+          })
+        });
+        loadStudyCourseData(code);
+      } catch (e) {
+        console.error('Failed to save attempt:', e);
+      }
+    }
+
+    async function loadWeaknessNotebook() {
+      const container = document.getElementById('mistakesListContainer');
+      container.innerHTML = '<div style="color:var(--text-muted);">正在載入弱點錯題...</div>';
+      const code = currentStudyCourse.code;
+      const lecQuery = activeStudyLectureNo !== null ? `&lecture_no=${activeStudyLectureNo}` : '';
+
+      try {
+        const res = await fetch(`/api/courses/${code}/study/mistakes?only_unresolved=true${lecQuery}`);
+        const mistakes = await res.json();
+
+        if (!mistakes || mistakes.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p>🎉 太棒了！目前沒有未掌握的弱點錯題！</p>
+              <p style="font-size:0.8rem; margin-top:8px;">在「📝 互動測驗」中作答錯誤的題目會自動彙整於此。</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = mistakes.map(m => `
+          <div class="card" id="mistakeCard-${m.id}" style="background: #0f172a; margin-bottom: 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <span class="badge badge-warning">講義第 ${m.lecture_no || '全課'} 講錯題</span>
+              <button class="btn" style="padding: 4px 10px; font-size: 0.8rem; border-color: #10b981; color: #10b981;" onclick="resolveMistake('${m.id}')">
+                ✅ 我已精通此題 (消除)
+              </button>
+            </div>
+            <div style="font-weight: 600; font-size: 0.95rem; margin-top: 6px;">${m.question_text}</div>
+            <div style="margin-top: 8px;">
+              ${(m.choices || []).map((c, idx) => {
+                const letter = String.fromCharCode(65 + idx);
+                let style = 'padding: 6px 12px; margin-bottom: 4px; border-radius: 4px; font-size: 0.85rem;';
+                if (idx === m.correct_index) style += ' background: #14532d; color: #4ade80; font-weight: 600;';
+                else if (idx === m.selected_index) style += ' background: #7f1d1d; color: #fca5a5;';
+                else style += ' background: #1e293b; color: #94a3b8;';
+                return `<div style="${style}">${letter}. ${c}</div>`;
+              }).join('')}
+            </div>
+            <div style="margin-top: 10px; padding: 10px; background: #1e293b; border-left: 3px solid #38bdf8; font-size: 0.85rem; color: #cbd5e1;">
+              <strong>解析：</strong> ${m.explanation}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        container.innerHTML = `<div class="empty-state">無法讀取錯題記錄。</div>`;
+      }
+    }
+
+    async function resolveMistake(id) {
+      const code = currentStudyCourse.code;
+      try {
+        await fetch(`/api/courses/${code}/study/mistakes/${id}/resolve`, { method: 'POST' });
+        const card = document.getElementById(`mistakeCard-${id}`);
+        if (card) card.remove();
+        loadStudyCourseData(code);
+      } catch (e) {
+        alert('標記失敗: ' + e.message);
+      }
+    }
+
+    function downloadWeaknessAnki() {
+      const code = currentStudyCourse.code;
+      const lecQuery = activeStudyLectureNo !== null ? `?lecture_no=${activeStudyLectureNo}` : '';
+      window.location.href = `/api/courses/${code}/study/mistakes/anki.csv${lecQuery}`;
+    }
+
+    async function loadFlashcardsViewer() {
+      const container = document.getElementById('flashcardsViewerContainer');
+      container.innerHTML = '<div style="color:var(--text-muted);">正在載入抽認卡...</div>';
+      const code = currentStudyCourse.code;
+      const lecNo = activeStudyLectureNo || 1;
+
+      try {
+        const res = await fetch(`/api/courses/${code}/study/flashcards?lecture_no=${lecNo}`);
+        const data = await res.json();
+        currentFlashcards = data.cards || [];
+        currentFlashcardIdx = 0;
+
+        if (currentFlashcards.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p>🗂️ 本章節抽認卡尚未生成或無法解析。</p>
+              <p style="font-size:0.8rem; margin-top:8px;">可至管理控制台勾選 Flashcards 進行批次生成。</p>
+            </div>
+          `;
+          return;
+        }
+
+        renderCurrentFlashcard();
+      } catch (e) {
+        container.innerHTML = `<div class="empty-state">載入抽認卡失敗。</div>`;
+      }
+    }
+
+    function renderCurrentFlashcard() {
+      const container = document.getElementById('flashcardsViewerContainer');
+      const card = currentFlashcards[currentFlashcardIdx];
+      const total = currentFlashcards.length;
+
+      container.innerHTML = `
+        <div class="flip-card-wrap" onclick="toggleFlipCard()">
+          <div class="flip-card-inner" id="flashcardInner">
+            <!-- Front -->
+            <div class="flip-card-face flip-card-front">
+              <span class="badge badge-neutral" style="position: absolute; top: 16px; left: 16px;">正面・核心概念</span>
+              <span style="font-size: 0.8rem; color: var(--text-muted); position: absolute; top: 16px; right: 16px;">點擊翻面 🔄</span>
+              <div style="font-size: 1.3rem; font-weight: 700; line-height: 1.5;">${card.front}</div>
+            </div>
+            <!-- Back -->
+            <div class="flip-card-face flip-card-back">
+              <span class="badge badge-success" style="position: absolute; top: 16px; left: 16px;">背面・詳細解答</span>
+              <div style="font-size: 1.1rem; line-height: 1.6; max-height: 70%; overflow-y: auto;">${card.back}</div>
+              ${card.source ? `<div style="font-size: 0.8rem; color: #94a3b8; margin-top: 14px;">出處：${card.source}</div>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+          <button class="btn" onclick="prevFlashcard()" ${currentFlashcardIdx === 0 ? 'disabled' : ''}>⬅️ 上一張</button>
+          <span style="font-size: 0.9rem; font-weight: 600; min-width: 80px; text-align: center;">${currentFlashcardIdx + 1} / ${total}</span>
+          <button class="btn" onclick="nextFlashcard()" ${currentFlashcardIdx === total - 1 ? 'disabled' : ''}>下一張 ➡️</button>
+          <button class="btn" onclick="shuffleFlashcards()">🔀 隨機抽卡</button>
+        </div>
+      `;
+    }
+
+    function toggleFlipCard() {
+      const inner = document.getElementById('flashcardInner');
+      if (inner) inner.classList.toggle('flipped');
+    }
+    function prevFlashcard() {
+      if (currentFlashcardIdx > 0) {
+        currentFlashcardIdx--;
+        renderCurrentFlashcard();
+      }
+    }
+    function nextFlashcard() {
+      if (currentFlashcardIdx < currentFlashcards.length - 1) {
+        currentFlashcardIdx++;
+        renderCurrentFlashcard();
+      }
+    }
+    function shuffleFlashcards() {
+      currentFlashcards.sort(() => Math.random() - 0.5);
+      currentFlashcardIdx = 0;
+      renderCurrentFlashcard();
+    }
+    function downloadFlashcardsAnki() {
+      const code = currentStudyCourse.code;
+      const lecNo = activeStudyLectureNo || 1;
+      const job = (currentStudyCourse.jobs || []).find(j => j.artifact_type === 'flashcards' && j.lecture_no === lecNo);
+      if (job && job.output_file) {
+        const csvName = job.output_file.split('/').pop().replace('.json', '.csv');
+        window.location.href = `/api/artifacts/${code}/download/${csvName}`;
+      } else {
+        alert('尚未生成該章節抽認卡 CSV。');
+      }
+    }
+
+    async function loadReportInViewer(reportType) {
+      ['btnRepStudyGuide', 'btnRepBriefing', 'btnRepBlogPost', 'btnRepMindMap'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.className = '';
+      });
+
+      const map = {
+        'reports_study_guide': 'btnRepStudyGuide',
+        'reports_briefing': 'btnRepBriefing',
+        'reports_blog_post': 'btnRepBlogPost',
+        'mind_map': 'btnRepMindMap'
+      };
+      if (map[reportType]) {
+        const activeBtn = document.getElementById(map[reportType]);
+        if (activeBtn) activeBtn.className = 'primary';
+      }
+
+      const container = document.getElementById('reportContentContainer');
+      container.innerHTML = '<div style="color:var(--text-muted);">正在搜尋報告產出物...</div>';
+      const code = currentStudyCourse.code;
+      const isCourse = activeStudyLectureNo === null;
+      const targetType = isCourse ? `course_${reportType}` : reportType;
+
+      const job = (currentStudyCourse.jobs || []).find(j => 
+        j.artifact_type === targetType && (isCourse ? j.lecture_no === null : j.lecture_no === activeStudyLectureNo)
+      );
+
+      if (job && job.output_file) {
+        const filename = job.output_file.split('/').pop();
+        if (filename.endsWith('.html')) {
+          container.innerHTML = `<iframe src="/api/artifacts/${code}/download/${filename}" style="width:100%; height:550px; border:none; border-radius:var(--radius); background:#fff;"></iframe>`;
+        } else {
+          try {
+            const res = await fetch(`/api/artifacts/${code}/download/${filename}`);
+            const text = await res.text();
+            container.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; line-height:1.6; font-size:0.95rem;">${text}</pre>`;
+          } catch (e) {
+            container.innerHTML = `無法載入檔案內容。`;
+          }
+        }
+      } else {
+        container.innerHTML = `<div class="empty-state">此章節尚未生成該類型報告 (${reportType})，可至管理控制台勾選並生成。</div>`;
+      }
+    }
+
+    // ================= 管理控制台邏輯 (Admin Functions) =================
     async function fetchStatus() {
       try {
         const res = await fetch('/api/status');
@@ -430,8 +1121,7 @@
 
     async function startQueue() {
       try {
-        const res = await fetch('/api/queue/start', { method: 'POST' });
-        const data = await res.json();
+        await fetch('/api/queue/start', { method: 'POST' });
         await fetchStatus();
         await fetchCourses();
       } catch (e) {
@@ -441,8 +1131,7 @@
 
     async function pauseQueue() {
       try {
-        const res = await fetch('/api/queue/pause', { method: 'POST' });
-        const data = await res.json();
+        await fetch('/api/queue/pause', { method: 'POST' });
         await fetchStatus();
         await fetchCourses();
       } catch (e) {
@@ -452,8 +1141,7 @@
 
     async function resumeQueue() {
       try {
-        const res = await fetch('/api/queue/resume', { method: 'POST' });
-        const data = await res.json();
+        await fetch('/api/queue/resume', { method: 'POST' });
         await fetchStatus();
         await fetchCourses();
       } catch (e) {
@@ -499,24 +1187,219 @@
       try {
         alert(`正在呼叫本機 Ollama (gemma4) 與學術母版為課程 [${code}] 潤飾所有任務 Prompt...`);
         const res = await fetch(`/api/courses/${code}/refine_prompts`, { method: 'POST' });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || '潤飾失敗');
-        }
+        if (!res.ok) throw new Error('潤飾失敗');
         const data = await res.json();
-        alert(`✨ 已成功由 Ollama gemma4 潤飾 ${data.updated_prompts} 項學術 Prompt！`);
+        alert(`✅ 成功潤飾 ${data.updated_jobs_count} 項任務 Prompt！`);
         viewCourseDetail(code);
       } catch (e) {
-        alert('潤飾 Prompt 失敗: ' + e.message);
+        alert('Prompt 潤飾失敗: ' + e.message);
       }
     }
 
-    function openPromptModal(jobId, artifactType, promptText) {
+    async function syncFromNotebookLM(code) {
+      try {
+        alert(`正在向 NotebookLM 查詢課程 [${code}] 遠端所有生成物，並同步下載至本機...`);
+        const res = await fetch(`/api/courses/${code}/sync`, { method: 'POST' });
+        if (!res.ok) throw new Error('同步失敗');
+        const data = await res.json();
+        alert(`✅ 同步完成！\n遠端共 ${data.remote_artifacts_found} 項產物，成功下載同步 ${data.synced_count} 個新檔案至本機！`);
+        viewCourseDetail(code);
+      } catch (e) {
+        alert('同步失敗: ' + e.message);
+      }
+    }
+
+    async function resumeQuota() {
+      try {
+        const res = await fetch('/api/queue/resume_quota', { method: 'POST' });
+        const data = await res.json();
+        alert(`已喚醒 ${data.resumed_count} 個配額任務！`);
+        await fetchStatus();
+      } catch (e) {
+        alert('喚醒失敗: ' + e.message);
+      }
+    }
+
+    async function fetchCourses() {
+      try {
+        const res = await fetch('/api/courses');
+        const courses = await res.json();
+        currentCoursesList = courses;
+        const container = document.getElementById('courseContainer');
+
+        if (!courses || courses.length === 0) {
+          container.innerHTML = '<div class="empty-state">尚無註冊課程，請點擊上方按鈕「➕ 加入課程資料夾」。</div>';
+          return;
+        }
+
+        container.innerHTML = courses.map(c => {
+          const stats = c.stats || {};
+          const total = stats.total || 0;
+          const done = stats.done || 0;
+          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+          const hasNb = !!c.notebook_id;
+
+          return `
+            <div class="card" onclick="viewCourseDetail('${c.code}')" style="cursor: pointer;">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">${c.name} (${c.code})</div>
+                  <div class="card-subtitle">${c.lectures_count} 份講義 PDF</div>
+                </div>
+                <span class="badge ${hasNb ? 'badge-success' : 'badge-warning'}">
+                  ${hasNb ? '已連線' : '待初始化'}
+                </span>
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                  <span>生成進度: ${done} / ${total}</span>
+                  <span>${pct}%</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" style="width: ${pct}%;"></div>
+                </div>
+              </div>
+              <div class="status-counts">
+                <span>等待: ${stats.pending || 0}</span>
+                <span>進行中: ${stats.running || 0}</span>
+                <span>完成: ${stats.done || 0}</span>
+                ${stats.failed ? `<span style="color: var(--danger)">失敗: ${stats.failed}</span>` : ''}
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 4px;">
+                ${!hasNb ? `<button class="primary" style="font-size: 0.75rem;" onclick="setupCourse('${c.code}', event)">⚡ 建立筆記本與上傳</button>` : ''}
+                <button class="btn" style="font-size: 0.75rem;" onclick="viewCourseDetail('${c.code}')">詳情與清單 ➔</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        console.error('Fetch courses failed:', e);
+      }
+    }
+
+    async function viewCourseDetail(code) {
+      activeCourseCode = code;
+      const sec = document.getElementById('courseDetailSection');
+      const title = document.getElementById('detailTitle');
+      const content = document.getElementById('detailContent');
+
+      sec.style.display = 'block';
+      title.textContent = `課程詳細進度：${code}`;
+      content.innerHTML = '<div style="color:var(--text-muted);">載入中...</div>';
+      sec.scrollIntoView({ behavior: 'smooth' });
+
+      try {
+        const res = await fetch(`/api/courses/${code}`);
+        const data = await res.json();
+
+        let lecturesTable = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 6px;">
+            <h4 style="font-size: 1rem; color: #38bdf8;">📄 講義 PDF 上傳與 NotebookLM 解析狀態</h4>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>講次</th>
+                <th>主題</th>
+                <th>檔名</th>
+                <th>狀態</th>
+                <th>NotebookLM Source ID</th>
+                <th>動作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(data.lectures || []).map(l => {
+                let badgeClass = 'badge-neutral';
+                let statusText = l.upload_status || 'pending';
+                if (statusText === 'ready') badgeClass = 'badge-success';
+                else if (statusText === 'uploading' || statusText === 'parsing') badgeClass = 'badge-warning';
+                else if (statusText === 'failed') badgeClass = 'badge-danger';
+
+                return `
+                  <tr>
+                    <td>L${String(l.no).padStart(2, '0')}</td>
+                    <td>${l.topic}</td>
+                    <td><code>${l.filename}</code></td>
+                    <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                    <td><code style="font-size:0.75rem;">${l.source_id || '—'}</code></td>
+                    <td>
+                      ${statusText === 'failed' ? `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="retryUpload('${code}', ${l.no})">🔄 重傳</button>` : ''}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+
+        let jobsTable = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+            <h4 style="font-size: 1rem; color: #38bdf8;">⚙️ 生成任務佇列與成果下載</h4>
+            <div style="display:flex; gap:8px;">
+              <button class="btn" onclick="syncFromNotebookLM('${code}')" style="background:#0284c7; color:#fff; font-size:0.8rem; font-weight:600;">🔄 從 NotebookLM 同步網頁生成內容</button>
+              <button class="btn" onclick="refinePrompts('${code}')" style="background:#4f46e5; color:#fff; font-size:0.8rem; font-weight:600;">🤖 使用 Ollama Gemma4 潤飾 Prompt</button>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>範圍</th>
+                <th>產物種類</th>
+                <th>狀態</th>
+                <th>Prompt / 風格指令</th>
+                <th>檔案下載</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(data.jobs || []).map(j => {
+                let badgeClass = 'badge-neutral';
+                if (j.status === 'done') badgeClass = 'badge-success';
+                else if (j.status === 'running') badgeClass = 'badge-warning';
+                else if (j.status === 'failed') badgeClass = 'badge-danger';
+                else if (j.status === 'quota_wait') badgeClass = 'badge-warning';
+
+                const scope = j.lecture_no ? `L${String(j.lecture_no).padStart(2, '0')}` : '全課程';
+                const filename = j.output_file ? j.output_file.split('/').pop() : null;
+                const dlLink = filename ? `<a href="/api/artifacts/${code}/download/${filename}" target="_blank" class="btn" style="padding: 2px 8px; font-size: 0.75rem;">📥 下載 ${filename.split('.').pop().toUpperCase()}</a>` : '—';
+                const promptBtn = `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">📝 檢視/編輯 Prompt</button>`;
+
+                return `
+                  <tr>
+                    <td>${scope}</td>
+                    <td><strong>${j.artifact_type}</strong></td>
+                    <td><span class="badge ${badgeClass}">${j.status}</span></td>
+                    <td>${promptBtn}</td>
+                    <td>${dlLink}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+
+        content.innerHTML = lecturesTable + jobsTable;
+      } catch (e) {
+        content.innerHTML = `<div style="color:var(--danger)">載入失敗: ${e.message}</div>`;
+      }
+    }
+
+    function closeDetail() {
+      document.getElementById('courseDetailSection').style.display = 'none';
+    }
+
+    async function openPromptEditor(jobId, desc) {
       activeJobId = jobId;
+      document.getElementById('promptModalTitle').textContent = `📝 編輯 Prompt：${desc}`;
+      document.getElementById('promptModalDesc').textContent = '此指令將在向 NotebookLM 生成產物時傳入。';
       document.getElementById('promptModal').style.display = 'flex';
-      document.getElementById('promptModalTitle').textContent = `📝 編輯學術 Prompt: ${artifactType}`;
-      document.getElementById('promptModalDesc').textContent = `任務 ID: ${jobId}`;
-      document.getElementById('promptInput').value = promptText || '';
+
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/prompt`);
+        const data = await res.json();
+        document.getElementById('promptInput').value = data.custom_prompt || '';
+      } catch (e) {
+        document.getElementById('promptInput').value = '';
+      }
     }
 
     function closePromptModal() {
@@ -528,224 +1411,24 @@
       if (!activeJobId) return;
       const prompt = document.getElementById('promptInput').value;
       try {
-        const res = await fetch(`/api/jobs/${activeJobId}/prompt?prompt=${encodeURIComponent(prompt)}`, { method: 'POST' });
+        const res = await fetch(`/api/jobs/${activeJobId}/prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
         if (!res.ok) throw new Error('儲存失敗');
-        alert('✅ Prompt 已更新！');
+        alert('Prompt 儲存成功！');
         closePromptModal();
-        if (activeCourseCode) viewCourseDetail(activeCourseCode);
       } catch (e) {
-        alert('儲存 Prompt 失敗: ' + e.message);
+        alert('儲存失敗: ' + e.message);
       }
     }
 
-    async function retryJob(jobId) {
-      try {
-        const res = await fetch(`/api/jobs/${jobId}/retry`, { method: 'POST' });
-        if (!res.ok) throw new Error('重試失敗');
-        alert('已將任務重新加入待處理佇列！');
-        if (activeCourseCode) viewCourseDetail(activeCourseCode);
-        fetchCourses();
-      } catch (e) {
-        alert('重試失敗: ' + e.message);
-      }
-    }
-
-    async function fetchCourses() {
-      try {
-        const res = await fetch('/api/courses');
-        const courses = await res.json();
-        const container = document.getElementById('courseContainer');
-        if (!courses || courses.length === 0) {
-          container.innerHTML = '<div class="empty-state">尚未加入任何課程。點擊右上角「➕ 加入課程資料夾」開始。</div>';
-          return;
-        }
-        container.innerHTML = courses.map(c => `
-          <div class="card">
-            <div class="card-header">
-              <div>
-                <div class="card-title">${c.code} — ${c.name}</div>
-                <div class="card-subtitle">講次：${c.lecture_count} 講 | 組合：${c.profile}</div>
-              </div>
-              <span class="badge ${c.done_jobs === c.total_jobs && c.total_jobs > 0 ? 'badge-success' : 'badge-neutral'}">
-                ${c.progress_percent}%
-              </span>
-            </div>
-            <div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width: ${c.progress_percent}%"></div>
-              </div>
-            </div>
-            <div class="status-counts">
-              <span>完成: ${c.done_jobs}/${c.total_jobs} (待處理: ${c.counts.pending || 0})</span>
-              ${c.counts.running ? '<span style="color:#38bdf8">運行中: ' + c.counts.running + '</span>' : ''}
-              ${c.counts.quota_wait ? '<span style="color:var(--warning)">配額等待: ' + c.counts.quota_wait + '</span>' : ''}
-              ${c.counts.failed ? '<span style="color:var(--danger)">失敗: ' + c.counts.failed + '</span>' : ''}
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:4px;">
-              <button onclick="viewCourseDetail('${c.code}')">🔍 詳細進度與講義</button>
-              ${c.notebook_url ? `<a href="${c.notebook_url}" target="_blank" class="btn" style="font-size:0.8rem">🔗 NotebookLM 筆記本</a>` : `<button class="btn" style="font-size:0.75rem; background:#2563eb;" onclick="setupCourse('${c.code}', event)">🚀 初始化 NotebookLM</button>`}
-            </div>
-          </div>
-        `).join('');
-      } catch (e) {
-        console.error('Failed to load courses:', e);
-      }
-    }
-
-    async function viewCourseDetail(code) {
-      activeCourseCode = code;
-      const section = document.getElementById('courseDetailSection');
-      const content = document.getElementById('detailContent');
-      document.getElementById('detailTitle').textContent = `課程 [${code}] 詳細產出進度與 PDF 來源`;
-      section.style.display = 'block';
-      content.innerHTML = '載入詳細資料中...';
-      try {
-        const res = await fetch(`/api/courses/${code}`);
-        const data = await res.json();
-
-        // 1. PDF 上傳進度表
-        let lecRows = (data.lectures || []).map(lec => {
-          let statusBadge = '<span class="badge badge-neutral">⚪ 等待上傳</span>';
-          if (lec.upload_status === 'ready') statusBadge = '<span class="badge badge-success">✅ 已就緒</span>';
-          else if (lec.upload_status === 'uploading') statusBadge = '<span class="badge badge-warning">⏳ 上傳中...</span>';
-          else if (lec.upload_status === 'parsing') statusBadge = '<span class="badge badge-warning">🔍 NotebookLM 解析中...</span>';
-          else if (lec.upload_status === 'failed') statusBadge = `<span class="badge badge-danger">❌ 失敗</span> <span style="font-size:0.75rem;color:var(--danger)">${lec.error_message || ''}</span>`;
-
-          return `
-            <tr>
-              <td><strong>L${String(lec.no).padStart(2, '0')}</strong></td>
-              <td><code>${lec.filename}</code></td>
-              <td>${lec.topic}</td>
-              <td>${statusBadge}</td>
-              <td><button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="retryUpload('${code}', ${lec.no})">🔄 重試上傳</button></td>
-            </tr>
-          `;
-        }).join('');
-
-        // 2. 產出任務矩陣
-        let jobRows = (data.jobs || []).map(j => {
-          let stBadge = '<span class="badge badge-neutral">等待中</span>';
-          if (j.status === 'done') stBadge = '<span class="badge badge-success">✅ 完成</span>';
-          else if (j.status === 'running') stBadge = '<span class="badge badge-warning">⏳ 生成中</span>';
-          else if (j.status === 'quota_wait') stBadge = '<span class="badge badge-warning">⏱️ 配額等待</span>';
-          else if (j.status === 'failed') stBadge = '<span class="badge badge-danger">❌ 失敗</span>';
-
-          const scopeLabel = j.lecture_no !== null ? `Ch${String(j.lecture_no).padStart(2, '0')}` : '全課整合';
-          const promptPreview = (j.custom_prompt || '').substring(0, 35) + '...';
-          const syncBadge = j.source_origin === 'remote_sync' ? '<span class="badge" style="background:#0284c7; font-size:0.65rem; margin-left:4px;">🌐 遠端同步</span>' : '';
-
-          return `
-            <tr>
-              <td><strong>${scopeLabel}</strong></td>
-              <td>${j.artifact_type} ${syncBadge}</td>
-              <td>${stBadge}</td>
-              <td style="font-size:0.8rem; color:var(--text-muted);">
-                <span title="${j.custom_prompt || ''}">${promptPreview}</span>
-                <button class="btn" style="padding:2px 6px; font-size:0.72rem; margin-left:6px;" onclick='openPromptModal("${j.id}", "${j.artifact_type}", ${JSON.stringify(j.custom_prompt || "")})'>📝 編輯 Prompt</button>
-              </td>
-              <td>
-                ${j.status === 'failed' ? `<button class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="retryJob('${j.id}')">🔄 重試</button>` : '-'}
-              </td>
-            </tr>
-          `;
-        }).join('');
-
-        let html = `
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <div>
-              <h3>${data.name} (${data.code})</h3>
-              <p style="color:var(--text-muted); font-size:0.85rem">來源資料夾：<code>${data.source_dir}</code></p>
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="btn" style="background:#0284c7;" onclick="syncFromNotebookLM('${code}')">🔄 從 NotebookLM 同步網頁生成內容</button>
-              <button class="btn" style="background:#8b5cf6;" onclick="refinePrompts('${code}')">✨ 由 Ollama gemma4 潤飾全部 Prompt</button>
-              <button class="btn" onclick="setupCourse('${code}')">🚀 初始化筆記本與講義來源</button>
-              <a href="/api/courses/${code}/artifacts" class="btn" target="_blank">📦 查看產出檔案</a>
-            </div>
-          </div>
-
-          <h4 style="margin-top:20px; font-size:1rem; color:#38bdf8;">📄 1. 講義 PDF 上傳與 NotebookLM 解析進度</h4>
-          <table style="margin-top:8px;">
-            <thead>
-              <tr>
-                <th style="width:60px;">講次</th>
-                <th>PDF 檔名</th>
-                <th>主題名稱</th>
-                <th>NotebookLM 上傳與解析狀態</th>
-                <th style="width:100px;">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${lecRows || '<tr><td colspan="5">尚未載入講義</td></tr>'}
-            </tbody>
-          </table>
-
-          <h4 style="margin-top:24px; font-size:1rem; color:#a78bfa;">🎯 2. 各項產出任務進度與學術 Prompt 管理</h4>
-          <table style="margin-top:8px;">
-            <thead>
-              <tr>
-                <th style="width:90px;">範圍/章節</th>
-                <th>產出項目</th>
-                <th>狀態</th>
-                <th>學術 Prompt 設定 (Ollama gemma4)</th>
-                <th style="width:80px;">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${jobRows || '<tr><td colspan="5">尚未排入任務</td></tr>'}
-            </tbody>
-          </table>
-        `;
-        content.innerHTML = html;
-        section.scrollIntoView({ behavior: 'smooth' });
-      } catch (e) {
-        content.innerHTML = `<span style="color:var(--danger)">載入失敗: ${e.message}</span>`;
-      }
-    }
-
-    function closeDetail() {
-      document.getElementById('courseDetailSection').style.display = 'none';
-    }
-
-    async function resumeQuota() {
-      try {
-        const res = await fetch('/api/queue/resume', { method: 'POST' });
-        const data = await res.json();
-        alert(`已喚醒 ${data.data || 0} 個配額等待任務！`);
-        fetchCourses();
-      } catch (e) {
-        alert('喚醒失敗: ' + e.message);
-      }
-    }
-
-    async function syncFromNotebookLM(code) {
-      if (!confirm(`確定要從 NotebookLM 同步課程 [${code}] 遠端生成的內容回本地嗎？`)) return;
-      alert(`正在與 NotebookLM 遠端筆記本比對並下載產出物，請稍候...`);
-      try {
-        const res = await fetch(`/api/courses/${code}/sync`, { method: 'POST' });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || '同步失敗');
-        }
-        const data = await res.json();
-        alert(`🎉 遠端同步完成！成功同步 ${data.synced_count} 項產出物！`);
-        viewCourseDetail(code);
-      } catch (e) {
-        alert('同步失敗: ' + e.message);
-      }
-    }
-
-    function applyTemplate(name) {
+    function setPreset(name) {
       const chapBoxes = document.querySelectorAll('input[name="chap_art"]');
       const courseBoxes = document.querySelectorAll('input[name="course_art"]');
-      if (name === 'all') {
+      if (name === 'full') {
         chapBoxes.forEach(b => b.checked = true);
-        courseBoxes.forEach(b => b.checked = true);
-      } else if (name === 'chapters') {
-        chapBoxes.forEach(b => b.checked = true);
-        courseBoxes.forEach(b => b.checked = false);
-      } else if (name === 'course') {
-        chapBoxes.forEach(b => b.checked = false);
         courseBoxes.forEach(b => b.checked = true);
       } else if (name === 'dual') {
         const dualCh = ['audio', 'quiz_academic', 'quiz_concept', 'flashcards', 'mind_map', 'reports_briefing', 'reports_study_guide'];

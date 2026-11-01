@@ -341,3 +341,59 @@ class GreetingResult:
 
     message: str
     environment: str
+
+
+@dataclass
+class QuizMistake:
+    """A single wrong question record from a student quiz attempt.
+
+    Attributes:
+        id: Unique identifier.
+        attempt_id: Identifier of the parent attempt.
+        course_code: Course identifier.
+        lecture_no: Lecture sequence number or None for course-wide.
+        question_text: Full text of the question.
+        choices: List of choice strings.
+        correct_index: Index of the correct choice.
+        selected_index: Index of the student's selected choice.
+        explanation: Detailed academic rationale.
+        is_resolved: Whether the question has been resolved.
+        created_at: Creation timestamp.
+    """
+
+    id: str
+    attempt_id: str
+    course_code: str
+    lecture_no: int | None
+    question_text: str
+    choices: list[str]
+    correct_index: int
+    selected_index: int
+    explanation: str
+    is_resolved: bool = False
+    created_at: datetime | None = None
+
+
+@dataclass
+class QuizAttempt:
+    """A record of a completed quiz submission by a student.
+
+    Attributes:
+        id: Unique identifier.
+        course_code: Course identifier.
+        lecture_no: Lecture sequence number or None for course-wide.
+        quiz_variant: Variant of quiz (e.g. academic, concept).
+        score: Score achieved.
+        total_questions: Total number of questions.
+        created_at: Submission timestamp.
+        mistakes: Optional list of mistake entities recorded during this attempt.
+    """
+
+    id: str
+    course_code: str
+    lecture_no: int | None
+    quiz_variant: str
+    score: int
+    total_questions: int
+    created_at: datetime | None = None
+    mistakes: list[QuizMistake] = field(default_factory=list)
