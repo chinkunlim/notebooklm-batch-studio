@@ -12,6 +12,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
@@ -372,7 +373,24 @@ class TestCourseWatcher(unittest.TestCase):
 
 
 class TestCliCommands(unittest.TestCase):
-    """Test suite for CLI subcommands."""
+    """Test suite for CLI subcommands, run against a throwaway database (never DATA_DIR)."""
+
+    def setUp(self) -> None:
+        """Point the CLI at a temporary SQLite database with the current schema."""
+        self.tmpdir = tempfile.TemporaryDirectory()
+        tmp = Path(self.tmpdir.name)
+        db_url = f"sqlite:///{tmp / 'app.db'}"
+        from notebooklm_batch_studio.adapters.db.models import Base
+
+        Base.metadata.create_all(create_db_engine(db_url))
+        cfg = AppConfig(data_dir=tmp / "data", database_url=db_url, log_to_file=False)
+        self.patcher = mock.patch("notebooklm_batch_studio.entrypoints.cli.load_config", return_value=cfg)
+        self.patcher.start()
+
+    def tearDown(self) -> None:
+        """Restore load_config and remove the temporary database."""
+        self.patcher.stop()
+        self.tmpdir.cleanup()
 
     def test_cli_greeting(self) -> None:
         """Verify bootstrap greeting argument."""

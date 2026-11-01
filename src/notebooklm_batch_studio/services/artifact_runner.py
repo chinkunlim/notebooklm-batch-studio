@@ -54,6 +54,7 @@ from notebooklm_batch_studio.services.converters.quiz_converter import (
 from notebooklm_batch_studio.services.converters.quiz_converter import (
     to_json as quiz_to_json,
 )
+from notebooklm_batch_studio.services.converters.report_converter import report_to_html
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,8 @@ REPORT_FORMATS = {
     ArtifactType.COURSE_REPORTS_STUDY_GUIDE: "study_guide",
     ArtifactType.REPORTS_BLOG_POST: "blog_post",
     ArtifactType.COURSE_REPORTS_BLOG_POST: "blog_post",
+    ArtifactType.REPORTS_CONCEPT: "concept_explanation",
+    ArtifactType.COURSE_REPORTS_CONCEPT: "concept_explanation",
 }
 QUIZ_VARIANTS = {
     ArtifactType.QUIZ_1: ("1-基礎", "easy"),
@@ -630,15 +633,6 @@ class ArtifactRunner:
 
         html_path = out_dir / f"{out_prefix}_interactive.html"
         content_md = out_path.read_text(encoding="utf-8") if out_path.exists() else ""
-        html_wrapper = (
-            '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width, initial-scale=1">'
-            f"<title>{out_prefix} — 互動研究報告</title>"
-            "<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
-            "background:#0f172a;color:#f8fafc;padding:32px;line-height:1.7;max-width:850px;margin:0 auto;}"
-            "pre{background:#1e293b;padding:16px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;}"
-            "</style></head><body>"
-            f"<h1>{out_prefix}</h1><pre>{content_md}</pre></body></html>"
-        )
+        html_wrapper = report_to_html(out_prefix, content_md)  # Refs: ISSUE-013
         html_path.write_text(html_wrapper, encoding="utf-8")
         return str(out_path), [art_id]

@@ -88,6 +88,7 @@ notebooklm-batch-studio/
 │   │   ├── 20261101_3dbb5819dc15_add_style_options_interactive_path_and_.py
 │   │   ├── 20261101_4985a300eaa2_add_quiz_attempts_and_mistakes.py
 │   │   ├── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
+│   │   ├── 20261101_d0a82d2914ab_persist_course_artifact_selections.py
 │   │   └── 20261101_d6e896ae4e2c_add_job_version_artifact_ids_and_course_.py
 │   ├── DB.md
 │   ├── env.py
@@ -117,6 +118,9 @@ notebooklm-batch-studio/
 │   │   ├── 010-needs-review-not-downloadable.md
 │   │   ├── 011-mind-map-not-renamed.md
 │   │   ├── 012-wrong-extensions-and-download-link.md
+│   │   ├── 013-report-html-raw-text.md
+│   │   ├── 014-artifact-selection-not-saved.md
+│   │   ├── 015-cli-tests-use-real-db.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -154,6 +158,7 @@ notebooklm-batch-studio/
 │       │   ├── notebooklm/
 │       │   │   ├── __init__.py
 │       │   │   ├── client.py
+│       │   │   ├── downloads.py
 │       │   │   ├── generation.py
 │       │   │   └── quota.py
 │       │   ├── ollama/
@@ -169,7 +174,8 @@ notebooklm-batch-studio/
 │       │   ├── exceptions.py
 │       │   ├── models.py
 │       │   ├── naming.py
-│       │   └── repositories.py
+│       │   ├── repositories.py
+│       │   └── usage_guide.py
 │       ├── entrypoints/
 │       │   ├── http/
 │       │   │   ├── __init__.py
@@ -194,7 +200,8 @@ notebooklm-batch-studio/
 │       │   │   ├── image_fitter.py
 │       │   │   ├── mindmap_converter.py
 │       │   │   ├── pdf_renderer.py
-│       │   │   └── quiz_converter.py
+│       │   │   ├── quiz_converter.py
+│       │   │   └── report_converter.py
 │       │   ├── __init__.py
 │       │   ├── artifact_runner.py
 │       │   ├── course_parser.py
@@ -223,6 +230,7 @@ notebooklm-batch-studio/
 │   ├── test_db.py
 │   ├── test_domain_and_queue.py
 │   ├── test_greeting.py
+│   ├── test_guides_and_reports.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py

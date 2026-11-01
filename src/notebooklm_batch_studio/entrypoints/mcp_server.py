@@ -22,6 +22,7 @@ from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.naming import naming_guide
+from notebooklm_batch_studio.domain.usage_guide import usage_guide
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
@@ -446,6 +447,15 @@ def _register_settings_tools(mcp: MCPServer, active_service: BatchStudioService)
             JSON string with naming rules and one row per artifact type.
         """
         return json.dumps(naming_guide(), ensure_ascii=False, indent=2)
+
+    @mcp.tool()
+    def get_usage_guide() -> str:
+        """Explain how to use the studio and an effective study routine (read-only).
+
+        Returns:
+            JSON string with sections of headings and steps.
+        """
+        return json.dumps(usage_guide(), ensure_ascii=False, indent=2)
 
     @mcp.tool()
     def get_course_options(code: str) -> str:

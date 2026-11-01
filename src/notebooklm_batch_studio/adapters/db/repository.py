@@ -96,6 +96,8 @@ def _to_domain_course(record: CourseRecord, lectures: list[Lecture]) -> Course:
         mock_exam_questions=record.mock_exam_questions,
         lectures=lectures,
         generation_options=_options_from_json(getattr(record, "generation_options", None)),
+        selected_chapter_artifacts=json.loads(record.selected_chapter_artifacts or "[]"),
+        selected_course_artifacts=json.loads(record.selected_course_artifacts or "[]"),
     )
 
 
@@ -236,6 +238,11 @@ class CourseRepository:
             existing.mock_exam_questions = course.mock_exam_questions
             existing.updated_at = utc_now()
 
+        # A custom artifact selection is kept until a new non-empty one replaces it, so a rescan
+        # by `batch` or the watcher (which carries no selection) does not fall back to the profile.
+        if course.selected_chapter_artifacts or course.selected_course_artifacts:
+            existing.selected_chapter_artifacts = json.dumps(course.selected_chapter_artifacts)
+            existing.selected_course_artifacts = json.dumps(course.selected_course_artifacts)
         self._update_lectures(course.code, course.lectures)
         self.session.flush()
         self.session.commit()

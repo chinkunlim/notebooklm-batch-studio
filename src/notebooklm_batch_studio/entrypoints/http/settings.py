@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.naming import naming_guide
+from notebooklm_batch_studio.domain.usage_guide import usage_guide
 from notebooklm_batch_studio.entrypoints.schemas import RegenerateRequest, UpdateOptionsRequest
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
@@ -22,6 +23,16 @@ def get_naming_guide() -> dict[str, Any]:
         Naming rules and one row per artifact type.
     """
     return naming_guide()
+
+
+@settings_router.get("/api/usage-guide", tags=["Settings"], operation_id="get_usage_guide")
+def get_usage_guide() -> dict[str, Any]:
+    """Explain how to use the studio and a study routine that makes the outputs effective.
+
+    Returns:
+        Title and sections of headings and steps.
+    """
+    return usage_guide()
 
 
 @settings_router.get("/api/courses/{code}/options", tags=["Settings"], operation_id="get_course_options")

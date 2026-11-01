@@ -30,6 +30,7 @@ class ArtifactType(str, Enum):
     REPORTS_BRIEFING = "reports_briefing"
     REPORTS_STUDY_GUIDE = "reports_study_guide"
     REPORTS_BLOG_POST = "reports_blog_post"
+    REPORTS_CONCEPT = "reports_concept_explanation"
 
     # Course-wide (Ch01-ChNN) aggregated artifacts
     COURSE_MOCK_EXAM = "course_mock_exam"  # Legacy Course-wide mock exam
@@ -45,6 +46,7 @@ class ArtifactType(str, Enum):
     COURSE_REPORTS_BRIEFING = "course_reports_briefing"
     COURSE_REPORTS_STUDY_GUIDE = "course_reports_study_guide"
     COURSE_REPORTS_BLOG_POST = "course_reports_blog_post"
+    COURSE_REPORTS_CONCEPT = "course_reports_concept_explanation"
 
 
 class JobStatus(str, Enum):
@@ -382,6 +384,7 @@ def get_artifact_english_title(artifact_type: ArtifactType | str, prefix: str) -
         ArtifactType.REPORTS_BRIEFING.value: "Reports - Briefing Doc",
         ArtifactType.REPORTS_STUDY_GUIDE.value: "Reports - Study Guide",
         ArtifactType.REPORTS_BLOG_POST.value: "Reports - Blog Post",
+        ArtifactType.REPORTS_CONCEPT.value: "Reports - Concept Explanation",
         ArtifactType.COURSE_MOCK_EXAM.value: "Comprehensive Mock Exam",
         ArtifactType.COURSE_QUIZ_ACADEMIC.value: "Comprehensive Mock Exam - Academic Advanced",
         ArtifactType.COURSE_QUIZ_CONCEPT.value: "Comprehensive Mock Exam - Concept Drill",
@@ -395,6 +398,7 @@ def get_artifact_english_title(artifact_type: ArtifactType | str, prefix: str) -
         ArtifactType.COURSE_REPORTS_BRIEFING.value: "Course Reports - Briefing Doc",
         ArtifactType.COURSE_REPORTS_STUDY_GUIDE.value: "Course Reports - Synthesis Study Guide",
         ArtifactType.COURSE_REPORTS_BLOG_POST.value: "Course Reports - Blog Post",
+        ArtifactType.COURSE_REPORTS_CONCEPT.value: "Course Reports - Concept Explanation",
     }
     label = title_map.get(type_val, type_val.replace("_", " ").title())
     return f"[{prefix}] {label}"

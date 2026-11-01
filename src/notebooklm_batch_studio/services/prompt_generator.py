@@ -114,6 +114,10 @@ def _get_chapter_prompts(base_rules: str) -> dict[str, str]:
                 f"{base_rules}請根據本講義撰寫【學術知識精華文章 (Blog Post)】。"
                 "以清晰流暢風格萃取本講義最具突破性之核心觀念，使用小標題與重點引言整理成高品質知識長文。"
             ),
+            ArtifactType.REPORTS_CONCEPT.value: (
+                f"{base_rules}請根據本講義撰寫【概念解說 (Concept Explanation)】。"
+                "逐一解釋本講最重要的概念：白話定義、為什麼重要、具體例子、常見誤解，以及概念之間的關係。"
+            ),
         }
     )
     return prompts
@@ -170,6 +174,10 @@ def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, st
         ArtifactType.COURSE_REPORTS_BLOG_POST.value: (
             f"本課程為【{course_name}】。{lang_instruction}請撰寫全課程知識精華文章 (Blog Post)。"
             "以引人入勝的文章風格統整本門課最有啟發性的十項核心研究原則與思維精要。"
+        ),
+        ArtifactType.COURSE_REPORTS_CONCEPT.value: (
+            f"本課程為【{course_name}】。{lang_instruction}請撰寫全課程概念解說 (Concept Explanation)。"
+            "整理跨章節最核心的概念：白話定義、例子、常見誤解，並說明概念如何串連成整門課的知識架構。"
         ),
     }
 

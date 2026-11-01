@@ -76,6 +76,8 @@ def map_remote_kind_to_artifact_type(kind: str) -> ArtifactType:
         return ArtifactType.REPORTS_STUDY_GUIDE
     if "blog" in k:
         return ArtifactType.REPORTS_BLOG_POST
+    if "concept" in k:
+        return ArtifactType.REPORTS_CONCEPT
     return ArtifactType.QUIZ_ACADEMIC
 
 

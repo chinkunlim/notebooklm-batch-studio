@@ -33,6 +33,8 @@ class CourseRecord(Base):
         watch: Whether folder watcher is active.
         mock_exam_questions: Number of questions in course-wide mock exam.
         generation_options: JSON of the course's GenerationOptions (None = defaults).
+        selected_chapter_artifacts: JSON list of per-lecture artifact types chosen in the web app.
+        selected_course_artifacts: JSON list of course-wide artifact types chosen in the web app.
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
     """
@@ -49,6 +51,8 @@ class CourseRecord(Base):
     watch: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     mock_exam_questions: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     generation_options: Mapped[str | None] = mapped_column(Text, nullable=True)
+    selected_chapter_artifacts: Mapped[str | None] = mapped_column(Text, nullable=True)
+    selected_course_artifacts: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now

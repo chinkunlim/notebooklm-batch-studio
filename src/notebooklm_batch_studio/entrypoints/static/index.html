@@ -242,6 +242,7 @@
     <div style="display: flex; gap: 6px; background: #0f172a; padding: 4px; border-radius: var(--radius); border: 1px solid var(--border);">
       <button id="btnViewAdmin" class="primary" onclick="switchMainView('admin')" style="padding: 6px 14px; font-size: 0.85rem;">⚙️ 管理控制台</button>
       <button id="btnViewStudy" onclick="switchMainView('study')" style="padding: 6px 14px; font-size: 0.85rem;">🎓 學生研讀專區</button>
+      <button onclick="openUsageModal()" style="padding: 6px 14px; font-size: 0.85rem;">📘 使用方法</button>
     </div>
 
     <div class="controls" id="adminControls">
@@ -419,10 +420,15 @@
         <span style="font-size: 0.85rem; font-weight: 600; color: #38bdf8;">📌 獨立 PDF 對應產出 (每份講義各自獨立產生)：</span>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; font-size: 0.85rem;">
           <label><input type="checkbox" name="chap_art" value="audio" checked> 🎙️ Audio Overview</label>
+          <label><input type="checkbox" name="chap_art" value="quiz_1" checked> 📝 測驗 1・基礎 (easy)</label>
+          <label><input type="checkbox" name="chap_art" value="quiz_2" checked> 📝 測驗 2・理解 (medium)</label>
+          <label><input type="checkbox" name="chap_art" value="quiz_3" checked> 📝 測驗 3・模擬考 (hard)</label>
+          <label><input type="checkbox" name="chap_art" value="study_guide" checked> 📘 讀書指南</label>
           <label><input type="checkbox" name="chap_art" value="video"> 🎬 Video Overview</label>
           <label><input type="checkbox" name="chap_art" value="reports_briefing" checked> 📑 Reports: Briefing Doc</label>
           <label><input type="checkbox" name="chap_art" value="reports_study_guide" checked> 📑 Reports: Study Guide</label>
           <label><input type="checkbox" name="chap_art" value="reports_blog_post"> 📑 Reports: Blog Post</label>
+          <label><input type="checkbox" name="chap_art" value="reports_concept_explanation" checked> 📑 Reports: 概念解說</label>
           <label><input type="checkbox" name="chap_art" value="quiz_academic" checked> 📝 Quiz: 研究所/高年級深入版</label>
           <label><input type="checkbox" name="chap_art" value="quiz_concept" checked> ⚡ Quiz: 考概念刷題風格版</label>
           <label><input type="checkbox" name="chap_art" value="data_table"> 📊 Data Table</label>
@@ -438,10 +444,12 @@
         <span style="font-size: 0.85rem; font-weight: 600; color: #38bdf8;">🌐 全課程 PDF 整合產出 (合併所有章節統整產生)：</span>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; font-size: 0.85rem;">
           <label><input type="checkbox" name="course_art" value="course_audio" checked> 🎙️ 全課 Audio Overview</label>
+          <label><input type="checkbox" name="course_art" value="course_mock_exam" checked> 📝 全課期末模擬考 (50 題)</label>
           <label><input type="checkbox" name="course_art" value="course_video"> 🎬 全課 Video Overview</label>
           <label><input type="checkbox" name="course_art" value="course_reports_briefing" checked> 📑 全課 Briefing Doc</label>
           <label><input type="checkbox" name="course_art" value="course_reports_study_guide" checked> 📑 全課 Study Guide</label>
           <label><input type="checkbox" name="course_art" value="course_reports_blog_post"> 📑 全課 Blog Post</label>
+          <label><input type="checkbox" name="course_art" value="course_reports_concept_explanation"> 📑 全課 概念解說</label>
           <label><input type="checkbox" name="course_art" value="course_quiz_academic" checked> 📝 全課期末考: 研究所深入版</label>
           <label><input type="checkbox" name="course_art" value="course_quiz_concept" checked> ⚡ 全課期末考: 考概念刷題版</label>
           <label><input type="checkbox" name="course_art" value="course_mind_map" checked> 🧠 全課跨章 Mind Map</label>
@@ -461,6 +469,17 @@
         <button onclick="previewFolders()">🔍 預覽掃描</button>
         <button class="primary" id="btnConfirmAdd" onclick="confirmAddFolders()" disabled>✅ 確認加入</button>
         <button onclick="closeAddModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Usage Guide Modal -->
+  <div id="usageModal" class="modal-overlay" style="display: none;">
+    <div class="modal" style="max-width: 820px; max-height: 85vh; overflow-y: auto;">
+      <h3>📘 使用方法</h3>
+      <div id="usageContent" style="font-size: 0.9rem; line-height: 1.7;">載入中...</div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+        <button onclick="closeUsageModal()">關閉</button>
       </div>
     </div>
   </div>
@@ -1578,6 +1597,24 @@
       }
     }
 
+    async function openUsageModal() {
+      document.getElementById('usageModal').style.display = 'flex';
+      const box = document.getElementById('usageContent');
+      try {
+        const data = await (await fetch('/api/usage-guide')).json();
+        box.innerHTML = data.sections.map(sec => `
+          <h4 style="color:#38bdf8; margin: 14px 0 6px;">${escHtml(sec.heading)}</h4>
+          <ol style="margin: 0 0 0 20px;">${sec.steps.map(st => `<li>${escHtml(st)}</li>`).join('')}</ol>
+        `).join('');
+      } catch (e) {
+        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
+      }
+    }
+
+    function closeUsageModal() {
+      document.getElementById('usageModal').style.display = 'none';
+    }
+
     function closeNamingModal() {
       document.getElementById('namingModal').style.display = 'none';
     }
@@ -1627,16 +1664,17 @@
       const chapBoxes = document.querySelectorAll('input[name="chap_art"]');
       const courseBoxes = document.querySelectorAll('input[name="course_art"]');
       if (name === 'full') {
-        chapBoxes.forEach(b => b.checked = true);
-        courseBoxes.forEach(b => b.checked = true);
+        // Video is the most expensive output (~10% of the 5-hour quota each); tick it by hand when needed.
+        chapBoxes.forEach(b => b.checked = b.value !== 'video');
+        courseBoxes.forEach(b => b.checked = b.value !== 'course_video');
       } else if (name === 'dual') {
-        const dualCh = ['audio', 'quiz_academic', 'quiz_concept', 'flashcards', 'mind_map', 'reports_briefing', 'reports_study_guide'];
-        const dualCo = ['course_quiz_academic', 'course_quiz_concept', 'course_mind_map', 'course_reports_briefing', 'course_audio'];
+        const dualCh = ['audio', 'quiz_1', 'quiz_2', 'quiz_3', 'study_guide', 'flashcards', 'mind_map', 'infographic', 'reports_concept_explanation'];
+        const dualCo = ['course_mock_exam', 'course_mind_map', 'course_audio'];
         chapBoxes.forEach(b => b.checked = dualCh.includes(b.value));
         courseBoxes.forEach(b => b.checked = dualCo.includes(b.value));
       } else if (name === 'quiz') {
-        const quizCh = ['quiz_academic', 'quiz_concept', 'flashcards'];
-        const quizCo = ['course_quiz_academic', 'course_quiz_concept'];
+        const quizCh = ['quiz_1', 'quiz_2', 'quiz_3', 'flashcards'];
+        const quizCo = ['course_mock_exam'];
         chapBoxes.forEach(b => b.checked = quizCh.includes(b.value));
         courseBoxes.forEach(b => b.checked = quizCo.includes(b.value));
       }

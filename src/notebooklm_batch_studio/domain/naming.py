@@ -63,6 +63,12 @@ _GUIDE: tuple[ArtifactNaming, ...] = (
     ),
     ArtifactNaming("reports_blog_post", "報告・部落格文章", "Blog Post 格式", "<課程>_L01_blog_post.md"),
     ArtifactNaming(
+        "reports_concept_explanation",
+        "報告・概念解說",
+        "逐一解釋核心概念：定義、例子、常見誤解",
+        "<課程>_L01_concept_explanation.md",
+    ),
+    ArtifactNaming(
         "course_mock_exam",
         "全課程期末模擬考",
         "所有講次，目標 50 題",
@@ -87,6 +93,27 @@ _GUIDE: tuple[ArtifactNaming, ...] = (
     ArtifactNaming("course_slide_deck", "全課程投影片", "整門課摘要投影片", "course_slide_deck.pdf"),
     ArtifactNaming("course_data_table", "全課程資料表", "整門課總表", "course_data_table.csv"),
     ArtifactNaming("course_video", "全課程影片", "整門課講解影片", "course_video.mp4"),
+    ArtifactNaming(
+        "course_reports_briefing",
+        "全課程報告・簡報文件",
+        "整門課 Briefing Doc",
+        "<課程>_Course_briefing_doc.md",
+    ),
+    ArtifactNaming(
+        "course_reports_study_guide",
+        "全課程報告・讀書指南",
+        "整門課 Study Guide",
+        "<課程>_Course_study_guide.md",
+    ),
+    ArtifactNaming(
+        "course_reports_blog_post", "全課程報告・部落格文章", "整門課 Blog Post", "<課程>_Course_blog_post.md"
+    ),
+    ArtifactNaming(
+        "course_reports_concept_explanation",
+        "全課程報告・概念解說",
+        "跨章節核心概念與彼此關係",
+        "<課程>_Course_concept_explanation.md",
+    ),
 )
 
 NAMING_BY_TYPE: dict[str, ArtifactNaming] = {n.artifact_type: n for n in _GUIDE}

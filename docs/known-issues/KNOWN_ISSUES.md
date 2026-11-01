@@ -25,3 +25,6 @@
 | [ISSUE-010](010-needs-review-not-downloadable.md) | 🟢 已根治 (Resolved) | needs_review 的檔案在網頁上無法下載 | 隔離檔不在課程產出資料夾內，下載路由找不到；路徑穿越檢查用字串前綴比對 | `services/orchestrator.py`, `entrypoints/http/artifacts.py` |
 | [ISSUE-011](011-mind-map-not-renamed.md) | 🟢 已根治 (Resolved) | 心智圖在 NotebookLM 上沒有改名 | 心智圖是 note，artifacts.rename 改不到，程式直接跳過；改用 mind_maps.rename | `adapters/notebooklm/client.py`, `services/artifact_runner.py` |
 | [ISSUE-012](012-wrong-extensions-and-download-link.md) | 🟢 已根治 (Resolved) | 投影片與資料表副檔名錯誤，網頁下載連結忽略 rel_path | 投影片 PDF 存成 .md、資料表 CSV 存成 .md；網頁只用檔名組下載網址 | `services/artifact_runner.py`, `entrypoints/static/index.html` |
+| [ISSUE-013](013-report-html-raw-text.md) | 🟢 已根治 (Resolved) | 報告的 HTML 頁面只是原始文字 | Markdown 原文直接放進 pre，沒有轉換也沒有跳脫 | `services/converters/report_converter.py`, `services/artifact_runner.py` |
+| [ISSUE-014](014-artifact-selection-not-saved.md) | 🟢 已根治 (Resolved) | 網頁勾選的產出內容沒有存進資料庫 | 勾選只存在 domain 物件，重新註冊後退回 profile 預設 | `adapters/db/models.py`, `adapters/db/repository.py` |
+| [ISSUE-015](015-cli-tests-use-real-db.md) | 🟢 已根治 (Resolved) | CLI 測試讀寫真實資料庫 | 測試呼叫 main() 時 load_config 指向 DATA_DIR 的資料庫 | `tests/test_services_and_cli.py` |

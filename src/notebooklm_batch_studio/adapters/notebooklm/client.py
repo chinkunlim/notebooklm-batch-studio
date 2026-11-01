@@ -25,6 +25,7 @@ from notebooklm import (
 )
 from notebooklm.types import MindMapKind
 
+from notebooklm_batch_studio.adapters.notebooklm.downloads import ArtifactDownloadsMixin
 from notebooklm_batch_studio.adapters.notebooklm.generation import (
     finish_generation,
     generation_kwargs,
@@ -149,7 +150,7 @@ def _translate_errors(func: Callable[..., Coroutine[Any, Any, T]]) -> Callable[.
     return wrapper
 
 
-class NotebookLMAdapter:
+class NotebookLMAdapter(ArtifactDownloadsMixin):
     """Adapter implementing NotebookLMClientProtocol using official notebooklm-py client.
 
     Every `generate_*` passes the course output language, checks the returned status, waits for
@@ -584,115 +585,6 @@ class NotebookLMAdapter:
             logger.info("Downloading %s %s from notebook %s to %s", kind, artifact_id, notebook_id, out)
             downloader = getattr(client.artifacts, f"download_{kind}")
             await downloader(notebook_id, str(out), artifact_id=artifact_id, **extra)
-
-    async def download_quiz(self, notebook_id: str, output_path: str, artifact_id: str | None = None) -> None:
-        """Download a quiz JSON.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Local filesystem path where JSON should be saved.
-            artifact_id: Artifact id returned by generate_quiz.
-        """
-        await self.download_artifact("quiz", notebook_id, output_path, artifact_id or "")
-
-    async def download_flashcards(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download a flashcards JSON.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Local filesystem path where JSON should be saved.
-            artifact_id: Artifact id returned by generate_flashcards.
-        """
-        await self.download_artifact("flashcards", notebook_id, output_path, artifact_id or "")
-
-    async def download_mind_map(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download a mind map JSON.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Local filesystem path where JSON should be saved.
-            artifact_id: Mind map note id returned by generate_mind_map.
-        """
-        await self.download_artifact("mind_map", notebook_id, output_path, artifact_id or "")
-
-    async def download_audio(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download an audio overview (MP3/MP4 audio).
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Local filesystem path where audio should be saved.
-            artifact_id: Artifact id returned by generate_audio.
-        """
-        await self.download_artifact("audio", notebook_id, output_path, artifact_id or "")
-
-    async def download_report(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download a report / study guide as Markdown.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Artifact id returned by generate_report.
-        """
-        await self.download_artifact("report", notebook_id, output_path, artifact_id or "")
-
-    async def download_slide_deck(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None, output_format: str = "pdf"
-    ) -> None:
-        """Download a slide deck as PDF or PPTX.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Artifact id returned by generate_slide_deck.
-            output_format: 'pdf' or 'pptx'.
-        """
-        await self.download_artifact(
-            "slide_deck", notebook_id, output_path, artifact_id or "", output_format=output_format
-        )
-
-    async def download_infographic(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download an infographic image.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Artifact id returned by generate_infographic.
-        """
-        await self.download_artifact("infographic", notebook_id, output_path, artifact_id or "")
-
-    async def download_data_table(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download a data table.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Artifact id returned by generate_data_table.
-        """
-        await self.download_artifact("data_table", notebook_id, output_path, artifact_id or "")
-
-    async def download_video(
-        self, notebook_id: str, output_path: str, artifact_id: str | None = None
-    ) -> None:
-        """Download a video overview.
-
-        Args:
-            notebook_id: The notebook identifier.
-            output_path: Target filesystem destination.
-            artifact_id: Artifact id returned by generate_video.
-        """
-        await self.download_artifact("video", notebook_id, output_path, artifact_id or "")
 
     @_translate_errors
     async def rename_artifact(self, notebook_id: str, artifact_id: str, title: str) -> None:
