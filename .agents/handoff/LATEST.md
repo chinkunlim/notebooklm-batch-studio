@@ -5,20 +5,22 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-01 02:13 UTC`
+- **最後更新時間**: `2026-11-01 02:17 UTC`
 - **最近操作 Agent**: `claude-code`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `d8a22ee fix(api,quiz): share database engine between services, sanitize json script tags, and document spec 004 [agent:antigravity]`
+- **最新 Git Commit**: `d84b503 fix(services): mark incomplete quizzes as needs_review and wire Ollama client into prompt refinement [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
-|---|---|---|---|---|---|---|
-| **TASK-007**<br/>Fix Ollama prompt refinement and needs_review job status | 🟢 `in_progress` | `claude-code` | `-` | - | - | - |
+> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-01 02:17 UTC] 完成任務 `TASK-007` — Fix Ollama prompt refinement and needs_review job status (by `claude-code`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: (無)
 
 ### [2026-11-01 02:13 UTC] 建立任務 `TASK-007`: Fix Ollama prompt refinement and needs_review job status (by `claude-code`)
 - **狀態**: `in_progress`
@@ -103,7 +105,3 @@
 ### [2026-10-21 16:48 UTC] 建立任務 `TASK-001`: Phase 1A: 環境校驗與 NotebookLM 技術驗證 (Technical Spike) (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
-
-### [2026-10-21 15:41 UTC] Initial Bootstrap (by `init_project`)
-- **狀態**: 專案已初始化（框架 v3.3.0）。
-- **下一步**: 檢視 `.agents/project.toml`，再用 `agentctl task create` 建立第一個任務。
