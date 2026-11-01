@@ -32,6 +32,9 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(learning): lecture PDF reader route (read-only, folder-confined), key points asked once and saved, forgetting-curve memory strength, study streak and heatmap, Socratic tutor that continues one conversation, confidence ratings on quiz attempts and mistakes; HTTP + MCP (by `@claude-code`)
 - feat(web): learning aids UI - course reader (pdf.js 4.10.38 vendored) with colour-coded key points, memory strength / streak / heatmap on Today, resume where you stopped, confidence ratings with sure-but-wrong feedback, peak-end comparison, mixed review, recall-first mode, flashcard answer box, pomodoro, Socratic tutor tab; static files served no-cache; sticky works (overflow-x clip); SPEC-008 (by `@claude-code`)
 
+### Changed
+- style: wrap a long usage guide line (by `@claude-code`)
+
 ### Fixed
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)
 - fix(web): switch default HTTP port from 8767 to 8768 to prevent collision with literature-parser (by `@antigravity`)
