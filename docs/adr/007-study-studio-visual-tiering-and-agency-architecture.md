@@ -33,10 +33,10 @@
 4. **雙軌響應式選擇器 (Dual-Target RWD)**：
    - 樣式同時綁定 `@media (max-width: 680px), [data-device="iphone"]`，根治模擬器容器與真實手機之自適應重排與縮放。
 5. **獨立原型歸檔機制 (Versioned Prototyping)**：
-   - 所有探索版本（Version 1 ~ 4）獨立歸檔至 `designs_archive/`，嚴禁在原型確認前污染生產程式碼庫 (`src/`)。
+   - 所有探索版本（Version 1 ~ 4）獨立歸檔至 `docs/design/`，嚴禁在原型確認前污染生產程式碼庫 (`src/`)。
 
 ## 4. 後果
 
 - 產出 `docs/specs/009-study-studio-ui-redesign.md` 作為正式移植依據。
 - 建立 `.agents/skills/design-psychology-master/` 審查工具，確保 8pt 網格、視覺分級與色彩對比度 100% 達標。
-- 透過 `mockups_gallery.html` 提供高保真互動展示，零污染保留原始 `src/` 程式碼。
+- 透過 `docs/design/mockups_gallery.html` 提供高保真互動展示，零污染保留原始 `src/` 程式碼。

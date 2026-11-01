@@ -39,3 +39,7 @@
 | [ISSUE-024](024-buttons-calling-missing-routes.md) | 🟢 已根治 (Resolved) | 部分按鈕呼叫不存在的 API（Prompt 編輯、立即喚醒、裝置版資訊圖表） | 前端按鈕呼叫的路由從未實作；下載路由只接受 GET | `entrypoints/http/queue.py`、`http/artifacts.py`、`static/studio-core.js` |
 | [ISSUE-025](025-linux-time-wait-so-reuseaddr.md) | 🟢 已根治 (Resolved) | Linux TCP 要求 TIME_WAIT 前後 socket 皆啟用 SO_REUSEADDR 否則 bind 失敗 | CI (Ubuntu 24.04) 執行 test_recently_closed_port_is_free 失敗，而 macOS 通過。原因為 Linux kernel 規定若原 socket 未設 SO_REUSEADDR，後續 socket 即使開啟 SO_REUSEADDR 亦無法重用 TIME_WAIT port。 | `tests/test_port_check.py` |
 | [ISSUE-026](026-mobile-simulator-viewport-media-query-mismatch.md) | 🟢 已根治 (Resolved) | 桌面環境切換手機模擬器時因視窗寬度未觸發 Media Query 導致排版與縮放失效 | 點擊 iPhone 模擬器按鈕時容器限縮為 416px，但 window.innerWidth 為桌面寬度，導致 @media (max-width: 500px) 不生效而產生橫向破版。改採雙軌自適應選擇器解決。 | `mockups_gallery.html`, `SPEC-009` |
+| [ISSUE-027](027-launcher-port-time-wait.md) | 🟢 已根治 (Resolved) | 啟動器誤判埠號被佔用（剛停止的伺服器留下 TIME_WAIT） | 啟動前檢查沒設 SO_REUSEADDR，把 TIME_WAIT 誤判成被佔用 | `entrypoints/port_check.py` |
+| [ISSUE-028](028-stale-static-cache.md) | 🟢 已根治 (Resolved) | 更新後瀏覽器仍使用舊的 CSS／JS | StaticFiles 沒送 Cache-Control，瀏覽器用啟發式快取 | `entrypoints/api.py` |
+| [ISSUE-029](029-sticky-broken-by-overflow-hidden.md) | 🟢 已根治 (Resolved) | 固定面板（sticky）不會固定：body 的 overflow-x: hidden | overflow-x: hidden 讓 body 變成捲動容器 | `static/studio.css` |
+| [ISSUE-030](030-key-point-quote-matching.md) | 🟢 已根治 (Resolved) | 課件重點原文比對失敗與引用標記外露 | 頁面未繪製即判定、PDF 文字分段、標點差異、Gemini 引用編號 | `static/studio-reader.js`、`services/learning_service.py` |

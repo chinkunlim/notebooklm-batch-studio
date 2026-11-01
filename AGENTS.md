@@ -113,6 +113,7 @@ notebooklm-batch-studio/
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
 │   ├── architecture/                       # [系統架構與資料模型]
+│   ├── design/
 │   ├── known-issues/                       # [已知問題庫] 一問題一檔案
 │   ├── specs/                              # [功能規格書] PRD / API Contract
 │   └── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)

@@ -10,6 +10,7 @@ Inspects HTML/CSS files against the Dual-Process Cognitive & Design Model:
 """
 
 import sys
+from pathlib import Path
 import os
 import re
 
@@ -105,7 +106,9 @@ def audit_file(filepath: str) -> bool:
 
 def main():
     """Main CLI entrypoint."""
-    target = sys.argv[1] if len(sys.argv) > 1 else "/Users/limchinkun/.gemini/antigravity/brain/e05e4bcd-8988-4ae6-b283-16e9f7303c06/mockups_gallery.html"
+    # Default: the design gallery kept in the repo (docs/design/), so it works on any machine.
+    default = Path(__file__).resolve().parents[4] / "docs" / "design" / "mockups_gallery.html"
+    target = sys.argv[1] if len(sys.argv) > 1 else str(default)
     success = audit_file(target)
     sys.exit(0 if success else 1)
 

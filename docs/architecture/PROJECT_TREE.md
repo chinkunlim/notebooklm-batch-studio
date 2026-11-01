@@ -121,6 +121,13 @@ notebooklm-batch-studio/
 │   ├── architecture/                       # [系統架構與資料模型]
 │   │   ├── ARCHITECTURE.md                 # 系統架構總覽 (手動) 與自動報告索引
 │   │   └── PROJECT_TREE.md                 # 完整檔案結構樹 (自動產生)
+│   ├── design/
+│   │   ├── DESIGN.md
+│   │   ├── mockups_gallery.html
+│   │   ├── version_01_classic_triptych.html
+│   │   ├── version_02_dual_column_sanctuary.html
+│   │   ├── version_03_luxury_turntable_visualizer.html
+│   │   └── version_04_workbench_customizer.html
 │   ├── known-issues/                       # [已知問題庫] 一問題一檔案
 │   │   ├── 001-ollama-refine-noop.md
 │   │   ├── 002-quiz-needs-review-status.md
@@ -148,6 +155,10 @@ notebooklm-batch-studio/
 │   │   ├── 024-buttons-calling-missing-routes.md
 │   │   ├── 025-linux-time-wait-so-reuseaddr.md
 │   │   ├── 026-mobile-simulator-viewport-media-query-mismatch.md
+│   │   ├── 027-launcher-port-time-wait.md
+│   │   ├── 028-stale-static-cache.md
+│   │   ├── 029-sticky-broken-by-overflow-hidden.md
+│   │   ├── 030-key-point-quote-matching.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -161,7 +172,6 @@ notebooklm-batch-studio/
 │   │   ├── 008-learning-aids.md
 │   │   ├── 009-study-studio-ui-redesign.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
-│   │   ├── SPEC-009-STUDY-STUDIO-UI-REDESIGN.md
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
 │   │   ├── ARCHITECTURE_RULES.md           # 分層依賴與系統架構守則

@@ -112,13 +112,13 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 負責協調外部使用者與外部代理人的請求輸入，不包含業務規則：
 - `cli.py`：命令列工具入口，支援 `login`（檢查登入憑證；加 `--browser` 開瀏覽器由使用者親自登入）、`batch`（批次掃描建立）、`status`（即時進度總覽）、`resume`（中斷重試續跑）、`watch`（守護進程監控）與 `web`（啟動 Web 與 MCP 服務）。
 - `api.py` 與 `entrypoints/http/`：FastAPI 應用程式，切分為職責分明的子路由：
-  - `courses.py`：課程列表、註冊掃描、講次清單、產出物開關設定與伺服器資料夾瀏覽器 (`/api/browse`)。
-  - `queue.py`：工作佇列狀態、暫停/恢復、工作重試、版本化重新生成 (`POST /api/jobs/{id}/regenerate`)、Prompt 檢視與編輯。
+  - `courses.py`：課程列表、註冊掃描、講次清單。
+  - `queue.py`：工作佇列狀態、暫停/恢復（恢復時一併喚醒等待額度的工作）、工作重試、Prompt 檢視與編輯 (`GET/POST /api/jobs/{id}/prompt`)。
   - `artifacts.py`：檔案安全下載、隔離區 (`needs_review`) 檢視與直接下載、Markdown / HTML 檢視器。
   - `study.py`：研讀工作台 API，包含測驗繳卷即時評分、錯題本查詢與複習掌握標記、Anki 間隔重複 CSV 匯出。
   - `learning.py`：講義 PDF 安全串流閱讀、重點標註檢視、蘇格拉底式引導家教對話。
   - `plan.py`：學生個人學習計畫（Today）、複習排程、作答 AI 詳解保存與考前倒數。
-  - `settings.py`：產出細部選項設定（題型、題量、語言、方向、風格）、三層設定繼承與重設。
+  - `settings.py`：產出細部選項設定（題型、題量、語言、方向、風格）、三層設定繼承與重設、版本化重新生成 (`POST /api/courses/{code}/jobs/regenerate`)、產出物開關、課程暫停／開始／刪除、點選式資料夾瀏覽 (`/api/folders`)。
   - `system.py`：系統健康檢查、即時額度狀態、命名規則與研讀導引指南 (`/api/usage-guide`)。
 - `entrypoints/static/`：前端使用者介面（純原生 JS，無編譯負擔）：
   - `index.html`：整合儀表板、學生研讀專區、講義閱讀器、專注番茄鐘、設定抽屜。
@@ -132,6 +132,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `mcp_job_prompts.py`：提示詞查詢與改寫工具。
   - `mcp_learning.py`：重點查詢、閱讀狀態與家教對話工具。
   - `mcp_study_plan.py`：研讀計畫與間隔複習工具。
+- `port_check.py`：啟動前檢查埠號；被佔用時列出佔用程式並停止（與 uvicorn 一樣使用 `SO_REUSEADDR`，ISSUE-027）。全機埠號總表在 `00 init_dev_env/PORTS.md`。
+- `/static` 以 `NoCacheStaticFiles` 掛載（`Cache-Control: no-cache`），更新後瀏覽器不會沿用舊的 CSS／JS（ISSUE-028）。
 - 一鍵桌面啟動：
   - `scripts/build_mac_app.sh`：編譯 macOS 一鍵啟動 App。
   - `scripts/launch_app.sh`：自動啟動本機伺服器並以 Chrome `--app` 全螢幕專注視窗呈現。
@@ -235,6 +237,9 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 3. 支援一鍵重設為系統預設值，確保設定調整具備彈性與可逆性。
 
 ### 3.9 學生研讀工作室與視覺分級多媒體 (Study Studio & Visual Tiering, SPEC-009, ADR-007)
+
+> **狀態：規劃中，尚未實作。** 以下是 SPEC-009 的目標設計，目前只有 `docs/design/` 的 HTML 原型；正式網頁仍是 design v2（`static/studio-theme.css`）。
+
 1. **奢華擬態黑膠留聲基座 (Skeuomorphic Turntable)**：
    - 採用 `conic-gradient` 呈現 4 象限十字光澤流轉（非均向性反射 Anisotropic Sheen）與同心微音軌，模擬真實黑膠唱片的深度閱讀隱喻。
    - **機械唱臂物理動態**：播放時優雅下旋 24° 落針至音軌，暫停時平滑回彈 -6° 歸位，提供行為層零負擔之播放狀態感知。
@@ -246,8 +251,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
    - 與進度看板、研讀工作室、批次排程並列同級，集中管理外觀、頭像、架構與聲學風格。
 4. **全設備雙軌響應式選擇器 (Dual-Target RWD)**：
    - 同時綁定 `@media (max-width: 680px), [data-device="iphone"]`，使桌面 iPhone 模擬器與真實行動裝置皆能精準觸發單欄垂直重排、唱盤等比縮放與零溢出。
-5. **獨立版本探索歸檔 (`designs_archive/`)**：
-   - 包含 Version 1（經典排程）、Version 2（心流雙欄）、Version 3（奢華黑膠）、Version 4（九宮格矩陣與全RWD）自包含檔案與 `INDEX.md`。
+5. **獨立版本探索歸檔 (`docs/design/`)**：
+   - 包含 Version 1（經典排程）、Version 2（心流雙欄）、Version 3（奢華黑膠）、Version 4（九宮格矩陣與全RWD）自包含檔案與 `DESIGN.md`。
 
 ---
 
@@ -255,5 +260,5 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 1. **憑證安全**：不讀取亦不儲存使用者 Google 密碼。使用者透過 `login` 指令開啟本機 Chromium 瀏覽器完成 OAuth 登入，登入狀態隔離儲存於 `~/.config/notebooklm-batch-studio`（權限 600）。
 2. **服務綁定**：FastAPI 與 MCP 本機伺服器嚴格僅綁定 `127.0.0.1:8768`，並具備 Host Header 檢查機制，禁止對外網暴露。
-3. **路徑穿越防護**：所有靜態資源與產出物讀取（含講義 PDF 閱讀器串流）均通過 `safe_join_path` 嚴格限制於 `DATA_DIR` 內，防止目錄穿越攻擊。
+3. **路徑穿越防護**：產出物下載與檢視都限制在該課程的輸出資料夾（或 `needs_review` 隔離區）內；講義 PDF 閱讀器只提供已註冊講次的檔案，並檢查解析後的路徑必須位於該課程的講義資料夾內（否則回 403），且只讀不改。
 4. **資料隔離**：原始講義、中繼資料、產出物與紀錄檔案全數集中於專案目錄外的 `DATA_DIR`，避免程式碼倉庫污染或敏感講義外流。

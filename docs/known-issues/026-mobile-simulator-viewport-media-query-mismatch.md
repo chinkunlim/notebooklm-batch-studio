@@ -55,4 +55,4 @@ CSS 媒體查詢 `@media (max-width: 500px)` 是**針對瀏覽器頂層視窗（
 ## 4. 防回歸
 
 1. 透過 `.agents/skills/design-psychology-master/scripts/design_audit.py` 驗收網格規範與 RWD 符合性。
-2. 在 `mockups_gallery.html` 頂部點擊「MacBook」「iPad」「iPhone」按鈕進行即時切換驗證，確保三種裝置尺寸均能流暢自適應。
+2. 在 `docs/design/mockups_gallery.html` 頂部點擊「MacBook」「iPad」「iPhone」按鈕進行即時切換驗證，確保三種裝置尺寸均能流暢自適應。

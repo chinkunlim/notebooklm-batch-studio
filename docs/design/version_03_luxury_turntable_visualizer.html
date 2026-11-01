@@ -1,0 +1,2744 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="sage" data-mode="light" data-style="sanctuary" data-layout="spread" data-audio-view="vinyl" data-anim-level="gentle">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Notebook 學習工作室 — 跨流派終極自訂學習平台原型</title>
+  <style>
+    /* ----------------------------------------------------
+       8pt 網格與國際現代雜誌級護眼 Design Tokens
+    ---------------------------------------------------- */
+    :root {
+      --font-display: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Serif TC", "Songti TC", "Georgia", serif;
+      --font-body: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", Menlo, monospace;
+      
+      --ease-lux: cubic-bezier(0.22, 1, 0.36, 1);
+      --duration-lux: 0.75s;
+
+      /* 8pt 幾何網格 */
+      --sp-4: 4px;
+      --sp-8: 8px;
+      --sp-12: 12px;
+      --sp-16: 16px;
+      --sp-20: 20px;
+      --sp-24: 24px;
+      --sp-32: 32px;
+      --sp-40: 40px;
+    }
+
+    /* 套組 1：鼠尾草茶白 (Sage & Pine) */
+    html[data-theme="sage"][data-mode="light"] {
+      --canvas: #f5f0e8;
+      --card-bg: #ffffff;
+      --dock-bg: #141a16;
+      --dock-hover: #222b25;
+      --text-ink: #11261d;
+      --text-muted: #4f685a;
+      --text-faint: #8a9c91;
+      --primary: #2d6a4f;
+      --primary-soft: #e8f5ed;
+      --accent: #40916c;
+      --accent-glow: rgba(64, 145, 108, 0.3);
+      --pill-track: #e8e2d8;
+      --pill-thumb: #ffffff;
+      --border-card: rgba(0, 0, 0, 0.08);
+      --shadow-lux: 0 4px 20px rgba(60, 45, 35, 0.04), 0 20px 48px rgba(60, 45, 35, 0.06);
+    }
+    html[data-theme="sage"][data-mode="dark"] {
+      --canvas: #0c1510;
+      --card-bg: #13221a;
+      --dock-bg: #090f0c;
+      --dock-hover: #192a21;
+      --text-ink: #edf5f0;
+      --text-muted: #8ca395;
+      --text-faint: #566d60;
+      --primary: #52b788;
+      --primary-soft: #1a3528;
+      --accent: #74c69d;
+      --accent-glow: rgba(116, 198, 157, 0.45);
+      --pill-track: #1b2e23;
+      --pill-thumb: #233c2e;
+      --border-card: rgba(82, 183, 136, 0.16);
+      --shadow-lux: 0 8px 24px rgba(0, 0, 0, 0.35), 0 24px 64px rgba(0, 0, 0, 0.55);
+    }
+
+    /* 套組 2：北歐冷霧板岩 (Nordic Slate & Frost) */
+    html[data-theme="nordic"][data-mode="light"] {
+      --canvas: #f0f4f2;
+      --card-bg: #ffffff;
+      --dock-bg: #161a19;
+      --dock-hover: #232a27;
+      --text-ink: #161d1a;
+      --text-muted: #4e5f58;
+      --text-faint: #889991;
+      --primary: #354f52;
+      --primary-soft: #e2ebe6;
+      --accent: #52796f;
+      --accent-glow: rgba(82, 121, 111, 0.35);
+      --pill-track: #e0e8e4;
+      --pill-thumb: #ffffff;
+      --border-card: rgba(0, 0, 0, 0.08);
+      --shadow-lux: 0 4px 20px rgba(30, 40, 35, 0.04), 0 20px 48px rgba(30, 40, 35, 0.06);
+    }
+    html[data-theme="nordic"][data-mode="dark"] {
+      --canvas: #0f1515;
+      --card-bg: #182221;
+      --dock-bg: #0b1010;
+      --dock-hover: #1f2b2a;
+      --text-ink: #ecf3f1;
+      --text-muted: #8eaba4;
+      --text-faint: #526762;
+      --primary: #84a98c;
+      --primary-soft: #1f332c;
+      --accent: #a3c4ab;
+      --accent-glow: rgba(163, 196, 171, 0.45);
+      --pill-track: #1a2725;
+      --pill-thumb: #253634;
+      --border-card: rgba(132, 169, 140, 0.16);
+      --shadow-lux: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.6);
+    }
+
+    /* 套組 3：義式濃縮與醇乳 (Espresso & Cream) */
+    html[data-theme="espresso"][data-mode="light"] {
+      --canvas: #f6f2ec;
+      --card-bg: #ffffff;
+      --dock-bg: #1f1a17;
+      --dock-hover: #2f2723;
+      --text-ink: #2b1e16;
+      --text-muted: #6e584a;
+      --text-faint: #a69183;
+      --primary: #5c3d2e;
+      --primary-soft: #f2e9e1;
+      --accent: #8b5a3e;
+      --accent-glow: rgba(139, 90, 62, 0.35);
+      --pill-track: #ebdcd0;
+      --pill-thumb: #ffffff;
+      --border-card: rgba(0, 0, 0, 0.08);
+      --shadow-lux: 0 4px 20px rgba(50, 30, 20, 0.04), 0 20px 48px rgba(50, 30, 20, 0.06);
+    }
+    html[data-theme="espresso"][data-mode="dark"] {
+      --canvas: #14100d;
+      --card-bg: #221c17;
+      --dock-bg: #0d0a08;
+      --dock-hover: #2b231d;
+      --text-ink: #fbf5ef;
+      --text-muted: #bfa795;
+      --text-faint: #735f50;
+      --primary: #c9936b;
+      --primary-soft: #38291f;
+      --accent: #e0ac86;
+      --accent-glow: rgba(224, 172, 134, 0.45);
+      --pill-track: #2a211b;
+      --pill-thumb: #3a2e26;
+      --border-card: rgba(201, 147, 107, 0.16);
+      --shadow-lux: 0 8px 24px rgba(0, 0, 0, 0.45), 0 24px 64px rgba(0, 0, 0, 0.65);
+    }
+
+    /* 套組 4：陶土暖沙與赤陶 (Clay & Terracotta) */
+    html[data-theme="clay"][data-mode="light"] {
+      --canvas: #f7f1ec;
+      --card-bg: #ffffff;
+      --dock-bg: #1c1816;
+      --dock-hover: #2b2522;
+      --text-ink: #291c18;
+      --text-muted: #73544c;
+      --text-faint: #ab8f87;
+      --primary: #b0573e;
+      --primary-soft: #fcefe9;
+      --accent: #d46f53;
+      --accent-glow: rgba(212, 111, 83, 0.35);
+      --pill-track: #eedcd3;
+      --pill-thumb: #ffffff;
+      --border-card: rgba(0, 0, 0, 0.08);
+      --shadow-lux: 0 4px 20px rgba(60, 30, 20, 0.04), 0 20px 48px rgba(60, 30, 20, 0.06);
+    }
+    html[data-theme="clay"][data-mode="dark"] {
+      --canvas: #151110;
+      --card-bg: #231c1a;
+      --dock-bg: #0e0b0a;
+      --dock-hover: #2d2421;
+      --text-ink: #f8ede8;
+      --text-muted: #bda098;
+      --text-faint: #755b54;
+      --primary: #d46f53;
+      --primary-soft: #3b221b;
+      --accent: #e5886f;
+      --accent-glow: rgba(229, 136, 111, 0.45);
+      --pill-track: #2c201d;
+      --pill-thumb: #3d2c28;
+      --border-card: rgba(212, 111, 83, 0.16);
+      --shadow-lux: 0 8px 24px rgba(0, 0, 0, 0.45), 0 24px 64px rgba(0, 0, 0, 0.65);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background-color: #16191c;
+      color: #e5e9f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--sp-16);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* 頂部全域主控制列 */
+    .top-meta-control-bar {
+      width: 100%;
+      max-width: 1360px;
+      background: #101316;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--sp-12);
+      padding: var(--sp-12) var(--sp-16);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-12);
+      margin-bottom: var(--sp-16);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      font-size: 0.82rem;
+    }
+    .meta-group { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
+    .meta-label { color: #8e9ca8; font-weight: 700; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    
+    .btn-meta {
+      background: #1b2126;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #c9d5e0;
+      padding: var(--sp-4) var(--sp-12);
+      border-radius: var(--sp-8);
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+    .btn-meta:hover { background: #263038; color: #ffffff; }
+    .btn-meta.active {
+      background: #3b5063;
+      border-color: #6388a6;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    /* 三大風格模式主切換器 */
+    .style-switcher-pill-box {
+      display: flex;
+      background: #242c33;
+      padding: var(--sp-4);
+      border-radius: var(--sp-8);
+      gap: var(--sp-4);
+    }
+    .btn-style-pill {
+      background: transparent;
+      border: none;
+      color: #9cb1c2;
+      padding: var(--sp-4) var(--sp-12);
+      border-radius: var(--sp-4);
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .btn-style-pill.active {
+      background: #3b5063;
+      color: #ffffff;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    /* 模擬器畫布容器 */
+    .viewport-canvas-wrapper {
+      width: 100%;
+      max-width: 1360px;
+      display: flex;
+      justify-content: center;
+      transition: max-width var(--duration-lux) var(--ease-lux);
+    }
+    .viewport-canvas-wrapper[data-device="macbook"] { max-width: 1360px; }
+    .viewport-canvas-wrapper[data-device="ipad"] { max-width: 864px; }
+    .viewport-canvas-wrapper[data-device="iphone"] { max-width: 416px; }
+
+    /* 學習平台外框 */
+    .platform-app-frame {
+      width: 100%;
+      background: var(--canvas);
+      color: var(--text-ink);
+      border-radius: var(--sp-16);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.45);
+      display: flex;
+      min-height: 880px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border-card);
+      transition: background var(--duration-lux) var(--ease-lux), color var(--duration-lux) var(--ease-lux);
+    }
+
+    /* ====================================================
+       【左側微型 Icon Dock (68px)】
+       背後滑動高亮框 (Vertical Sliding Indicator)
+    ==================================================== */
+    .sidebar-icon-dock {
+      width: 68px;
+      background: var(--dock-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--sp-24) 0;
+      flex-shrink: 0;
+      z-index: 20;
+      position: relative;
+    }
+    .dock-logo-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--sp-12);
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 1.15rem;
+      margin-bottom: var(--sp-16);
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+    
+    .dock-nav-items-track {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-12);
+      width: 44px;
+    }
+    /* 滑動框指示器 (Sliding Box Indicator) */
+    .dock-slider-box-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: var(--sp-12);
+      border-left: 3px solid var(--accent);
+      transition: transform var(--duration-lux) var(--ease-lux);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .dock-icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--sp-12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.6);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: color 0.3s ease;
+      position: relative;
+      z-index: 2;
+    }
+    .dock-icon-btn:hover { color: #ffffff; }
+    .dock-icon-btn.active { color: #ffffff; }
+
+    /* 主工作區 */
+    .workspace-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      position: relative;
+    }
+
+    /* 頂部整合 Header */
+    .workspace-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-16) var(--sp-32);
+      border-bottom: 1px solid var(--border-card);
+      gap: var(--sp-16);
+      flex-wrap: wrap;
+    }
+    .course-meta-title { display: flex; flex-direction: column; gap: var(--sp-4); }
+    .course-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-faint);
+      font-weight: 700;
+    }
+    .course-h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-ink);
+      font-family: var(--font-display);
+    }
+
+    /* 0.75s 緩動分段控制器 */
+    .segmented-nav-track {
+      position: relative;
+      display: flex;
+      background: var(--pill-track);
+      padding: var(--sp-4);
+      border-radius: var(--sp-32);
+      gap: var(--sp-4);
+    }
+    .segmented-slider-thumb {
+      position: absolute;
+      top: var(--sp-4);
+      bottom: var(--sp-4);
+      left: var(--sp-4);
+      background: var(--pill-thumb);
+      border-radius: 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      transition: transform var(--duration-lux) var(--ease-lux), width var(--duration-lux) var(--ease-lux);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .seg-tab-btn {
+      position: relative;
+      z-index: 2;
+      border: none;
+      background: transparent;
+      padding: var(--sp-8) var(--sp-24);
+      border-radius: 24px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color 0.4s ease;
+      white-space: nowrap;
+    }
+    .seg-tab-btn.active {
+      color: var(--text-ink);
+      font-weight: 700;
+    }
+
+    /* 視圖滾動容器 */
+    .view-scroll-viewport {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--sp-24) var(--sp-32);
+      display: flex;
+      flex-direction: column;
+    }
+    .view-content-panel { display: none; }
+    .view-content-panel.active { display: block; animation: entranceFloat 0.75s var(--ease-lux) forwards; }
+
+    @keyframes entranceFloat {
+      0% { opacity: 0; transform: translateY(16px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ====================================================
+       【Dashboard：依指定保留 3 欄大器平衡】
+    ==================================================== */
+    .dashboard-three-col-grid {
+      display: grid;
+      grid-template-columns: 310px 1.15fr 300px;
+      gap: var(--sp-20);
+      align-items: stretch;
+    }
+
+    .master-panel-card {
+      background: var(--card-bg);
+      border-radius: var(--sp-16);
+      border: 1px solid var(--border-card);
+      box-shadow: var(--shadow-lux);
+      padding: var(--sp-20);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: var(--sp-16);
+    }
+    .master-card-header {
+      border-bottom: 1px solid var(--border-card);
+      padding-bottom: var(--sp-12);
+      text-align: center;
+    }
+    .master-card-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--text-ink);
+      font-family: var(--font-display);
+    }
+    .master-card-sub { font-size: 0.72rem; color: var(--text-faint); margin-top: var(--sp-4); }
+
+    /* 學習掌控感模組 */
+    .strategy-config-cluster {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-12);
+    }
+    .strategy-sub-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .strategy-pills-row {
+      display: flex;
+      gap: var(--sp-8);
+    }
+    .btn-strat-pill {
+      flex: 1;
+      background: var(--primary-soft);
+      border: 1px solid var(--border-card);
+      color: var(--text-ink);
+      padding: var(--sp-8) var(--sp-4);
+      border-radius: var(--sp-8);
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .btn-strat-pill.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+    .strategy-slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-12);
+      background: var(--primary-soft);
+      padding: var(--sp-8) var(--sp-12);
+      border-radius: var(--sp-8);
+    }
+    .strategy-slider {
+      flex: 1;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .slider-val-tag {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--primary);
+      min-width: 44px;
+      text-align: right;
+    }
+    .strategy-commitment-box {
+      background: var(--card-bg);
+      border: 1px dashed var(--primary);
+      border-radius: var(--sp-8);
+      padding: var(--sp-8) var(--sp-12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .commitment-check-mark {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 2px solid var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: transparent;
+      transition: all 0.2s ease;
+    }
+    .commitment-check-mark.checked {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .roadmap-tree-flow {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-12);
+    }
+    .roadmap-step-card {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-12);
+      background: var(--card-bg);
+      padding: var(--sp-12) var(--sp-16);
+      border-radius: var(--sp-12);
+      border: 1px solid var(--border-card);
+      cursor: pointer;
+      transition: all 0.3s var(--ease-lux);
+    }
+    .roadmap-step-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lux);
+      border-color: var(--primary);
+    }
+    .roadmap-node-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary-soft);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+    .roadmap-node-badge.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .donut-center-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-8) 0;
+    }
+    .donut-svg-box {
+      width: 110px;
+      height: 110px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .donut-svg-box svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .donut-bg { fill: none; stroke: var(--pill-track); stroke-width: 8; }
+    .donut-fill {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 326;
+      stroke-dashoffset: 114;
+    }
+    .donut-txt { position: absolute; text-align: center; }
+    .donut-pct-num { font-size: 1.4rem; font-weight: 800; color: var(--text-ink); font-family: var(--font-mono); }
+    .donut-pct-sub { font-size: 0.65rem; color: var(--text-faint); }
+
+    /* ====================================================
+       【研讀工作室：依據風格與版面徹底結構劇變 (3 種專屬舞台)】
+       Layout 1: mode-spread (50/50 雙欄開合)
+       Layout 2: mode-focus (單欄 780px 典雅期刊)
+       Layout 3: mode-practice (實戰測驗與盲點大中樞)
+    ==================================================== */
+    .studio-stage-container {
+      width: 100%;
+      transition: all var(--duration-lux) var(--ease-lux);
+    }
+
+    /* 1. 雙欄開合佈局 (Spread) */
+    .studio-stage-container.mode-spread {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: var(--sp-24);
+      align-items: start;
+    }
+
+    /* 2. 全景單欄期刊佈局 (Focus Journal Reader) */
+    .studio-stage-container.mode-focus {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 820px;
+      margin: 0 auto;
+      gap: var(--sp-24);
+    }
+    .studio-stage-container.mode-focus .editorial-reader-pane {
+      width: 100%;
+    }
+    .studio-stage-container.mode-focus .studio-secondary-aside {
+      width: 100%;
+    }
+
+    /* 3. 實戰測驗中樞佈局 (Practice / Quiz Workbench) */
+    .studio-stage-container.mode-practice {
+      display: grid;
+      grid-template-columns: 280px 1.35fr;
+      gap: var(--sp-24);
+      align-items: start;
+    }
+    .studio-stage-container.mode-practice .editorial-reader-pane {
+      display: none; /* 在實戰模式下，講義縮為考點精準側欄 */
+    }
+    .practice-sidebar-outlines {
+      display: none;
+      background: var(--card-bg);
+      border-radius: var(--sp-16);
+      border: 1px solid var(--border-card);
+      padding: var(--sp-20);
+      flex-direction: column;
+      gap: var(--sp-12);
+    }
+    .studio-stage-container.mode-practice .practice-sidebar-outlines {
+      display: flex;
+    }
+
+    /* 講義樣式 */
+    .editorial-reader-pane {
+      background: var(--card-bg);
+      border-radius: var(--sp-16);
+      border: 1px solid var(--border-card);
+      box-shadow: var(--shadow-lux);
+      padding: var(--sp-32);
+      line-height: 1.85;
+      color: var(--text-ink);
+      font-size: 0.98rem;
+    }
+    .reader-chapter-tag {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--primary);
+      margin-bottom: var(--sp-8);
+    }
+    .reader-h2 {
+      font-size: 1.55rem;
+      font-weight: 800;
+      font-family: var(--font-display);
+      line-height: 1.35;
+      margin-bottom: var(--sp-24);
+      color: var(--text-ink);
+    }
+    .reader-p {
+      margin-bottom: var(--sp-16);
+      color: var(--text-ink);
+    }
+    .editorial-pull-quote {
+      margin: var(--sp-24) 0;
+      padding: var(--sp-16) var(--sp-24);
+      border-left: 4px solid var(--primary);
+      background: var(--primary-soft);
+      border-radius: 0 var(--sp-12) var(--sp-12) 0;
+      font-style: normal;
+      color: var(--text-ink);
+      font-weight: 500;
+    }
+    .inline-timestamp-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-4);
+      background: var(--pill-track);
+      color: var(--primary);
+      padding: var(--sp-4) var(--sp-8);
+      border-radius: var(--sp-12);
+      font-size: 0.76rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      font-weight: 600;
+      vertical-align: middle;
+      transition: all 0.2s ease;
+    }
+    .inline-timestamp-badge:hover { background: var(--primary); color: #ffffff; }
+
+    /* 右側多感官工作台容器 */
+    .studio-secondary-aside {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-24);
+    }
+
+    /* ====================================================
+       【聲學多媒體卡片：純淨無字黑膠 ⇋ 數學 Sin 弦波】
+    ==================================================== */
+    .multimedia-interactive-card {
+      background: var(--card-bg);
+      border-radius: var(--sp-16);
+      border: 1px solid var(--border-card);
+      box-shadow: var(--shadow-lux);
+      padding: var(--sp-24);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-16);
+      position: relative;
+      overflow: hidden;
+    }
+    .media-card-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-12);
+    }
+    .media-living-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-8);
+      overflow: hidden;
+    }
+    .now-playing-equalizer-pill {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 14px;
+      padding: 0 4px;
+      background: var(--primary-soft);
+      border-radius: 4px;
+    }
+    .eq-bar {
+      width: 2px;
+      background: var(--primary);
+      border-radius: 1px;
+      animation: eqBounce 1s ease-in-out infinite alternate;
+    }
+    .eq-bar:nth-child(1) { height: 4px; animation-delay: 0.1s; }
+    .eq-bar:nth-child(2) { height: 12px; animation-delay: 0.3s; }
+    .eq-bar:nth-child(3) { height: 8px; animation-delay: 0.2s; }
+    @keyframes eqBounce {
+      0% { height: 3px; }
+      100% { height: 13px; }
+    }
+    .media-card-title {
+      font-size: 0.94rem;
+      font-weight: 700;
+      color: var(--text-ink);
+      white-space: nowrap;
+    }
+
+    .audio-view-toggle-pills {
+      display: flex;
+      background: var(--pill-track);
+      padding: var(--sp-4);
+      border-radius: var(--sp-16);
+      gap: var(--sp-4);
+    }
+    .btn-audio-view-pill {
+      background: transparent;
+      border: none;
+      padding: var(--sp-4) var(--sp-12);
+      border-radius: var(--sp-12);
+      font-size: 0.72rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-weight: 600;
+      transition: all 0.25s ease;
+    }
+    .btn-audio-view-pill.active {
+      background: var(--card-bg);
+      color: var(--text-ink);
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    /* ====================================================
+       【奢華黑膠唱盤基座與多維聲學可視化庫 (參照圖 1, 2, 3, 4, 5)】
+    ==================================================== */
+    .media-stage-viewport {
+      width: 100%;
+      min-height: 208px;
+      position: relative;
+      border-radius: var(--sp-16);
+      margin-bottom: var(--sp-12);
+    }
+    .view-stage-panel {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.98);
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+    }
+    .view-stage-panel.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+      position: relative;
+    }
+
+    /* 形態 1：奢華典雅黑膠唱機基座 (圖 1, 2, 3, 5) */
+    .turntable-deck-chassis {
+      width: 100%;
+      min-height: 208px;
+      background: radial-gradient(circle at 25% 30%, #1a201c 0%, #101512 65%, #080b09 100%);
+      border-radius: var(--sp-16);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-16) var(--sp-20);
+      gap: var(--sp-16);
+      overflow: hidden;
+      color: #ffffff;
+      box-sizing: border-box;
+    }
+    html[data-theme-mode="light"] .turntable-deck-chassis {
+      background: radial-gradient(circle at 25% 30%, #ffffff 0%, #f2f5f3 65%, #e6eae7 100%);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9), 0 8px 24px rgba(0, 0, 0, 0.06);
+      color: var(--text-ink);
+    }
+
+    /* 環形進度弧線軌道 (Orbit Arc Scrubber, 圖 5) */
+    .turntable-orbit-wrap {
+      width: 168px;
+      height: 168px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .turntable-arc-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: rotate(140deg);
+      pointer-events: none;
+    }
+    .arc-track-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 3.5;
+      stroke-dasharray: 335.8 465;
+      stroke-linecap: round;
+    }
+    html[data-theme-mode="light"] .arc-track-bg {
+      stroke: rgba(0, 0, 0, 0.08);
+    }
+    .arc-track-progress {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 3.5;
+      stroke-dasharray: 335.8 465;
+      stroke-dashoffset: 167.9;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.4s ease;
+      filter: drop-shadow(0 0 4px var(--accent));
+    }
+    .arc-scrubber-bead {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 10px var(--accent), 0 2px 5px rgba(0, 0, 0, 0.6);
+      top: 10px;
+      left: 78px;
+      z-index: 4;
+      pointer-events: none;
+      transition: all 0.4s ease;
+    }
+
+    /* 黑膠盤面 (非均向性光澤 + 同心微音軌, 圖 1, 2, 3) */
+    .vinyl-disc-render {
+      width: 136px;
+      height: 136px;
+      border-radius: 50%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: 
+        repeating-radial-gradient(circle, transparent 0, transparent 2px, rgba(255, 255, 255, 0.015) 3px, transparent 4px),
+        conic-gradient(
+          from 0deg,
+          #111412 0deg,
+          #323b34 45deg,
+          #111412 90deg,
+          #323b34 135deg,
+          #111412 180deg,
+          #323b34 225deg,
+          #111412 270deg,
+          #323b34 315deg,
+          #111412 360deg
+        );
+      box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.6),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        inset 0 0 14px rgba(0, 0, 0, 0.9);
+      animation: spinTurntable 20s linear infinite;
+      z-index: 2;
+    }
+    .vinyl-disc-render.paused { animation-play-state: paused; }
+    @keyframes spinTurntable {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .vinyl-groove-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      pointer-events: none;
+    }
+    .vinyl-groove-ring.ring-1 { inset: 12px; }
+    .vinyl-groove-ring.ring-2 { inset: 26px; }
+
+    /* 中央講義微縮封面 (雙重編碼視覺錨點, 圖 1, 2, 3, 5) */
+    .vinyl-center-artwork {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.35), inset 0 0 4px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #18221b;
+    }
+    .artwork-inner-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .vinyl-center-brass-spindle {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #e2c08d 0%, #a4783c 70%, #523b18 100%);
+      box-shadow: 0 0 4px rgba(226, 192, 141, 0.6), inset 0 0 2px rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+    }
+    .vinyl-spindle-hole {
+      width: 5px;
+      height: 5px;
+      background: #080a09;
+      border-radius: 50%;
+    }
+
+    /* 金屬機械唱臂總成 (Tonearm Assembly, 圖 1, 2, 3) */
+    .turntable-tonearm {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      width: 48px;
+      height: 84px;
+      z-index: 5;
+      transform-origin: 34px 10px;
+      transition: transform 0.75s cubic-bezier(0.34, 1.4, 0.64, 1);
+      transform: rotate(24deg);
+      pointer-events: none;
+    }
+    .turntable-tonearm.arm-parked {
+      transform: rotate(-6deg);
+    }
+    .tonearm-gimbal-base {
+      position: absolute;
+      top: 2px;
+      right: 6px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #d0d6d2 0%, #69726d 70%, #2a302c 100%);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tonearm-weight-knob {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1b201d;
+      border: 1px solid #9aa59e;
+    }
+    .tonearm-shaft {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      width: 3px;
+      height: 52px;
+      background: linear-gradient(to right, #d4dad6, #ffffff, #6f7772);
+      box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.35);
+      transform-origin: top center;
+      transform: rotate(-16deg);
+      border-radius: 2px;
+    }
+    .tonearm-cartridge {
+      position: absolute;
+      bottom: 12px;
+      left: 6px;
+      width: 11px;
+      height: 17px;
+      background: #181d1a;
+      border: 1px solid #7c8881;
+      border-radius: 2px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.6);
+      transform: rotate(24deg);
+    }
+    .tonearm-stylus-needle {
+      position: absolute;
+      bottom: -2px;
+      left: 4px;
+      width: 2px;
+      height: 3px;
+      background: #e2c08d;
+      border-radius: 1px;
+    }
+
+    /* 唱機右側資訊與輕擬態觸感實體按鈕 (圖 1, 2, 3) */
+    .turntable-info-deck {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      padding: var(--sp-4) 0;
+      min-width: 0;
+    }
+    .deck-track-meta {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+    }
+    .deck-track-category {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+    }
+    .deck-track-title {
+      font-size: 0.94rem;
+      font-weight: 800;
+      line-height: 1.35;
+      color: inherit;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .deck-time-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: var(--sp-4);
+    }
+    .deck-time-curr {
+      color: var(--text-ink);
+    }
+    html[data-theme-mode="dark"] .deck-time-curr { color: #ffffff; }
+
+    /* 輕擬態按鍵槽 (Neumorphic Button Wells) */
+    .tactile-hardware-buttons {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-8);
+      margin-top: var(--sp-8);
+      flex-wrap: wrap;
+    }
+    .tactile-well-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.2);
+      color: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      flex-shrink: 0;
+    }
+    html[data-theme-mode="light"] .tactile-well-btn {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: #ffffff;
+      box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9), 0 2px 6px rgba(0, 0, 0, 0.08);
+      color: var(--text-ink);
+    }
+    .tactile-well-btn:hover {
+      transform: translateY(-1px);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    .tactile-well-btn:active {
+      transform: translateY(1px);
+      box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+    .tactile-well-btn.btn-play-master {
+      width: 42px;
+      height: 42px;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+    .tactile-well-btn.btn-play-master:hover {
+      transform: scale(1.06);
+      box-shadow: 0 6px 18px var(--accent-glow);
+    }
+    .tactile-well-btn.btn-speed {
+      width: auto;
+      border-radius: var(--sp-8);
+      padding: 0 var(--sp-8);
+      height: 32px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
+    /* 形態 2, 3, 4：畫布卡片 (圖 4) */
+    .visualizer-canvas-card {
+      width: 100%;
+      height: 208px;
+      background: radial-gradient(circle at center, #1a221d 0%, #0d120f 100%);
+      border-radius: var(--sp-16);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+      padding: var(--sp-12);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing: border-box;
+    }
+    html[data-theme-mode="light"] .visualizer-canvas-card {
+      background: radial-gradient(circle at center, #ffffff 0%, #edf1ee 100%);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+    .visualizer-canvas-card canvas {
+      width: 100%;
+      height: 148px;
+      display: block;
+    }
+    .canvas-meta-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--primary);
+      padding-top: var(--sp-4);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    html[data-theme-mode="light"] .canvas-meta-status {
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    /* 播放控制橫條 */
+    .media-transport-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-12);
+    }
+    .btn-transport-play {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--sp-8);
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+    .btn-transport-play:hover { transform: scale(1.05); }
+
+    .btn-speed-sync {
+      border: 1px solid var(--border-card);
+      background: var(--primary-soft);
+      color: var(--primary);
+      padding: var(--sp-4) var(--sp-12);
+      border-radius: var(--sp-8);
+      font-size: 0.76rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-speed-sync:hover { background: var(--primary); color: #ffffff; }
+
+    /* 9 大功能工作台卡片 */
+    .modular-tools-master-card {
+      background: var(--card-bg);
+      border-radius: var(--sp-16);
+      border: 1px solid var(--border-card);
+      box-shadow: var(--shadow-lux);
+      padding: var(--sp-24);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-16);
+    }
+    .triad-tier-header {
+      display: flex;
+      gap: var(--sp-4);
+      background: var(--pill-track);
+      padding: var(--sp-4);
+      border-radius: var(--sp-24);
+    }
+    .btn-triad-tier {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: var(--sp-8) var(--sp-12);
+      border-radius: var(--sp-16);
+      font-size: 0.76rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-weight: 500;
+      transition: all 0.3s ease;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .btn-triad-tier.active {
+      background: var(--card-bg);
+      color: var(--text-ink);
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .deck-grid-row { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+    .btn-deck-item {
+      background: var(--primary-soft);
+      border: 1px solid var(--border-card);
+      color: var(--text-ink);
+      padding: var(--sp-4) var(--sp-12);
+      border-radius: var(--sp-16);
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .btn-deck-item.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    .triad-output-stage {
+      background: var(--canvas);
+      border-radius: var(--sp-12);
+      padding: var(--sp-16);
+      border: 1px dashed var(--border-card);
+      min-height: 200px;
+    }
+    .tool-stage-panel { display: none; }
+    .tool-stage-panel.active { display: block; animation: entranceFloat 0.5s var(--ease-lux) forwards; }
+
+    .quiz-preview-box { display: flex; flex-direction: column; gap: var(--sp-12); }
+    .quiz-q-title { font-size: 0.88rem; font-weight: 700; color: var(--text-ink); line-height: 1.4; }
+    .quiz-opt-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border-card);
+      padding: var(--sp-12) var(--sp-16);
+      border-radius: var(--sp-8);
+      text-align: left;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-ink);
+    }
+    .quiz-opt-btn:hover { border-color: var(--primary); background: var(--primary-soft); }
+
+    /* ====================================================
+       【全功能自訂掌控抽屜】(User Agency Customization Drawer)
+    ==================================================== */
+    .custom-agency-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 380px;
+      background: var(--card-bg);
+      border-left: 1px solid var(--border-card);
+      box-shadow: -8px 0 32px rgba(0,0,0,0.25);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.4s var(--ease-lux);
+    }
+    .custom-agency-drawer.open { transform: translateX(0); }
+    .drawer-header {
+      padding: var(--sp-20);
+      border-bottom: 1px solid var(--border-card);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .drawer-title { font-size: 1.05rem; font-weight: 800; font-family: var(--font-display); }
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--sp-20);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-20);
+    }
+    .custom-group-card {
+      background: var(--primary-soft);
+      padding: var(--sp-16);
+      border-radius: var(--sp-12);
+      border: 1px solid var(--border-card);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-12);
+    }
+    .custom-group-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-ink);
+    }
+    .custom-options-row { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+    .btn-custom-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--border-card);
+      color: var(--text-muted);
+      padding: var(--sp-8) var(--sp-12);
+      border-radius: var(--sp-8);
+      font-size: 0.76rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .btn-custom-pill.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    /* 常駐底部迷你播放列 */
+    .atelier-bottom-dock {
+      margin-top: auto;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border-card);
+      padding: var(--sp-16) var(--sp-32);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-16);
+      z-index: 10;
+    }
+    .bottom-player-left { display: flex; align-items: center; gap: var(--sp-16); }
+    .bottom-player-right { display: flex; align-items: center; gap: var(--sp-12); }
+
+    .bottom-synced-mini-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      border: 1px solid var(--border-card);
+      cursor: pointer;
+    }
+    .mini-vinyl-spinning {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #252e28 0%, #111513 100%);
+      animation: spinTurntable 10s linear infinite;
+      position: relative;
+    }
+    .mini-vinyl-spinning::after {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: #a4783c;
+    }
+
+    /* ====================================================
+       【全設備 RWD 徹底修復：iPhone 416px 完美自適應】
+    ==================================================== */
+    @media (max-width: 980px) {
+      .dashboard-three-col-grid {
+        grid-template-columns: 1fr;
+        gap: var(--sp-16);
+      }
+      .studio-stage-container.mode-spread {
+        grid-template-columns: 1fr;
+        gap: var(--sp-20);
+      }
+      .studio-stage-container.mode-practice {
+        grid-template-columns: 1fr;
+      }
+      .workspace-top-bar {
+        padding: var(--sp-16);
+      }
+      .view-scroll-viewport {
+        padding: var(--sp-16);
+      }
+    }
+
+    @media (max-width: 500px) {
+      body {
+        padding: 0;
+      }
+      .top-meta-control-bar {
+        border-radius: 0;
+        margin-bottom: 0;
+        padding: var(--sp-8);
+      }
+      .viewport-canvas-wrapper {
+        max-width: 100% !important;
+      }
+      .platform-app-frame {
+        border-radius: 0;
+        border: none;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      
+      .sidebar-icon-dock {
+        width: 100%;
+        height: 52px;
+        flex-direction: row;
+        padding: 0 var(--sp-12);
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+      .dock-logo-mark {
+        margin-bottom: 0;
+        width: 32px;
+        height: 32px;
+        font-size: 0.95rem;
+      }
+      .dock-nav-items-track {
+        flex-direction: row;
+        width: auto;
+        gap: var(--sp-8);
+      }
+      .dock-slider-box-indicator {
+        width: 40px;
+        height: 40px;
+        border-left: none;
+        border-bottom: 3px solid var(--accent);
+      }
+      .dock-icon-btn {
+        width: 40px;
+        height: 40px;
+      }
+
+      .workspace-top-bar {
+        padding: var(--sp-12);
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--sp-8);
+      }
+      .segmented-nav-track {
+        overflow-x: auto;
+        border-radius: var(--sp-12);
+      }
+      .seg-tab-btn {
+        padding: var(--sp-4) var(--sp-12);
+        font-size: 0.74rem;
+      }
+
+      .view-scroll-viewport {
+        padding: var(--sp-12);
+      }
+      .master-panel-card,
+      .editorial-reader-pane,
+      .multimedia-interactive-card,
+      .modular-tools-master-card {
+        padding: var(--sp-16);
+        border-radius: var(--sp-12);
+      }
+      .dashboard-three-col-grid {
+        grid-template-columns: 100%;
+      }
+      .studio-stage-container.mode-spread {
+        grid-template-columns: 100%;
+      }
+      .atelier-bottom-dock {
+        padding: var(--sp-12);
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--sp-8);
+      }
+      .bottom-player-right {
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= 頂部環境與控制列 ================= -->
+  <header class="top-meta-control-bar">
+    <!-- 三大風格模式主切換器 (切換時工作室排版徹底劇變！) -->
+    <div class="meta-group">
+      <span class="meta-label">風格模式：</span>
+      <div class="style-switcher-pill-box">
+        <button class="btn-style-pill active" id="btnStyleSanctuary" onclick="applyPhilosophyStyle('sanctuary', this)">🌱 認知心流</button>
+        <button class="btn-style-pill" id="btnStyleEditorial" onclick="applyPhilosophyStyle('editorial', this)">🏛️ 編輯典藏</button>
+        <button class="btn-style-pill" id="btnStylePractice" onclick="applyPhilosophyStyle('practice', this)">🎯 實戰刻意練習</button>
+      </div>
+    </div>
+
+    <!-- 螢幕模擬器 -->
+    <div class="meta-group">
+      <span class="meta-label">螢幕模擬：</span>
+      <button class="btn-meta active" onclick="setDevice('macbook', this)">MacBook (1360)</button>
+      <button class="btn-meta" onclick="setDevice('ipad', this)">iPad (864)</button>
+      <button class="btn-meta" onclick="setDevice('iphone', this)">iPhone (416)</button>
+    </div>
+
+    <!-- 4 組固定典雅配色 -->
+    <div class="meta-group">
+      <span class="meta-label">固定配色：</span>
+      <button class="btn-meta active" onclick="setTheme('sage', this)">鼠尾草茶白</button>
+      <button class="btn-meta" onclick="setTheme('nordic', this)">北歐冷霧板岩</button>
+      <button class="btn-meta" onclick="setTheme('espresso', this)">義式濃縮與醇乳</button>
+      <button class="btn-meta" onclick="setTheme('clay', this)">陶土暖沙與赤陶</button>
+    </div>
+
+    <!-- 亮暗模式與全功能自訂抽屜 -->
+    <div class="meta-group">
+      <button class="btn-meta active" id="btnModeLight" onclick="setMode('light', this)">☀️ 亮色</button>
+      <button class="btn-meta" id="btnModeDark" onclick="setMode('dark', this)">🌙 暗色</button>
+      <button class="btn-meta" style="background:var(--primary); color:#ffffff; font-weight:700;" onclick="toggleDrawer()">⚙️ 自訂排列組合</button>
+    </div>
+  </header>
+
+  <!-- ================= 學習平台容器 ================= -->
+  <main class="viewport-canvas-wrapper" id="viewportWrapper" data-device="macbook">
+    <div class="platform-app-frame" id="appFrame">
+      
+      <!-- 1. 左側微型 Icon Dock (背後滑動框 + 正確 Icon 造型) -->
+      <aside class="sidebar-icon-dock" id="sidebarDock">
+        <div class="dock-logo-mark">G</div>
+
+        <div class="dock-nav-items-track" id="dockNavTrack">
+          <!-- 滑動框指示器 (Sliding Box) -->
+          <div class="dock-slider-box-indicator" id="dockSliderBox"></div>
+
+          <!-- 1. 首頁/總覽 -->
+          <button class="dock-icon-btn active" title="研讀總覽" onclick="switchNav(0)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </button>
+
+          <!-- 2. 研讀工作室 -->
+          <button class="dock-icon-btn" title="研讀工作室" onclick="switchNav(1)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          </button>
+
+          <!-- 3. 弱點錯題集 (圓圈中問號！) -->
+          <button class="dock-icon-btn" title="弱點錯題集" onclick="switchNav(2)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </button>
+
+          <!-- 4. 批次排程 (日曆排程時鐘！) -->
+          <button class="dock-icon-btn" title="批次排程" onclick="switchNav(3)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <circle cx="12" cy="15" r="2"/>
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <!-- 2. 主工作區 -->
+      <section class="workspace-main">
+        
+        <!-- 頂部工作列 -->
+        <header class="workspace-top-bar">
+          <div class="course-meta-title">
+            <span class="course-label" id="currentStyleLabel">模式：🌱 認知心流 (50/50 雙欄講義＋三階梯)</span>
+            <h1 class="course-h1">細胞神經生物學與膜電位機制</h1>
+          </div>
+
+          <nav class="segmented-nav-track" id="mainSegTrack">
+            <div class="segmented-slider-thumb" id="sliderThumb"></div>
+            <button class="seg-tab-btn active" onclick="switchNav(0)">研讀總覽</button>
+            <button class="seg-tab-btn" onclick="switchNav(1)">研讀工作室</button>
+            <button class="seg-tab-btn" onclick="switchNav(2)">弱點複習</button>
+            <button class="seg-tab-btn" onclick="switchNav(3)">批次排程</button>
+          </nav>
+        </header>
+
+        <!-- 視圖滾動容器 -->
+        <div class="view-scroll-viewport">
+
+          <!-- ================= 視圖 1: Dashboard (維持大器 3 欄平衡) ================= -->
+          <section id="viewDashboard" class="view-content-panel active">
+            <div class="dashboard-three-col-grid">
+              
+              <!-- Col 1: 學習掌控感與今日自訂策略 (Pills + Slider + Commitment) -->
+              <div class="master-panel-card">
+                <div class="master-card-header">
+                  <div class="master-card-title">學習節奏掌控感</div>
+                  <div class="master-card-sub">Daily Strategy & Momentum</div>
+                </div>
+
+                <div class="strategy-config-cluster">
+                  <span class="strategy-sub-label">今日研讀目標</span>
+                  <div class="strategy-pills-row">
+                    <button class="btn-strat-pill active" onclick="setTargetLectures(1, this)">1 講</button>
+                    <button class="btn-strat-pill" onclick="setTargetLectures(2, this)">2 講</button>
+                    <button class="btn-strat-pill" onclick="setTargetLectures(3, this)">3 講</button>
+                  </div>
+
+                  <span class="strategy-sub-label" style="margin-top:var(--sp-4);">專注步調拉桿</span>
+                  <div class="strategy-slider-wrap">
+                    <input type="range" min="1" max="5" value="1" class="strategy-slider" id="lectureSlider" oninput="onSliderChange(this.value)">
+                    <span class="slider-val-tag" id="sliderValTag">1 講/日</span>
+                  </div>
+
+                  <span class="strategy-sub-label" style="margin-top:var(--sp-4);">今日自律契約</span>
+                  <div class="strategy-commitment-box" onclick="toggleCommitment(this)">
+                    <span style="font-size:0.78rem; font-weight:600; color:var(--text-ink);">攻克 §2.2 突觸傳遞核心概念</span>
+                    <div class="commitment-check-mark" id="commitCheck">✓</div>
+                  </div>
+                </div>
+
+                <div style="background:var(--primary-soft); padding:var(--sp-8) var(--sp-12); border-radius:var(--sp-8); font-size:0.74rem; color:var(--text-muted); text-align:center;" id="momentumCalcMsg">
+                  依當前策略：預計 <strong>8 天後</strong> 從容精熟全章。
+                </div>
+
+                <button class="btn-meta" style="width:100%; padding:var(--sp-8); background:var(--primary); color:#ffffff; font-weight:700;" onclick="switchNav(1)">
+                  依目標開始今日研讀
+                </button>
+              </div>
+
+              <!-- Col 2: 章節歷程探索樹 -->
+              <div class="master-panel-card">
+                <div class="master-card-header">
+                  <div class="master-card-title">章節研讀歷程</div>
+                  <div class="master-card-sub">Roadmap • 階梯式精熟</div>
+                </div>
+
+                <div class="roadmap-tree-flow">
+                  <div class="roadmap-step-card" onclick="switchNav(1)">
+                    <div class="roadmap-node-badge">01</div>
+                    <div style="flex:1;">
+                      <div style="font-size:0.86rem; font-weight:700;">細胞膜與受體結構</div>
+                      <div style="font-size:0.72rem; color:var(--text-faint);">32 頁 PDF • 測驗 93%</div>
+                    </div>
+                    <span style="font-size:0.7rem; color:var(--primary); font-weight:700;">已精熟</span>
+                  </div>
+
+                  <div class="roadmap-step-card" style="border-color:var(--primary);" onclick="switchNav(1)">
+                    <div class="roadmap-node-badge active">02</div>
+                    <div style="flex:1;">
+                      <div style="font-size:0.86rem; font-weight:700; color:var(--primary);">神經傳導與突觸傳遞</div>
+                      <div style="font-size:0.72rem; color:var(--text-muted);">進行中 • 導讀剩餘 14 分鐘</div>
+                    </div>
+                    <span style="font-size:0.7rem; color:var(--accent); font-weight:700;">研讀中</span>
+                  </div>
+
+                  <div class="roadmap-step-card" onclick="switchNav(1)">
+                    <div class="roadmap-node-badge">03</div>
+                    <div style="flex:1;">
+                      <div style="font-size:0.86rem; font-weight:700;">代謝途徑與酵素調控</div>
+                      <div style="font-size:0.72rem; color:var(--text-faint);">待研讀 • 28 頁 PDF</div>
+                    </div>
+                    <span style="font-size:0.7rem; color:var(--text-faint); font-weight:600;">鎖定中</span>
+                  </div>
+                </div>
+
+                <div style="font-size:0.72rem; color:var(--text-faint); text-align:center;">
+                  今日推薦起點：接續上次聽至 14:20 的《神經傳導與突觸傳遞》
+                </div>
+              </div>
+
+              <!-- Col 3: 全課研讀指標大面板 -->
+              <div class="master-panel-card">
+                <div class="master-card-header">
+                  <div class="master-card-title">全課精熟指標</div>
+                  <div class="master-card-sub">Study Mastery Overview</div>
+                </div>
+
+                <div class="donut-center-wrap">
+                  <div class="donut-svg-box">
+                    <svg viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="52" class="donut-bg"></circle>
+                      <circle cx="60" cy="60" r="52" class="donut-fill"></circle>
+                    </svg>
+                    <div class="donut-txt">
+                      <span class="donut-pct-num">65%</span>
+                      <span class="donut-pct-sub">Mastery</span>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; gap:var(--sp-8); margin-top:var(--sp-12); width:100%;">
+                    <div style="flex:1; background:var(--primary-soft); padding:var(--sp-8); border-radius:var(--sp-8); text-align:center;">
+                      <div style="font-size:0.88rem; font-weight:700; color:var(--primary);">8 / 12</div>
+                      <div style="font-size:0.65rem; color:var(--text-muted);">已讀章節</div>
+                    </div>
+                    <div style="flex:1; background:var(--primary-soft); padding:var(--sp-8); border-radius:var(--sp-8); text-align:center;">
+                      <div style="font-size:0.88rem; font-weight:700; color:var(--primary);">88%</div>
+                      <div style="font-size:0.65rem; color:var(--text-muted);">記憶保持率</div>
+                    </div>
+                  </div>
+                </div>
+
+                <button class="btn-meta" style="width:100%; padding:var(--sp-8);" onclick="switchNav(2)">
+                  查看弱點分析
+                </button>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- ================= 視圖 2: 研讀工作室 (依風格徹底結構劇變！) ================= -->
+          <section id="viewStudio" class="view-content-panel">
+            <div class="studio-stage-container mode-spread" id="studioStageContainer">
+              
+              <!-- 實戰模式專用考點速查側欄 -->
+              <aside class="practice-sidebar-outlines" id="practiceSidebar">
+                <div style="font-size:0.88rem; font-weight:700; color:var(--text-ink);">考點大綱速查列表</div>
+                <div style="font-size:0.74rem; color:var(--text-muted);">點擊考點即時跳轉錯題音訊定位</div>
+                <div class="roadmap-step-card" style="padding:var(--sp-8) var(--sp-12);" onclick="jumpAudio('04:15')">
+                  <div>
+                    <div style="font-size:0.78rem; font-weight:700;">§2.1 去極化閥值 (-55mV)</div>
+                    <div style="font-size:0.68rem; color:var(--primary);">已包含 5 道真題</div>
+                  </div>
+                </div>
+                <div class="roadmap-step-card" style="padding:var(--sp-8) var(--sp-12); border-color:var(--primary);" onclick="jumpAudio('14:20')">
+                  <div>
+                    <div style="font-size:0.78rem; font-weight:700; color:var(--primary);">§2.2 突觸前膜鈣離子通道</div>
+                    <div style="font-size:0.68rem; color:#b91c1c;">高頻錯題 (Sure-but-Wrong)</div>
+                  </div>
+                </div>
+                <div class="roadmap-step-card" style="padding:var(--sp-8) var(--sp-12);" onclick="jumpAudio('22:10')">
+                  <div>
+                    <div style="font-size:0.78rem; font-weight:700;">§2.3 SNARE 蛋白囊泡融合</div>
+                    <div style="font-size:0.68rem; color:var(--text-faint);">3D 抽認卡已就緒</div>
+                  </div>
+                </div>
+              </aside>
+
+              <!-- 精裝講義長文 (無 Dropcase) -->
+              <article class="editorial-reader-pane" id="lectureReaderPane">
+                <div class="reader-chapter-tag">Chapter 02 • Lecture Notes</div>
+                <h2 class="reader-h2">動作電位傳導與突觸前膜離子通道機制</h2>
+
+                <p class="reader-p">
+                  在神經系統的精密運作中，膜電位的快速倒轉構成了一切感官與思維的基石。靜止膜電位仰賴鈉鉀幫浦（Na⁺/K⁺-ATPase）以主動運輸持續耗費 ATP，維持細胞內高鉀、細胞外高鈉的非對稱化學梯度。
+                </p>
+
+                <div class="editorial-pull-quote">
+                  「去極化並非漸進的妥協，而是一場全有全無（All-or-None）的電壓連鎖反應。」
+                  <span class="inline-timestamp-badge" onclick="jumpAudio('04:15')">▶ 04:15 聽導讀釋義</span>
+                </div>
+
+                <p class="reader-p">
+                  當去極化刺激越過閾值（約 -55mV），電壓門控鈉通道迅速爆發性開放，引起 Na⁺ 洶湧內流。隨之而來的失活閘門關閉與延遲整流鉀通道開放，則賦予膜電位迅速復歸的單向絕對不應期（Absolute Refractory Period）。
+                  <span class="inline-timestamp-badge" onclick="jumpAudio('14:20')">▶ 14:20 突觸傳遞</span>
+                </p>
+
+                <p class="reader-p">
+                  當動作電位抵達軸突末梢，電壓門控鈣通道（Cav）開放引起 Ca²⁺ 內流，促使神經傳導物質小泡與前膜 SNARE 複合體結合，完成突觸間隙之化學信號傳導。
+                </p>
+              </article>
+
+              <!-- 多感官工作台 (純淨無字黑膠 ⇋ Sin 弦波 ＋ 9 大功能) -->
+              <aside class="studio-secondary-aside" id="studioAside">
+                
+                <!-- 【黑膠唱盤基座 vs 聲學可視化庫】(標題 Equalizer 呼吸動態, 參照圖 1, 2, 3, 4, 5) -->
+                <div class="multimedia-interactive-card">
+                  <div class="media-card-top-bar">
+                    <div class="media-living-title-wrap">
+                      <div class="now-playing-equalizer-pill">
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                      </div>
+                      <div class="media-card-title">Chapter 02・神經傳導深度導讀</div>
+                    </div>
+
+                    <!-- 4 款可視化切換鈕組 (圖 4 多頻段可視化庫) -->
+                    <div class="audio-view-toggle-pills">
+                      <button class="btn-audio-view-pill active" id="btnPillVinyl" onclick="setAudioView('vinyl')">典雅黑膠</button>
+                      <button class="btn-audio-view-pill" id="btnPillSin" onclick="setAudioView('sinwave')">Sin 弦波</button>
+                      <button class="btn-audio-view-pill" id="btnPillRadial" onclick="setAudioView('radial')">環形頻譜</button>
+                      <button class="btn-audio-view-pill" id="btnPillMatrix" onclick="setAudioView('matrix')">矩陣聲譜</button>
+                    </div>
+                  </div>
+
+                  <!-- 多維舞台視窗 (平滑切換 4 種形態) -->
+                  <div class="media-stage-viewport" id="mediaStageViewport">
+                    
+                    <!-- 形態 1：典雅黑膠 (來自圖 1, 2, 3, 5: 機械唱臂 + 270° 環形進度弧線 + 輕擬態按鍵槽) -->
+                    <div class="view-stage-panel active" id="panelViewVinyl">
+                      <div class="turntable-deck-chassis">
+                        
+                        <!-- 左側：黑膠唱盤總成 (環形進度弧線 + 唱臂 + 封面微縮) -->
+                        <div class="turntable-orbit-wrap">
+                          <svg class="turntable-arc-svg" viewBox="0 0 168 168">
+                            <circle class="arc-track-bg" cx="84" cy="84" r="74" />
+                            <circle class="arc-track-progress" id="turntableArcProgress" cx="84" cy="84" r="74" />
+                          </svg>
+                          <div class="arc-scrubber-bead" id="turntableArcBead"></div>
+
+                          <!-- 黑膠盤面 (同心光澤 + 非均向性反射) -->
+                          <div class="vinyl-disc-render" id="turntableDisc">
+                            <div class="vinyl-groove-ring ring-1"></div>
+                            <div class="vinyl-groove-ring ring-2"></div>
+                            
+                            <!-- 中央講義封面微縮圖 (圖 1, 2, 3, 5: 雙重編碼視覺錨點) -->
+                            <div class="vinyl-center-artwork">
+                              <svg class="artwork-inner-svg" viewBox="0 0 60 60">
+                                <circle cx="30" cy="30" r="28" fill="#18221b"/>
+                                <path d="M12 30 Q 30 12 48 30 T 84 30" stroke="var(--accent)" stroke-width="2.4" fill="none" opacity="0.9"/>
+                                <circle cx="30" cy="30" r="11" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.2"/>
+                                <circle cx="23" cy="26" r="3" fill="#ffffff"/>
+                                <circle cx="37" cy="34" r="3" fill="var(--accent)"/>
+                                <line x1="23" y1="26" x2="37" y2="34" stroke="#ffffff" stroke-width="1.2"/>
+                              </svg>
+                              <div class="vinyl-center-brass-spindle">
+                                <div class="vinyl-spindle-hole"></div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- 金屬機械唱臂總成 (Tonearm Assembly, 圖 1, 2, 3) -->
+                          <div class="turntable-tonearm" id="turntableTonearm">
+                            <div class="tonearm-gimbal-base">
+                              <div class="tonearm-weight-knob"></div>
+                            </div>
+                            <div class="tonearm-shaft"></div>
+                            <div class="tonearm-cartridge">
+                              <div class="tonearm-stylus-needle"></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- 右側：章節標題、即時時間戳與輕擬態觸感實體按鈕 (圖 1, 2, 3) -->
+                        <div class="turntable-info-deck">
+                          <div class="deck-track-meta">
+                            <div class="deck-track-category">BIO101・神經生物學與認知機能</div>
+                            <div class="deck-track-title">Chapter 02・動作電位與突觸傳遞深度導讀</div>
+                            <div class="deck-time-row">
+                              <span class="deck-time-curr" id="deckTimeDigits">14:20</span>
+                              <span class="deck-time-divider">/</span>
+                              <span class="deck-time-total">28:45</span>
+                            </div>
+                          </div>
+                          
+                          <!-- 觸感凹槽實體按鈕群組 (輕擬態按鍵槽) -->
+                          <div class="tactile-hardware-buttons">
+                            <button class="tactile-well-btn" onclick="jumpRelative(-15)" title="倒退 15 秒">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                            </button>
+                            <button class="tactile-well-btn btn-prev" onclick="jumpAudio('04:15')" title="上一節 (§2.1 去極化)">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="19,20 9,12 19,4"/><rect x="5" y="4" width="3" height="16"/></svg>
+                            </button>
+                            <button class="tactile-well-btn btn-play-master" id="btnMasterPlay" onclick="togglePlayState()" title="播放/暫停">
+                              <svg id="masterPlaySvg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+                            </button>
+                            <button class="tactile-well-btn btn-next" onclick="jumpAudio('14:20')" title="下一節 (§2.2 突觸傳遞)">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,4 15,12 5,20"/><rect x="16" y="4" width="3" height="16"/></svg>
+                            </button>
+                            <button class="tactile-well-btn btn-speed" id="btnSpeedTactile" onclick="cyclePlaybackSpeed()" title="切換倍速">1.25x</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 形態 2：動態 Sin 弦波 (多重疊加諧波, 圖 4) -->
+                    <div class="view-stage-panel" id="panelViewSin">
+                      <div class="visualizer-canvas-card">
+                        <canvas id="sinCanvas"></canvas>
+                        <div class="canvas-meta-status">
+                          <span>多重諧波聲學正弦波 (Acoustic Harmonics)</span>
+                          <span style="font-family:var(--font-mono); color:var(--text-faint);">即時頻域疊加振盪</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 形態 3：天體環形頻譜光環 (圖 4) -->
+                    <div class="view-stage-panel" id="panelViewRadial">
+                      <div class="visualizer-canvas-card">
+                        <canvas id="radialCanvas"></canvas>
+                        <div class="canvas-meta-status">
+                          <span>天體環形頻譜光環 (Radial Spectrum Pulse)</span>
+                          <span style="font-family:var(--font-mono); color:var(--text-faint);">360° 徑向頻率共振</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 形態 4：專業霓虹矩陣聲譜柱 (圖 4) -->
+                    <div class="view-stage-panel" id="panelViewMatrix">
+                      <div class="visualizer-canvas-card">
+                        <canvas id="matrixCanvas"></canvas>
+                        <div class="canvas-meta-status">
+                          <span>專業矩陣 LED 聲譜柱 (Matrix Equalizer Bars)</span>
+                          <span style="font-family:var(--font-mono); color:var(--text-faint);">24 頻段動態峰值監測</span>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <!-- 講義錨點章節快速跳轉標籤 (保留快速索引) -->
+                  <div class="media-transport-bar">
+                    <div style="display:flex; align-items:center; gap:var(--sp-8);">
+                      <button class="inline-timestamp-badge" onclick="jumpAudio('04:15')">§2.1 去極化</button>
+                      <button class="inline-timestamp-badge" onclick="jumpAudio('14:20')">§2.2 突觸傳遞</button>
+                      <button class="inline-timestamp-badge" onclick="jumpAudio('22:10')">§2.3 難治期與復極化</button>
+                    </div>
+                    <span style="font-family:var(--font-mono); font-size:0.74rem; font-weight:700; color:var(--text-faint);" id="audioTimeDigits">14:20 / 28:45</span>
+                  </div>
+                </div>
+
+                <!-- 9 大功能工作台卡片 -->
+                <div class="modular-tools-master-card">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:0.88rem; font-weight:700; color:var(--text-ink);" id="lblToolsCardTitle">Gemini 知識產出物工作台</div>
+                    <span style="font-size:0.72rem; color:var(--text-faint);" id="lblToolsSubArch">架構：三階分層</span>
+                  </div>
+
+                  <!-- 三階分層導航 -->
+                  <div class="triad-tier-header" id="triadTierHeader">
+                    <button class="btn-triad-tier active" onclick="switchTriadTier(0, this)">1. 脈絡輸入</button>
+                    <button class="btn-triad-tier" onclick="switchTriadTier(1, this)">2. 結構提煉</button>
+                    <button class="btn-triad-tier" onclick="switchTriadTier(2, this)">3. 主動提取</button>
+                  </div>
+
+                  <!-- 9 功能工具群 -->
+                  <div class="deck-grid-row" id="tierGroup0">
+                    <button class="btn-deck-item active" onclick="selectOutputTool('pdf', this)">講義課件 (PDF)</button>
+                    <button class="btn-deck-item" onclick="selectOutputTool('audio', this)">語音導讀</button>
+                    <button class="btn-deck-item" onclick="selectOutputTool('guide', this)">研讀指南</button>
+                  </div>
+
+                  <div class="deck-grid-row" id="tierGroup1" style="display:none;">
+                    <button class="btn-deck-item" onclick="selectOutputTool('mindmap', this)">心智圖 (Mind Map)</button>
+                    <button class="btn-deck-item" onclick="selectOutputTool('infographic', this)">資訊圖表</button>
+                    <button class="btn-deck-item" onclick="selectOutputTool('slides', this)">投影片簡報</button>
+                    <button class="btn-deck-item" onclick="selectOutputTool('table', this)">數據比較表</button>
+                  </div>
+
+                  <div class="deck-grid-row" id="tierGroup2" style="display:none;">
+                    <button class="btn-deck-item" onclick="selectOutputTool('quiz', this)">30 題實戰測驗</button>
+                    <button class="btn-deck-item" onclick="selectOutputTool('flashcard', this)">3D 抽認卡</button>
+                    <button class="btn-deck-item" onclick="selectOutputTool('tutor', this)">蘇格拉底追問</button>
+                  </div>
+
+                  <!-- 產出物動態舞台 (點擊即時切換) -->
+                  <div class="triad-output-stage">
+                    <div class="tool-stage-panel active" id="toolPanel-pdf">
+                      <div style="font-size:0.8rem; font-weight:700; margin-bottom:var(--sp-8);">PDF 講義原文錨點索引</div>
+                      <div style="font-size:0.76rem; color:var(--text-muted); line-height:1.6;">
+                        已載入 45 頁向量 PDF。當前瀏覽至 第 12 頁 §2.1「電壓閘門通道之門控電荷位移」。點擊可在左側同步跳轉高亮。
+                      </div>
+                    </div>
+
+                    <div class="tool-stage-panel" id="toolPanel-quiz">
+                      <div class="quiz-preview-box">
+                        <div class="quiz-q-title">Q04. 當神經細胞膜電位從 -70mV 劇增至 +30mV 時，最關鍵之跨膜離子流動為何？</div>
+                        <button class="quiz-opt-btn" onclick="alert('答對！Na+ 大量內流造成去極化。')">A. 大量 Na⁺ 順化學電位梯度內流</button>
+                        <button class="quiz-opt-btn" onclick="alert('錯誤。K+ 外流發生於再極化期。')">B. 延遲整流 K⁺ 通道開放造成外流</button>
+                      </div>
+                    </div>
+
+                    <div class="tool-stage-panel" id="toolPanel-mindmap">
+                      <div style="font-size:0.8rem; font-weight:700; margin-bottom:var(--sp-8);">章節核心概念心智圖</div>
+                      <div style="background:var(--card-bg); padding:var(--sp-16); border-radius:var(--sp-8); border:1px solid var(--border-card); text-align:center;">
+                        <svg width="220" height="90" viewBox="0 0 220 90">
+                          <rect x="70" y="5" width="80" height="24" rx="12" fill="var(--primary)"/>
+                          <text x="110" y="21" fill="#fff" font-size="11" text-anchor="middle" font-weight="700">動作電位</text>
+                          <line x1="110" y1="29" x2="45" y2="60" stroke="var(--primary)" stroke-width="2"/>
+                          <line x1="110" y1="29" x2="175" y2="60" stroke="var(--primary)" stroke-width="2"/>
+                          <rect x="10" y="60" width="70" height="22" rx="6" fill="var(--primary-soft)"/>
+                          <text x="45" y="75" fill="var(--primary)" font-size="10" text-anchor="middle">去極化 (Na+)</text>
+                          <rect x="140" y="60" width="70" height="22" rx="6" fill="var(--primary-soft)"/>
+                          <text x="175" y="75" fill="var(--primary)" font-size="10" text-anchor="middle">再極化 (K+)</text>
+                        </svg>
+                      </div>
+                    </div>
+
+                    <div class="tool-stage-panel" id="toolPanel-flashcard">
+                      <div style="background:var(--card-bg); padding:var(--sp-24); border-radius:var(--sp-12); border:1px solid var(--border-card); text-align:center; cursor:pointer;" onclick="this.querySelector('.fc-back').style.display = this.querySelector('.fc-back').style.display === 'none' ? 'block' : 'none'">
+                        <div style="font-size:0.72rem; color:var(--text-faint); margin-bottom:var(--sp-8);">點擊翻轉卡片</div>
+                        <div style="font-size:0.92rem; font-weight:700; color:var(--text-ink);">SNARE 蛋白複合體之主要功能？</div>
+                        <div class="fc-back" style="display:none; margin-top:var(--sp-12); font-size:0.82rem; color:var(--primary); font-weight:600;">
+                          介導突觸囊泡與前膜融合，釋放神經傳導物質。
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </aside>
+
+            </div>
+          </section>
+
+          <!-- ================= 視圖 3: 弱點複習 ================= -->
+          <section id="viewReview" class="view-content-panel">
+            <div class="editorial-reader-pane">
+              <div class="reader-chapter-tag">Metacognition • 弱點錯題集</div>
+              <h2 class="reader-h2">高把握度但錯誤 (Sure-but-Wrong) 盲點剖析</h2>
+              <div class="editorial-pull-quote" style="border-left-color:#b91c1c; background:rgba(185,28,28,0.06);">
+                系統診斷：您在第 02 講 Q07「突觸前膜鈣離子阻斷劑機制」標註 100% 把握度但答錯，屬於典型認知假象盲點。
+              </div>
+              <button class="btn-meta" onclick="switchNav(1)">返回章節強化精讀</button>
+            </div>
+          </section>
+
+          <!-- ================= 視圖 4: 批次排程 ================= -->
+          <section id="viewBatch" class="view-content-panel">
+            <div class="editorial-reader-pane">
+              <div class="reader-chapter-tag">Backend Infrastructure</div>
+              <h2 class="reader-h2">Gemini Notebook 批次排程與配額監控</h2>
+              <p class="reader-p">管理後台佇列狀態、Gemini 2.0 Flash / Pro 配額儀表與自訂多媒體生成任務。</p>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- 常駐底部迷你播放列 (同步黑膠 / 弦波設計) -->
+        <footer class="atelier-bottom-dock">
+          <div class="bottom-player-left">
+            <button class="btn-transport-play" style="width:28px; height:28px;" onclick="togglePlayState()">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+            </button>
+            
+            <div class="bottom-synced-mini-icon" id="bottomMiniSyncedIcon" title="點擊切換黑膠與弦波" onclick="toggleAudioView()">
+              <div id="bottomMiniVinyl" class="mini-vinyl-spinning"></div>
+              <svg id="bottomSvgWave" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary); display:none;">
+                <path d="M2 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0"/>
+              </svg>
+            </div>
+
+            <div>
+              <div style="font-size:0.82rem; font-weight:700; color:var(--text-ink);">Chapter 02 • 神經傳導語音導讀</div>
+              <div style="font-size:0.7rem; color:var(--text-faint);">14:20 / 28:45 • <span id="lblBottomStatus">典雅黑膠同步導讀中</span></div>
+            </div>
+          </div>
+
+          <div class="bottom-player-right">
+            <!-- 底欄倍速 (雙向聯動) -->
+            <button class="btn-speed-sync" id="btnSpeedBottom" onclick="cyclePlaybackSpeed()">1.25x</button>
+            <button class="btn-meta" onclick="switchNav(1)">展開工作台</button>
+          </div>
+        </footer>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ================= 【全功能自訂掌控抽屜】(User Agency Customization Drawer) ================= -->
+  <aside class="custom-agency-drawer" id="agencyDrawer">
+    <div class="drawer-header">
+      <div class="drawer-title">⚙️ 個人化工作台自訂矩陣</div>
+      <button class="btn-meta" onclick="toggleDrawer()">關閉 ✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- 1. 三大風格模式 -->
+      <div class="custom-group-card">
+        <div class="custom-group-title">🌟 風格模式快速切換</div>
+        <div class="custom-options-row">
+          <button class="btn-custom-pill active" onclick="applyPhilosophyStyle('sanctuary')">🌱 認知心流</button>
+          <button class="btn-custom-pill" onclick="applyPhilosophyStyle('editorial')">🏛️ 編輯典藏</button>
+          <button class="btn-custom-pill" onclick="applyPhilosophyStyle('practice')">🎯 實戰刻意練習</button>
+        </div>
+      </div>
+
+      <!-- 2. 研讀工作室排版結構 (可任意自由覆蓋！) -->
+      <div class="custom-group-card">
+        <div class="custom-group-title">📐 工作室專屬舞台排版</div>
+        <div class="custom-options-row">
+          <button class="btn-custom-pill active" id="btnCustomLayoutSpread" onclick="setStudioLayout('mode-spread', this)">雙欄開合 (Spread)</button>
+          <button class="btn-custom-pill" id="btnCustomLayoutFocus" onclick="setStudioLayout('mode-focus', this)">全景單欄期刊 (Focus)</button>
+          <button class="btn-custom-pill" id="btnCustomLayoutPractice" onclick="setStudioLayout('mode-practice', this)">實戰測驗中樞 (Practice)</button>
+        </div>
+      </div>
+
+      <!-- 3. 9 大功能架構呈現 -->
+      <div class="custom-group-card">
+        <div class="custom-group-title">📚 9 大功能呈現架構</div>
+        <div class="custom-options-row">
+          <button class="btn-custom-pill active" id="btnCustomArchTriad" onclick="setToolsArch('triad', this)">認知三階分層</button>
+          <button class="btn-custom-pill" id="btnCustomArchDeck" onclick="setToolsArch('deck', this)">全景九宮格羅盤</button>
+        </div>
+      </div>
+
+      <!-- 4. 聲學多媒體預設形態 (圖 4 多維聲學庫) -->
+      <div class="custom-group-card">
+        <div class="custom-group-title">🎵 聲學多媒體形態 (可視化風格)</div>
+        <div class="custom-options-row">
+          <button class="btn-custom-pill active" id="btnCustomAudioVinyl" onclick="setAudioView('vinyl', this)">典雅黑膠 (唱臂+環形軌)</button>
+          <button class="btn-custom-pill" id="btnCustomAudioSin" onclick="setAudioView('sinwave', this)">動態 Sin 弦波</button>
+          <button class="btn-custom-pill" id="btnCustomAudioRadial" onclick="setAudioView('radial', this)">天體環形頻譜</button>
+          <button class="btn-custom-pill" id="btnCustomAudioMatrix" onclick="setAudioView('matrix', this)">霓虹矩陣聲譜</button>
+        </div>
+      </div>
+
+      <!-- 5. 視覺動態分級 -->
+      <div class="custom-group-card">
+        <div class="custom-group-title">✨ 視覺動態分級</div>
+        <div class="custom-options-row">
+          <button class="btn-custom-pill active" onclick="setAnimLevel('gentle', this)">柔和引導 (20% 動態)</button>
+          <button class="btn-custom-pill" onclick="setAnimLevel('static', this)">極致靜態 (純文字沉浸)</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    let currentTheme = 'sage';
+    let currentMode = 'light';
+    let currentStyle = 'sanctuary';
+    let currentLayout = 'mode-spread';
+    let currentAudioView = 'vinyl'; // 'vinyl' | 'sinwave'
+    let isPlaying = true;
+    
+    const speedList = ['1.0x', '1.25x', '1.5x', '2.0x'];
+    let currentSpeedIndex = 1; // 1.25x
+
+    // 1. 【三大風格模式套用：工作台排版徹底結構劇變！】
+    function applyPhilosophyStyle(style, btn) {
+      currentStyle = style;
+      document.documentElement.setAttribute('data-style', style);
+      
+      document.querySelectorAll('.style-switcher-pill-box .btn-style-pill').forEach(b => b.classList.remove('active'));
+      const activeBtn = btn || document.getElementById('btnStyle' + style.charAt(0).toUpperCase() + style.slice(1));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const container = document.getElementById('studioStageContainer');
+
+      if (style === 'sanctuary') {
+        // 風格 1：🌱 認知心流 -> 50/50 雙欄開合 + 認知三階梯 + Sin 弦波
+        document.getElementById('currentStyleLabel').textContent = '模式：🌱 認知心流 (50/50 雙欄講義＋三階梯)';
+        setStudioLayout('mode-spread');
+        setToolsArch('triad');
+        setAudioView('sinwave');
+      } else if (style === 'editorial') {
+        // 風格 2：🏛️ 編輯典藏 -> 單欄 780px 典雅期刊 + 典雅黑膠 + 九宮格羅盤
+        document.getElementById('currentStyleLabel').textContent = '模式：🏛️ 編輯典藏 (單欄 780px 典雅期刊＋黑膠)';
+        setStudioLayout('mode-focus');
+        setToolsArch('deck');
+        setAudioView('vinyl');
+      } else if (style === 'practice') {
+        // 風格 3：🎯 實戰刻意練習 -> 30 題 Quiz 測驗大中樞 + 考點大綱速查列表
+        document.getElementById('currentStyleLabel').textContent = '模式：🎯 實戰刻意練習 (30題 Quiz 盲點大中樞)';
+        setStudioLayout('mode-practice');
+        setToolsArch('triad');
+        switchTriadTier(2); // 自動鎖定在第 3 階主動提取 (Quiz)
+        selectOutputTool('quiz', document.querySelectorAll('#tierGroup2 .btn-deck-item')[0]);
+      }
+    }
+
+    // 2. 【工作室排版結構自訂切換】
+    function setStudioLayout(layoutClass, btn) {
+      currentLayout = layoutClass;
+      document.documentElement.setAttribute('data-layout', layoutClass.replace('mode-', ''));
+      const container = document.getElementById('studioStageContainer');
+      container.className = 'studio-stage-container ' + layoutClass;
+
+      document.querySelectorAll('.custom-agency-drawer .btn-custom-pill').forEach(b => {
+        if (b.id && b.id.startsWith('btnCustomLayout')) b.classList.remove('active');
+      });
+      if (btn) {
+        btn.classList.add('active');
+      } else {
+        if (layoutClass === 'mode-spread') document.getElementById('btnCustomLayoutSpread').classList.add('active');
+        if (layoutClass === 'mode-focus') document.getElementById('btnCustomLayoutFocus').classList.add('active');
+        if (layoutClass === 'mode-practice') document.getElementById('btnCustomLayoutPractice').classList.add('active');
+      }
+      setTimeout(resizeSinCanvas, 300);
+    }
+
+    // 3. 【9 大功能架構呈現自訂切換】
+    function setToolsArch(arch, btn) {
+      const isTriad = (arch === 'triad');
+      document.getElementById('triadTierHeader').style.display = isTriad ? 'flex' : 'none';
+      document.getElementById('lblToolsSubArch').textContent = isTriad ? '架構：三階分層' : '架構：九宮格羅盤';
+
+      if (!isTriad) {
+        // 九宮格模式：展開所有工具標籤
+        document.getElementById('tierGroup0').style.display = 'flex';
+        document.getElementById('tierGroup1').style.display = 'flex';
+        document.getElementById('tierGroup2').style.display = 'flex';
+      } else {
+        switchTriadTier(0);
+      }
+
+      document.querySelectorAll('.custom-agency-drawer .btn-custom-pill').forEach(b => {
+        if (b.id && b.id.startsWith('btnCustomArch')) b.classList.remove('active');
+      });
+      if (btn) {
+        btn.classList.add('active');
+      } else {
+        if (isTriad) document.getElementById('btnCustomArchTriad').classList.add('active');
+        else document.getElementById('btnCustomArchDeck').classList.add('active');
+      }
+    }
+
+    // 4. 【切換導航與左側 Dock 滑動框】
+    function switchNav(index) {
+      document.querySelectorAll('#mainSegTrack .seg-tab-btn').forEach((tab, i) => tab.classList.toggle('active', i === index));
+      const panels = [
+        document.getElementById('viewDashboard'),
+        document.getElementById('viewStudio'),
+        document.getElementById('viewReview'),
+        document.getElementById('viewBatch')
+      ];
+      panels.forEach((p, i) => p.classList.toggle('active', i === index));
+
+      const dockBtns = document.querySelectorAll('#dockNavTrack .dock-icon-btn');
+      dockBtns.forEach((btn, i) => btn.classList.toggle('active', i === index));
+      
+      updateDockSliderBox(index);
+      updateTopSliderThumb();
+      if (index === 1) resizeSinCanvas();
+    }
+
+    function updateDockSliderBox(index) {
+      const slider = document.getElementById('dockSliderBox');
+      const isMobile = window.innerWidth <= 500 || document.getElementById('viewportWrapper').getAttribute('data-device') === 'iphone';
+      if (!slider) return;
+
+      if (isMobile) {
+        slider.style.transform = `translateX(${index * 48}px)`;
+      } else {
+        slider.style.transform = `translateY(${index * 56}px)`;
+      }
+    }
+
+    function updateTopSliderThumb() {
+      const activeBtn = document.querySelector('#mainSegTrack .seg-tab-btn.active');
+      const thumb = document.getElementById('sliderThumb');
+      if (activeBtn && thumb) {
+        thumb.style.width = activeBtn.offsetWidth + 'px';
+        thumb.style.transform = `translateX(${activeBtn.offsetLeft - 4}px)`;
+      }
+    }
+
+    function toggleDrawer() {
+      document.getElementById('agencyDrawer').classList.toggle('open');
+    }
+
+    // 5. 螢幕模擬器切換
+    function setDevice(device, btn) {
+      document.querySelectorAll('.top-meta-control-bar .btn-meta').forEach(b => {
+        if (['MacBook (1360)', 'iPad (864)', 'iPhone (416)'].includes(b.textContent.trim())) {
+          b.classList.remove('active');
+        }
+      });
+      btn.classList.add('active');
+      document.getElementById('viewportWrapper').setAttribute('data-device', device);
+      setTimeout(() => {
+        updateTopSliderThumb();
+        const activeNavIndex = Array.from(document.querySelectorAll('#dockNavTrack .dock-icon-btn')).findIndex(b => b.classList.contains('active'));
+        updateDockSliderBox(activeNavIndex >= 0 ? activeNavIndex : 0);
+        resizeSinCanvas();
+      }, 400);
+    }
+
+    // 6. 配色切換
+    function setTheme(theme, btn) {
+      currentTheme = theme;
+      document.documentElement.setAttribute('data-theme', theme);
+      document.querySelectorAll('.top-meta-control-bar .btn-meta').forEach(b => {
+        if (['鼠尾草茶白', '北歐冷霧板岩', '義式濃縮與醇乳', '陶土暖沙與赤陶'].includes(b.textContent.trim())) {
+          b.classList.remove('active');
+        }
+      });
+      btn.classList.add('active');
+    }
+
+    function setMode(mode, btn) {
+      currentMode = mode;
+      document.documentElement.setAttribute('data-mode', mode);
+      document.getElementById('btnModeLight').classList.toggle('active', mode === 'light');
+      document.getElementById('btnModeDark').classList.toggle('active', mode === 'dark');
+    }
+
+    function setAnimLevel(level, btn) {
+      document.documentElement.setAttribute('data-anim-level', level);
+      if (btn) {
+        btn.parentElement.querySelectorAll('.btn-custom-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    }
+
+    // 7. 【多維聲學可視化切換庫 (圖 1, 2, 3, 4, 5)】
+    function setAudioView(view, btn) {
+      currentAudioView = view;
+      document.documentElement.setAttribute('data-audio-view', view);
+
+      // 切換頂端 4 顆按鈕
+      ['vinyl', 'sinwave', 'radial', 'matrix'].forEach(v => {
+        const pBtn = document.getElementById('btnPill' + v.charAt(0).toUpperCase() + v.slice(1));
+        if (pBtn) pBtn.classList.toggle('active', v === view);
+      });
+
+      // 切換舞台面板
+      const panelMap = {
+        vinyl: 'panelViewVinyl',
+        sinwave: 'panelViewSin',
+        radial: 'panelViewRadial',
+        matrix: 'panelViewMatrix'
+      };
+      Object.keys(panelMap).forEach(k => {
+        const panel = document.getElementById(panelMap[k]);
+        if (panel) panel.classList.toggle('active', k === view);
+      });
+
+      // 同步底端狀態與迷你唱盤
+      const isVinyl = (view === 'vinyl');
+      document.getElementById('bottomMiniVinyl').style.display = isVinyl ? 'block' : 'none';
+      document.getElementById('bottomSvgWave').style.display = isVinyl ? 'none' : 'block';
+      
+      const statusLabels = {
+        vinyl: '典雅黑膠 (唱臂+環形軌) 同步導讀中',
+        sinwave: '動態 Sin 弦波同步振盪中',
+        radial: '天體環形頻譜共振中',
+        matrix: '專業矩陣 LED 聲譜監測中'
+      };
+      document.getElementById('lblBottomStatus').textContent = statusLabels[view] || '多媒體音訊導讀中';
+
+      // 同步抽屜自訂按鈕
+      document.querySelectorAll('.custom-agency-drawer .btn-custom-pill').forEach(b => {
+        if (b.id && b.id.startsWith('btnCustomAudio')) b.classList.remove('active');
+      });
+      const drawerTargetId = 'btnCustomAudio' + view.charAt(0).toUpperCase() + view.slice(1);
+      const drawerBtn = document.getElementById(drawerTargetId);
+      if (drawerBtn) drawerBtn.classList.add('active');
+
+      // 畫布尺寸重繪
+      if (view === 'sinwave') resizeSinCanvas();
+      else if (view === 'radial') resizeRadialCanvas();
+      else if (view === 'matrix') resizeMatrixCanvas();
+    }
+
+    function toggleAudioView() {
+      const views = ['vinyl', 'sinwave', 'radial', 'matrix'];
+      const nextIdx = (views.indexOf(currentAudioView) + 1) % views.length;
+      setAudioView(views[nextIdx]);
+    }
+
+    // 8. 學習掌控感自訂策略
+    function setTargetLectures(n, btn) {
+      document.querySelectorAll('.strategy-pills-row .btn-strat-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('lectureSlider').value = n;
+      onSliderChange(n);
+    }
+
+    function onSliderChange(val) {
+      document.getElementById('sliderValTag').textContent = val + ' 講/日';
+      const days = Math.max(1, Math.ceil(8 / val));
+      document.getElementById('momentumCalcMsg').innerHTML = `依當前目標（每日 ${val} 講）：預計 <strong>${days} 天後</strong> 從容精熟全章！`;
+    }
+
+    function toggleCommitment(box) {
+      const check = document.getElementById('commitCheck');
+      check.classList.toggle('checked');
+    }
+
+    // 9. 雙向倍速與走帶控制 (圖 1, 2, 3)
+    function cyclePlaybackSpeed() {
+      currentSpeedIndex = (currentSpeedIndex + 1) % speedList.length;
+      const speedStr = speedList[currentSpeedIndex];
+      const btnTactile = document.getElementById('btnSpeedTactile');
+      if (btnTactile) btnTactile.textContent = speedStr;
+      const btnBottom = document.getElementById('btnSpeedBottom');
+      if (btnBottom) btnBottom.textContent = speedStr;
+    }
+
+    function togglePlayState() {
+      isPlaying = !isPlaying;
+      
+      // 1. 黑膠盤面旋轉/暫停
+      const disc = document.getElementById('turntableDisc');
+      if (disc) disc.classList.toggle('paused', !isPlaying);
+
+      // 2. 金屬機械唱臂落針/抬起 (圖 1, 2, 3)
+      const arm = document.getElementById('turntableTonearm');
+      if (arm) arm.classList.toggle('arm-parked', !isPlaying);
+
+      // 3. 底端迷你黑膠同步
+      const miniVinyl = document.getElementById('bottomMiniVinyl');
+      if (miniVinyl) miniVinyl.style.animationPlayState = isPlaying ? 'running' : 'paused';
+
+      // 4. 按鈕圖標同步 (播放/暫停)
+      const playIcon = isPlaying 
+        ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' 
+        : '<polygon points="6,4 20,12 6,20"/>';
+      
+      const masterSvg = document.getElementById('masterPlaySvg');
+      if (masterSvg) masterSvg.innerHTML = playIcon;
+
+      const bottomPlay = document.getElementById('btnPlayBottom');
+      if (bottomPlay) bottomPlay.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">${playIcon}</svg>`;
+    }
+
+    function jumpRelative(deltaSec) {
+      // 模擬相對快轉 / 倒退 15 秒
+      let curr = 14 * 60 + 20 + deltaSec;
+      if (curr < 0) curr = 0;
+      if (curr > 28 * 60 + 45) curr = 28 * 60 + 45;
+      const m = String(Math.floor(curr / 60)).padStart(2, '0');
+      const s = String(curr % 60).padStart(2, '0');
+      jumpAudio(`${m}:${s}`);
+    }
+
+    // 10. 三階分層與工具選擇
+    function switchTriadTier(tierIndex, btn) {
+      if (btn) {
+        document.querySelectorAll('.triad-tier-header .btn-triad-tier').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      for (let i = 0; i < 3; i++) {
+        const group = document.getElementById('tierGroup' + i);
+        if (group) group.style.display = (i === tierIndex) ? 'flex' : 'none';
+      }
+      const activeGroup = document.getElementById('tierGroup' + tierIndex);
+      const firstBtn = activeGroup.querySelector('.btn-deck-item');
+      if (firstBtn) firstBtn.click();
+    }
+
+    function selectOutputTool(toolKey, btn) {
+      document.querySelectorAll('.btn-deck-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tool-stage-panel').forEach(p => p.classList.remove('active'));
+      const targetPanel = document.getElementById('toolPanel-' + toolKey);
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+      } else {
+        document.getElementById('toolPanel-pdf').classList.add('active');
+      }
+    }
+
+    function jumpAudio(ts) {
+      const timeStr = ts + ' / 28:45';
+      const elDigits = document.getElementById('audioTimeDigits');
+      if (elDigits) elDigits.textContent = timeStr;
+      const deckTimeDigits = document.getElementById('deckTimeDigits');
+      if (deckTimeDigits) deckTimeDigits.textContent = ts;
+
+      // 同步 270° 環形進度弧線與發光游標微珠 (圖 5)
+      const parts = ts.split(':');
+      const currentSec = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      const totalSec = 28 * 60 + 45;
+      const ratio = Math.min(1, Math.max(0, currentSec / totalSec));
+      
+      const arcTotalLength = 335.8;
+      const arcProgress = document.getElementById('turntableArcProgress');
+      if (arcProgress) {
+        arcProgress.style.strokeDashoffset = arcTotalLength * (1 - ratio);
+      }
+      
+      // 計算圓形弧度座標 (半徑 74, 圓心 84, 84, 起始角 140deg, 弧度範圍 260deg)
+      const startAngle = 140 * Math.PI / 180;
+      const sweepAngle = 260 * Math.PI / 180;
+      const curAngle = startAngle + ratio * sweepAngle;
+      const beadX = 84 + 74 * Math.cos(curAngle) - 6; // 6 是 bead 半徑
+      const beadY = 84 + 74 * Math.sin(curAngle) - 6;
+      const bead = document.getElementById('turntableArcBead');
+      if (bead) {
+        bead.style.left = beadX + 'px';
+        bead.style.top = beadY + 'px';
+      }
+
+      if (!isPlaying) togglePlayState();
+    }
+
+    // ====================================================
+    // 【畫布聲學可視化庫 (Sin 弦波、天體環形頻譜、矩陣 LED, 圖 4)】
+    // ====================================================
+    let animStep = 0;
+
+    // 1. 正弦波 Canvas
+    const sinCanvas = document.getElementById('sinCanvas');
+    const sinCtx = sinCanvas ? sinCanvas.getContext('2d') : null;
+
+    function resizeSinCanvas() {
+      if (!sinCanvas || !sinCanvas.parentElement) return;
+      sinCanvas.width = sinCanvas.parentElement.clientWidth - 24;
+      sinCanvas.height = 148;
+    }
+
+    function drawSinWaves() {
+      if (sinCanvas && sinCtx && currentAudioView === 'sinwave') {
+        sinCtx.clearRect(0, 0, sinCanvas.width, sinCanvas.height);
+        const w = sinCanvas.width;
+        const h = sinCanvas.height;
+        const centerY = h / 2;
+
+        const isDark = (currentMode === 'dark');
+        const waveColor1 = isDark ? 'rgba(82, 183, 136, 0.9)' : 'rgba(45, 106, 79, 0.9)';
+        const waveColor2 = isDark ? 'rgba(116, 198, 157, 0.5)' : 'rgba(64, 145, 108, 0.5)';
+        const waveColor3 = isDark ? 'rgba(163, 196, 171, 0.25)' : 'rgba(82, 183, 136, 0.25)';
+
+        drawSingleSinWave(sinCtx, w, centerY, 14, 0.015, animStep * 0.7, waveColor3, 1.5);
+        drawSingleSinWave(sinCtx, w, centerY, 22, 0.022, -animStep * 1.1, waveColor2, 2);
+        drawSingleSinWave(sinCtx, w, centerY, 32, 0.03, animStep * 1.5, waveColor1, 2.8);
+      }
+    }
+
+    function drawSingleSinWave(ctx, width, centerY, amplitude, frequency, offset, color, lineWidth) {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = 'round';
+      for (let x = 0; x <= width; x += 3) {
+        const envelope = Math.sin((x / width) * Math.PI);
+        const y = centerY + Math.sin(x * frequency + offset) * amplitude * envelope;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // 2. 天體環形頻譜 Canvas (圖 4)
+    const radialCanvas = document.getElementById('radialCanvas');
+    const radialCtx = radialCanvas ? radialCanvas.getContext('2d') : null;
+
+    function resizeRadialCanvas() {
+      if (!radialCanvas || !radialCanvas.parentElement) return;
+      radialCanvas.width = radialCanvas.parentElement.clientWidth - 24;
+      radialCanvas.height = 148;
+    }
+
+    function drawRadialSpectrum() {
+      if (radialCanvas && radialCtx && currentAudioView === 'radial') {
+        radialCtx.clearRect(0, 0, radialCanvas.width, radialCanvas.height);
+        const cx = radialCanvas.width / 2;
+        const cy = radialCanvas.height / 2;
+        const baseRadius = 36;
+        const rayCount = 44;
+
+        // 中心光暈
+        const grad = radialCtx.createRadialGradient(cx, cy, 10, cx, cy, 60);
+        grad.addColorStop(0, 'rgba(82, 183, 136, 0.35)');
+        grad.addColorStop(1, 'rgba(82, 183, 136, 0)');
+        radialCtx.fillStyle = grad;
+        radialCtx.beginPath();
+        radialCtx.arc(cx, cy, 60, 0, Math.PI * 2);
+        radialCtx.fill();
+
+        // 核心圓
+        radialCtx.beginPath();
+        radialCtx.arc(cx, cy, baseRadius - 4, 0, Math.PI * 2);
+        radialCtx.strokeStyle = 'var(--accent)';
+        radialCtx.lineWidth = 2;
+        radialCtx.stroke();
+
+        // 徑向頻率射線
+        for (let i = 0; i < rayCount; i++) {
+          const angle = (i / rayCount) * Math.PI * 2;
+          const harmonic = Math.sin(i * 0.4 + animStep * 2.2) * Math.cos(animStep * 1.2);
+          const rayLen = 8 + Math.abs(harmonic) * 28;
+
+          const x1 = cx + (baseRadius) * Math.cos(angle);
+          const y1 = cy + (baseRadius) * Math.sin(angle);
+          const x2 = cx + (baseRadius + rayLen) * Math.cos(angle);
+          const y2 = cy + (baseRadius + rayLen) * Math.sin(angle);
+
+          radialCtx.beginPath();
+          radialCtx.moveTo(x1, y1);
+          radialCtx.lineTo(x2, y2);
+          radialCtx.strokeStyle = (i % 2 === 0) ? 'var(--primary)' : 'var(--accent)';
+          radialCtx.lineWidth = 2.2;
+          radialCtx.lineCap = 'round';
+          radialCtx.stroke();
+        }
+      }
+    }
+
+    // 3. 霓虹矩陣 LED 聲譜柱 Canvas (圖 4)
+    const matrixCanvas = document.getElementById('matrixCanvas');
+    const matrixCtx = matrixCanvas ? matrixCanvas.getContext('2d') : null;
+
+    function resizeMatrixCanvas() {
+      if (!matrixCanvas || !matrixCanvas.parentElement) return;
+      matrixCanvas.width = matrixCanvas.parentElement.clientWidth - 24;
+      matrixCanvas.height = 148;
+    }
+
+    function drawMatrixBars() {
+      if (matrixCanvas && matrixCtx && currentAudioView === 'matrix') {
+        matrixCtx.clearRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+        const w = matrixCanvas.width;
+        const h = matrixCanvas.height;
+        const cols = 22;
+        const colWidth = Math.max(8, Math.floor((w - (cols * 4)) / cols));
+        const blockHeight = 10;
+        const blockGap = 3;
+        const totalRows = 8;
+
+        for (let c = 0; c < cols; c++) {
+          const freqLevel = Math.sin(c * 0.35 + animStep * 2.5) * 0.5 + 0.5;
+          const activeRows = Math.floor(freqLevel * totalRows);
+          const x = c * (colWidth + 4) + 8;
+
+          for (let r = 0; r < totalRows; r++) {
+            const y = h - (r + 1) * (blockHeight + blockGap) - 8;
+            const isActive = r <= activeRows;
+
+            if (isActive) {
+              if (r >= totalRows - 2) matrixCtx.fillStyle = '#e2c08d'; // 高頻暖金
+              else if (r >= totalRows - 4) matrixCtx.fillStyle = 'var(--accent)';
+              else matrixCtx.fillStyle = 'var(--primary)';
+              matrixCtx.shadowColor = matrixCtx.fillStyle;
+              matrixCtx.shadowBlur = 4;
+            } else {
+              matrixCtx.fillStyle = (currentMode === 'dark') ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)';
+              matrixCtx.shadowBlur = 0;
+            }
+
+            matrixCtx.fillRect(x, y, colWidth, blockHeight);
+          }
+        }
+        matrixCtx.shadowBlur = 0;
+      }
+    }
+
+    // 統一動態驅動迴圈 (Unified Animation Loop)
+    function masterVisualizerLoop() {
+      if (isPlaying) animStep += 0.035;
+      
+      if (currentAudioView === 'sinwave') drawSinWaves();
+      else if (currentAudioView === 'radial') drawRadialSpectrum();
+      else if (currentAudioView === 'matrix') drawMatrixBars();
+
+      requestAnimationFrame(masterVisualizerLoop);
+    }
+
+    window.addEventListener('load', () => {
+      updateTopSliderThumb();
+      updateDockSliderBox(0);
+      resizeSinCanvas();
+      resizeRadialCanvas();
+      resizeMatrixCanvas();
+      jumpAudio('14:20'); // 初始化環形進度弧線
+      masterVisualizerLoop();
+
+      window.addEventListener('resize', () => {
+        updateTopSliderThumb();
+        const activeNavIndex = Array.from(document.querySelectorAll('#dockNavTrack .dock-icon-btn')).findIndex(b => b.classList.contains('active'));
+        updateDockSliderBox(activeNavIndex >= 0 ? activeNavIndex : 0);
+        resizeSinCanvas();
+        resizeRadialCanvas();
+        resizeMatrixCanvas();
+      });
+    });
+  </script>
+</body>
+</html>

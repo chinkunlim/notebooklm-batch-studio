@@ -2,7 +2,7 @@
 
 > **目標讀者**：Claude Code 與後續接手開發者  
 > **建立時間**：2026-11-02  
-> **前置狀態**：已在原型 `mockups_gallery.html` 與 `designs_archive/` 完成 4 個世代的原型探索與驗證；使用者確認本規格書後由 Claude Code 統一落實回正式代碼庫。  
+> **前置狀態**：已在原型 `docs/design/mockups_gallery.html` 與 `docs/design/` 完成 4 個世代的原型探索與驗證；使用者確認本規格書後由 Claude Code 統一落實回正式代碼庫。  
 > **核心原則**：**程式碼未經使用者明確指示不私自修改**；依本規格書與既有原型進行精確、穩健的代碼實作。
 
 ---
@@ -103,12 +103,12 @@
 
 | 版本檔案 | 路徑 | 說明 |
 |---|---|---|
-| **Version 1** | `designs_archive/version_01_classic_triptych.html` | 原始三欄經典排程儀表板。 |
-| **Version 2** | `designs_archive/version_02_dual_column_sanctuary.html` | 心流雙欄研讀室（50/50 閱讀比例）。 |
-| **Version 3** | `designs_archive/version_03_luxury_turntable_visualizer.html` | **（使用者高度好評）** 奢華黑膠唱機、機械唱臂、環形進度弧線與 4 款畫布。 |
-| **Version 4** | `designs_archive/version_04_workbench_customizer.html` | 全景九宮格＋自訂主分頁＋全設備 RWD＋個人頭像完整實作。 |
-| **總展間** | `mockups_gallery.html` | 當前主展示檔案，整合上述所有功能。 |
-| **索引手冊** | `designs_archive/INDEX.md` | 詳細版本對照與代碼說明手冊。 |
+| **Version 1** | `docs/design/version_01_classic_triptych.html` | 原始三欄經典排程儀表板。 |
+| **Version 2** | `docs/design/version_02_dual_column_sanctuary.html` | 心流雙欄研讀室（50/50 閱讀比例）。 |
+| **Version 3** | `docs/design/version_03_luxury_turntable_visualizer.html` | **（使用者高度好評）** 奢華黑膠唱機、機械唱臂、環形進度弧線與 4 款畫布。 |
+| **Version 4** | `docs/design/version_04_workbench_customizer.html` | 全景九宮格＋自訂主分頁＋全設備 RWD＋個人頭像完整實作。 |
+| **總展間** | `docs/design/mockups_gallery.html` | 當前主展示檔案，整合上述所有功能。 |
+| **索引手冊** | `docs/design/DESIGN.md` | 詳細版本對照與代碼說明手冊。 |
 
 ---
 
