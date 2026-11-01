@@ -1,7 +1,7 @@
 {
   "id": "TASK-008",
   "title": "Fix NotebookLM language, artifact targeting, quota handling; switch to gemma4",
-  "status": "in_progress",
+  "status": "done",
   "agent": "claude-code",
   "handed_off_from": "",
   "handed_off_to": "",
@@ -10,12 +10,19 @@
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-01 02:24 UTC",
-  "updated_at": "2026-11-01 02:24 UTC",
+  "updated_at": "2026-11-01 03:25 UTC",
   "history": [
     {
       "timestamp": "2026-11-01 02:24 UTC",
       "action": "created_and_claimed",
       "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-01 03:25 UTC",
+      "action": "done",
+      "agent": "claude-code",
+      "summary": ""
     }
-  ]
+  ],
+  "summary": ""
 }
