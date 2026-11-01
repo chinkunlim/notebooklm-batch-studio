@@ -134,6 +134,7 @@ notebooklm-batch-studio/
 │   │   ├── 021-answer-position-bias.md
 │   │   ├── 022-quiz-submit-resets-view.md
 │   │   ├── 023-db-connection-leak.md
+│   │   ├── 024-buttons-calling-missing-routes.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -205,11 +206,13 @@ notebooklm-batch-studio/
 │       │   │   └── system.py
 │       │   ├── static/
 │       │   │   ├── index.html
+│       │   │   ├── studio-core.js
 │       │   │   ├── studio.css
 │       │   │   └── studio.js
 │       │   ├── __init__.py
 │       │   ├── api.py
 │       │   ├── cli.py
+│       │   ├── mcp_job_prompts.py
 │       │   ├── mcp_server.py
 │       │   ├── mcp_study_plan.py
 │       │   ├── schemas.py
@@ -247,6 +250,7 @@ notebooklm-batch-studio/
 │   │   └── sample_quiz.json
 │   ├── __init__.py
 │   ├── test_api_and_mcp.py
+│   ├── test_button_routes.py
 │   ├── test_converters.py
 │   ├── test_course_admin.py
 │   ├── test_course_parser.py

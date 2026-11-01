@@ -36,3 +36,4 @@
 | [ISSUE-021](021-answer-position-bias.md) | 🟢 已根治 (Resolved) | 測驗正確答案大多是 A | NotebookLM 傾向把正解放第一個；解析時改為固定種子打亂 | `services/converters/quiz_converter.py` |
 | [ISSUE-022](022-quiz-submit-resets-view.md) | 🟢 已根治 (Resolved) | 交卷後測驗被重置並跳回第 1 講 | 交卷後更新統計的函式會選回第一講並重繪分頁 | `entrypoints/static/index.html` |
 | [ISSUE-023](023-db-connection-leak.md) | 🟢 已根治 (Resolved) | 網頁用久了出現 Failed to fetch（資料庫連線耗盡） | scoped_session 以執行緒為範圍，執行緒池每條執行緒都佔住一條連線 | `entrypoints/api.py` |
+| [ISSUE-024](024-buttons-calling-missing-routes.md) | 🟢 已根治 (Resolved) | 部分按鈕呼叫不存在的 API（Prompt 編輯、立即喚醒、裝置版資訊圖表） | 前端按鈕呼叫的路由從未實作；下載路由只接受 GET | `entrypoints/http/queue.py`、`http/artifacts.py`、`static/studio-core.js` |

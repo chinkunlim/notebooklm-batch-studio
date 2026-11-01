@@ -24,6 +24,7 @@ from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
+from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
 from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
 from notebooklm_batch_studio.services.folder_browser import browse_folders
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
@@ -777,6 +778,7 @@ def build_mcp_server(
     _register_selection_tools(mcp, active_service)
     _register_job_option_tools(mcp, active_service)
     _register_course_admin_tools(mcp, active_service)
+    register_job_prompt_tools(mcp, active_service)
     if study_plan is not None:
         register_study_plan_tools(mcp, study_plan)
     return mcp

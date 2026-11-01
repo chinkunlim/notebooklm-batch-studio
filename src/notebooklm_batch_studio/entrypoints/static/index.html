@@ -234,36 +234,47 @@
   <link rel="stylesheet" href="/static/studio.css">
 </head>
 <body>
-  <header>
-    <div>
-      <h1>NotebookLM Batch Studio</h1>
-      <span style="font-size: 0.85rem; color: var(--text-muted);">本機課程自動化學習產出套裝 (127.0.0.1:8768)</span>
+  <header class="app-header">
+    <div class="header-top">
+      <a href="/" class="brand" onclick="goHome(); return false;" title="回到首頁">
+        <span class="brand-logo" aria-hidden="true">📚</span>
+        <span>
+          <h1>Gemini Notebook 學習工作室</h1>
+          <small>本機課程學習產出（127.0.0.1:8768）</small>
+        </span>
+      </a>
+      <!-- 視角切換器 -->
+      <nav class="view-switch" aria-label="切換畫面">
+        <button id="btnViewAdmin" class="primary" onclick="switchMainView('admin')">⚙️ 管理控制台</button>
+        <button id="btnViewStudy" onclick="switchMainView('study')">🎓 學生研讀專區</button>
+        <button onclick="openUsageModal()">📘 使用方法</button>
+      </nav>
     </div>
 
-    <!-- 視角切換器 -->
-    <div style="display: flex; gap: 6px; background: #0f172a; padding: 4px; border-radius: var(--radius); border: 1px solid var(--border);">
-      <button id="btnViewAdmin" class="primary" onclick="switchMainView('admin')" style="padding: 6px 14px; font-size: 0.85rem;">⚙️ 管理控制台</button>
-      <button id="btnViewStudy" onclick="switchMainView('study')" style="padding: 6px 14px; font-size: 0.85rem;">🎓 學生研讀專區</button>
-      <button onclick="openUsageModal()" style="padding: 6px 14px; font-size: 0.85rem;">📘 使用方法</button>
-    </div>
-
-    <div class="controls" id="adminControls">
-      <span id="authBadge" class="badge badge-neutral">檢查認證中...</span>
-      <span id="queueBadge" class="badge badge-neutral">佇列閒置</span>
-      <span id="quotaBadge" class="badge badge-neutral" title="NotebookLM 生成額度（5 小時 / 每週）">額度讀取中...</span>
-      <button id="btnStartQueue" class="primary" style="background: #10b981; font-weight: 600;" onclick="startQueue()">▶️ 啟動批次生成</button>
-      <button id="btnPauseQueue" style="display:none; background: #eab308; color: #000; font-weight: 600;" onclick="pauseQueue()">⏸️ 溫和暫停</button>
-      <button id="btnResumeQueue" style="display:none; background: #10b981; font-weight: 600;" onclick="resumeQueue()">▶️ 繼續執行</button>
-      <button class="primary" onclick="openAddModal()">➕ 加入課程</button>
-      <details class="more-menu">
-        <summary aria-label="更多功能">⋯ 更多</summary>
-        <div class="menu">
-          <button onclick="resumeQuota()" title="喚醒因配額暫停的項目">⚡ 立即喚醒等待額度的工作</button>
-          <button onclick="openNamingModal()">🏷️ 命名規則</button>
-          <button id="btnTheme" onclick="toggleTheme()">☀️ 淺色</button>
-          <a href="/docs" target="_blank" class="btn">📖 OpenAPI 文件</a>
-        </div>
-      </details>
+    <div class="header-bar">
+      <!-- 狀態（只顯示，不能按） -->
+      <div class="status-strip" aria-label="系統狀態">
+        <span class="status-label">狀態</span>
+        <span id="authBadge" class="badge badge-neutral">檢查認證中...</span>
+        <span id="queueBadge" class="badge badge-neutral">佇列閒置</span>
+        <span id="quotaBadge" class="badge badge-neutral" title="Gemini Notebook 生成額度（5 小時 / 每週）">額度讀取中...</span>
+      </div>
+      <!-- 動作按鈕 -->
+      <div class="controls" id="adminControls">
+        <button id="btnStartQueue" class="btn-go" onclick="startQueue()">▶️ 啟動批次生成</button>
+        <button id="btnPauseQueue" class="btn-pause" style="display:none;" onclick="pauseQueue()">⏸️ 溫和暫停</button>
+        <button id="btnResumeQueue" class="btn-go" style="display:none;" onclick="resumeQueue()">▶️ 繼續執行</button>
+        <button class="primary" onclick="openAddModal()">➕ 加入課程</button>
+        <details class="more-menu">
+          <summary aria-label="更多功能">⋯ 更多</summary>
+          <div class="menu">
+            <button onclick="resumeQuota()" title="喚醒因配額暫停的項目">⚡ 立即喚醒等待額度的工作</button>
+            <button onclick="openNamingModal()">🏷️ 命名規則</button>
+            <button id="btnTheme" onclick="toggleTheme()">☀️ 淺色</button>
+            <a href="/docs" target="_blank" class="btn">📖 OpenAPI 文件</a>
+          </div>
+        </details>
+      </div>
     </div>
   </header>
 
@@ -903,6 +914,8 @@
       const actionBar = document.getElementById('quizActionBar');
       container.innerHTML = '';
       currentQuizAnswers = {};
+      // New choice order on every attempt (first try, full retake and wrong-only retake).
+      quiz.questions = quiz.questions.map(q => shuffleQuestion(q));
 
       quiz.questions.forEach((q, qIdx) => {
         const card = document.createElement('div');
@@ -1429,9 +1442,11 @@
 
     async function resumeQuota() {
       try {
-        const res = await fetch('/api/queue/resume_quota', { method: 'POST' });
+        // Wakes the jobs waiting for quota and resumes the queue (one existing route does both).
+        const res = await fetch('/api/queue/resume', { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        alert(`已喚醒 ${data.resumed_count} 個配額任務！`);
+        showToast(`✅ 已喚醒 ${data.data} 個等待額度的工作，佇列繼續執行。`, 'success');
         await fetchStatus();
       } catch (e) {
         alert('喚醒失敗: ' + e.message);
@@ -1943,11 +1958,12 @@
     async function openPromptEditor(jobId, desc) {
       activeJobId = jobId;
       document.getElementById('promptModalTitle').textContent = `📝 編輯 Prompt：${desc}`;
-      document.getElementById('promptModalDesc').textContent = '此指令將在向 NotebookLM 生成產物時傳入。';
+      document.getElementById('promptModalDesc').textContent = '這段指令會在向 Gemini Notebook 生成這份產出時送出。留空就用內建的指令。';
       document.getElementById('promptModal').style.display = 'flex';
 
       try {
         const res = await fetch(`/api/jobs/${jobId}/prompt`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         document.getElementById('promptInput').value = data.custom_prompt || '';
       } catch (e) {
@@ -2171,6 +2187,7 @@
       }, 15000);
     });
   </script>
+  <script src="/static/studio-core.js"></script>
   <script src="/static/studio.js"></script>
 </body>
 </html>

@@ -115,8 +115,10 @@ def _resolve_artifact_path(config: AppConfig, code: str, file_path: str) -> Path
     return target_path
 
 
-@artifacts_router.get(
+# HEAD lets the page check whether an optional file (e.g. the A4 infographic) exists.
+@artifacts_router.api_route(
     "/api/artifacts/{code}/download/{file_path:path}",
+    methods=["GET", "HEAD"],
     tags=["Artifacts"],
     operation_id="download_artifact",
 )
