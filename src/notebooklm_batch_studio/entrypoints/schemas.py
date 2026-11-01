@@ -38,6 +38,9 @@ class AddCoursesRequest(BaseModel):
         chapter_artifacts: Granular selection of chapter-level artifact types.
         course_artifacts: Granular selection of course-wide aggregated artifact types.
         language: Output language preference ('zh-TW', 'en', 'bilingual').
+        paused: Hold the course until it is started.
+        reuse_notebook: Reuse an existing NotebookLM notebook with the same title.
+        options: Generation options applied before any job runs.
     """
 
     folders: list[str] = Field(..., description="List of course folder paths to register")
@@ -52,6 +55,9 @@ class AddCoursesRequest(BaseModel):
         default=None, description="Selected course-wide artifact types"
     )
     language: str = Field(default="zh-TW", description="Output language ('zh-TW', 'en', 'bilingual')")
+    paused: bool = Field(default=False, description="Hold the course until it is started")
+    reuse_notebook: bool = Field(default=True, description="Reuse a NotebookLM notebook with the same title")
+    options: dict[str, Any] | None = Field(default=None, description="Generation options to set first")
 
 
 class UpdateProfileRequest(BaseModel):
@@ -118,6 +124,7 @@ class CourseSummaryResponse(BaseModel):
     done_jobs: int
     progress_percent: float
     counts: dict[str, int]
+    paused: bool = False
 
 
 class GenericActionResponse(BaseModel):

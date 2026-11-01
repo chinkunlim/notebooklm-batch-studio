@@ -240,6 +240,37 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
         return None if limits.source_limit is None else int(limits.source_limit)
 
     @_translate_errors
+    async def find_notebook_by_title(self, title: str) -> str | None:
+        """Find an existing notebook whose title matches exactly (most recent first).
+
+        Args:
+            title: Notebook title, e.g. "[115-1] 心理學研究法".
+
+        Returns:
+            The notebook id, or None when there is no such notebook.
+        """
+        async with self._client() as client:
+            notebooks = await client.notebooks.list()
+        match = next((nb for nb in notebooks if nb.title == title), None)
+        return str(match.id) if match else None
+
+    @_translate_errors
+    async def list_ready_sources(self, notebook_id: str) -> dict[str, str]:
+        """Map the titles of a notebook's ready sources (the uploaded PDF file names) to their ids.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            Source title to source id, for sources that finished processing.
+        """
+        async with self._client() as client:
+            sources = await client.sources.list(notebook_id)
+        return {
+            str(s.title): str(s.id) for s in sources if s.title and getattr(s.status, "name", "") == "READY"
+        }
+
+    @_translate_errors
     async def create_notebook(self, title: str) -> str:
         """Create a new notebook in NotebookLM.
 

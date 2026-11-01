@@ -23,6 +23,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(studio): folder picker, change artifact types after adding, study-portal viewers, browser login, numbered quiz batches, 30-question subject-neutral prompts, weekly quota, and report instructions fix (by `@claude-code`)
 - feat(settings): course-wide extra instructions, editable language and mock exam size, quiz difficulty, custom video style, and per-output settings (SPEC-006) (by `@claude-code`)
 - feat(settings): real per-quiz question count (default 30) driving prompt, check and NotebookLM size; mock exam prompt follows its count; defaults marked in the web app with a reset button (by `@claude-code`)
+- feat(courses): settings when adding, per-course pause/start, chapter range for course-wide outputs, delete course, reuse existing notebook; fix study-portal quizzes; split oversized modules (by `@claude-code`)
 
 ### Fixed
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)

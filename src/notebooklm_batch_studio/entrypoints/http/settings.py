@@ -14,6 +14,7 @@ from notebooklm_batch_studio.entrypoints.schemas import (
     RegenerateRequest,
     UpdateOptionsRequest,
 )
+from notebooklm_batch_studio.services.course_settings import default_options, option_choices
 from notebooklm_batch_studio.services.folder_browser import browse_folders
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
@@ -38,6 +39,18 @@ def get_usage_guide() -> dict[str, Any]:
         Title and sections of headings and steps.
     """
     return usage_guide()
+
+
+@settings_router.get("/api/generation-options", tags=["Settings"], operation_id="get_default_options")
+def get_default_options() -> dict[str, Any]:
+    """Default generation options and allowed values, for setting up a course before adding it.
+
+    Returns:
+        `defaults` and `choices`.
+    """
+    choices = option_choices()
+    choices.update(language=["zh-TW", "en", "bilingual"], mock_exam_questions={"min": 10, "max": 100})
+    return {"defaults": default_options(), "choices": choices}
 
 
 @settings_router.get("/api/courses/{code}/options", tags=["Settings"], operation_id="get_course_options")
@@ -226,3 +239,70 @@ def set_job_options(job_id: str, req: UpdateOptionsRequest, request: Request) ->
         return service.course_settings.set_job_options(job_id, req.options)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@settings_router.post("/api/courses/{code}/pause", tags=["Settings"], operation_id="pause_course")
+def pause_course(code: str, request: Request) -> dict[str, Any]:
+    """Hold one course: its jobs stay queued and do not start.
+
+    Args:
+        code: Course code.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Course code and paused state.
+
+    Raises:
+        HTTPException: 404 when the course does not exist.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return service.course_settings.set_paused(code, True)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@settings_router.post("/api/courses/{code}/start", tags=["Settings"], operation_id="start_course")
+def start_course(code: str, request: Request) -> dict[str, Any]:
+    """Let one course's jobs run (and make sure the queue itself is running).
+
+    Args:
+        code: Course code.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Course code and paused state.
+
+    Raises:
+        HTTPException: 404 when the course does not exist.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        result = service.course_settings.set_paused(code, False)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    service.start_queue()
+    return result
+
+
+@settings_router.delete("/api/courses/{code}", tags=["Settings"], operation_id="delete_course")
+def delete_course(code: str, request: Request) -> dict[str, Any]:
+    """Remove a course from this app (records deleted, outputs moved to DATA_DIR/deleted/).
+
+    The source PDFs and everything on NotebookLM stay untouched.
+
+    Args:
+        code: Course code.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Removed job count and where the outputs were moved.
+
+    Raises:
+        HTTPException: 404 when the course does not exist.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return service.course_settings.delete_course(code)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

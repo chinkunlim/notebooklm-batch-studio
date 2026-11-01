@@ -272,7 +272,10 @@
     <section id="courseDetailSection" style="display: none; margin-top: 32px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h2 id="detailTitle" style="font-size: 1.25rem;">課程詳細進度</h2>
-        <button onclick="closeDetail()">✖ 關閉詳細資訊</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <span id="detailCourseActions"></span>
+          <button onclick="closeDetail()">✖ 關閉詳細資訊</button>
+        </div>
       </div>
       <div id="detailContent" class="card"></div>
       <details id="detailSelectionBox" class="card" style="margin-top: 16px;">
@@ -334,10 +337,7 @@
         <!-- Tab 2: Interactive Quiz Panel -->
         <div id="tabPanelQuiz" class="card" style="display: none; padding: 24px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-            <div style="display: flex; gap: 8px;">
-              <button id="btnQuizAcademic" class="primary" onclick="loadQuizForChapter('quiz_academic')">🎓 研究所深入版 (Academic)</button>
-              <button id="btnQuizConcept" onclick="loadQuizForChapter('quiz_concept')">⚡ 考概念刷題版 (Concept Drill)</button>
-            </div>
+            <div id="quizKindButtons" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
             <div id="quizScoreHeader" style="font-size: 0.95rem; font-weight: 600; color: #4ade80;"></div>
           </div>
           <div id="quizContainer"></div>
@@ -468,9 +468,18 @@
         </div>
       </div>
 
+      <details id="addOptionsBox" style="margin-top: 10px; background: #0f172a; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);">
+        <summary style="cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #38bdf8;">⚙️ 進階產出設定（不改就用預設值；之後也能在課程頁修改）</summary>
+        <div id="addOptions" style="margin-top: 10px;">載入中...</div>
+      </details>
+
       <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
         <input type="checkbox" id="autoStartQueue" checked>
-        <span>🚀 加入後立即自動在 NotebookLM 建立筆記本、上傳 PDF 並啟動批次生成</span>
+        <span>🚀 加入後立即開始生成（取消勾選：先加入並暫停，設定好再到課程頁按「▶️ 開始生成」）</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
+        <input type="checkbox" id="reuseNotebook" checked>
+        <span>📒 NotebookLM 上已有同名筆記本就沿用（已上傳的 PDF 不重傳；取消勾選會另建新的筆記本）</span>
       </label>
 
       <div id="previewResults" style="display: none; background: #0f172a; padding: 12px; border-radius: var(--radius); font-size: 0.85rem; border: 1px solid var(--border);"></div>
@@ -537,7 +546,7 @@
     let currentStudyCourse = null;
     let activeStudyLectureNo = null; // null represents course-wide
     let activeStudyTab = 'audio';
-    let activeQuizVariant = 'quiz_academic';
+    let activeQuizVariant = null;
     let currentQuizData = null;
     let currentQuizAnswers = {};
     let currentFlashcards = [];
@@ -712,7 +721,7 @@
         loadAudioPlayer();
       } else if (tabName === 'quiz') {
         document.getElementById('tabPanelQuiz').style.display = 'block';
-        loadQuizForChapter('quiz_academic');
+        loadQuizForChapter(null);
       } else if (tabName === 'mistakes') {
         document.getElementById('tabPanelMistakes').style.display = 'block';
         loadWeaknessNotebook();
@@ -785,17 +794,33 @@
       if (audio) audio.currentTime += secs;
     }
 
+    // Quizzes a student can take: lecture quizzes per chapter, mock exams for the whole course.
+    const QUIZ_KINDS = {
+      lecture: [['quiz_1', '📝 測驗 1・基礎'], ['quiz_2', '📝 測驗 2・理解'], ['quiz_3', '📝 測驗 3・模擬考'],
+                ['quiz_academic', '🎓 學術精研'], ['quiz_concept', '⚡ 概念刷題']],
+      course: [['course_mock_exam', '📝 全課程模擬考'], ['course_quiz_academic', '🎓 全課程學術精研'],
+               ['course_quiz_concept', '⚡ 全課程概念刷題']],
+    };
+
+    function availableQuizzes() {
+      const isCourse = activeStudyLectureNo === null;
+      return QUIZ_KINDS[isCourse ? 'course' : 'lecture'].map(([type, label]) => {
+        const job = (currentStudyCourse.jobs || [])
+          .filter(j => j.artifact_type === type && j.status === 'done' && j.output_file
+            && (isCourse ? j.lecture_no === null : j.lecture_no === activeStudyLectureNo))
+          .sort((a, b) => (b.version || 1) - (a.version || 1))[0];
+        // The quiz files are named "<variant>[_vN]_quiz.json"; that prefix selects the newest version.
+        const variant = job ? job.output_file.split('/').pop().replace(/_quiz\.json$/, '') : null;
+        return { type, label, variant, version: job ? job.version || 1 : null };
+      }).filter(k => k.variant);
+    }
+
     async function loadQuizForChapter(variant) {
+      const kinds = availableQuizzes();
+      if (!variant || !kinds.some(k => k.variant === variant)) variant = kinds.length ? kinds[0].variant : null;
       activeQuizVariant = variant;
-      const btnAcad = document.getElementById('btnQuizAcademic');
-      const btnConc = document.getElementById('btnQuizConcept');
-      if (variant === 'quiz_academic') {
-        btnAcad.className = 'primary';
-        btnConc.className = '';
-      } else {
-        btnConc.className = 'primary';
-        btnAcad.className = '';
-      }
+      document.getElementById('quizKindButtons').innerHTML = kinds.map(k =>
+        `<button class="${k.variant === variant ? 'primary' : ''}" onclick="loadQuizForChapter('${k.variant}')">${k.label}${k.version > 1 ? ` v${k.version}` : ''}</button>`).join('');
 
       const container = document.getElementById('quizContainer');
       const scoreHeader = document.getElementById('quizScoreHeader');
@@ -804,10 +829,14 @@
       actionBar.style.display = 'none';
       container.innerHTML = '<div style="color:var(--text-muted);">正在載入題目與解析...</div>';
 
+      if (!variant) {
+        container.innerHTML = '<div class="empty-state">這個範圍還沒有完成的測驗，可在管理控制台的「🧩 產出內容」勾選後生成。</div>';
+        return;
+      }
       const code = currentStudyCourse.code;
       const lecNo = activeStudyLectureNo !== null ? activeStudyLectureNo : 0;
       try {
-        const res = await fetch(`/api/courses/${code}/lectures/${lecNo}/quiz/${variant}?with_answers=true`);
+        const res = await fetch(`/api/courses/${code}/lectures/${lecNo}/quiz/${encodeURIComponent(variant)}?with_answers=true`);
         if (!res.ok) throw new Error('尚無此風格測驗資料');
         currentQuizData = await res.json();
         currentQuizAnswers = {};
@@ -1375,7 +1404,7 @@
             <div class="card" onclick="viewCourseDetail('${c.code}')" style="cursor: pointer;">
               <div class="card-header">
                 <div>
-                  <div class="card-title">${c.name} (${c.code})</div>
+                  <div class="card-title">${c.name} (${c.code}) ${c.paused ? '<span class="badge badge-warning">⏸ 暫停中</span>' : ''}</div>
                   <div class="card-subtitle">${c.lectures_count} 份講義 PDF</div>
                 </div>
                 <span class="badge ${hasNb ? 'badge-success' : 'badge-warning'}">
@@ -1536,6 +1565,10 @@
         `;
 
         content.innerHTML = lecturesTable + jobsTable;
+        document.getElementById('detailCourseActions').innerHTML = (data.paused
+          ? `<span class="badge badge-warning" style="margin-right:6px;">⏸ 這門課暫停中</span><button class="primary" onclick="setCoursePaused('${code}', false)">▶️ 開始生成</button>`
+          : `<button onclick="setCoursePaused('${code}', true)">⏸ 暫停這門課</button>`) +
+          ` <button onclick="deleteCourse('${code}')" style="color:var(--danger);">🗑️ 刪除課程</button>`;
       } catch (e) {
         content.innerHTML = `<div style="color:var(--danger)">載入失敗: ${e.message}</div>`;
       }
@@ -1567,6 +1600,33 @@
       return `<div style="margin-top: 20px; padding: 10px 12px; background:#0f172a; border:1px solid var(--border); border-radius: var(--radius);">
         <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"><strong style="font-size:0.85rem; margin-right:6px;">📊 共 ${jobs.length} 項</strong>${chips}</div>${resume}
       </div>`;
+    }
+
+    async function setCoursePaused(code, paused) {
+      try {
+        const res = await fetch(`/api/courses/${code}/${paused ? 'pause' : 'start'}`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        await viewCourseDetail(code, true);
+        await fetchCourses();
+      } catch (e) {
+        alert('操作失敗：' + e.message);
+      }
+    }
+
+    async function deleteCourse(code) {
+      if (!confirm(`刪除課程 ${code}？\n\n• 本機的工作紀錄與學習紀錄會刪除\n• 產出檔案移到 DATA_DIR/deleted/（可找回）\n• 講義 PDF 和 NotebookLM 上的筆記本不會動`)) return;
+      try {
+        const res = await fetch(`/api/courses/${code}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        alert(`已刪除 ${code}（${data.removed_jobs} 項工作）。` + (data.moved_to ? `\n產出已移到：${data.moved_to}` : ''));
+        closeDetail();
+        activeCourseCode = null;
+        await fetchCourses();
+      } catch (e) {
+        alert('刪除失敗：' + e.message);
+      }
     }
 
     async function regenerateArtifact(code, lectureNo, artifactType, label, nextVersion) {
@@ -1602,6 +1662,7 @@
       flashcards_difficulty: ['閃卡難度', { easy: '簡單', medium: '中等', hard: '困難' }],
       quiz_difficulty: ['測驗難度', { auto: '依測驗而定（1 簡單、2 中等、3 困難）', easy: '全部簡單', medium: '全部中等', hard: '全部困難' }],
       video_style_prompt: ['影片自訂風格描述（填了就用這段描述，直式短片不適用）', 'text'],
+      chapter_range: ['整門課產出涵蓋的講次（例如 1-3 或 1,3,5-6；留空＝全部）', 'text'],
       extra_instructions: ['補充指示（加在每一份產出的要求後面，例如「考試以申論題為主」）', 'textarea'],
     };
     // Course-only fields shown at the top of the course settings panel.
@@ -1872,6 +1933,7 @@
     function openAddModal() {
       document.getElementById('addModal').style.display = 'flex';
       browseFolder(null);
+      loadAddOptions();
     }
 
     let currentBrowsePath = null;
@@ -1963,11 +2025,36 @@
       }
     }
 
+    let addDefaults = null;
+
+    async function loadAddOptions() {
+      const box = document.getElementById('addOptions');
+      try {
+        const data = await (await fetch('/api/generation-options')).json();
+        addDefaults = data.defaults;
+        const all = { mock_exam_questions: COURSE_FIELD_LABELS.mock_exam_questions, ...OPTION_LABELS };
+        box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.85rem;">
+          ${Object.keys(all).map(key => renderOptionField(key, all[key][0], all[key][1], data.defaults[key], data.choices, undefined, data.defaults)).join('')}
+        </div>`;
+      } catch (e) {
+        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
+      }
+    }
+
+    function changedAddOptions() {
+      // Send only what differs from the defaults, so untouched settings stay on the project defaults.
+      if (!addDefaults || !document.getElementById('addOptions').querySelector('[data-opt]')) return null;
+      const picked = collectOptions('#addOptions');
+      const changed = Object.fromEntries(Object.entries(picked).filter(([k, v]) => v !== addDefaults[k]));
+      return Object.keys(changed).length ? changed : null;
+    }
+
     async function confirmAddFolders() {
       const raw = document.getElementById('folderPaths').value;
       const folders = raw.split('\n').map(s => s.trim()).filter(Boolean);
       const { chapterArts, courseArts, language } = getSelectedArtifacts();
       const autoStart = document.getElementById('autoStartQueue').checked;
+      const reuseNotebook = document.getElementById('reuseNotebook').checked;
       try {
         const res = await fetch('/api/courses', {
           method: 'POST',
@@ -1977,14 +2064,18 @@
             profile: 'full',
             chapter_artifacts: chapterArts,
             course_artifacts: courseArts,
-            language
+            language,
+            paused: !autoStart,
+            reuse_notebook: reuseNotebook,
+            options: changedAddOptions(),
           })
         });
         const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
         if (autoStart) {
           await fetch('/api/queue/start', { method: 'POST' });
         }
-        alert('成功加入課程並排入佇列！' + (autoStart ? ' 系統已自動啟動 NotebookLM 上傳與批次生成！' : ''));
+        alert(autoStart ? '已加入課程，開始自動生成。' : '已加入課程並暫停。到課程頁確認設定後，按「▶️ 開始生成」。');
         closeAddModal();
         await fetchStatus();
         await fetchCourses();

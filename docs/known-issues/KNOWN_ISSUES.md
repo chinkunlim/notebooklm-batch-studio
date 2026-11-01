@@ -30,3 +30,5 @@
 | [ISSUE-015](015-cli-tests-use-real-db.md) | 🟢 已根治 (Resolved) | CLI 測試讀寫真實資料庫 | 測試呼叫 main() 時 load_config 指向 DATA_DIR 的資料庫 | `tests/test_services_and_cli.py` |
 | [ISSUE-016](016-report-instructions-ignored.md) | 🟢 已根治 (Resolved) | 報告的自訂指示被忽略；概念解說格式在網頁連線被拒絕 | 預設格式只讀 extra_instructions；網頁連線政策關閉 CONCEPT_EXPLANATION，改用 CUSTOM | `adapters/notebooklm/client.py` |
 | [ISSUE-017](017-quiz-prompts-ten-questions.md) | 🟢 已根治 (Resolved) | 測驗 prompt 只要求 10 題，且寫死研究法領域 | 每份測驗需多批才湊滿 30 題、NotebookLM 同名重複；prompt 不適用其他科目 | `services/prompt_generator.py`, `services/artifact_runner.py` |
+| [ISSUE-018](018-study-portal-quiz-missing.md) | 🟢 已根治 (Resolved) | 學習專區的測驗分頁打不開測驗 1/2/3 | 分頁寫死兩種進階測驗，沒跟上預設改用的測驗 1/2/3 與版本檔名 | `entrypoints/static/index.html` |
+| [ISSUE-019](019-start-checkbox-ignored.md) | 🟢 已根治 (Resolved) | 「加入後立即開始」取消勾選無效 | 佇列已自動運作，新工作一進佇列就被認領；改為課程層級暫停 | `adapters/db/repository.py`, `entrypoints/static/index.html` |

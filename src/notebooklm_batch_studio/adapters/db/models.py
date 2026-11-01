@@ -35,6 +35,8 @@ class CourseRecord(Base):
         generation_options: JSON of the course's GenerationOptions (None = defaults).
         selected_chapter_artifacts: JSON list of per-lecture artifact types chosen in the web app.
         selected_course_artifacts: JSON list of course-wide artifact types chosen in the web app.
+        paused: When true, the queue does not start this course's jobs.
+        reuse_notebook: Reuse a NotebookLM notebook with the same title (and its PDFs) if one exists.
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
     """
@@ -53,6 +55,8 @@ class CourseRecord(Base):
     generation_options: Mapped[str | None] = mapped_column(Text, nullable=True)
     selected_chapter_artifacts: Mapped[str | None] = mapped_column(Text, nullable=True)
     selected_course_artifacts: Mapped[str | None] = mapped_column(Text, nullable=True)
+    paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    reuse_notebook: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now

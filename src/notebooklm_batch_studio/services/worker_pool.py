@@ -244,7 +244,7 @@ class WorkerPool:
         while self._running:
             await asyncio.sleep(0.5)
             with self.queue_provider() as repo:
-                counts = repo.count_by_status()
+                counts = repo.count_by_status(runnable_only=True)
             pending = counts.get(JobStatus.PENDING, 0)
             running = counts.get(JobStatus.RUNNING, 0)
             waiting = counts.get(JobStatus.QUOTA_WAIT, 0) if wait_for_quota else 0

@@ -11,9 +11,12 @@ import dataclasses
 import json
 import logging
 import re
+import shutil
 import uuid
+from datetime import datetime
 from typing import Any
 
+from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.models import (
     GENERATION_OPTION_CHOICES,
@@ -26,6 +29,7 @@ from notebooklm_batch_studio.domain.models import (
     JobStatus,
     effective_options,
     merge_generation_options,
+    parse_chapter_range,
 )
 from notebooklm_batch_studio.domain.naming import label_for
 from notebooklm_batch_studio.domain.repositories import CourseRepositoryProtocol, QueueRepositoryProtocol
@@ -60,10 +64,11 @@ def fields_for_type(artifact_type: str) -> list[str]:
         Option names relevant to that type.
     """
     value = artifact_type.removeprefix("course_")
+    scope = ["chapter_range"] if artifact_type.startswith("course_") else []
     for prefix, fields in _FIELDS_BY_PREFIX:
         if value.startswith(prefix):
-            return [*fields, "extra_instructions"]
-    return ["extra_instructions"]
+            return [*fields, *scope, "extra_instructions"]
+    return [*scope, "extra_instructions"]
 
 
 def option_choices() -> dict[str, Any]:
@@ -74,6 +79,7 @@ def option_choices() -> dict[str, Any]:
     """
     choices: dict[str, Any] = {k: list(v) if v else None for k, v in GENERATION_OPTION_CHOICES.items()}
     choices.update({k: "text" for k in TEXT_OPTION_LIMITS})
+    choices["chapter_range"] = "text"
     choices.update({k: {"min": low, "max": high} for k, (low, high) in NUMBER_OPTION_RANGES.items()})
     return choices
 
@@ -133,11 +139,18 @@ def apply_job_settings(job: ArtifactJob, course: Course) -> tuple[ArtifactJob, C
         prompt = re.sub(r"生成 \d+ 題", f"生成 {count} 題", prompt)
     elif value.startswith("mock_exam"):
         prompt = re.sub(r"生成 \d+ 題", f"生成 {course.mock_exam_questions} 題", prompt)
+    lectures = course.lectures
+    wanted = parse_chapter_range(options.chapter_range) if options.chapter_range else None
+    if job.lecture_no is None and wanted:
+        # A course-wide output limited to some chapters (e.g. a midterm on Ch01-Ch03) uses only
+        # those sources, and its NotebookLM title prefix shows that range.
+        lectures = [lec for lec in course.lectures if lec.no in wanted] or course.lectures
+        prompt = f"{prompt}\n\n範圍：只涵蓋第 {options.chapter_range} 講的內容。".strip()
     if options.extra_instructions:
         prompt = f"{prompt}\n\n補充要求：{options.extra_instructions}".strip()
     return (
         dataclasses.replace(job, custom_prompt=prompt or None),
-        dataclasses.replace(course, generation_options=options),
+        dataclasses.replace(course, generation_options=options, lectures=lectures),
     )
 
 
@@ -147,15 +160,22 @@ logger = logging.getLogger(__name__)
 class CourseSettingsService:
     """Read and change generation options; enqueue new versions of artifacts."""
 
-    def __init__(self, course_repo: CourseRepositoryProtocol, queue_repo: QueueRepositoryProtocol) -> None:
+    def __init__(
+        self,
+        course_repo: CourseRepositoryProtocol,
+        queue_repo: QueueRepositoryProtocol,
+        config: AppConfig | None = None,
+    ) -> None:
         """Bind the service to its repositories.
 
         Args:
             course_repo: Course persistence.
             queue_repo: Job queue persistence.
+            config: Application configuration (folders used when deleting a course).
         """
         self.course_repo = course_repo
         self.queue_repo = queue_repo
+        self.config = config or load_config()
 
     def _course(self, code: str) -> Course:
         """Load a course or raise.
@@ -400,3 +420,43 @@ class CourseSettingsService:
         )
         logger.info("Updated own settings of job %s: %s", job_id, sorted(cleaned))
         return self.get_job_options(job_id)
+
+    def set_paused(self, code: str, paused: bool) -> dict[str, Any]:
+        """Pause a course (its jobs wait) or start it (its jobs join the running queue).
+
+        Args:
+            code: Course code.
+            paused: True to pause, False to start.
+
+        Returns:
+            Course code and its new paused state.
+        """
+        self._course(code)
+        self.course_repo.set_course_paused(code, paused)
+        logger.info("Course %s %s", code, "paused" if paused else "started")
+        return {"code": code, "paused": paused}
+
+    def delete_course(self, code: str) -> dict[str, Any]:
+        """Remove a course from this app: database records go, its output folder is set aside.
+
+        Output files are moved to `DATA_DIR/deleted/<code>-<time>/` (recoverable), the source
+        PDFs in `input/` are never touched, and nothing on NotebookLM is deleted.
+
+        Args:
+            code: Course code.
+
+        Returns:
+            Removed job count and where the output files were moved (None when there were none).
+        """
+        self._course(code)
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        target = self.config.data_dir / "deleted" / f"{code}-{stamp}"
+        moved: str | None = None
+        sources = [self.config.courses_output_dir / code, *self.config.needs_review_dir.glob(f"{code}_*")]
+        for folder in (f for f in sources if f.exists()):
+            target.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(folder), str(target / folder.name))
+            moved = str(target)
+        removed = self.course_repo.delete_course(code)
+        logger.info("Deleted course %s (%d jobs); outputs moved to %s", code, removed, moved)
+        return {"code": code, "removed_jobs": removed, "moved_to": moved}

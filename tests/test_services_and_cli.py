@@ -49,6 +49,28 @@ class MockNotebookLMClient:
         """Mock check auth."""
         return True
 
+    async def find_notebook_by_title(self, title: str) -> str | None:
+        """Report that no notebook with this title exists yet.
+
+        Args:
+            title: Notebook title.
+
+        Returns:
+            None.
+        """
+        return None
+
+    async def list_ready_sources(self, notebook_id: str) -> dict[str, str]:
+        """Report no existing sources.
+
+        Args:
+            notebook_id: Notebook id.
+
+        Returns:
+            Empty mapping.
+        """
+        return {}
+
     async def create_notebook(self, title: str) -> str:
         """Mock create notebook."""
         nb_id = f"mock-nb-{len(self.notebooks_created) + 1}"

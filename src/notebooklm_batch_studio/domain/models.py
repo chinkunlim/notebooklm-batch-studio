@@ -209,6 +209,7 @@ class GenerationOptions:
         extra_instructions: Free text added to every prompt (course level) or to one output
             (job level), e.g. "the exam is mostly essays".
         video_style_prompt: Free-text visual style for videos (ignored for short videos).
+        chapter_range: Lectures a course-wide output covers, e.g. "1-3" or "1,3,5-6"; empty = all.
     """
 
     infographic_orientation: str = "portrait"
@@ -228,6 +229,7 @@ class GenerationOptions:
     quiz_difficulty: str = "auto"
     extra_instructions: str = ""
     video_style_prompt: str = ""
+    chapter_range: str = ""
 
 
 # Allowed values per GenerationOptions field (None = boolean field).
@@ -298,6 +300,11 @@ def merge_generation_options(base: GenerationOptions, changes: dict[str, object]
                 raise ValueError(f"{key} must be a whole number from {low} to {high}")
             values[key] = value
             continue
+        if key == "chapter_range":
+            if not isinstance(value, str) or (value.strip() and parse_chapter_range(value) is None):
+                raise ValueError('chapter_range must look like "1-3" or "1,3,5-6"')
+            values[key] = value.replace(" ", "")
+            continue
         if key in TEXT_OPTION_LIMITS:
             if not isinstance(value, str) or len(value) > TEXT_OPTION_LIMITS[key]:
                 raise ValueError(f"{key} must be text of at most {TEXT_OPTION_LIMITS[key]} characters")
@@ -313,6 +320,27 @@ def merge_generation_options(base: GenerationOptions, changes: dict[str, object]
             raise ValueError(f"{key} must be one of {', '.join(choices)}")
         values[key] = value
     return GenerationOptions(**values)
+
+
+def parse_chapter_range(text: str) -> set[int] | None:
+    """Parse a lecture range such as "1-3" or "1,3,5-6".
+
+    Args:
+        text: Range text (spaces ignored).
+
+    Returns:
+        The lecture numbers, or None when the text is not a valid range.
+    """
+    numbers: set[int] = set()
+    for part in text.replace(" ", "").split(","):
+        bounds = part.split("-")
+        if not part or len(bounds) > 2 or not all(b.isdigit() for b in bounds):
+            return None
+        low, high = int(bounds[0]), int(bounds[-1])
+        if low < 1 or high < low:
+            return None
+        numbers.update(range(low, high + 1))
+    return numbers
 
 
 def effective_options(course_options: GenerationOptions, overrides: dict[str, object]) -> GenerationOptions:
@@ -353,6 +381,8 @@ class Course:
         mock_exam_questions: Target question count for course-wide mock exam.
         lectures: List of lectures belonging to this course.
         generation_options: NotebookLM generation settings for this course.
+        paused: When true, the queue does not start this course's jobs (set it up first).
+        reuse_notebook: Reuse an existing NotebookLM notebook with the same title and its PDFs.
     """
 
     code: str
@@ -368,6 +398,8 @@ class Course:
     selected_course_artifacts: list[str] = field(default_factory=list)
     lectures: list[Lecture] = field(default_factory=list)
     generation_options: GenerationOptions = field(default_factory=GenerationOptions)
+    paused: bool = False
+    reuse_notebook: bool = True
 
 
 def get_lecture_prefix(filename: str, fallback_no: int) -> str:

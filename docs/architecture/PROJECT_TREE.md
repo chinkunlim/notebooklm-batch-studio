@@ -91,6 +91,7 @@ notebooklm-batch-studio/
 │   │   ├── 20261101_7b0938de08f1_drop_template_greetings_table.py
 │   │   ├── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
 │   │   ├── 20261101_d0a82d2914ab_persist_course_artifact_selections.py
+│   │   ├── 20261101_d21a28b5d5a0_add_course_paused_and_reuse_notebook_.py
 │   │   └── 20261101_d6e896ae4e2c_add_job_version_artifact_ids_and_course_.py
 │   ├── DB.md
 │   ├── env.py
@@ -125,6 +126,8 @@ notebooklm-batch-studio/
 │   │   ├── 015-cli-tests-use-real-db.md
 │   │   ├── 016-report-instructions-ignored.md
 │   │   ├── 017-quiz-prompts-ten-questions.md
+│   │   ├── 018-study-portal-quiz-missing.md
+│   │   ├── 019-start-checkbox-ignored.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -154,6 +157,7 @@ notebooklm-batch-studio/
 │       │   ├── db/
 │       │   │   ├── __init__.py
 │       │   │   ├── base.py
+│       │   │   ├── mappers.py
 │       │   │   ├── models.py
 │       │   │   ├── repository.py
 │       │   │   ├── session.py
@@ -177,6 +181,7 @@ notebooklm-batch-studio/
 │       │   ├── exceptions.py
 │       │   ├── models.py
 │       │   ├── naming.py
+│       │   ├── notebooklm_protocol.py
 │       │   ├── repositories.py
 │       │   └── usage_guide.py
 │       ├── entrypoints/
@@ -213,6 +218,7 @@ notebooklm-batch-studio/
 │       │   ├── job_views.py
 │       │   ├── orchestrator.py
 │       │   ├── prompt_generator.py
+│       │   ├── quiz_reader.py
 │       │   ├── quota_planner.py
 │       │   ├── reporter.py
 │       │   ├── study_service.py
@@ -228,6 +234,7 @@ notebooklm-batch-studio/
 │   ├── __init__.py
 │   ├── test_api_and_mcp.py
 │   ├── test_converters.py
+│   ├── test_course_admin.py
 │   ├── test_course_parser.py
 │   ├── test_course_reregistration.py
 │   ├── test_db.py

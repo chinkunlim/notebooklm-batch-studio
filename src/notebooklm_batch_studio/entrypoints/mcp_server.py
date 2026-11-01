@@ -656,6 +656,60 @@ def _register_job_option_tools(mcp: MCPServer, active_service: BatchStudioServic
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
 
+def _register_course_admin_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register per-course pause / start and course deletion tools (all require confirm).
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+
+    @mcp.tool()
+    def set_course_paused(code: str, paused: bool, confirm: bool = False) -> str:
+        """Pause a course (jobs wait) or start it (jobs run; spends quota). Requires confirm=True.
+
+        Args:
+            code: Course code.
+            paused: True to pause, False to start.
+            confirm: Must be True to apply.
+
+        Returns:
+            JSON string with the new state, or a confirmation warning.
+        """
+        if not confirm:
+            return json.dumps(
+                {"confirmed": False, "warning": "Set confirm=True to apply."}, ensure_ascii=False
+            )
+        try:
+            result = active_service.course_settings.set_paused(code, paused)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        if not paused:
+            active_service.start_queue()
+        return json.dumps(result, ensure_ascii=False)
+
+    @mcp.tool()
+    def delete_course(code: str, confirm: bool = False) -> str:
+        """Remove a course from this app; outputs move to DATA_DIR/deleted/, NotebookLM untouched.
+
+        Args:
+            code: Course code.
+            confirm: Must be True to delete.
+
+        Returns:
+            JSON string with what was removed and moved, or a confirmation warning.
+        """
+        if not confirm:
+            return json.dumps(
+                {"confirmed": False, "warning": "Set confirm=True to delete this course's local records."},
+                ensure_ascii=False,
+            )
+        try:
+            return json.dumps(active_service.course_settings.delete_course(code), ensure_ascii=False)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
 def build_mcp_server(
     service: BatchStudioService | None = None,
     study_service: StudyTrackerService | None = None,
@@ -712,6 +766,7 @@ def build_mcp_server(
     _register_regenerate_tools(mcp, active_service)
     _register_selection_tools(mcp, active_service)
     _register_job_option_tools(mcp, active_service)
+    _register_course_admin_tools(mcp, active_service)
     return mcp
 
 

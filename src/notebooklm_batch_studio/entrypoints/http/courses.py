@@ -89,13 +89,19 @@ def add_courses(req: AddCoursesRequest, request: Request) -> list[dict[str, Any]
         List of registered course summaries.
     """
     service: BatchStudioService = request.app.state.service
-    return service.add_course_folders(
-        req.folders,
-        profile=req.profile,
-        chapter_artifacts=req.chapter_artifacts,
-        course_artifacts=req.course_artifacts,
-        language=req.language,
-    )
+    try:
+        return service.add_course_folders(
+            req.folders,
+            profile=req.profile,
+            chapter_artifacts=req.chapter_artifacts,
+            course_artifacts=req.course_artifacts,
+            language=req.language,
+            paused=req.paused,
+            reuse_notebook=req.reuse_notebook,
+            options=req.options,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @courses_router.post("/api/courses/{code}/profile", tags=["Courses"], operation_id="update_course_profile")

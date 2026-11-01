@@ -9,10 +9,13 @@ from datetime import timedelta
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from notebooklm_batch_studio.adapters.db.mappers import to_domain_course, to_domain_job, to_domain_lecture
 from notebooklm_batch_studio.adapters.db.models import (
     ArtifactJobRecord,
     CourseRecord,
     LectureRecord,
+    QuizAttemptRecord,
+    QuizMistakeRecord,
     QuotaRecord,
     utc_now,
 )
@@ -23,112 +26,7 @@ from notebooklm_batch_studio.domain.models import (
     GenerationOptions,
     JobStatus,
     Lecture,
-    ProfileName,
-    merge_generation_options,
 )
-
-
-def _options_from_json(raw: str | None) -> GenerationOptions:
-    """Decode stored generation options, ignoring unknown or invalid keys.
-
-    Args:
-        raw: JSON text from the courses table, or None.
-
-    Returns:
-        GenerationOptions (defaults for anything missing).
-    """
-    if not raw:
-        return GenerationOptions()
-    options = GenerationOptions()
-    for key, value in json.loads(raw).items():
-        try:
-            options = merge_generation_options(options, {key: value})
-        except ValueError:
-            continue
-    return options
-
-
-def _to_domain_lecture(record: LectureRecord) -> Lecture:
-    """Convert a LectureRecord ORM instance to a pure domain Lecture object.
-
-    Args:
-        record: Database lecture record.
-
-    Returns:
-        Immutable domain Lecture entity.
-    """
-    return Lecture(
-        no=record.no,
-        topic=record.topic,
-        filename=record.filename,
-        sha256=record.sha256,
-        source_id=record.source_id,
-        upload_status=getattr(record, "upload_status", "pending") or "pending",
-        error_message=getattr(record, "error_message", None),
-    )
-
-
-def _to_domain_course(record: CourseRecord, lectures: list[Lecture]) -> Course:
-    """Convert a CourseRecord ORM instance to a pure domain Course object.
-
-    Args:
-        record: Database course record.
-        lectures: Associated domain lecture objects.
-
-    Returns:
-        Immutable domain Course entity.
-    """
-    return Course(
-        code=record.code,
-        name=record.name,
-        source_dir=record.source_dir,
-        notebook_id=record.notebook_id,
-        profile=(
-            ProfileName(record.profile)
-            if record.profile in ProfileName._value2member_map_
-            else ProfileName.FULL
-        ),
-        language=record.language,
-        exam_date=record.exam_date,
-        watch=record.watch,
-        mock_exam_questions=record.mock_exam_questions,
-        lectures=lectures,
-        generation_options=_options_from_json(getattr(record, "generation_options", None)),
-        selected_chapter_artifacts=json.loads(record.selected_chapter_artifacts or "[]"),
-        selected_course_artifacts=json.loads(record.selected_course_artifacts or "[]"),
-    )
-
-
-def _to_domain_job(record: ArtifactJobRecord) -> ArtifactJob:
-    """Convert an ArtifactJobRecord ORM instance to a pure domain ArtifactJob object.
-
-    Args:
-        record: Database job record.
-
-    Returns:
-        Immutable domain ArtifactJob entity.
-    """
-    return ArtifactJob(
-        id=record.id,
-        course_code=record.course_code,
-        lecture_no=record.lecture_no,
-        artifact_type=ArtifactType(record.artifact_type),
-        status=JobStatus(record.status),
-        attempts=record.attempts,
-        worker_id=record.worker_id,
-        error_message=record.error_message,
-        output_file=record.output_file,
-        custom_prompt=getattr(record, "custom_prompt", None),
-        style_options=getattr(record, "style_options", None),
-        interactive_path=getattr(record, "interactive_path", None),
-        source_origin=getattr(record, "source_origin", "auto"),
-        quota_blocked_at=record.quota_blocked_at,
-        cooldown_until=record.cooldown_until,
-        created_at=record.created_at,
-        updated_at=record.updated_at,
-        version=getattr(record, "version", 1) or 1,
-        artifact_ids=tuple(json.loads(record.artifact_ids)) if record.artifact_ids else (),
-    )
 
 
 class CourseRepository:
@@ -222,6 +120,8 @@ class CourseRepository:
                 mock_exam_questions=course.mock_exam_questions,
                 # Later re-registrations keep the stored options (see update_generation_options).
                 generation_options=json.dumps(dataclasses.asdict(course.generation_options)),
+                paused=course.paused,
+                reuse_notebook=course.reuse_notebook,
             )
             self.session.add(existing)
         else:
@@ -258,8 +158,8 @@ class CourseRepository:
         if record is None:
             return None
         stmt = select(LectureRecord).where(LectureRecord.course_code == code).order_by(LectureRecord.no.asc())
-        lectures = [_to_domain_lecture(r) for r in self.session.scalars(stmt)]
-        return _to_domain_course(record, lectures)
+        lectures = [to_domain_lecture(r) for r in self.session.scalars(stmt)]
+        return to_domain_course(record, lectures)
 
     def list_courses(self) -> list[Course]:
         """List all courses registered in the system.
@@ -275,8 +175,8 @@ class CourseRepository:
                 .where(LectureRecord.course_code == r.code)
                 .order_by(LectureRecord.no.asc())
             )
-            lectures = [_to_domain_lecture(lec) for lec in self.session.scalars(stmt)]
-            result.append(_to_domain_course(r, lectures))
+            lectures = [to_domain_lecture(lec) for lec in self.session.scalars(stmt)]
+            result.append(to_domain_course(r, lectures))
         return result
 
     def update_artifact_selection(self, code: str, chapter: list[str], whole: list[str]) -> None:
@@ -291,6 +191,41 @@ class CourseRepository:
         if record:
             record.selected_chapter_artifacts = json.dumps(chapter)
             record.selected_course_artifacts = json.dumps(whole)
+            record.updated_at = utc_now()
+            self.session.flush()
+            self.session.commit()
+
+    def delete_course(self, code: str) -> int:
+        """Delete a course and everything recorded for it in this database.
+
+        NotebookLM is not touched; only local records (jobs, lectures, study history) go.
+
+        Args:
+            code: Course code.
+
+        Returns:
+            Number of jobs that were removed.
+        """
+        removed = 0
+        for model in (QuizMistakeRecord, QuizAttemptRecord, ArtifactJobRecord, LectureRecord):
+            result = self.session.execute(delete(model).where(model.course_code == code))
+            if model is ArtifactJobRecord:
+                removed = int(getattr(result, "rowcount", 0) or 0)
+        self.session.execute(delete(CourseRecord).where(CourseRecord.code == code))
+        self.session.flush()
+        self.session.commit()
+        return removed
+
+    def set_course_paused(self, code: str, paused: bool) -> None:
+        """Pause or resume one course in the queue.
+
+        Args:
+            code: Course code.
+            paused: True to hold the course's jobs, False to let them run.
+        """
+        record = self.session.get(CourseRecord, code)
+        if record:
+            record.paused = paused
             record.updated_at = utc_now()
             self.session.flush()
             self.session.commit()
@@ -433,7 +368,12 @@ class QueueRepository:
         Returns:
             The claimed domain ArtifactJob, or None if no eligible job is waiting.
         """
-        stmt = select(ArtifactJobRecord).where(ArtifactJobRecord.status == JobStatus.PENDING.value)
+        stmt = select(ArtifactJobRecord).where(
+            ArtifactJobRecord.status == JobStatus.PENDING.value,
+            ArtifactJobRecord.course_code.not_in(
+                select(CourseRecord.code).where(CourseRecord.paused.is_(True))
+            ),
+        )
         if excluded_types:
             excluded_str = [t.value for t in excluded_types]
             stmt = stmt.where(ArtifactJobRecord.artifact_type.not_in(excluded_str))
@@ -454,7 +394,7 @@ class QueueRepository:
         record.updated_at = utc_now()
         self.session.flush()
         self.session.commit()
-        return _to_domain_job(record)
+        return to_domain_job(record)
 
     def update_job_style_options(self, job_id: str, style_options: str | None) -> None:
         """Store one job's own option overrides (JSON), or clear them with None.
@@ -673,7 +613,7 @@ class QueueRepository:
         if status:
             stmt = stmt.where(ArtifactJobRecord.status == status.value)
         stmt = stmt.order_by(ArtifactJobRecord.created_at.asc())
-        return [_to_domain_job(r) for r in self.session.scalars(stmt)]
+        return [to_domain_job(r) for r in self.session.scalars(stmt)]
 
     def get_job(self, job_id: str) -> ArtifactJob | None:
         """Retrieve a specific job by its ID.
@@ -685,7 +625,7 @@ class QueueRepository:
             Domain ArtifactJob entity or None.
         """
         record = self.session.get(ArtifactJobRecord, job_id)
-        return _to_domain_job(record) if record else None
+        return to_domain_job(record) if record else None
 
     def retry_job(self, job_id: str) -> bool:
         """Reset a job back to PENDING status to allow re-execution.
@@ -726,11 +666,14 @@ class QueueRepository:
         self.session.commit()
         return True
 
-    def count_by_status(self, course_code: str | None = None) -> dict[JobStatus, int]:
+    def count_by_status(
+        self, course_code: str | None = None, runnable_only: bool = False
+    ) -> dict[JobStatus, int]:
         """Compute the breakdown of jobs across all statuses.
 
         Args:
             course_code: Optional course filter.
+            runnable_only: Leave out paused courses (used to decide when a run is finished).
 
         Returns:
             Mapping from JobStatus to integer count.
@@ -738,6 +681,9 @@ class QueueRepository:
         stmt = select(ArtifactJobRecord.status, func.count(ArtifactJobRecord.id))
         if course_code:
             stmt = stmt.where(ArtifactJobRecord.course_code == course_code)
+        if runnable_only:
+            paused = select(CourseRecord.code).where(CourseRecord.paused.is_(True))
+            stmt = stmt.where(ArtifactJobRecord.course_code.not_in(paused))
         stmt = stmt.group_by(ArtifactJobRecord.status)
         counts = {status: 0 for status in JobStatus}
         for status_str, count in self.session.execute(stmt):

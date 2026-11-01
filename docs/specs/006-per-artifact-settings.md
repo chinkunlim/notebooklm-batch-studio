@@ -64,3 +64,12 @@
 - `domain/models.py`：`GenerationOptions` 新增 `quiz_difficulty`、`extra_instructions`、`video_style_prompt`；`effective_options()` 合併課程與單項設定（補充指示兩層都保留）。
 - `services/course_settings.py`：`apply_job_settings()` 在執行時把補充指示接到 prompt 後面、帶入合併後的設定；`get_job_options` / `set_job_options`；重新生成沿用上一版的單項設定。
 - 測試：`tests/test_job_settings.py`。
+
+## 8. 第二批（課程管理）
+
+- **加入時設定**：加入課程視窗有「⚙️ 進階產出設定」，只送出和預設值不同的項目；設定在任何工作開始前寫入。
+- **課程暫停**：取消「加入後立即開始」＝以暫停狀態加入；課程頁可「▶️ 開始生成／⏸ 暫停這門課」。HTTP `POST /api/courses/{code}/pause|start`、MCP `set_course_paused(confirm)`。
+- **章節範圍**：整門課產出可設 `chapter_range`（例如 `1-3`），只用那些講次的來源，標題前綴與 prompt 都跟著範圍。
+- **刪除課程**：`DELETE /api/courses/{code}`、MCP `delete_course(confirm)`；刪本機紀錄，產出移到 `DATA_DIR/deleted/`，講義 PDF 與 NotebookLM 不動。
+- **沿用筆記本**：重新加入時，NotebookLM 上已有同名筆記本就沿用，已上傳的 PDF（依檔名）不重傳；可在加入視窗取消。
+- 測試：`tests/test_course_admin.py`。

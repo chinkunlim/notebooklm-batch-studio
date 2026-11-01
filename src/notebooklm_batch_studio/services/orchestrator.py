@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import json
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -41,6 +40,7 @@ from notebooklm_batch_studio.services.job_views import (
     preview_job_types,
 )
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
+from notebooklm_batch_studio.services.quiz_reader import read_quiz_content
 from notebooklm_batch_studio.services.quota_planner import (
     ensure_quota_for,
     estimate_quota_plan,
@@ -89,7 +89,7 @@ class BatchStudioService:
         self.ollama_client = ollama_client
         self.worker_pool: WorkerPool | None = None
         self._is_queue_running = False
-        self.course_settings = CourseSettingsService(course_repo, queue_repo)
+        self.course_settings = CourseSettingsService(course_repo, queue_repo, self.config)
 
     @contextmanager
     def _default_queue_provider(self) -> Iterator[QueueRepositoryProtocol]:
@@ -135,13 +135,30 @@ class BatchStudioService:
         await self._check_source_limit(course)
 
         notebook_id = course.notebook_id
+        existing_sources: dict[str, str] = {}
         if not notebook_id:
             title = f"[{course.code}] {course.name}"
-            notebook_id = await self.notebooklm_client.create_notebook(title)
+            found = (
+                await self.notebooklm_client.find_notebook_by_title(title) if course.reuse_notebook else None
+            )
+            if found:
+                # Re-adding a course reuses its notebook and already-uploaded PDFs instead of
+                # creating a second notebook with the same name.
+                notebook_id = found
+                existing_sources = await self.notebooklm_client.list_ready_sources(found)
+                logger.info("Reusing NotebookLM notebook %s for %s", found, course_code)
+            else:
+                notebook_id = await self.notebooklm_client.create_notebook(title)
+                logger.info("Created NotebookLM notebook %s for %s", notebook_id, course_code)
             self.course_repo.update_notebook_id(course_code, notebook_id)
-            logger.info("Created NotebookLM notebook %s for %s", notebook_id, course_code)
 
         for lec in course.lectures:
+            if not lec.source_id and lec.filename in existing_sources:
+                self.course_repo.update_lecture_upload_status(
+                    course_code, lec.no, "ready", source_id=existing_sources[lec.filename]
+                )
+                logger.info("Lecture %d reuses existing source %s", lec.no, existing_sources[lec.filename])
+                continue
             if not lec.source_id:
                 pdf_file = Path(course.source_dir) / lec.filename
                 if not pdf_file.exists():
@@ -244,17 +261,17 @@ class BatchStudioService:
         if not nb_id:
             raise RuntimeError(f"Course {job.course_code} lacks NotebookLM notebook_id")
 
+        run_job, run_course = apply_job_settings(job, course)  # SPEC-006 (may narrow lectures)
         if job.lecture_no is not None:
             lec = next((item for item in course.lectures if item.no == job.lecture_no), None)
             source_ids = [lec.source_id] if (lec and lec.source_id) else []
             lec_dir_name = f"{job.lecture_no:02d}_{lec.topic if lec else 'lecture'}"
             out_dir = self.config.courses_output_dir / course.code / lec_dir_name
         else:
-            source_ids = [item.source_id for item in course.lectures if item.source_id]
+            source_ids = [item.source_id for item in run_course.lectures if item.source_id]
             out_dir = self.config.courses_output_dir / course.code / "_course_synthesis"
 
         out_dir.mkdir(parents=True, exist_ok=True)
-        run_job, run_course = apply_job_settings(job, course)  # SPEC-006
         path, artifact_ids = await self.runner.process_job_with_ids(
             run_job, run_course, nb_id, source_ids, out_dir
         )
@@ -310,6 +327,7 @@ class BatchStudioService:
                     "done_jobs": done_jobs,
                     "progress_percent": round((done_jobs / total_jobs * 100), 1) if total_jobs > 0 else 0.0,
                     "counts": raw_counts,
+                    "paused": c.paused,
                 }
             )
         return summaries
@@ -369,6 +387,7 @@ class BatchStudioService:
             "done_jobs": done_jobs,
             "progress_percent": round((done_jobs / total_jobs * 100), 1) if total_jobs > 0 else 0.0,
             "counts": raw_counts,
+            "paused": course.paused,
             "lectures": lectures_data,
             "jobs": jobs_data,
         }
@@ -445,6 +464,9 @@ class BatchStudioService:
         chapter_artifacts: list[str] | None = None,
         course_artifacts: list[str] | None = None,
         language: str = "zh-TW",
+        paused: bool = False,
+        reuse_notebook: bool = True,
+        options: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Register course directories and enqueue artifact generation tasks.
 
@@ -454,6 +476,9 @@ class BatchStudioService:
             chapter_artifacts: Granular list of chapter-level artifact types.
             course_artifacts: Granular list of course-wide aggregated artifact types.
             language: Target output language preference.
+            paused: Queue the jobs but hold the course until it is started.
+            reuse_notebook: Reuse a NotebookLM notebook with the same title and its PDFs.
+            options: Generation options to set before any job runs (see course_settings).
 
         Returns:
             List of dictionaries describing newly registered courses and enqueued job counts.
@@ -469,9 +494,16 @@ class BatchStudioService:
                 language=language,
                 selected_chapter_artifacts=chapter_artifacts or [],
                 selected_course_artifacts=course_artifacts or [],
+                paused=paused,
+                reuse_notebook=reuse_notebook,
             )
             self.course_repo.save_course(course)
+            # Hold the course while settings are applied, so no job starts with the old ones.
+            self.course_repo.set_course_paused(course.code, True)
+            if options:
+                self.course_settings.set_options(course.code, options)
             enqueued = self.enqueue_course_artifacts(course.code)
+            self.course_repo.set_course_paused(course.code, paused)
             registered.append(
                 {
                     "code": course.code,
@@ -480,6 +512,7 @@ class BatchStudioService:
                     "language": course.language,
                     "lecture_count": len(course.lectures),
                     "enqueued_jobs": enqueued,
+                    "paused": paused,
                 }
             )
         return registered
@@ -506,43 +539,7 @@ class BatchStudioService:
         if course is None:
             raise CourseNotFoundError(f"Course not found: {course_code}")
 
-        if lecture_no == 0:
-            quiz_dir = self.config.courses_output_dir / course.code / "_course_synthesis"
-        else:
-            lec = next((item for item in course.lectures if item.no == lecture_no), None)
-            lec_topic = lec.topic if lec else "lecture"
-            lec_dir_name = f"{lecture_no:02d}_{lec_topic}"
-            quiz_dir = self.config.courses_output_dir / course.code / lec_dir_name
-
-        suffix = "答案卷.md" if with_answers else "題目卷.md"
-        candidates = [variant, f"quiz_{variant}", variant.replace("quiz_", "")]
-        md_file = quiz_dir / suffix
-        for c in candidates:
-            v_md = quiz_dir / f"{c}_{suffix}"
-            if v_md.exists():
-                md_file = v_md
-                break
-
-        json_file = quiz_dir / "quiz.json"
-        for c in candidates:
-            v_json = quiz_dir / f"{c}_quiz.json"
-            if v_json.exists():
-                json_file = v_json
-                break
-
-        if not md_file.exists():
-            raise FileNotFoundError(f"Quiz artifact not found for {course_code} L{lecture_no} ({variant})")
-
-        json_content = json.loads(json_file.read_text(encoding="utf-8")) if json_file.exists() else None
-        return {
-            "course_code": course_code,
-            "lecture_no": lecture_no,
-            "variant": variant,
-            "with_answers": with_answers,
-            "markdown": md_file.read_text(encoding="utf-8"),
-            "json_data": json_content,
-            "quiz": json_content,
-        }
+        return read_quiz_content(self.config.courses_output_dir, course, lecture_no, variant, with_answers)
 
     def list_artifact_files(self, course_code: str, lecture_no: int | None = None) -> list[dict[str, Any]]:
         """List generated deliverable files present on disk for a course.
