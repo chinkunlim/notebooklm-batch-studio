@@ -43,3 +43,7 @@
 ### [2026-10-21 18:02 UTC] 建立任務 `TASK-004`: Phase 1D: 核心服務協同、監控與 CLI (Batch Orchestrator, Watcher, Reporter & CLI) (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-10-21 18:16 UTC] 建立任務 `TASK-005`: Phase 1E: 本機網頁、OpenAPI 與 MCP 伺服器 (Web UI, FastAPI & MCP Server) (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

@@ -6,6 +6,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 ## [Unreleased]
 
 ### Added
+- docs(midterm): complete midterm project deliverables in DATA_DIR/midterm-submission/ including 9-page report (docx/pdf), 12-slide presentation with speaker notes (pptx/pdf), AI collaboration summary (md/pdf), and 1440x900 walkthrough video with clean subtitles (mp4) (by `@antigravity`)
 - feat(study,mcp): add student study portal MCP tools, spaced repetition weakness tracking, and remote sync tools (TASK-007) (by `@antigravity`)
 - feat(spike): scaffold notebooklm spike script, sample pdf generator, and standard DATA_DIR paths (TASK-001) (`TASK-001`, by `@antigravity`)
 - feat(domain,queue): implement course domain models, sqlite queue repository, course parser, and parallel worker pool (TASK-002) (`TASK-002`, by `@antigravity`)
