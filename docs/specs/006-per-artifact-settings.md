@@ -1,6 +1,6 @@
-# SPEC-006：每一項產出各自的生成設定（構想）
+# SPEC-006：每一項產出各自的生成設定
 
-- **狀態**：Draft <!-- Draft | Approved | Implemented | Deprecated -->
+- **狀態**：Implemented <!-- Draft | Approved | Implemented | Deprecated -->
 - **日期**：2026-11-01
 - **相關任務 / ADR**：TASK-009 / ADR-005
 
@@ -41,19 +41,26 @@
 
 ## 4. 介面
 
-- **加入課程視窗**：每個勾選項目旁加「⚙️」，展開該產出的設定（套用到這門課所有講次的這種產出）。
+- **課程頁「⚙️ 產出設定」**：設定這門課所有同類產出（加入課程後調整；加入視窗本身不另設 ⚙️，避免畫面過於複雜）。
 - **課程頁任務表**：每一列加「⚙️ 設定」，只改這一份（存到該工作的 `style_options`）；尚未開始的工作直接套用，已完成的提示「按重新生成才會套用」。
+- 課程設定另外可改：產出語言、全課程模擬考題數（10–100）、整門課的補充指示、測驗難度（依測驗而定／全部簡單／中等／困難）、影片自訂風格描述。
 - 表單只顯示該產出可用的欄位；notebooklm-py 尚未支援的欄位（題型）顯示為灰色並註明「等待函式庫支援」。
 - HTTP：`GET/PUT /api/jobs/{id}/options`；MCP：`get_job_options`、`set_job_options(confirm)`。
 
 ## 5. 驗收標準
 
-- [ ] 單項設定覆蓋課程設定，課程設定覆蓋預設值（單元測試）
-- [ ] 尚未開始的工作改設定後，生成時帶入新參數
-- [ ] 重新生成沿用上一版單項設定
-- [ ] 不支援的欄位不會送給 NotebookLM
+- [x] 單項設定覆蓋課程設定，課程設定覆蓋預設值（單元測試）
+- [x] 尚未開始的工作改設定後，生成時帶入新參數
+- [x] 重新生成沿用上一版單項設定
+- [x] 不支援的欄位不會送給 NotebookLM
 
 ## 6. 未決問題
 
 - 題型（選擇／簡答）要等 notebooklm-py 下一版發布；發布後升級並開放此欄位。
 - 簡答題的本機格式：目前題目卷／答案卷與互動測驗只支援選擇題，簡答題需要新的版面與作答方式（學習專區改為「自己作答後看參考答案」）。
+
+## 7. 實作摘要
+
+- `domain/models.py`：`GenerationOptions` 新增 `quiz_difficulty`、`extra_instructions`、`video_style_prompt`；`effective_options()` 合併課程與單項設定（補充指示兩層都保留）。
+- `services/course_settings.py`：`apply_job_settings()` 在執行時把補充指示接到 prompt 後面、帶入合併後的設定；`get_job_options` / `set_job_options`；重新生成沿用上一版的單項設定。
+- 測試：`tests/test_job_settings.py`。

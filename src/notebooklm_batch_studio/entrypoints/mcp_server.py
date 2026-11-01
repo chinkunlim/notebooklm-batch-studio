@@ -606,6 +606,56 @@ def _register_selection_tools(mcp: MCPServer, active_service: BatchStudioService
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
 
+def _register_job_option_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register tools for one output's own generation settings (SPEC-006).
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+
+    @mcp.tool()
+    def get_job_options(job_id: str) -> str:
+        """Read one output's own settings and the settings it will actually use (read-only).
+
+        Args:
+            job_id: Job id (from get_course_status).
+
+        Returns:
+            JSON string with overrides, effective options and the fields its type supports.
+        """
+        try:
+            return json.dumps(
+                active_service.course_settings.get_job_options(job_id), ensure_ascii=False, indent=2
+            )
+        except ValueError as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+    @mcp.tool()
+    def set_job_options(job_id: str, options: dict[str, Any], confirm: bool = False) -> str:
+        """Set one output's own settings, e.g. {"quiz_quantity": "fewer"} (requires confirm=True).
+
+        Args:
+            job_id: Job id.
+            options: Option overrides; "" removes one and falls back to the course setting.
+            confirm: Must be True to save.
+
+        Returns:
+            JSON string with the updated settings, or a confirmation warning.
+        """
+        if not confirm:
+            return json.dumps(
+                {"confirmed": False, "warning": "Set confirm=True to save.", "options": options},
+                ensure_ascii=False,
+            )
+        try:
+            return json.dumps(
+                active_service.course_settings.set_job_options(job_id, options), ensure_ascii=False
+            )
+        except ValueError as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
 def build_mcp_server(
     service: BatchStudioService | None = None,
     study_service: StudyTrackerService | None = None,
@@ -661,6 +711,7 @@ def build_mcp_server(
     _register_settings_tools(mcp, active_service)
     _register_regenerate_tools(mcp, active_service)
     _register_selection_tools(mcp, active_service)
+    _register_job_option_tools(mcp, active_service)
     return mcp
 
 

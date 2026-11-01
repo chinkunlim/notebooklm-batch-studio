@@ -83,6 +83,32 @@ def to_enum(enum_cls: type[Enum], value: str) -> Any:
     return enum_cls[value.upper()]
 
 
+def _video_kwargs(o: GenerationOptions) -> dict[str, Any]:
+    """Video arguments that respect notebooklm-py's rules for styles.
+
+    Short (vertical) videos have a fixed style and accept no style text; a free-text style
+    description requires `VideoStyle.CUSTOM`.
+
+    Args:
+        o: Effective generation options.
+
+    Returns:
+        Keyword arguments for `generate_video`.
+    """
+    if o.video_format == "short":
+        return {"video_format": VideoFormat.SHORT, "video_style": VideoStyle.AUTO_SELECT}
+    if o.video_style_prompt:
+        return {
+            "video_format": to_enum(VideoFormat, o.video_format),
+            "video_style": VideoStyle.CUSTOM,
+            "style_prompt": o.video_style_prompt,
+        }
+    return {
+        "video_format": to_enum(VideoFormat, o.video_format),
+        "video_style": to_enum(VideoStyle, o.video_style),
+    }
+
+
 def generation_kwargs(kind: str, options: GenerationOptions | None) -> dict[str, Any]:
     """Build the notebooklm-py keyword arguments for one artifact kind from course options.
 
@@ -108,11 +134,7 @@ def generation_kwargs(kind: str, options: GenerationOptions | None) -> dict[str,
             "slide_format": to_enum(SlideDeckFormat, o.slide_format),
             "slide_length": to_enum(SlideDeckLength, o.slide_length),
         },
-        "video": {
-            "video_format": to_enum(VideoFormat, o.video_format),
-            # Short (vertical) videos have a fixed style; notebooklm-py rejects any other style.
-            "video_style": to_enum(VideoStyle, "auto_select" if o.video_format == "short" else o.video_style),
-        },
+        "video": _video_kwargs(o),
         "quiz": {"quantity": to_enum(QuizQuantity, o.quiz_quantity)},
         "flashcards": {
             "quantity": to_enum(QuizQuantity, o.flashcards_quantity),

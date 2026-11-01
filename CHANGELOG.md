@@ -21,6 +21,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(studio): rename mind maps, versioned regeneration, per-course generation options with device-sized infographics, naming guide, live web status and auto-resume (by `@claude-code`)
 - feat(studio): usage guide page, concept-explanation reports, rendered report HTML, saved artifact selections, isolated CLI tests, and split adapter downloads (by `@claude-code`)
 - feat(studio): folder picker, change artifact types after adding, study-portal viewers, browser login, numbered quiz batches, 30-question subject-neutral prompts, weekly quota, and report instructions fix (by `@claude-code`)
+- feat(settings): course-wide extra instructions, editable language and mock exam size, quiz difficulty, custom video style, and per-output settings (SPEC-006) (by `@claude-code`)
 
 ### Fixed
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)

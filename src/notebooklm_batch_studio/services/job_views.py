@@ -50,6 +50,7 @@ def format_jobs_data(
                 "artifact_type": j.artifact_type.value,
                 "label": label_for(j.artifact_type),
                 "version": j.version,
+                "style_options": j.style_options,
                 "artifact_ids": list(j.artifact_ids),
                 "cooldown_until": j.cooldown_until.isoformat() if j.cooldown_until else None,
                 "status": j.status.value,

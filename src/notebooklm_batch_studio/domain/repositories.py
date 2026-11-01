@@ -77,6 +77,15 @@ class QueueRepositoryProtocol(Protocol):
         """
         ...
 
+    def update_job_style_options(self, job_id: str, style_options: str | None) -> None:
+        """Store one job's own option overrides (JSON), or clear them with None.
+
+        Args:
+            job_id: Task UUID.
+            style_options: JSON object text, or None.
+        """
+        ...
+
     def record_artifact_ids(self, job_id: str, artifact_ids: list[str]) -> None:
         """Remember which NotebookLM artifacts / notes a job produced.
 
@@ -255,6 +264,16 @@ class CourseRepositoryProtocol(Protocol):
             code: Course code.
             chapter: Per-lecture artifact type values.
             whole: Course-wide artifact type values.
+        """
+        ...
+
+    def update_course_basics(self, code: str, language: str, mock_exam_questions: int) -> None:
+        """Change a course's output language and mock exam question target.
+
+        Args:
+            code: Course code.
+            language: Output language.
+            mock_exam_questions: Mock exam question target.
         """
         ...
 

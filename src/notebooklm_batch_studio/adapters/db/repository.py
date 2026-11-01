@@ -295,6 +295,22 @@ class CourseRepository:
             self.session.flush()
             self.session.commit()
 
+    def update_course_basics(self, code: str, language: str, mock_exam_questions: int) -> None:
+        """Change a course's output language and course mock exam question target.
+
+        Args:
+            code: Course code.
+            language: 'zh-TW', 'en' or 'bilingual'.
+            mock_exam_questions: Target number of questions in the course mock exam.
+        """
+        record = self.session.get(CourseRecord, code)
+        if record:
+            record.language = language
+            record.mock_exam_questions = mock_exam_questions
+            record.updated_at = utc_now()
+            self.session.flush()
+            self.session.commit()
+
     def update_generation_options(self, code: str, options: GenerationOptions) -> None:
         """Store a course's NotebookLM generation options.
 
@@ -439,6 +455,20 @@ class QueueRepository:
         self.session.flush()
         self.session.commit()
         return _to_domain_job(record)
+
+    def update_job_style_options(self, job_id: str, style_options: str | None) -> None:
+        """Store one job's own option overrides (JSON), or clear them with None.
+
+        Args:
+            job_id: Task UUID.
+            style_options: JSON object text, or None.
+        """
+        record = self.session.get(ArtifactJobRecord, job_id)
+        if record:
+            record.style_options = style_options
+            record.updated_at = utc_now()
+            self.session.flush()
+            self.session.commit()
 
     def record_artifact_ids(self, job_id: str, artifact_ids: list[str]) -> None:
         """Remember which NotebookLM artifacts / notes a job produced. Refs: ADR-005

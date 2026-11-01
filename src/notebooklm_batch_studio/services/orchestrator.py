@@ -35,7 +35,7 @@ from notebooklm_batch_studio.domain.repositories import (
 )
 from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
-from notebooklm_batch_studio.services.course_settings import CourseSettingsService
+from notebooklm_batch_studio.services.course_settings import CourseSettingsService, apply_job_settings
 from notebooklm_batch_studio.services.job_views import (
     format_jobs_data,
     preview_job_types,
@@ -254,7 +254,10 @@ class BatchStudioService:
             out_dir = self.config.courses_output_dir / course.code / "_course_synthesis"
 
         out_dir.mkdir(parents=True, exist_ok=True)
-        path, artifact_ids = await self.runner.process_job_with_ids(job, course, nb_id, source_ids, out_dir)
+        run_job, run_course = apply_job_settings(job, course)  # SPEC-006
+        path, artifact_ids = await self.runner.process_job_with_ids(
+            run_job, run_course, nb_id, source_ids, out_dir
+        )
         with self.queue_provider() as repo:
             repo.record_artifact_ids(job.id, artifact_ids)  # Refs: ADR-005
         return path

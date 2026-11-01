@@ -233,6 +233,7 @@ notebooklm-batch-studio/
 │   ├── test_db.py
 │   ├── test_domain_and_queue.py
 │   ├── test_guides_and_reports.py
+│   ├── test_job_settings.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py

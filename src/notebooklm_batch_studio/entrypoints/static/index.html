@@ -482,6 +482,19 @@
     </div>
   </div>
 
+  <!-- Per-output Settings Modal -->
+  <div id="jobOptionsModal" class="modal-overlay" style="display: none;">
+    <div class="modal" style="max-width: 720px; max-height: 85vh; overflow-y: auto;">
+      <h3 id="jobOptionsTitle">⚙️ 這一份產出的設定</h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">只影響這一份。選「沿用課程設定」就用課程的設定；尚未開始的工作會直接套用，已完成的請按「🔁 重新生成」。</p>
+      <div id="jobOptionsContent" style="font-size: 0.85rem;">載入中...</div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+        <button class="primary" id="btnSaveJobOptions">💾 儲存</button>
+        <button onclick="document.getElementById('jobOptionsModal').style.display='none'">取消</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Usage Guide Modal -->
   <div id="usageModal" class="modal-overlay" style="display: none;">
     <div class="modal" style="max-width: 820px; max-height: 85vh; overflow-y: auto;">
@@ -1489,7 +1502,9 @@
                 const target = j.rel_path || (j.output_file ? j.output_file.split('/').pop() : null);
                 const dlName = target ? target.split('/').pop() : null;
                 const dlLink = target ? `<a href="/api/artifacts/${code}/download/${encodeURI(target)}" target="_blank" class="btn" style="padding: 2px 8px; font-size: 0.75rem;">📥 ${escHtml(dlName.split('.').pop().toUpperCase())}</a>` : '—';
-                const promptBtn = `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">📝 Prompt</button>`;
+                const hasOwn = j.style_options ? ' ✱' : '';
+                const promptBtn = `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">📝 Prompt</button>
+                  <button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="openJobOptions('${j.id}')" title="只調整這一份產出的設定">⚙️ 設定${hasOwn}</button>`;
                 const slot = `${j.lecture_no}|${j.artifact_type}`;
                 const total = versionsBySlot[slot] || 1;
                 const ver = `<span class="badge ${j.version > 1 ? 'badge-warning' : 'badge-neutral'}">v${j.version || 1}</span>` +
@@ -1585,7 +1600,48 @@
       quiz_quantity: ['測驗題量（每次生成）', { fewer: '較少', standard: '標準', more: '較多' }],
       flashcards_quantity: ['閃卡數量', { fewer: '較少', standard: '標準', more: '較多' }],
       flashcards_difficulty: ['閃卡難度', { easy: '簡單', medium: '中等', hard: '困難' }],
+      quiz_difficulty: ['測驗難度', { auto: '依測驗而定（1 簡單、2 中等、3 困難）', easy: '全部簡單', medium: '全部中等', hard: '全部困難' }],
+      video_style_prompt: ['影片自訂風格描述（填了就用這段描述，直式短片不適用）', 'text'],
+      extra_instructions: ['補充指示（加在每一份產出的要求後面，例如「考試以申論題為主」）', 'textarea'],
     };
+    // Course-only fields shown at the top of the course settings panel.
+    const COURSE_FIELD_LABELS = {
+      language: ['產出語言', { 'zh-TW': '繁體中文', en: 'English', bilingual: '中英雙語' }],
+      mock_exam_questions: ['全課程模擬考題數（10–100）', 'number'],
+    };
+
+    function renderOptionField(key, label, names, value, choices, inherit) {
+      const inheritOpt = inherit !== undefined ? `<option value="">沿用課程設定（${escHtml(String(inherit))}）</option>` : '';
+      if (names === null) {
+        if (inherit !== undefined) {
+          return `<label>${label}<select data-opt="${key}" style="margin-top:4px;">${inheritOpt}
+            <option value="true" ${value === true ? 'selected' : ''}>是</option><option value="false" ${value === false ? 'selected' : ''}>否</option></select></label>`;
+        }
+        return `<label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" data-opt="${key}" ${value ? 'checked' : ''}> ${label}</label>`;
+      }
+      if (names === 'textarea') {
+        return `<label style="grid-column: 1 / -1;">${label}<textarea data-opt="${key}" rows="2" style="margin-top:4px;" placeholder="${inherit !== undefined ? '留空就只用課程的補充指示' : '例如：考試以申論題為主；重點放在第 3 章的公式'}">${escHtml(value || '')}</textarea></label>`;
+      }
+      if (names === 'text') {
+        return `<label>${label}<input data-opt="${key}" value="${escHtml(value || '')}" style="margin-top:4px;"></label>`;
+      }
+      if (names === 'number') {
+        return `<label>${label}<input type="number" min="10" max="100" data-opt="${key}" data-num="1" value="${value ?? ''}" style="margin-top:4px;"></label>`;
+      }
+      const opts = (choices[key] || []).map(c => `<option value="${c}" ${c === value ? 'selected' : ''}>${names[c] || c}</option>`).join('');
+      return `<label>${label}<select data-opt="${key}" style="margin-top:4px;">${inheritOpt}${opts}</select></label>`;
+    }
+
+    function collectOptions(selector) {
+      const options = {};
+      document.querySelectorAll(`${selector} [data-opt]`).forEach(el => {
+        let v = el.type === 'checkbox' ? el.checked : el.value;
+        if (el.dataset.num) v = parseInt(v, 10);
+        if (el.tagName === 'SELECT' && (v === 'true' || v === 'false')) v = v === 'true';
+        options[el.dataset.opt] = v;
+      });
+      return options;
+    }
 
     async function loadCourseOptions(code) {
       const box = document.getElementById('detailOptions');
@@ -1593,16 +1649,9 @@
         const res = await fetch(`/api/courses/${code}/options`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || res.statusText);
+        const all = { ...COURSE_FIELD_LABELS, ...OPTION_LABELS };
         box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; font-size: 0.85rem;">
-          ${Object.keys(OPTION_LABELS).map(key => {
-            const [label, names] = OPTION_LABELS[key];
-            const value = data.options[key];
-            if (names === null) {
-              return `<label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" data-opt="${key}" ${value ? 'checked' : ''}> ${label}</label>`;
-            }
-            const opts = (data.choices[key] || []).map(c => `<option value="${c}" ${c === value ? 'selected' : ''}>${names[c] || c}</option>`).join('');
-            return `<label>${label}<select data-opt="${key}" style="margin-top:4px;">${opts}</select></label>`;
-          }).join('')}
+          ${Object.keys(all).map(key => renderOptionField(key, all[key][0], all[key][1], data.options[key], data.choices)).join('')}
         </div>
         <div style="display:flex; justify-content:flex-end; margin-top: 12px;"><button class="primary" onclick="saveCourseOptions('${code}')">💾 儲存產出設定</button></div>`;
       } catch (e) {
@@ -1645,10 +1694,7 @@
     }
 
     async function saveCourseOptions(code) {
-      const options = {};
-      document.querySelectorAll('#detailOptions [data-opt]').forEach(el => {
-        options[el.dataset.opt] = el.type === 'checkbox' ? el.checked : el.value;
-      });
+      const options = collectOptions('#detailOptions');
       try {
         const res = await fetch(`/api/courses/${code}/options`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ options }),
@@ -1672,6 +1718,50 @@
           </tbody></table>`;
       } catch (e) {
         box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
+      }
+    }
+
+    async function openJobOptions(jobId) {
+      document.getElementById('jobOptionsModal').style.display = 'flex';
+      const box = document.getElementById('jobOptionsContent');
+      box.innerHTML = '載入中...';
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/options`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        document.getElementById('jobOptionsTitle').textContent = `⚙️ ${data.label} 的設定`;
+        const describe = (key, v) => {
+          const names = OPTION_LABELS[key] ? OPTION_LABELS[key][1] : null;
+          if (typeof v === 'boolean') return v ? '是' : '否';
+          if (names && typeof names === 'object') return names[v] || v;
+          return v || '無';
+        };
+        box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;">
+          ${data.fields.map(key => {
+            const [label, names] = OPTION_LABELS[key];
+            const inherit = key === 'extra_instructions' ? '' : describe(key, data.effective[key]);
+            return renderOptionField(key, label, names, data.overrides[key], data.choices, inherit);
+          }).join('')}
+        </div>
+        ${data.unsupported.map(u => `<div style="margin-top:10px; color:var(--text-muted); font-size:0.8rem;">⏳ ${escHtml(u)}</div>`).join('')}`;
+        document.getElementById('btnSaveJobOptions').onclick = () => saveJobOptions(jobId);
+      } catch (e) {
+        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
+      }
+    }
+
+    async function saveJobOptions(jobId) {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/options`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ options: collectOptions('#jobOptionsContent') }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        document.getElementById('jobOptionsModal').style.display = 'none';
+        if (activeCourseCode) await viewCourseDetail(activeCourseCode, true);
+      } catch (e) {
+        alert('儲存失敗：' + e.message);
       }
     }
 

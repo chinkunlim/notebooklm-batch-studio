@@ -203,6 +203,11 @@ class GenerationOptions:
         flashcards_quantity: 'fewer', 'standard' or 'more'.
         flashcards_difficulty: 'easy', 'medium' or 'hard'.
         device_exports: Whether to fit infographics to A4 / iPad Air 4 / MacBook Pro 14.
+        quiz_difficulty: 'auto' (each quiz keeps its own level: quiz 1 easy, 2 medium, 3 hard),
+            or 'easy' / 'medium' / 'hard' to force one level.
+        extra_instructions: Free text added to every prompt (course level) or to one output
+            (job level), e.g. "the exam is mostly essays".
+        video_style_prompt: Free-text visual style for videos (ignored for short videos).
     """
 
     infographic_orientation: str = "portrait"
@@ -219,6 +224,9 @@ class GenerationOptions:
     flashcards_quantity: str = "more"
     flashcards_difficulty: str = "medium"
     device_exports: bool = True
+    quiz_difficulty: str = "auto"
+    extra_instructions: str = ""
+    video_style_prompt: str = ""
 
 
 # Allowed values per GenerationOptions field (None = boolean field).
@@ -259,7 +267,11 @@ GENERATION_OPTION_CHOICES: dict[str, tuple[str, ...] | None] = {
     "flashcards_quantity": ("fewer", "standard", "more"),
     "flashcards_difficulty": ("easy", "medium", "hard"),
     "device_exports": None,
+    "quiz_difficulty": ("auto", "easy", "medium", "hard"),
 }
+
+# Free-text options and their maximum length.
+TEXT_OPTION_LIMITS: dict[str, int] = {"extra_instructions": 2000, "video_style_prompt": 300}
 
 
 def merge_generation_options(base: GenerationOptions, changes: dict[str, object]) -> GenerationOptions:
@@ -277,6 +289,11 @@ def merge_generation_options(base: GenerationOptions, changes: dict[str, object]
     """
     values = dict(base.__dict__)
     for key, value in changes.items():
+        if key in TEXT_OPTION_LIMITS:
+            if not isinstance(value, str) or len(value) > TEXT_OPTION_LIMITS[key]:
+                raise ValueError(f"{key} must be text of at most {TEXT_OPTION_LIMITS[key]} characters")
+            values[key] = value.strip()
+            continue
         if key not in GENERATION_OPTION_CHOICES:
             raise ValueError(f"Unknown generation option: {key}")
         choices = GENERATION_OPTION_CHOICES[key]
@@ -287,6 +304,28 @@ def merge_generation_options(base: GenerationOptions, changes: dict[str, object]
             raise ValueError(f"{key} must be one of {', '.join(choices)}")
         values[key] = value
     return GenerationOptions(**values)
+
+
+def effective_options(course_options: GenerationOptions, overrides: dict[str, object]) -> GenerationOptions:
+    """Combine course options with one output's own overrides (SPEC-006).
+
+    Overrides replace the course value field by field, except `extra_instructions`, where the
+    output's text is added after the course's text so both apply.
+
+    Args:
+        course_options: The course's options.
+        overrides: Validated per-output overrides (may be empty).
+
+    Returns:
+        Options to use for that output.
+    """
+    changes = dict(overrides)
+    job_extra = str(changes.pop("extra_instructions", "") or "").strip()
+    merged = merge_generation_options(course_options, changes)
+    if job_extra:
+        combined = "\n".join(t for t in (course_options.extra_instructions, job_extra) if t)
+        merged = GenerationOptions(**{**merged.__dict__, "extra_instructions": combined})
+    return merged
 
 
 @dataclass(frozen=True)

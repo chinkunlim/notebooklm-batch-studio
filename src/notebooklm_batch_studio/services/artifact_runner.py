@@ -343,6 +343,8 @@ class ArtifactRunner:
                 is saved under `needs_review/` and its path is carried on the error.
         """
         variant, difficulty = QUIZ_VARIANTS.get(job.artifact_type, ("1-基礎", None))
+        if course.generation_options.quiz_difficulty != "auto":  # forced by course / output settings
+            difficulty = course.generation_options.quiz_difficulty
         variant_prefix = job.artifact_type.value
         prompt = (
             job.custom_prompt or f"Generate rigorous questions for {variant} in language: {course.language}"
@@ -493,6 +495,8 @@ class ArtifactRunner:
             NeedsReviewError: When fewer than the target questions were collected.
         """
         target_q = course.mock_exam_questions or 50
+        forced = course.generation_options.quiz_difficulty
+        mock_difficulty = None if forced == "auto" else forced
         batches: list[Quiz] = []
         art_ids: list[str] = []
         variant_prefix = job.artifact_type.value
@@ -513,7 +517,7 @@ class ArtifactRunner:
                 )
                 prompt = job.custom_prompt or default_prompt
                 art_id, raw = await self._generate_quiz_batch(
-                    nb_id, source_ids, prompt, None, tmp_json, course.generation_options
+                    nb_id, source_ids, prompt, mock_difficulty, tmp_json, course.generation_options
                 )
                 art_ids.append(art_id)
                 if raw is not None:

@@ -181,3 +181,48 @@ def get_folders(
         return browse_folders(path, request.app.state.config.courses_input_dir)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@settings_router.get("/api/jobs/{job_id}/options", tags=["Settings"], operation_id="get_job_options")
+def get_job_options(job_id: str, request: Request) -> dict[str, Any]:
+    """Read one output's own settings, the settings it will use, and the fields its type supports.
+
+    Args:
+        job_id: Job id.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Overrides, effective options, relevant fields and choices.
+
+    Raises:
+        HTTPException: 404 when the job does not exist.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return service.course_settings.get_job_options(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@settings_router.put("/api/jobs/{job_id}/options", tags=["Settings"], operation_id="set_job_options")
+def set_job_options(job_id: str, req: UpdateOptionsRequest, request: Request) -> dict[str, Any]:
+    """Set one output's own settings (empty values fall back to the course settings).
+
+    Args:
+        job_id: Job id.
+        req: Option overrides.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Updated overrides and effective options.
+
+    Raises:
+        HTTPException: 404 for an unknown job, 422 for an invalid option.
+    """
+    service: BatchStudioService = request.app.state.service
+    if service.queue_repo.get_job(job_id) is None:
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+    try:
+        return service.course_settings.set_job_options(job_id, req.options)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
