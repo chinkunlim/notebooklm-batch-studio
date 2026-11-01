@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
-from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
+from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError, OllamaUnavailableError
 from notebooklm_batch_studio.entrypoints.schemas import (
     AddCoursesRequest,
     CourseSummaryResponse,
@@ -156,7 +156,7 @@ def refine_course_prompts(code: str, request: Request) -> dict[str, Any]:
         Summary detailing count of updated prompts.
 
     Raises:
-        HTTPException: 404 if course not found.
+        HTTPException: 404 if course not found, 503 if Ollama is unavailable.
     """
     service: BatchStudioService = request.app.state.service
     try:
@@ -164,6 +164,8 @@ def refine_course_prompts(code: str, request: Request) -> dict[str, Any]:
         return {"code": code, "updated_prompts": updated}
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except OllamaUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @courses_router.post(

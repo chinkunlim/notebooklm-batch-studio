@@ -13,3 +13,5 @@
 
 | ISSUE | 狀態 | 標題 | 現象 | 程式與測試 |
 |---|---|---|---|---|
+| [ISSUE-001](001-ollama-refine-noop.md) | 🟢 已根治 (Resolved) | Ollama 提示詞改寫實際上沒有呼叫 Ollama | refine_course_prompts_with_ollama 回報成功改寫 N 筆，但 prompt 內容其實沒變 | `services/orchestrator.py`, `entrypoints/api.py`, `entrypoints/mcp_server.py` |
+| [ISSUE-002](002-quiz-needs-review-status.md) | 🟢 已根治 (Resolved) | 題數不足的測驗被標成 DONE 而非 NEEDS_REVIEW | 湊不滿 30 題的測驗已隔離到 needs_review/，但工作狀態是 DONE，總覽報告看不到需審查警告 | `services/artifact_runner.py`, `services/worker_pool.py`, `adapters/db/repository.py` |

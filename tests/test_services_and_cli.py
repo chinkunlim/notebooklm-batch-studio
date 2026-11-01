@@ -15,6 +15,7 @@ from pathlib import Path
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.config.settings import AppConfig
+from notebooklm_batch_studio.domain.exceptions import NeedsReviewError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
@@ -303,10 +304,11 @@ class TestBatchStudioService(unittest.IsolatedAsyncioTestCase):
                 lecture_no=1,
                 artifact_type=ArtifactType.QUIZ_1,
             )
-            quiz_out = await service.execute_job(quiz_job)
-            self.assertTrue(Path(quiz_out).exists())
-            # Since mock client returns 10 questions and 10 < 30, it gets quarantined to needs_review/
-            self.assertIn("needs_review", quiz_out)
+            # Mock client returns 10 questions (< 30): quiz is quarantined and NeedsReviewError raised
+            with self.assertRaises(NeedsReviewError) as ctx:
+                await service.execute_job(quiz_job)
+            self.assertTrue(Path(ctx.exception.output_file).exists())
+            self.assertIn("needs_review", ctx.exception.output_file)
 
 
 class TestCourseWatcher(unittest.TestCase):

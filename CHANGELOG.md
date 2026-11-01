@@ -25,6 +25,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(web): wire up background worker pool, auto-setup NotebookLM and add queue controls (by `@antigravity`)
 - fix: resolve audit report issues across quiz variants, prompts, remote sync, study portal, and mcp tools (by `@antigravity`)
 - fix(api,quiz): share database engine between services, sanitize json script tags, and document spec 004 (by `@antigravity`)
+- fix(services): mark incomplete quizzes as needs_review and wire Ollama client into prompt refinement (by `@claude-code`)
 
 ### Documentation
 - docs(adr): add ADR-002 (session token authentication) and ADR-003 (student study portal and spaced repetition) (by `@antigravity`)

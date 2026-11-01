@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
-from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
+from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError, OllamaUnavailableError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     Course,
@@ -26,6 +26,7 @@ from notebooklm_batch_studio.domain.models import (
 from notebooklm_batch_studio.domain.repositories import (
     CourseRepositoryProtocol,
     NotebookLMClientProtocol,
+    OllamaClientProtocol,
     QueueRepositoryProtocol,
 )
 from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
@@ -92,6 +93,7 @@ class BatchStudioService:
         notebooklm_client: NotebookLMClientProtocol,
         config: AppConfig | None = None,
         queue_provider: QueueSessionProvider | None = None,
+        ollama_client: OllamaClientProtocol | None = None,
     ) -> None:
         """Initialize the batch studio service.
 
@@ -101,6 +103,7 @@ class BatchStudioService:
             notebooklm_client: Protocol client for NotebookLM operations.
             config: Application configuration.
             queue_provider: Factory returning scoped QueueRepository instances.
+            ollama_client: Local Ollama client used for prompt refinement (None disables it).
         """
         self.course_repo = course_repo
         self.queue_repo = queue_repo
@@ -109,6 +112,7 @@ class BatchStudioService:
         self.reporter = CourseReporter(self.config.courses_output_dir)
         self.runner = ArtifactRunner(self.notebooklm_client, self.config)
         self.queue_provider = queue_provider or self._default_queue_provider
+        self.ollama_client = ollama_client
         self.worker_pool: WorkerPool | None = None
         self._is_queue_running = False
 
@@ -699,32 +703,43 @@ class BatchStudioService:
         return self.queue_repo.update_job_prompt(job_id, prompt)
 
     def refine_course_prompts_with_ollama(self, course_code: str) -> int:
-        """Refine all jobs' prompts for a course using Ollama gemma4.
+        """Rewrite prompts of a course's unfinished jobs using local Ollama.
+
+        DONE and RUNNING jobs are skipped; only prompts that actually changed are counted.
+        Refs: ISSUE-001
 
         Args:
             course_code: Course identifier.
 
         Returns:
-            Count of successfully refined prompts.
+            Count of prompts that were replaced by an Ollama-refined version.
+
+        Raises:
+            CourseNotFoundError: If the course does not exist.
+            OllamaUnavailableError: If no Ollama client is configured or it is unreachable.
         """
         course = self.course_repo.get_course(course_code)
         if course is None:
             raise CourseNotFoundError(f"Course not found: {course_code}")
+        if self.ollama_client is None or not self.ollama_client.is_available():
+            raise OllamaUnavailableError(
+                "Ollama is not configured or not reachable; prompts were not changed"
+            )
 
-        prompt_gen = PromptGenerator()
-        jobs = self.queue_repo.list_jobs(course_code=course_code)
+        prompt_gen = PromptGenerator(self.ollama_client)
+        skip = (JobStatus.DONE, JobStatus.RUNNING)
+        jobs = [j for j in self.queue_repo.list_jobs(course_code=course_code) if j.status not in skip]
         updated_count = 0
         for j in jobs:
-            topic = "全範圍整合"
-            if j.lecture_no is not None:
-                lec = next((item for item in course.lectures if item.no == j.lecture_no), None)
-                if lec:
-                    topic = lec.topic
+            lec = next((item for item in course.lectures if item.no == j.lecture_no), None)
+            topic = lec.topic if lec else "全範圍整合"
+            base = prompt_gen.get_base_blueprint_prompt(j.artifact_type, topic, course.name, course.language)
             refined = prompt_gen.generate_refined_prompt(
                 j.artifact_type, topic, course.name, course.language, use_ollama=True
             )
-            if refined and self.queue_repo.update_job_prompt(j.id, refined):
+            if refined and refined != base and self.queue_repo.update_job_prompt(j.id, refined):
                 updated_count += 1
+        logger.info("Refined %d/%d prompts with Ollama for course %s", updated_count, len(jobs), course_code)
         return updated_count
 
     async def sync_course_artifacts(self, course_code: str) -> dict[str, Any]:

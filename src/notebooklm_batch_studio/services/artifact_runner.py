@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.domain.exceptions import NeedsReviewError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
@@ -244,7 +245,11 @@ class ArtifactRunner:
             out_dir: Target output directory.
 
         Returns:
-            Path string to the resulting quiz.json or quarantined file.
+            Path string to the resulting quiz.json.
+
+        Raises:
+            NeedsReviewError: When fewer than 30 questions were collected; the partial quiz
+                is saved under `needs_review/` and its path is carried on the error.
         """
         variant_map = {
             ArtifactType.QUIZ_1: "1-基礎",
@@ -288,12 +293,9 @@ class ArtifactRunner:
             review_dir.mkdir(parents=True, exist_ok=True)
             incomplete_json = review_dir / f"{variant_prefix}_quiz.json"
             incomplete_json.write_text(quiz_to_json(merged_quiz), encoding="utf-8")
-            logger.warning(
-                "Quiz incomplete (%d questions), quarantined to %s",
-                len(merged_quiz.questions),
-                review_dir,
-            )
-            return str(incomplete_json)
+            count = len(merged_quiz.questions)
+            logger.warning("Quiz incomplete (%d questions), quarantined to %s", count, review_dir)
+            raise NeedsReviewError(f"Quiz has {count}/30 questions", output_file=str(incomplete_json))
 
         return _save_quiz_files(out_dir, merged_quiz, file_prefix=variant_prefix)
 

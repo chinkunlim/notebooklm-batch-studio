@@ -8,7 +8,7 @@ import time
 import uuid
 from typing import Awaitable, Callable, ContextManager
 
-from notebooklm_batch_studio.domain.exceptions import QuotaExceededError
+from notebooklm_batch_studio.domain.exceptions import NeedsReviewError, QuotaExceededError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
@@ -267,6 +267,11 @@ class WorkerPool:
             with self.queue_provider() as repo:
                 repo.complete_job(job.id, output_file)
             logger.info("Worker %s completed job=%s output=%s", worker_id, job.id, output_file)
+
+        except NeedsReviewError as review:  # Refs: ISSUE-002
+            logger.warning("Worker %s job=%s needs review: %s", worker_id, job.id, review)
+            with self.queue_provider() as repo:
+                repo.mark_needs_review(job.id, review.output_file, str(review))
 
         except QuotaExceededError as q_err:
             logger.warning(

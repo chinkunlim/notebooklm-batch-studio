@@ -22,7 +22,7 @@ class OllamaClient:
     def __init__(
         self,
         base_url: str | None = None,
-        model: str = "gemma4:latest",
+        model: str | None = None,
         timeout_seconds: float = 30.0,
         config: AppConfig | None = None,
     ) -> None:
@@ -30,13 +30,13 @@ class OllamaClient:
 
         Args:
             base_url: Ollama base endpoint (defaults to config or http://127.0.0.1:11434).
-            model: Model tag on local Ollama.
+            model: Model tag on local Ollama (defaults to config `ollama_model`).
             timeout_seconds: Request timeout in seconds.
             config: Optional application configuration.
         """
         cfg = config or load_config()
         self.base_url = (base_url or cfg.ollama_base_url).rstrip("/")
-        self.model = model
+        self.model = model or cfg.ollama_model
         self.timeout_seconds = timeout_seconds
 
     def is_available(self) -> bool:

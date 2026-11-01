@@ -38,6 +38,28 @@ class IncompleteArtifactError(StudioError):
     """Raised when an extracted artifact fails validation (e.g., missing choices or empty tree)."""
 
 
+class NeedsReviewError(StudioError):
+    """Raised when an artifact was saved but failed quality checks and needs manual review.
+
+    Attributes:
+        output_file: Path of the quarantined file under `needs_review/`.
+    """
+
+    def __init__(self, message: str, output_file: str) -> None:
+        """Initialize NeedsReviewError.
+
+        Args:
+            message: Why the artifact needs review (e.g. too few questions).
+            output_file: Path of the quarantined file.
+        """
+        super().__init__(message)
+        self.output_file = output_file
+
+
+class OllamaUnavailableError(StudioError):
+    """Raised when an operation needs local Ollama but no client is configured or it is unreachable."""
+
+
 class CourseNotFoundError(StudioError):
     """Raised when an operation targets a course code that does not exist."""
 

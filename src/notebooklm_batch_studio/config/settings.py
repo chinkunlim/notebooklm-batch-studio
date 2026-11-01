@@ -69,6 +69,7 @@ class AppConfig:
         log_to_file: Also write `<data_dir>/logs/app.log` and `errors.log` (default on; tests turn it off).
         timeout_seconds: Timeout for outgoing API calls.
         ollama_base_url: Local Ollama endpoint (always 127.0.0.1, never localhost / 0.0.0.0).
+        ollama_model: Ollama model tag used for prompt refinement (`OLLAMA_MODEL`).
         data_dir: Root folder for all data, outside the project folder.
         database_url: SQLAlchemy URL; SQLite file `<data_dir>/db/app.db` by default.
         notebooklm_home: Folder holding NotebookLM credentials and session states.
@@ -79,6 +80,7 @@ class AppConfig:
     log_to_file: bool = True
     timeout_seconds: int = 15
     ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "gemma4:latest"
     data_dir: Path = resolve_data_dir(DEFAULT_DATA_DIR)
     database_url: str = "sqlite://"
     notebooklm_home: Path = Path("~/.config/notebooklm-batch-studio").expanduser()
@@ -205,6 +207,7 @@ def load_config() -> AppConfig:
         log_to_file=_flag(os.environ.get("LOG_TO_FILE", "true")),
         timeout_seconds=int(os.environ.get("API_TIMEOUT_SECONDS", "15")),
         ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/"),
+        ollama_model=os.environ.get("OLLAMA_MODEL", "gemma4:latest").strip(),
         data_dir=data_dir,
         database_url=os.environ.get("DATABASE_URL", "").strip() or f"sqlite:///{data_dir / 'db' / 'app.db'}",
         notebooklm_home=notebooklm_home,

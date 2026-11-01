@@ -1373,6 +1373,7 @@
                 else if (j.status === 'running') badgeClass = 'badge-warning';
                 else if (j.status === 'failed') badgeClass = 'badge-danger';
                 else if (j.status === 'quota_wait') badgeClass = 'badge-warning';
+                else if (j.status === 'needs_review') badgeClass = 'badge-warning';
 
                 const scope = j.lecture_no ? `L${String(j.lecture_no).padStart(2, '0')}` : '全課程';
                 const filename = j.output_file ? j.output_file.split('/').pop() : null;

@@ -383,6 +383,24 @@ class QueueRepository:
             self.session.flush()
             self.session.commit()
 
+    def mark_needs_review(self, job_id: str, output_file: str, message: str) -> None:
+        """Mark a job as NEEDS_REVIEW; it is not retried until the user retries it.
+
+        Args:
+            job_id: Task UUID.
+            output_file: Path of the quarantined output file.
+            message: Why the output needs review.
+        """
+        record = self.session.get(ArtifactJobRecord, job_id)
+        if record:
+            record.status = JobStatus.NEEDS_REVIEW.value
+            record.output_file = output_file
+            record.error_message = message
+            record.worker_id = None
+            record.updated_at = utc_now()
+            self.session.flush()
+            self.session.commit()
+
     def fail_job(self, job_id: str, error_message: str, max_attempts: int = 3) -> None:
         """Handle a job failure, retrying if under max_attempts or marking FAILED.
 

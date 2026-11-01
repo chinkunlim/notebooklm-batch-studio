@@ -76,6 +76,16 @@ class QueueRepositoryProtocol(Protocol):
         """
         ...
 
+    def mark_needs_review(self, job_id: str, output_file: str, message: str) -> None:
+        """Mark a job as finished but needing manual review (no automatic retry).
+
+        Args:
+            job_id: Task UUID.
+            output_file: Path of the quarantined output file.
+            message: Why the output needs review.
+        """
+        ...
+
     def fail_job(self, job_id: str, error_message: str, max_attempts: int = 3) -> None:
         """Record job execution failure.
 

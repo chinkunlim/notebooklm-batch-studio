@@ -22,6 +22,7 @@ from notebooklm_batch_studio.adapters.db.repository import CourseRepository, Que
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
+from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
@@ -111,6 +112,7 @@ def _resolve_service(
         notebooklm_client=adapter,
         config=cfg,
         queue_provider=queue_provider,
+        ollama_client=OllamaClient(config=cfg),
     )
 
 
