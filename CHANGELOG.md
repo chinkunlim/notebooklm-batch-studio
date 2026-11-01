@@ -34,6 +34,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
+- style: wrap the memory-strength usage line (by `@claude-code`)
 
 ### Fixed
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)
