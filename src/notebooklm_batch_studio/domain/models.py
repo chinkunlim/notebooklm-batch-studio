@@ -543,6 +543,7 @@ class QuizMistake:
         explanation: Detailed academic rationale.
         is_resolved: Whether the question has been resolved.
         created_at: Creation timestamp.
+        confidence: How sure the student was ('sure', 'unsure', 'guess'), or None if not rated.
     """
 
     id: str
@@ -556,6 +557,7 @@ class QuizMistake:
     explanation: str
     is_resolved: bool = False
     created_at: datetime | None = None
+    confidence: str | None = None
 
 
 @dataclass
@@ -571,6 +573,7 @@ class QuizAttempt:
         total_questions: Total number of questions.
         created_at: Submission timestamp.
         mistakes: Optional list of mistake entities recorded during this attempt.
+        confidence_summary: Counts from the confidence ratings, e.g. {"sure_wrong": 2, "guess_right": 3}.
     """
 
     id: str
@@ -581,3 +584,4 @@ class QuizAttempt:
     total_questions: int
     created_at: datetime | None = None
     mistakes: list[QuizMistake] = field(default_factory=list)
+    confidence_summary: dict[str, int] | None = None

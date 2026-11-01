@@ -14,6 +14,7 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
+from notebooklm_batch_studio.adapters.db.learning_repository import LearningRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
@@ -26,8 +27,10 @@ from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
 from notebooklm_batch_studio.entrypoints.mcp_course_settings import register_course_settings_tools
 from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
+from notebooklm_batch_studio.entrypoints.mcp_learning import register_learning_tools
 from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
 from notebooklm_batch_studio.services.folder_browser import browse_folders
+from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
@@ -619,6 +622,7 @@ def build_mcp_server(
     study_service: StudyTrackerService | None = None,
     config: AppConfig | None = None,
     study_plan: StudyPlanService | None = None,
+    learning: LearningService | None = None,
 ) -> MCPServer:
     """Build and configure the MCPServer instance with all batch studio tools.
 
@@ -628,6 +632,7 @@ def build_mcp_server(
         config: Application configuration.
         study_plan: Optional study-plan service (built from the database when omitted and the
             other services are built here too).
+        learning: Optional learning service (reader, memory, tutor); built like study_plan.
 
     Returns:
         Configured MCPServer with registered tool handlers.
@@ -660,6 +665,8 @@ def build_mcp_server(
                 study_plan = StudyPlanService(
                     course_repo, queue_repo, study_repo, ReviewRepository(session), adapter
                 )
+            if learning is None:
+                learning = LearningService(course_repo, LearningRepository(session), adapter)
     else:
         active_service = service
         active_study = study_service
@@ -680,6 +687,8 @@ def build_mcp_server(
     register_job_prompt_tools(mcp, active_service)
     if study_plan is not None:
         register_study_plan_tools(mcp, study_plan)
+    if learning is not None:
+        register_learning_tools(mcp, learning)
     return mcp
 
 

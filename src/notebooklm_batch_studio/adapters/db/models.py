@@ -166,6 +166,7 @@ class QuizAttemptRecord(Base):
         quiz_variant: Variant of quiz (e.g., academic, concept).
         score: Score achieved.
         total_questions: Total number of questions.
+        confidence_json: JSON counts from the confidence ratings, e.g. {"sure_wrong": 2, "guess_right": 3}.
         created_at: Submission timestamp in UTC.
     """
 
@@ -177,6 +178,7 @@ class QuizAttemptRecord(Base):
     quiz_variant: Mapped[str] = mapped_column(String(50), nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     total_questions: Mapped[int] = mapped_column(Integer, nullable=False)
+    confidence_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 
@@ -194,6 +196,7 @@ class QuizMistakeRecord(Base):
         selected_index: 0-based index of the student's selected answer.
         explanation: Detailed academic rationale.
         is_resolved: Whether the student has retaken and mastered the question.
+        confidence: How sure the student was before answering ('sure', 'unsure', 'guess'), or None.
         created_at: Creation timestamp in UTC.
     """
 
@@ -209,6 +212,7 @@ class QuizMistakeRecord(Base):
     selected_index: Mapped[int] = mapped_column(Integer, nullable=False)
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
     is_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    confidence: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 
@@ -284,4 +288,48 @@ class ExplanationRecord(Base):
     question_key: Mapped[str] = mapped_column(String(40), nullable=False)
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer_md: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class KeyPointsRecord(Base):
+    """Key points Gemini Notebook picked from one lecture PDF, saved once (table `key_points`).
+
+    Attributes:
+        id: "<course>:<lecture no>" primary key.
+        course_code: Course identifier.
+        lecture_no: Lecture number.
+        points_json: JSON list of {quote, page, importance, note}.
+        created_at: When they were generated (UTC).
+    """
+
+    __tablename__ = "key_points"
+
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    course_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    lecture_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    points_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class TutorMessageRecord(Base):
+    """One message of a tutor conversation about a lecture (table `tutor_messages`).
+
+    Attributes:
+        id: UUID primary key.
+        course_code: Course identifier.
+        lecture_no: Lecture number, or None for the whole course.
+        role: 'student' or 'tutor'.
+        text: Message text (Markdown for the tutor).
+        conversation_id: Gemini Notebook conversation id, so follow-ups continue it.
+        created_at: When it was sent (UTC).
+    """
+
+    __tablename__ = "tutor_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    course_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    lecture_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    role: Mapped[str] = mapped_column(String(10), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    conversation_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)

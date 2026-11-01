@@ -48,6 +48,7 @@ def _to_domain_mistake(record: QuizMistakeRecord) -> QuizMistake:
         explanation=record.explanation,
         is_resolved=record.is_resolved,
         created_at=record.created_at,
+        confidence=record.confidence,
     )
 
 
@@ -97,6 +98,9 @@ class StudyRepository:
             quiz_variant=attempt.quiz_variant,
             score=attempt.score,
             total_questions=attempt.total_questions,
+            confidence_json=(
+                json.dumps(attempt.confidence_summary) if attempt.confidence_summary is not None else None
+            ),
         )
         self.session.add(attempt_rec)
 
@@ -112,6 +116,7 @@ class StudyRepository:
                 selected_index=m.selected_index,
                 explanation=m.explanation,
                 is_resolved=m.is_resolved,
+                confidence=m.confidence,
             )
             self.session.add(mistake_rec)
         self.session.commit()

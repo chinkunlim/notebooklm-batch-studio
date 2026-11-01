@@ -39,6 +39,22 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
+    async def ask_in_conversation(
+        self, notebook_id: str, question: str, source_ids: list[str] | None, conversation_id: str | None
+    ) -> tuple[str, str | None]:
+        """Ask a question that continues an earlier chat (follow-ups keep the context).
+
+        Args:
+            notebook_id: Notebook identifier.
+            question: Question text.
+            source_ids: Limit to these sources (None = all).
+            conversation_id: Conversation to continue, or None to start one.
+
+        Returns:
+            (answer text, conversation id).
+        """
+        ...
+
     async def find_notebook_by_title(self, title: str) -> str | None:
         """Find an existing notebook whose title matches exactly.
 

@@ -20,6 +20,7 @@ class QuizMistakeIn(BaseModel):
     correct_index: int = Field(..., description="0-based index of the correct answer")
     selected_index: int = Field(..., description="0-based index of student choice")
     explanation: str = Field(..., description="Academic rationale")
+    confidence: str | None = Field(default=None, description="'sure', 'unsure' or 'guess' before answering")
 
 
 class QuizAttemptIn(BaseModel):
@@ -30,6 +31,9 @@ class QuizAttemptIn(BaseModel):
     score: int = Field(..., ge=0, description="Score achieved")
     total_questions: int = Field(..., ge=1, description="Total question count")
     mistakes: list[QuizMistakeIn] = Field(default_factory=list, description="List of mistaken questions")
+    confidence: dict[str, int] | None = Field(
+        default=None, description='Counts from confidence ratings, e.g. {"sure_wrong": 2, "guess_right": 3}'
+    )
 
 
 @study_router.post("/quiz-attempts", operation_id="record_quiz_attempt")
@@ -57,6 +61,7 @@ def record_quiz_attempt(
         score=payload.score,
         total_questions=payload.total_questions,
         mistakes_data=mistakes_dicts,
+        confidence_summary=payload.confidence,
     )
     return {
         "status": "ok",
@@ -130,6 +135,7 @@ def get_weaknesses(
             "selected_index": m.selected_index,
             "explanation": m.explanation,
             "is_resolved": m.is_resolved,
+            "confidence": m.confidence,
             "created_at": m.created_at.isoformat() if m.created_at else None,
         }
         for m in mistakes

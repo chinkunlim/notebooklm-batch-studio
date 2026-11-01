@@ -16,6 +16,9 @@ from notebooklm_batch_studio.services.converters.flashcard_converter import pars
 
 logger = logging.getLogger(__name__)
 
+#: Confidence a student can give before answering (metacognition: "sure but wrong" matters most).
+CONFIDENCE_LEVELS = ("sure", "unsure", "guess")
+
 
 class StudyTrackerService:
     """Core domain service for tracking student attempts, weakness notebook, and Anki exports."""
@@ -42,6 +45,7 @@ class StudyTrackerService:
         score: int,
         total_questions: int,
         mistakes_data: list[dict[str, Any]],
+        confidence_summary: dict[str, int] | None = None,
     ) -> QuizAttempt:
         """Record a completed quiz attempt and individual mistakes.
 
@@ -51,7 +55,8 @@ class StudyTrackerService:
             quiz_variant: Variant of quiz (e.g. academic, concept).
             score: Student score.
             total_questions: Total number of questions.
-            mistakes_data: List of raw mistake dictionaries from frontend.
+            mistakes_data: List of raw mistake dictionaries from frontend (may carry `confidence`).
+            confidence_summary: Counts from the confidence ratings, or None when none were given.
 
         Returns:
             Saved domain QuizAttempt entity.
@@ -71,6 +76,7 @@ class StudyTrackerService:
                     selected_index=int(m.get("selected_index", 0)),
                     explanation=str(m.get("explanation", "")).strip(),
                     is_resolved=False,
+                    confidence=m.get("confidence") if m.get("confidence") in CONFIDENCE_LEVELS else None,
                 )
             )
 
@@ -82,6 +88,7 @@ class StudyTrackerService:
             score=score,
             total_questions=total_questions,
             mistakes=mistakes,
+            confidence_summary=confidence_summary,
         )
         self.study_repo.record_attempt(attempt)
         logger.info(

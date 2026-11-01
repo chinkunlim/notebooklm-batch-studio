@@ -90,6 +90,7 @@ notebooklm-batch-studio/
 │   │   ├── 20261101_3dbb5819dc15_add_style_options_interactive_path_and_.py
 │   │   ├── 20261101_4985a300eaa2_add_quiz_attempts_and_mistakes.py
 │   │   ├── 20261101_7b0938de08f1_drop_template_greetings_table.py
+│   │   ├── 20261101_b3bed90c05da_add_key_points_tutor_messages_and_.py
 │   │   ├── 20261101_b6ac72489fc1_add_study_progress_and_review_items.py
 │   │   ├── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
 │   │   ├── 20261101_d0a82d2914ab_persist_course_artifact_selections.py
@@ -168,6 +169,7 @@ notebooklm-batch-studio/
 │       │   ├── db/
 │       │   │   ├── __init__.py
 │       │   │   ├── base.py
+│       │   │   ├── learning_repository.py
 │       │   │   ├── mappers.py
 │       │   │   ├── models.py
 │       │   │   ├── repository.py
@@ -191,6 +193,7 @@ notebooklm-batch-studio/
 │       ├── domain/
 │       │   ├── __init__.py
 │       │   ├── exceptions.py
+│       │   ├── memory_model.py
 │       │   ├── models.py
 │       │   ├── naming.py
 │       │   ├── notebooklm_protocol.py
@@ -202,6 +205,7 @@ notebooklm-batch-studio/
 │       │   │   ├── __init__.py
 │       │   │   ├── artifacts.py
 │       │   │   ├── courses.py
+│       │   │   ├── learning.py
 │       │   │   ├── plan.py
 │       │   │   ├── queue.py
 │       │   │   ├── settings.py
@@ -221,6 +225,7 @@ notebooklm-batch-studio/
 │       │   ├── cli.py
 │       │   ├── mcp_course_settings.py
 │       │   ├── mcp_job_prompts.py
+│       │   ├── mcp_learning.py
 │       │   ├── mcp_server.py
 │       │   ├── mcp_study_plan.py
 │       │   ├── port_check.py
@@ -241,6 +246,7 @@ notebooklm-batch-studio/
 │       │   ├── course_settings.py
 │       │   ├── folder_browser.py
 │       │   ├── job_views.py
+│       │   ├── learning_service.py
 │       │   ├── orchestrator.py
 │       │   ├── prompt_generator.py
 │       │   ├── quiz_reader.py
@@ -268,6 +274,7 @@ notebooklm-batch-studio/
 │   ├── test_domain_and_queue.py
 │   ├── test_guides_and_reports.py
 │   ├── test_job_settings.py
+│   ├── test_learning.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py

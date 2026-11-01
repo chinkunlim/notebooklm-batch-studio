@@ -256,6 +256,27 @@ class NotebookLMAdapter(ArtifactDownloadsMixin):
         return str(result.answer)
 
     @_translate_errors
+    async def ask_in_conversation(
+        self, notebook_id: str, question: str, source_ids: list[str] | None, conversation_id: str | None
+    ) -> tuple[str, str | None]:
+        """Ask a question that continues an earlier chat; the notebook's chat settings are not changed.
+
+        Args:
+            notebook_id: Notebook identifier.
+            question: Question text.
+            source_ids: Limit the answer to these sources (None = all).
+            conversation_id: Conversation to continue, or None to start one.
+
+        Returns:
+            (answer text, conversation id for the next follow-up).
+        """
+        async with self._client() as client:
+            result = await client.chat.ask(
+                notebook_id, question, source_ids=source_ids, conversation_id=conversation_id
+            )
+        return str(result.answer), result.conversation_id
+
+    @_translate_errors
     async def find_notebook_by_title(self, title: str) -> str | None:
         """Find an existing notebook whose title matches exactly (most recent first).
 
