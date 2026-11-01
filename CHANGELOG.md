@@ -28,6 +28,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(web): student experience - Today plan, in-page quiz review with retry-wrong and NotebookLM explanations, spaced flashcard review, mock-exam timer, audio resume, add-course wizard, grouped course page, toasts, light theme and iPad layout (by `@claude-code`)
 - feat: rename NotebookLM to Gemini Notebook in all user-facing text and links (ADR-006); start-up port check names the owner of a busy port; one-click macOS launcher app opening a full-screen Chrome app window; focus button and web app manifest; split course-settings MCP tools out of mcp_server (by `@claude-code`)
 - feat(web): design v2 preview (?design=v2) - dark base with purple accent, lecture colour cues, soft cards, gradient progress, reduced-motion support; chapter chips wrap on phones (by `@claude-code`)
+- feat(web): design v2 is the default look (?design=v1 brings back the old one) (by `@claude-code`)
 
 ### Fixed
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)
