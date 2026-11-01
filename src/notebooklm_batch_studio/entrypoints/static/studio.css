@@ -135,7 +135,8 @@ body { background: var(--bg); color: var(--text); }
 .explain-box strong { color: var(--text); }
 
 /* ---------- No horizontal scrolling anywhere: long words and tables wrap ---------- */
-html, body { max-width: 100%; overflow-x: hidden; }
+/* clip (not hidden): hidden would make body a scroll container and break position: sticky. */
+html, body { max-width: 100%; overflow-x: clip; }
 table { width: 100%; max-width: 100%; }
 td, th { overflow-wrap: anywhere; word-break: break-word; }
 code, pre { white-space: pre-wrap; overflow-wrap: anywhere; }

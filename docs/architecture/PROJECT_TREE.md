@@ -147,6 +147,7 @@ notebooklm-batch-studio/
 │   │   ├── 005-generation-options-and-versions.md
 │   │   ├── 006-per-artifact-settings.md
 │   │   ├── 007-student-experience.md
+│   │   ├── 008-learning-aids.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -212,11 +213,21 @@ notebooklm-batch-studio/
 │       │   │   ├── study.py
 │       │   │   └── system.py
 │       │   ├── static/
+│       │   │   ├── vendor/
+│       │   │   │   └── pdfjs/
+│       │   │   │       ├── LICENSE
+│       │   │   │       ├── pdf.min.mjs
+│       │   │   │       ├── pdf.worker.min.mjs
+│       │   │   │       ├── README.md
+│       │   │   │       └── text_layer.css
 │       │   │   ├── icon-192.png
 │       │   │   ├── icon-512.png
 │       │   │   ├── index.html
 │       │   │   ├── manifest.webmanifest
 │       │   │   ├── studio-core.js
+│       │   │   ├── studio-learning.css
+│       │   │   ├── studio-learning.js
+│       │   │   ├── studio-reader.js
 │       │   │   ├── studio-theme.css
 │       │   │   ├── studio.css
 │       │   │   └── studio.js

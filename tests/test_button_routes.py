@@ -96,6 +96,11 @@ class ButtonRoutesTest(unittest.TestCase):
         self.assertEqual(self.http.head(url).status_code, 200)
         self.assertEqual(self.http.head(url.replace("A4", "iPadAir4")).status_code, 404)
 
+    def test_static_files_are_revalidated(self) -> None:
+        """Browsers must revalidate page assets, so an update never runs with stale CSS or JS."""
+        res = self.http.get("/static/studio.css")
+        self.assertEqual((res.status_code, res.headers.get("cache-control")), (200, "no-cache"))
+
     def test_every_fixed_api_path_in_the_page_exists(self) -> None:
         """Each literal '/api/...' path the page fetches is a real route (catches buttons that 404)."""
         routes = set(self.http.app.openapi()["paths"])  # type: ignore[attr-defined]

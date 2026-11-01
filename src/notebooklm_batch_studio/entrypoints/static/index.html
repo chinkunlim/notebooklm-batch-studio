@@ -250,6 +250,8 @@
   </style>
   <link rel="stylesheet" href="/static/studio.css">
   <link rel="stylesheet" href="/static/studio-theme.css">
+  <link rel="stylesheet" href="/static/studio-learning.css">
+  <link rel="stylesheet" href="/static/vendor/pdfjs/text_layer.css">
 </head>
 <body>
   <header class="app-header">
@@ -357,17 +359,29 @@
           <!-- Top Tabs -->
           <div style="display: flex; gap: 6px; flex-wrap: wrap;">
             <button id="btnTabToday" class="study-tab-btn primary" onclick="switchStudyTab('today')">🏠 今天</button>
+            <button id="btnTabReader" class="study-tab-btn" onclick="switchStudyTab('reader')">📄 課件</button>
             <button id="btnTabAudio" class="study-tab-btn" onclick="switchStudyTab('audio')">🎧 語音導讀</button>
             <button id="btnTabQuiz" class="study-tab-btn" onclick="switchStudyTab('quiz')">📝 互動測驗</button>
             <button id="btnTabMistakes" class="study-tab-btn" onclick="switchStudyTab('mistakes')">📕 弱點錯題集 <span id="badgeMistakeCount" class="badge badge-warning" style="display:none;">0</span></button>
             <button id="btnTabFlashcards" class="study-tab-btn" onclick="switchStudyTab('flashcards')">🗂️ 3D 抽認卡</button>
             <button id="btnTabReports" class="study-tab-btn" onclick="switchStudyTab('reports')">📑 報告・圖表・心智圖</button>
+            <button id="btnTabTutor" class="study-tab-btn" onclick="switchStudyTab('tutor')">🧑‍🏫 問家教</button>
           </div>
         </div>
 
         <!-- Tab 0: Today / study plan -->
         <div id="tabPanelToday" class="card" style="padding: 24px;">
           <div id="todayContainer">載入中...</div>
+        </div>
+
+        <!-- Course material reader with highlighted key points -->
+        <div id="tabPanelReader" class="card" style="padding: 20px; display: none;">
+          <div id="readerContainer">載入中...</div>
+        </div>
+
+        <!-- Socratic tutor -->
+        <div id="tabPanelTutor" class="card" style="padding: 20px; display: none;">
+          <div id="tutorContainer">載入中...</div>
         </div>
 
         <!-- Tab 1: Audio Player Panel -->
@@ -767,7 +781,8 @@
     function switchStudyTab(tabName) {
       activeStudyTab = tabName;
       stopMockTimer();
-      ['Today', 'Audio', 'Quiz', 'Mistakes', 'Flashcards', 'Reports'].forEach(t => {
+      if (typeof stopReader === 'function') stopReader();
+      ['Today', 'Reader', 'Audio', 'Quiz', 'Mistakes', 'Flashcards', 'Reports', 'Tutor'].forEach(t => {
         const panel = document.getElementById(`tabPanel${t}`);
         const btn = document.getElementById(`btnTab${t}`);
         if (panel) panel.style.display = 'none';
@@ -795,7 +810,14 @@
       } else if (tabName === 'reports') {
         document.getElementById('tabPanelReports').style.display = 'block';
         loadReportInViewer('guide');
+      } else if (tabName === 'reader') {
+        document.getElementById('tabPanelReader').style.display = 'block';
+        loadReader();
+      } else if (tabName === 'tutor') {
+        document.getElementById('tabPanelTutor').style.display = 'block';
+        loadTutor();
       }
+      if (typeof rememberPlace === 'function' && tabName !== 'today') rememberPlace({ tab: tabName });
     }
 
     async function loadAudioPlayer() {
@@ -1022,7 +1044,8 @@
             choices: q.choices.map(c => c.text !== undefined ? c.text : c),
             correct_index: correct,
             selected_index: selected,
-            explanation: q.explanation || ''
+            explanation: q.explanation || '',
+            confidence: (window.quizConfidence || {})[qIdx] || null
           });
         }
       });
@@ -1038,11 +1061,12 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            lecture_no: activeStudyLectureNo,
+            lecture_no: activeQuizVariant === 'mixed_review' ? null : activeStudyLectureNo,
             quiz_variant: activeQuizVariant,
             score,
             total_questions: total,
-            mistakes
+            mistakes,
+            confidence: typeof confidenceSummary === 'function' ? confidenceSummary(wrongIndexes, total) : null
           })
         });
         loadStudyCourseData(code, true);
@@ -2209,5 +2233,7 @@
   </script>
   <script src="/static/studio-core.js"></script>
   <script src="/static/studio.js"></script>
+  <script src="/static/studio-learning.js"></script>
+  <script type="module" src="/static/studio-reader.js"></script>
 </body>
 </html>

@@ -255,6 +255,27 @@ def _build_study_plan(
     )
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """Static files that browsers must revalidate, so an updated page never runs with stale CSS / JS.
+
+    Unchanged files still answer 304 (ETag), so this costs almost nothing on a local server.
+    """
+
+    def file_response(self, *args: Any, **kwargs: Any) -> Response:
+        """Serve a file with `Cache-Control: no-cache`.
+
+        Args:
+            *args: Passed to StaticFiles.file_response.
+            **kwargs: Passed to StaticFiles.file_response.
+
+        Returns:
+            The file response with the cache header.
+        """
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def _build_learning(service: BatchStudioService, cfg: AppConfig, engine: Engine | None) -> LearningService:
     """Create the learning service (reader, key points, memory, tutor) with request-scoped storage.
 
@@ -334,7 +355,7 @@ def create_app(
         learning=app.state.learning,
     )
     app.mount("/mcp", mcp_server.streamable_http_app())
-    app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+    app.mount("/static", NoCacheStaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
     app.include_router(system_router)
     app.include_router(courses_router)

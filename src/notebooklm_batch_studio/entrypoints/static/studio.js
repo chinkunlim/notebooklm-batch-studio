@@ -210,6 +210,8 @@ async function renderQuizResult(score, total, wrong) {
       </div></div>`;
   const container = document.getElementById('quizContainer');
   container.prepend(box);
+  // Peak-end summary and confidence feedback (studio-learning.js).
+  if (typeof decorateQuizResult === 'function') decorateQuizResult(box, score, total, wrong);
   // Verdict and "why?" on every question; lock the choices.
   questions.forEach((q, i) => {
     const title = document.querySelector(`#explanation-${i}`)?.parentElement?.firstElementChild;
