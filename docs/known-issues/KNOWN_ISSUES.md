@@ -28,3 +28,5 @@
 | [ISSUE-013](013-report-html-raw-text.md) | 🟢 已根治 (Resolved) | 報告的 HTML 頁面只是原始文字 | Markdown 原文直接放進 pre，沒有轉換也沒有跳脫 | `services/converters/report_converter.py`, `services/artifact_runner.py` |
 | [ISSUE-014](014-artifact-selection-not-saved.md) | 🟢 已根治 (Resolved) | 網頁勾選的產出內容沒有存進資料庫 | 勾選只存在 domain 物件，重新註冊後退回 profile 預設 | `adapters/db/models.py`, `adapters/db/repository.py` |
 | [ISSUE-015](015-cli-tests-use-real-db.md) | 🟢 已根治 (Resolved) | CLI 測試讀寫真實資料庫 | 測試呼叫 main() 時 load_config 指向 DATA_DIR 的資料庫 | `tests/test_services_and_cli.py` |
+| [ISSUE-016](016-report-instructions-ignored.md) | 🟢 已根治 (Resolved) | 報告的自訂指示被忽略；概念解說格式在網頁連線被拒絕 | 預設格式只讀 extra_instructions；網頁連線政策關閉 CONCEPT_EXPLANATION，改用 CUSTOM | `adapters/notebooklm/client.py` |
+| [ISSUE-017](017-quiz-prompts-ten-questions.md) | 🟢 已根治 (Resolved) | 測驗 prompt 只要求 10 題，且寫死研究法領域 | 每份測驗需多批才湊滿 30 題、NotebookLM 同名重複；prompt 不適用其他科目 | `services/prompt_generator.py`, `services/artifact_runner.py` |

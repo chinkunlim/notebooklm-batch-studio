@@ -123,6 +123,8 @@ notebooklm-batch-studio/
 │   │   ├── 013-report-html-raw-text.md
 │   │   ├── 014-artifact-selection-not-saved.md
 │   │   ├── 015-cli-tests-use-real-db.md
+│   │   ├── 016-report-instructions-ignored.md
+│   │   ├── 017-quiz-prompts-ten-questions.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -131,6 +133,7 @@ notebooklm-batch-studio/
 │   │   ├── 003-web-and-ai-tools.md
 │   │   ├── 004-phase2-self-test.md
 │   │   ├── 005-generation-options-and-versions.md
+│   │   ├── 006-per-artifact-settings.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
