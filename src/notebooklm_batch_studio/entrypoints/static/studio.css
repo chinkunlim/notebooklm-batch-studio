@@ -6,11 +6,7 @@
    2. Base
    ========================================================= */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-/* No rubber-band bounce: overscrolling would pull the page away from the Dock and show a gap under it */
-html { -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
-/* Safety net: behind the page, the Dock column is Dock-coloured, so a bounce or a few extra pixels never show a light strip */
-html { background: linear-gradient(to right, var(--dock-bg) var(--dock-w-root, 76px), var(--canvas) var(--dock-w-root, 76px)); }
-@media (max-width: 640px) { html { background: var(--canvas); } }
+html { -webkit-text-size-adjust: 100%; overscroll-behavior: none; background: var(--canvas); }
 body {
   font-family: var(--font-sans); background: var(--canvas); color: var(--ink); overscroll-behavior: none;
   min-height: 100vh; min-height: 100dvh; -webkit-font-smoothing: antialiased; line-height: 1.6;
@@ -34,12 +30,15 @@ a { color: var(--primary); }
 @property --dock-w { syntax: '<length>'; inherits: true; initial-value: 76px; }
 @property --side-pct { syntax: '<percentage>'; inherits: true; initial-value: 30%; }
 @property --side-min { syntax: '<length>'; inherits: true; initial-value: 320px; }
-.shell { --dock-w: 76px; transition: --dock-w var(--dur-slide) var(--ease); background: linear-gradient(to right, var(--dock-bg) var(--dock-w), transparent var(--dock-w)); display: grid; grid-template-columns: var(--dock-w) minmax(0, 1fr); grid-template-areas: "dock main"; min-height: 100vh; min-height: 100dvh; }
+.shell { --dock-w: 76px; transition: --dock-w var(--dur-slide) var(--ease); display: grid; grid-template-columns: var(--dock-w) minmax(0, 1fr); grid-template-areas: "dock main"; min-height: 100vh; min-height: 100dvh; }
 
 /* Dock: 4 icon-only buttons, sliding pill with left accent bar */
 .dock {
-  grid-area: dock; background: var(--dock-bg); display: flex; flex-direction: column; align-items: flex-start;
-  gap: var(--s5); padding: var(--s5) 0 var(--s5) 16px; position: sticky; top: 0; height: 100vh; height: 100dvh; z-index: 30;
+  /* Pinned to the real window edges (top: 0; bottom: 0) instead of a height in vh / dvh, which some browsers
+     (Safari) measure differently from the visible area, leaving a strip under the Dock. The grid keeps an
+     empty first column of the same width, so the page never slides under it. */
+  background: var(--dock-bg); display: flex; flex-direction: column; align-items: flex-start;
+  gap: var(--s5); padding: var(--s5) 0 var(--s5) 16px; position: fixed; top: 0; bottom: 0; left: 0; width: var(--dock-w); z-index: 30;
 }
 .avatar {
   width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; flex: none; margin-left: 2px;
@@ -734,7 +733,7 @@ dialog[open] { animation: viewIn .5s var(--ease); }
 
 /* Focus mode: hide chrome, keep the reader */
 .app.focus .dock, .app.focus .status { display: none; }
-.app.focus .shell { background: none; grid-template-columns: minmax(0, 1fr); grid-template-areas: "main"; }
+.app.focus .shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main"; }
 
 /* =========================================================
    6b. Motion polish, accessibility, touch
@@ -805,8 +804,9 @@ html[data-glass="on"].scrolling .card { backdrop-filter: none; -webkit-backdrop-
   .queue > .side-col, .study .study-side { position: static; }
 }
 @container app (max-width: 640px) {
-  .shell { background: none; grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "dock"; }
-  .dock { position: sticky; bottom: 0; top: auto; height: auto; flex-direction: row; align-items: center; justify-content: space-around; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); gap: 0; }
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main"; }
+  .main { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .dock { top: auto; right: 0; width: auto; flex-direction: row; align-items: center; justify-content: space-around; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); gap: 0; }
   .dock-head, .dock-track { width: auto; }
   .dock .label { display: none; }
   .dock .avatar { width: 36px; height: 36px; font-size: 13px; }

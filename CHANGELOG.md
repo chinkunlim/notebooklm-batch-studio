@@ -68,6 +68,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(test): set SO_REUSEADDR on test server socket for Linux TIME_WAIT reuse (ISSUE-025) (by `@antigravity`)
 - fix(web): no gap under the sidebar when overscrolling (by `@claude-code`)
 - fix(web): paint the sidebar column behind the page as a safety net (by `@claude-code`)
+- fix(web): pin the sidebar to the window edges instead of vh-sized sticky (Safari gap) (by `@claude-code`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
