@@ -53,11 +53,11 @@ a { color: var(--primary); }
 /* Selected item: one smooth shape in the page colour (no corners) drawn by JS. Collapsed: a round notch at the
    Dock edge holding a larger circle pushed to the right. Expanded: a band with the circle at its start.
    The shape morphs with the Dock width, so expanding and collapsing stay continuous. */
-.dock-ind { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 0; }
+.dock-ind { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: visible; pointer-events: none; z-index: 0; transition: transform var(--pill-dur, .62s) var(--ease-gentle), opacity var(--dur-hover) var(--ease); }
 .ind-svg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; }
-.ind-path { fill: var(--canvas); transition: d var(--pill-dur, .62s) var(--ease-gentle), fill var(--dur-page) var(--ease); }
-.ind-dot { position: absolute; left: 0; top: 0; width: 48px; height: 48px; border-radius: 50%; background: var(--primary); box-shadow: 0 6px 16px var(--accent-glow); transition: transform var(--pill-dur, .62s) var(--ease-gentle), background var(--dur-page) var(--ease); }
-.dock-ind.live .ind-path, .dock-ind.live .ind-dot, .dock.live .dock-btn { transition: none; }
+.ind-path { fill: var(--canvas); transition: d var(--dur-slide) var(--ease-gentle), fill var(--dur-page) var(--ease); }
+.ind-dot { position: absolute; left: 0; top: 0; width: 48px; height: 48px; border-radius: 50%; background: var(--primary); box-shadow: 0 6px 16px var(--accent-glow); transition: transform var(--dur-slide) var(--ease-gentle), background var(--dur-page) var(--ease); }
+.dock-ind.live, .dock-ind.live .ind-path, .dock-ind.live .ind-dot, .dock.live .dock-btn { transition: none; }
 .dock-btn {
   position: relative; z-index: 1; width: 48px; height: 48px; border-radius: 24px; display: grid; justify-items: start; align-items: center; flex: none;
   color: rgba(255,255,255,.55); transition: color var(--dur-hover) var(--ease), transform var(--pill-dur, .62s) var(--ease-gentle), width var(--dur-slide) var(--ease);
@@ -65,6 +65,9 @@ a { color: var(--primary); }
 .dock-btn > i { width: 48px; text-align: center; }
 .dock-btn:hover { color: #fff; }
 .dock-btn.on > i, .dock-btn.on:hover > i { color: var(--primary-ink); }
+/* the icon turns light as the sliding circle arrives under it */
+.dock-btn > i { transition: color .3s var(--ease); }
+.dock-btn.on > i { transition: color .35s var(--ease) calc(var(--pill-dur, .62s) * .45); }
 .dock .label { position: absolute; left: 60px; top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .18s var(--ease); }
 .dock-head .label { left: 58px; color: #fff; font-weight: 700; }
 .dock-btn.on .label { color: var(--primary); font-weight: 700; }

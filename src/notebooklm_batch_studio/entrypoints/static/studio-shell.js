@@ -200,9 +200,11 @@ function placeThumb(thumb, active) {
   thumb.style.transform = `translate(${active.offsetLeft}px, ${active.offsetTop}px)`;
 }
 /** Place the selection tab on the active Dock item (page or 設計與自訂), reaching the Dock edge. */
-/* Indicator geometry in local coordinates: u runs along the Dock edge, v points out of the Dock (v < 0 is inside).
-   Both shapes use the same number of points so the Dock width can morph one into the other. */
-const IND = { R: 32, d: 12, f: 16, band: 56, N: 10, M: 24, collapsedW: 76, expandedW: 216 };
+/* Indicator: one piece made of the notch (a rounded tab in the page colour reaching from the Dock edge to the
+   active icon, blended into the edge with fillets) and the green circle behind that icon. The icons never move;
+   the whole piece slides to the active item. Local coordinates: u runs along the Dock edge, v points out of the
+   Dock (v < 0 is inside). */
+const IND = { f: 16, band: 56, N: 10, M: 24 };
 /**
  * Points on a circle from angle a0 to a1 (degrees) in n segments.
  * @param {number} cu Centre along the Dock edge
@@ -218,13 +220,6 @@ function arcPts(cu, cv, r, a0, a1, n) {
   for (let i = 0; i <= n; i++) { const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; out.push([cu + r * Math.cos(a), cv + r * Math.sin(a)]); }
   return out;
 }
-/** Collapsed shape: a round notch whose edges blend into the Dock edge with tangent fillets (no corners). */
-function notchShape() {
-  const { R, d, f, N, M } = IND, h = Math.sqrt((R + f) ** 2 - (f - d) ** 2);
-  const a1 = Math.atan2(f - d, h) * 180 / Math.PI;
-  const b0 = (Math.atan2(d - f, -h) * 180 / Math.PI + 360) % 360;
-  return [...arcPts(-h, -f, f, 90, a1, N), ...arcPts(0, -d, R, b0, 540 - b0, M - 1), ...arcPts(h, -f, f, 180 - a1, 90, N)];
-}
 /**
  * Expanded indicator shape: a band reaching into the Dock (rounded far end), blended into the edge.
  * @param {number} L Band length
@@ -234,30 +229,25 @@ function bandShape(L) {
   const { band, f, N, M } = IND, r = band / 2;
   return [...arcPts(-(r + f), -f, f, 90, 0, N), [-r, -f], ...arcPts(0, -(L - r), r, 180, 360, M - 3), [r, -f], ...arcPts(r + f, -f, f, 180, 90, N)];
 }
-/** Place the selection indicator on the active Dock item (page or 設計與自訂). */
+/** Place the selection indicator (notch + circle, one piece) on the active Dock item; the icons stay still. */
 function placeDockPill() {
   const ind = $('#dockPill'), dock = $('.dock'), active = $('.dock .dock-btn.on');
-  $$('.dock .dock-btn').forEach(b => { if (b !== active) b.style.transform = ''; });
+  $$('.dock .dock-btn').forEach(b => { b.style.transform = ''; });
   if (!active || !active.offsetWidth || !dock.offsetWidth) { ind.style.opacity = '0'; return; }
   ind.style.opacity = '1';
   const horizontal = getComputedStyle(dock).flexDirection === 'row';
   let x = 0, y = 0, el = active;
   while (el && el !== dock) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
-  const bcy = y + active.offsetHeight / 2, iconCx = x + 24;
-  const W = dock.offsetWidth;
-  const t = horizontal ? 0 : Math.max(0, Math.min(1, (W - IND.collapsedW) / (IND.expandedW - IND.collapsedW)));
-  const a = notchShape(), b = bandShape(W - (iconCx - 28));
-  const pts = a.map((p, i) => [p[0] * (1 - t) + b[i][0] * t, p[1] * (1 - t) + b[i][1] * t]);
+  const iconCx = x + 24, iconCy = y + active.offsetHeight / 2, W = dock.offsetWidth, r = IND.band / 2;
+  // the tab's rounded end is centred on the icon, so the circle and the notch always line up
+  const pts = bandShape(horizontal ? iconCy + r : W - iconCx + r);
   pts.push([pts[pts.length - 1][0], 4], [pts[0][0], 4]);
-  const cx = horizontal ? x + active.offsetWidth / 2 : 0;
-  const map = horizontal ? ([u, v]) => [cx + u, -v] : ([u, v]) => [W + v, bcy + u];
+  const map = horizontal ? ([u, v]) => [u, -v] : ([u, v]) => [W + v, u];
   const dStr = 'M' + pts.map(p => map(p).map(n => n.toFixed(1)).join(' ')).join(' L') + ' Z';
   const path = $('.ind-path', ind);
   path.style.d = `path("${dStr}")`; path.setAttribute('d', dStr);
-  // circle: centred on the notch when collapsed, on the icon when expanded
-  const dotX = horizontal ? cx : (W - IND.d) * (1 - t) + iconCx * t, dotY = horizontal ? IND.d : bcy;
-  $('.ind-dot', ind).style.transform = `translate(${dotX - 24}px, ${dotY - 24}px)`;
-  active.style.transform = horizontal ? `translateY(${IND.d - bcy}px)` : `translateX(${(dotX - iconCx).toFixed(1)}px)`;
+  $('.ind-dot', ind).style.transform = horizontal ? `translate(-24px, ${iconCy - 24}px)` : `translate(${iconCx - 24}px, -24px)`;
+  ind.style.transform = horizontal ? `translateX(${x + active.offsetWidth / 2}px)` : `translateY(${iconCy}px)`;
 }
 /**
  * Expand or collapse the Dock (labels shown when expanded); the indicator follows every frame.
