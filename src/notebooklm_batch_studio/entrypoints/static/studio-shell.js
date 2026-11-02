@@ -270,6 +270,7 @@ function setDockX(on, persist = true) {
   $('i', b).className = on ? 'icon-panel-left-close' : 'icon-panel-left-open';
   $('.tip', b).textContent = on ? '收合側欄' : '展開側欄';
   if (persist) save('dockX', on);
+  root.style.setProperty('--dock-w-root', on && innerWidth > 640 ? '216px' : '76px');
   const ind = $('#dockPill'), dock = $('.dock'), t0 = performance.now();
   ind.classList.add('live'); dock.classList.add('live');
   const loop = now => {

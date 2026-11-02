@@ -242,6 +242,7 @@ $('#btnHelp').addEventListener('click', () => openUsageModal());
  */
 function setFocus(on) {
   $('#app').classList.toggle('focus', on);
+  root.style.setProperty('--dock-w-root', on ? '0px' : ($('#app').classList.contains('dock-x') && innerWidth > 640 ? '216px' : '76px'));
   if (on && document.fullscreenElement == null && root.requestFullscreen) root.requestFullscreen().catch(() => {});
   if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
   requestAnimationFrame(refreshThumbs);

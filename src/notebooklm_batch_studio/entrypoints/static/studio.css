@@ -7,7 +7,10 @@
    ========================================================= */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 /* No rubber-band bounce: overscrolling would pull the page away from the Dock and show a gap under it */
-html { -webkit-text-size-adjust: 100%; overscroll-behavior: none; background: var(--canvas); }
+html { -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+/* Safety net: behind the page, the Dock column is Dock-coloured, so a bounce or a few extra pixels never show a light strip */
+html { background: linear-gradient(to right, var(--dock-bg) var(--dock-w-root, 76px), var(--canvas) var(--dock-w-root, 76px)); }
+@media (max-width: 640px) { html { background: var(--canvas); } }
 body {
   font-family: var(--font-sans); background: var(--canvas); color: var(--ink); overscroll-behavior: none;
   min-height: 100vh; min-height: 100dvh; -webkit-font-smoothing: antialiased; line-height: 1.6;
