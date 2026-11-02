@@ -140,6 +140,14 @@ uv run notebooklm-batch-studio web
 
 ---
 
+## 線上示範頁（GitHub Pages）
+
+`docs/demo/index.html` 是不用伺服器的單一網頁：用目前的介面，搭配虛構的 BIO101「細胞與分子生物學」與 CHEM110「普通化學」課程（講義 PDF、語音、測驗、學習卡、錯題都是假的），所有操作只存在瀏覽器裡。圖示、字型與 pdf.js 從公開 CDN 載入。
+
+- 重新產生（介面改了之後跑一次）：`uv run python scripts/build_demo.py`
+- 內容在 `scripts/demo/`：`demo-data.js`（虛構課程）、`demo-mock.js`（在瀏覽器裡回應所有 API）、`demo-overrides.js`（示範版才需要的調整）
+- 發布：GitHub repo 的 Settings → Pages → Deploy from a branch → `main` / `docs`，網址是 `https://<帳號>.github.io/notebooklm-batch-studio/demo/`
+
 ## 開發與測試
 
 執行靜態架構審查（註解、分層、秘密檢查、目錄樹檢查）：

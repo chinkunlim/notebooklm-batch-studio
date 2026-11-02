@@ -113,11 +113,13 @@ notebooklm-batch-studio/
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
 │   ├── architecture/                       # [系統架構與資料模型]
+│   ├── demo/
 │   ├── design/
 │   ├── known-issues/                       # [已知問題庫] 一問題一檔案
 │   ├── specs/                              # [功能規格書] PRD / API Contract
 │   └── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
+│   └── demo/
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── notebooklm_batch_studio/
 └── tests/                                  # 【測試層】單元與整合測試

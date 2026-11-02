@@ -127,6 +127,8 @@ notebooklm-batch-studio/
 │   ├── architecture/                       # [系統架構與資料模型]
 │   │   ├── ARCHITECTURE.md                 # 系統架構總覽 (手動) 與自動報告索引
 │   │   └── PROJECT_TREE.md                 # 完整檔案結構樹 (自動產生)
+│   ├── demo/
+│   │   └── index.html
 │   ├── design/
 │   │   ├── DESIGN.md
 │   │   ├── mockups_gallery.html
@@ -191,7 +193,12 @@ notebooklm-batch-studio/
 │   │   └── TESTING_AND_QUALITY.md          # 測試金字塔與 DoD 驗收清單
 │   └── TEMPLATE_FEEDBACK.md
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
+│   ├── demo/
+│   │   ├── demo-data.js
+│   │   ├── demo-mock.js
+│   │   └── demo-overrides.js
 │   ├── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
+│   ├── build_demo.py
 │   ├── build_mac_app.sh
 │   └── launch_app.sh
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml

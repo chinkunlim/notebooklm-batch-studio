@@ -40,6 +40,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(web): gentle page switching, overview check-in and exam countdown, font pairing gallery (by `@claude-code`)
 - feat(web): sidebar notch and circle slide as one piece, icons stay still (by `@claude-code`)
 - feat(web): pomodoro in the sidebar with habits, weekday calendar, course picker, exam date via course settings (by `@claude-code`)
+- feat(demo): standalone GitHub Pages demo with fictional BIO101 data (by `@claude-code`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
