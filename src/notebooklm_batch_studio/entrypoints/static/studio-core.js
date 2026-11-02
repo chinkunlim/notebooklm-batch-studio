@@ -1,7 +1,8 @@
 /* Gemini Notebook 學習工作室 — core UI behaviour shared by every page section.
-   Dialogs close with ✖, a click outside or Esc; fetch retries once and shows an "offline" banner
-   instead of a bare "Failed to fetch"; quiz choices are reshuffled on every attempt; the title goes home.
-   Uses globals from index.html / studio.js: switchMainView, closeDetail, askConfirm, pickedFolders. */
+   Dialogs close with the X button, a click outside or Esc; fetch retries once and shows an "offline"
+   banner instead of a bare "Failed to fetch"; quiz choices are reshuffled on every attempt.
+   Uses globals from studio-app.js / studio.js: closeAddModal, closeUsageModal, closeNamingModal,
+   closePromptModal, askConfirm, pickedFolders. Page navigation and focus mode live in studio-shell.js. */
 
 /* ---------- Dialogs ---------- */
 /** Close function for each dialog; dialogs not listed are simply hidden. */
@@ -52,7 +53,7 @@ function initModals() {
       x.className = 'modal-x';
       x.type = 'button';
       x.setAttribute('aria-label', '關閉');
-      x.textContent = '✖';
+      x.innerHTML = '<i class="icon-x"></i>';
       x.onclick = () => closeModal(overlay);
       box.prepend(x);
     }
@@ -85,7 +86,7 @@ function setOfflineBanner(show) {
     bar = document.createElement('div');
     bar.id = 'offlineBanner';
     bar.setAttribute('role', 'alert');
-    bar.innerHTML = '⚠️ 伺服器沒有回應，請確認學習工作室已啟動（雙擊「Gemini Notebook 學習工作室」）。'
+    bar.innerHTML = '伺服器沒有回應，請確認學習工作室已啟動（雙擊「Gemini Notebook 學習工作室」）。'
       + ' <button type="button" onclick="location.reload()">重新整理</button>';
     document.body.appendChild(bar);
   }
@@ -150,39 +151,4 @@ function shuffleQuestion(q, rand = Math.random) {
   return { ...q, choices: order.map(i => choices[i]), answer_index: order.indexOf(q.answer_index) };
 }
 
-/* ---------- Title goes home ---------- */
-/**
- * Go back to the start page: close dialogs, show the course list and scroll to the top.
- */
-function goHome() {
-  visibleOverlays().forEach(el => { el.style.display = 'none'; });
-  switchMainView('admin');
-  if (typeof closeDetail === 'function') closeDetail();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-/* ---------- Focus mode (full screen) ---------- */
-/**
- * Enter or leave full screen. Browsers only allow this after a click, so it cannot start by itself;
- * the desktop launcher (scripts/launch_app.sh) opens the app full screen instead.
- * @returns {Promise<void>}
- */
-async function toggleFocusMode() {
-  try {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
-  } catch (e) {
-    showToast('這個瀏覽器不允許全螢幕，可用 ⌃⌘F（Mac）切換。', 'warning');
-  }
-}
-
-/**
- * Keep the focus button label in step with the full-screen state.
- */
-function syncFocusButton() {
-  const btn = document.getElementById('btnFocus');
-  if (btn) btn.textContent = document.fullscreenElement ? '🗗 離開專注' : '⛶ 專注';
-}
-
-document.addEventListener('fullscreenchange', syncFocusButton);
 document.addEventListener('DOMContentLoaded', initModals);

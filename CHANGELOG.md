@@ -35,6 +35,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(web): design v2 is the default look (?design=v1 brings back the old one) (by `@claude-code`)
 - feat(learning): lecture PDF reader route (read-only, folder-confined), key points asked once and saved, forgetting-curve memory strength, study streak and heatmap, Socratic tutor that continues one conversation, confidence ratings on quiz attempts and mistakes; HTTP + MCP (by `@claude-code`)
 - feat(web): learning aids UI - course reader (pdf.js 4.10.38 vendored) with colour-coded key points, memory strength / streak / heatmap on Today, resume where you stopped, confidence ratings with sure-but-wrong feedback, peak-end comparison, mixed review, recall-first mode, flashcard answer box, pomodoro, Socratic tutor tab; static files served no-cache; sticky works (overflow-x clip); SPEC-008 (by `@claude-code`)
+- feat(web): apply v05 study studio design to the web UI (TASK-011) (`TASK-011`, by `@claude-code`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

@@ -1,161 +1,111 @@
-/* Gemini Notebook 學習工作室 — design v2 (the default look; ?design=v1 shows the old one).
-   Direction from the chosen references: dashboard-first, dark base with matte purple accent,
-   vibrant course cards, visible progress. Psychology: one colour per lecture as a context cue,
-   soft depth to group related items, calm motion that respects prefers-reduced-motion. */
-
-/* ---------- Tokens ---------- */
-html.design-v2 {
-  --bg: #0f0d1a;
-  --surface: #191628;
-  --surface-2: #211d34;
-  --surface-hover: #2a2542;
-  --border: #2e2947;
-  --text: #ece9f7;
-  --text-muted: #a49fc0;
-  --primary: #8b5cf6;
-  --primary-hover: #7c3aed;
-  --on-primary: #ffffff;
-  --accent: #14b8a6;
-  --warm: #f59e0b;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #f43f5e;
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(10, 6, 30, 0.35);
-  --glow: 0 0 0 3px rgba(139, 92, 246, 0.35);
-  /* One colour per lecture, repeated every 8 (same colour in nav, quiz and cards). */
-  --lec-1: #8b5cf6; --lec-2: #14b8a6; --lec-3: #f59e0b; --lec-4: #ec4899;
-  --lec-5: #3b82f6; --lec-6: #22c55e; --lec-7: #f97316; --lec-8: #06b6d4;
-}
-html.design-v2[data-theme="light"] {
-  --bg: #f6f4fb;
-  --surface: #ffffff;
-  --surface-2: #f1edfb;
-  --surface-hover: #ebe5fa;
-  --border: #e3dcf3;
-  --text: #1d1530;
-  --text-muted: #675f80;
-  --primary: #7c3aed;
-  --primary-hover: #6d28d9;
-  --shadow: 0 1px 2px rgba(40, 20, 90, 0.06), 0 8px 24px rgba(40, 20, 90, 0.08);
-}
-@media (prefers-color-scheme: light) {
-  html.design-v2:not([data-theme="dark"]) {
-    --bg: #f6f4fb; --surface: #ffffff; --surface-2: #f1edfb; --surface-hover: #ebe5fa;
-    --border: #e3dcf3; --text: #1d1530; --text-muted: #675f80; --primary: #7c3aed; --primary-hover: #6d28d9;
-    --shadow: 0 1px 2px rgba(40, 20, 90, 0.06), 0 8px 24px rgba(40, 20, 90, 0.08);
-  }
+/* Gemini Notebook 學習工作室 — design tokens (SPEC-009 v05, ADR-008).
+   Spacing, type, motion, the per-output hues, and five palettes with a light and a dark set each.
+   html[data-palette] / [data-mode] / [data-style] are set by studio-shell.js; user palettes are added at run time.
+   The last block maps the older variable names used by the feature scripts onto these tokens. */
+:root {
+  --loop: infinite; /* playback-only loops (they run only while audio plays) */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 40px; --s8: 48px;
+  --radius-s: 10px; --radius-m: 14px; --radius-l: 20px;
+  --font-sans: "Noto Sans TC", -apple-system, "PingFang TC", system-ui, sans-serif;
+  --font-serif: "Noto Serif TC", "Songti TC", serif;
+  --font-head: var(--font-sans);
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --ease-arm: cubic-bezier(.34, 1.25, .64, 1);
+  --dur-hover: .32s; --dur-slide: .5s; --dur-page: .7s;
+  --gutter: clamp(16px, 3.2cqi, 40px);
+  /* One hue per output type, kept in every palette (semantic colour = memory label) */
+  --h-audio: #b07d2a; --h-video: #a9503d; --h-report: #44699a; --h-mindmap: #5b8439; --h-infographic: #85609a;
+  --h-slides: #2c8580; --h-table: #5c6a79; --h-quiz: #ad4f68; --h-flash: #5759ab;
+  --card-pad: var(--s5);
+  --gap: var(--s5);
 }
 
-/* ---------- Base ---------- */
-html.design-v2 body {
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
-  background:
-    radial-gradient(1200px 500px at 85% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
-    radial-gradient(900px 400px at -10% 10%, rgba(20, 184, 166, 0.10), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
-  font-feature-settings: "tnum";
+/* Palettes: each has a light and a dark set (fixed choices, WCAG AA text) */
+html[data-palette="forest"][data-mode="light"] {
+  --canvas: #f4eee6; --surface: #ffffff; --surface-2: #faf6f0; --line: rgba(40, 33, 24, .09);
+  --ink: #1d2a23; --muted: #5a6a60; --faint: #5f6e65;
+  --primary: #1f4d3a; --primary-ink: #ffffff; --accent: #3f8f6b; --accent-soft: #e4efe8; --accent-glow: rgba(63, 143, 107, .28);
+  --dock-bg: #15201a; --track: #ebe3d7; --thumb: #ffffff; --warn: #a0662a;
+  --shadow: 0 1px 2px rgba(60, 45, 30, .04), 0 12px 32px rgba(60, 45, 30, .06);
 }
-html.design-v2 h1, html.design-v2 h2, html.design-v2 h3 { letter-spacing: -0.01em; }
-html.design-v2 .card,
-html.design-v2 .modal,
-html.design-v2 #confirmBox {
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  border-color: var(--border);
+html[data-palette="forest"][data-mode="dark"] {
+  --canvas: #0f1612; --surface: #16211b; --surface-2: #1b2821; --line: rgba(160, 210, 180, .1);
+  --ink: #e9f1ec; --muted: #9fb3a7; --faint: #7d9286;
+  --primary: #5fb88d; --primary-ink: #0c1a13; --accent: #7cc9a2; --accent-soft: #1f3529; --accent-glow: rgba(124, 201, 162, .3);
+  --dock-bg: #0a100c; --track: #1f2d25; --thumb: #2a3c32; --warn: #e0a560;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .35);
 }
-html.design-v2 .card:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); }
-html.design-v2 button, html.design-v2 .btn { border-radius: 10px; }
-html.design-v2 button.primary, html.design-v2 .btn.primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-  color: var(--on-primary);
-  border-color: transparent;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+html[data-palette="sage"][data-mode="light"] {
+  --canvas: #eef2ef; --surface: #ffffff; --surface-2: #f6f8f6; --line: rgba(20, 35, 30, .09);
+  --ink: #18221f; --muted: #52625c; --faint: #60706a;
+  --primary: #354f52; --primary-ink: #ffffff; --accent: #52796f; --accent-soft: #e1ebe7; --accent-glow: rgba(82, 121, 111, .28);
+  --dock-bg: #172020; --track: #dfe7e3; --thumb: #ffffff; --warn: #9a6a2c;
+  --shadow: 0 1px 2px rgba(20, 35, 30, .04), 0 12px 32px rgba(20, 35, 30, .06);
 }
-html.design-v2 button:focus-visible, html.design-v2 a:focus-visible { outline: none; box-shadow: var(--glow); }
-html.design-v2 .badge { text-transform: none; letter-spacing: 0; }
-
-/* ---------- Header ---------- */
-html.design-v2 header.app-header {
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 14px 18px;
-  box-shadow: var(--shadow);
+html[data-palette="sage"][data-mode="dark"] {
+  --canvas: #0f1515; --surface: #172120; --surface-2: #1c2827; --line: rgba(160, 200, 190, .1);
+  --ink: #e8f0ee; --muted: #9db3ad; --faint: #79928c;
+  --primary: #8fb8a6; --primary-ink: #0d1716; --accent: #a7cbb9; --accent-soft: #213230; --accent-glow: rgba(167, 203, 185, .3);
+  --dock-bg: #0a0f0f; --track: #1f2c2b; --thumb: #2b3d3b; --warn: #e0a560;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .35);
 }
-html.design-v2 .brand-logo {
-  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; font-size: 1.4rem;
-  background: linear-gradient(135deg, #8b5cf6, #14b8a6);
+html[data-palette="espresso"][data-mode="light"] {
+  --canvas: #f5efe8; --surface: #ffffff; --surface-2: #fbf7f2; --line: rgba(60, 35, 20, .09);
+  --ink: #2a1d15; --muted: #6b5546; --faint: #7e6859;
+  --primary: #5c3d2e; --primary-ink: #ffffff; --accent: #8b5a3e; --accent-soft: #f1e6dc; --accent-glow: rgba(139, 90, 62, .28);
+  --dock-bg: #1e1814; --track: #ebdfd3; --thumb: #ffffff; --warn: #9a5a2a;
+  --shadow: 0 1px 2px rgba(60, 35, 20, .04), 0 12px 32px rgba(60, 35, 20, .06);
 }
-html.design-v2 .brand h1 {
-  background: linear-gradient(90deg, var(--text), color-mix(in srgb, var(--primary) 70%, var(--text)));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+html[data-palette="espresso"][data-mode="dark"] {
+  --canvas: #14100d; --surface: #201a15; --surface-2: #271f19; --line: rgba(220, 180, 150, .1);
+  --ink: #f6eee7; --muted: #bfa898; --faint: #9b8576;
+  --primary: #d09a72; --primary-ink: #1a120c; --accent: #e2b08a; --accent-soft: #35281f; --accent-glow: rgba(226, 176, 138, .3);
+  --dock-bg: #0c0907; --track: #2a211b; --thumb: #3a2e26; --warn: #e6a868;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .4);
 }
-html.design-v2 .view-switch { border-radius: 12px; }
-html.design-v2 .view-switch button.primary { box-shadow: none; }
-
-/* ---------- Course cards: colour band + big progress ---------- */
-html.design-v2 #courseContainer .card { position: relative; overflow: hidden; padding-top: 22px; }
-html.design-v2 #courseContainer .card::before {
-  content: ""; position: absolute; inset: 0 0 auto 0; height: 6px;
-  background: linear-gradient(90deg, var(--lec-1), var(--lec-2), var(--lec-3));
+html[data-palette="clay"][data-mode="light"] {
+  --canvas: #f6efe9; --surface: #ffffff; --surface-2: #fcf7f3; --line: rgba(70, 35, 25, .09);
+  --ink: #2a1c18; --muted: #6f524a; --faint: #83665e;
+  --primary: #9d4c36; --primary-ink: #ffffff; --accent: #c4664b; --accent-soft: #f8e8e1; --accent-glow: rgba(196, 102, 75, .26);
+  --dock-bg: #1d1715; --track: #eedfd6; --thumb: #ffffff; --warn: #9a5a2a;
+  --shadow: 0 1px 2px rgba(70, 35, 25, .04), 0 12px 32px rgba(70, 35, 25, .06);
 }
-html.design-v2 .progress-bar-bg { height: 10px; border-radius: 999px; background: var(--surface-2); }
-html.design-v2 .progress-bar-fill { border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--accent)); }
-
-/* ---------- Study: lecture colours as context cues ---------- */
-html.design-v2 .study-nav-btn { border-radius: 12px; border-left: 5px solid var(--lec, var(--border)); }
-html.design-v2 .study-nav-btn.active {
-  background: color-mix(in srgb, var(--lec, var(--primary)) 22%, var(--surface));
-  border-color: var(--lec, var(--primary)); color: var(--text);
+html[data-palette="clay"][data-mode="dark"] {
+  --canvas: #151110; --surface: #221b19; --surface-2: #2a211e; --line: rgba(230, 170, 150, .1);
+  --ink: #f7ece7; --muted: #c0a39b; --faint: #a2867e;
+  --primary: #e0876c; --primary-ink: #1c0f0b; --accent: #eb9f86; --accent-soft: #3a241e; --accent-glow: rgba(235, 159, 134, .3);
+  --dock-bg: #0d0a09; --track: #2c211e; --thumb: #3d2d29; --warn: #e6a868;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .4);
 }
-html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+2) { --lec: var(--lec-1); }
-html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+3) { --lec: var(--lec-2); }
-html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+4) { --lec: var(--lec-3); }
-html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+5) { --lec: var(--lec-4); }
-html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+6) { --lec: var(--lec-5); }
-html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+7) { --lec: var(--lec-6); }
-html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+8) { --lec: var(--lec-7); }
-html.design-v2 #studyLectureList .study-nav-btn:nth-child(8n+1) { --lec: var(--lec-8); }
-html.design-v2 #studyLectureList .study-nav-btn:first-child { --lec: var(--warm); }
-html.design-v2 .study-tab-btn { border-radius: 999px; }
-
-/* ---------- Today dashboard ---------- */
-html.design-v2 .plan-card {
-  border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border); box-shadow: var(--shadow);
+html[data-palette="indigo"][data-mode="light"] {
+  --canvas: #f0f1f5; --surface: #ffffff; --surface-2: #f7f8fb; --line: rgba(25, 30, 60, .09);
+  --ink: #1b2033; --muted: #545b73; --faint: #646b82;
+  --primary: #2f4a7a; --primary-ink: #ffffff; --accent: #4f6fa8; --accent-soft: #e3e9f4; --accent-glow: rgba(79, 111, 168, .26);
+  --dock-bg: #161a28; --track: #e0e3ec; --thumb: #ffffff; --warn: #9a6a2c;
+  --shadow: 0 1px 2px rgba(25, 30, 60, .04), 0 12px 32px rgba(25, 30, 60, .06);
 }
-html.design-v2 .plan-card.next {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 28%, var(--surface-2)), var(--surface-2));
-  border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+html[data-palette="indigo"][data-mode="dark"] {
+  --canvas: #0f1119; --surface: #171a26; --surface-2: #1c2030; --line: rgba(170, 185, 230, .1);
+  --ink: #e9ecf5; --muted: #a3abc4; --faint: #8088a1;
+  --primary: #8fa9df; --primary-ink: #0d1120; --accent: #a8bdea; --accent-soft: #222a40; --accent-glow: rgba(168, 189, 234, .3);
+  --dock-bg: #0a0c13; --track: #20253a; --thumb: #2d3450; --warn: #e0a560;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px rgba(0, 0, 0, .4);
 }
-html.design-v2 .plan-card .big { font-size: 2rem; font-weight: 800; }
-html.design-v2 .meter { height: 10px; background: var(--surface-hover); }
-html.design-v2 .meter > span { background: linear-gradient(90deg, var(--primary), var(--accent)); }
-html.design-v2 .step-chip.done { background: rgba(20, 184, 166, 0.16); color: var(--accent); border-color: rgba(20, 184, 166, 0.45); }
-
-/* ---------- Quiz: clear choices, gentle feedback ---------- */
-html.design-v2 .choice-btn { border-radius: 12px; transition: transform 0.12s ease, background 0.12s ease; }
-html.design-v2 .choice-btn:hover { transform: translateX(2px); }
-html.design-v2 .choice-btn.selected { background: color-mix(in srgb, var(--primary) 20%, transparent); border-color: var(--primary); }
-html.design-v2 .choice-btn.correct { animation: v2-pop 0.35s ease-out; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25); }
-html.design-v2 .result-card {
-  border: none; color: var(--text);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 30%, var(--surface-2)), color-mix(in srgb, var(--accent) 18%, var(--surface-2)));
-}
-html.design-v2 #quizActionBar { background: var(--surface) !important; border-radius: 14px !important; box-shadow: var(--shadow) !important; }
-@keyframes v2-pop { 0% { transform: scale(1); } 40% { transform: scale(1.02); } 100% { transform: scale(1); } }
-
-/* ---------- Motion preferences ---------- */
-@media (prefers-reduced-motion: reduce) {
-  html.design-v2 *, html.design-v2 *::before, html.design-v2 *::after {
-    animation: none !important; transition: none !important;
-  }
+html[data-mode="dark"] {
+  --h-audio: #d9a756; --h-video: #d9806b; --h-report: #86a8d6; --h-mindmap: #97bf72; --h-infographic: #b995cc;
+  --h-slides: #6cc0ba; --h-table: #9eabb9; --h-quiz: #de8aa0; --h-flash: #9a9ee0;
 }
 
-/* ---------- Older inline colours follow the v2 tokens ---------- */
-html.design-v2 [style*="background: #0f172a"], html.design-v2 [style*="background:#0f172a"],
-html.design-v2 [style*="background: #1e293b"] { background: var(--surface-2) !important; }
-html.design-v2 [style*="color: #38bdf8"], html.design-v2 [style*="color:#38bdf8"] { color: var(--primary) !important; }
-html.design-v2 [style*="border-left: 4px solid var(--primary)"] { border-radius: 10px; }
+/* Style philosophies: 認知心流 (default) / 編輯典藏 / 實戰刻意練習 */
+html[data-style="editorial"] { --font-head: var(--font-serif); --card-pad: var(--s6); --gap: var(--s6); }
+html[data-style="practice"] { --card-pad: var(--s4); --gap: var(--s4); }
+/* Status colours that the palettes do not define */
+html[data-mode="light"] { --danger: #b0443a; --good: var(--accent); }
+html[data-mode="dark"] { --danger: #ee8f80; --good: var(--accent); }
+
+/* Older names used inside the feature scripts (quiz, reader, tutor, course page) */
+html {
+  --bg: var(--canvas); --text: var(--ink); --text-muted: var(--muted); --border: var(--line);
+  --surface-hover: var(--track); --radius: var(--radius-s); --primary-hover: var(--primary);
+  --on-primary: var(--primary-ink); --success: var(--good); --warning: var(--warn);
+}

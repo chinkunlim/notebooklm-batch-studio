@@ -121,10 +121,10 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `settings.py`：產出細部選項設定（題型、題量、語言、方向、風格）、三層設定繼承與重設、版本化重新生成 (`POST /api/courses/{code}/jobs/regenerate`)、產出物開關、課程暫停／開始／刪除、點選式資料夾瀏覽 (`/api/folders`)。
   - `system.py`：系統健康檢查、即時額度狀態、命名規則與研讀導引指南 (`/api/usage-guide`)。
 - `entrypoints/static/`：前端使用者介面（純原生 JS，無編譯負擔）：
-  - `index.html`：整合儀表板、學生研讀專區、講義閱讀器、專注番茄鐘、設定抽屜。
-  - `studio-core.js`、`studio.js`：核心介面邏輯、課程資料載入、狀態輪詢。
-  - `studio-learning.js`：研讀專區（Today 計畫、記憶強度卡片、錯題本、卡牌複習、家教對話）。
-  - `studio-reader.js`：講義閱讀器、PDF 原文比對與顏色高亮、滾動定位。
+  - `index.html`：v05 介面（SPEC-009、ADR-008）：側欄四頁（研讀總覽、研讀工作室、弱點複習、批次排程）、側欄底部工具（使用方法、專注模式、設計與自訂）與對話框。
+  - `studio-theme.css`（配色 tokens）、`studio.css`（版面與元件）、`studio-learning.css`（閱讀器、記憶卡、家教）。
+  - 功能層：`studio-core.js`（對話框、斷線提示、選項洗牌）、`studio-app.js`（研讀課程與講次、測驗、錯題、學習卡、報告檢視）、`studio-batch.js`（批次排程與工作清單）、`studio-settings.js`（課程設定、產出內容、Prompt、加入課程精靈）、`studio.js`（研讀總覽、交卷回饋、解釋、間隔複習、音檔續播）、`studio-learning.js`（記憶強度、信心評分、混合複習、番茄鐘、家教）、`studio-reader.js`（講義 PDF 閱讀器與重點畫線）。
+  - 外殼層：`studio-shell.js`（偏好、側欄、頁面切換）、`studio-player.js`（播放真實語音摘要的唱盤與四種視覺）、`studio-bench.js`（工作台、三種版面、本講重點、今日學習卡）、`studio-start.js`（設計與自訂、欄寬、鍵盤與觸控、啟動）。
   - `vendor/pdfjs/`：內建 PDF.js 4.10.38 閱讀核心，完全離線運作。
 - `mcp_server.py` 與 MCP 集群：
   - `mcp_server.py`：核心 MCP 工具（狀態、佇列控制、筆記本操作）。
@@ -236,9 +236,9 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 2. **三層設定繼承架構**：系統全域預設 ➔ 課程級設定 (`course.toml` / 資料庫) ➔ 個別講次覆寫，未設定之屬性自動向上繼承。
 3. 支援一鍵重設為系統預設值，確保設定調整具備彈性與可逆性。
 
-### 3.9 學生研讀工作室與視覺分級多媒體 (Study Studio & Visual Tiering, SPEC-009, ADR-007)
+### 3.9 學生研讀工作室與視覺分級多媒體 (Study Studio & Visual Tiering, SPEC-009, ADR-007, ADR-008)
 
-> **狀態：規劃中，尚未實作。** 以下是 SPEC-009 的目標設計，目前只有 `docs/design/` 的 HTML 原型；正式網頁仍是 design v2（`static/studio-theme.css`）。
+> **狀態：已實作（2026-11-02，v05，ADR-008）。** 依 `docs/design/version_05_claude_template.html` 套用到 `entrypoints/static/`。與下列 ADR-007 原始描述不同處：導覽改為左側圖示側欄，「設計與自訂」在側欄底部（不是第 4 個主分頁）；播放器四種視覺共用同一套繪圖，並有側欄迷你播放器。其餘（視覺分級、免分頁工作台、RWD、原型歸檔）照舊。
 
 1. **奢華擬態黑膠留聲基座 (Skeuomorphic Turntable)**：
    - 採用 `conic-gradient` 呈現 4 象限十字光澤流轉（非均向性反射 Anisotropic Sheen）與同心微音軌，模擬真實黑膠唱片的深度閱讀隱喻。

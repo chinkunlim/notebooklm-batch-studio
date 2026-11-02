@@ -1,102 +1,91 @@
-/* Gemini Notebook 學習工作室 — styles for the reader, memory panel, confidence, tutor and focus timer.
-   Uses the theme tokens (studio-theme.css / studio.css); works in light and dark. */
+/* Gemini Notebook 學習工作室 — styles for the reader, memory card, tutor and key points.
+   Uses the v05 tokens from studio-theme.css; works in every palette, light and dark. */
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
 
-.muted { color: var(--text-muted); }
-.small { font-size: 0.8rem; }
-
-/* ---------- Reader ---------- */
-.reader-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-.reader-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.reader-legend { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted); flex-wrap: wrap; }
-.kp-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 6px; }
-.kp-dot.kp-i3, .kp-hl.kp-i3 { background: rgba(250, 204, 21, 0.55); }
-.kp-dot.kp-i2, .kp-hl.kp-i2 { background: rgba(45, 212, 191, 0.45); }
-.kp-dot.kp-i1, .kp-hl.kp-i1 { background: rgba(167, 139, 250, 0.40); }
-.reader-layout { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
-.kp-list { position: sticky; top: 12px; max-height: calc(100vh - 40px); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-.kp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.kp-empty { padding: 12px; border: 1px dashed var(--border); border-radius: 12px; line-height: 1.6; }
-.kp-hint { font-size: 0.75rem; color: var(--text-muted); }
-.kp-item { display: flex; gap: 8px; align-items: flex-start; text-align: left; width: 100%; padding: 8px 10px; border-radius: 10px;
-  border: 1px solid var(--border); border-left: 5px solid var(--border); background: var(--surface-2); }
-.kp-item.kp-i3 { border-left-color: #facc15; }
-.kp-item.kp-i2 { border-left-color: #2dd4bf; }
-.kp-item.kp-i1 { border-left-color: #a78bfa; }
-.kp-item.missing { opacity: 0.55; }
-.kp-item.missing .kp-page::after { content: " 找不到原文"; display: block; font-size: 0.65rem; }
-.kp-page { font-size: 0.75rem; color: var(--text-muted); min-width: 34px; font-variant-numeric: tabular-nums; }
+/* ---------- Reader (lecture PDF with highlighted key points) ---------- */
+.reader-bar { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s4); }
+.reader-tools { display: flex; align-items: center; gap: var(--s1); flex-wrap: wrap; }
+.reader-tools #readerZoomLabel { min-width: 48px; text-align: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.reader-legend { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+.kp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 8px; }
+.kp-dot.kp-i3, .kp-hl.kp-i3 { background: rgba(232, 184, 60, .5); }
+.kp-dot.kp-i2, .kp-hl.kp-i2 { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.kp-dot.kp-i1, .kp-hl.kp-i1 { background: color-mix(in srgb, var(--h-flash) 35%, transparent); }
+.reader-layout { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); gap: var(--s4); align-items: start; }
+.kp-list { position: sticky; top: var(--s3); display: flex; flex-direction: column; gap: 6px; }
+.kp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 14px; }
+.kp-empty { padding: var(--s3) var(--s4); border: 1.5px dashed var(--line); border-radius: var(--radius-m); line-height: 1.7; font-size: 14px; }
+.kp-empty .btn { margin: var(--s2) 0; }
+.kp-hint { font-size: 12.5px; color: var(--faint); }
+.kp-item { display: flex; gap: 8px; align-items: flex-start; text-align: left; width: 100%; padding: 8px 10px; border-radius: var(--radius-s);
+  background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line); transition: background var(--dur-hover) var(--ease); }
+.kp-item:hover { background: var(--surface-2); }
+.kp-item.kp-i3 { border-left-color: #d9a73a; }
+.kp-item.kp-i2 { border-left-color: var(--accent); }
+.kp-item.kp-i1 { border-left-color: var(--h-flash); }
+.kp-item.missing { opacity: .55; }
+.kp-item.missing .kp-page::after { content: "找不到原文"; display: block; font-size: 11px; }
+.kp-page { font-size: 12px; color: var(--muted); min-width: 34px; font-variant-numeric: tabular-nums; }
 .kp-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.kp-quote { font-size: 0.85rem; overflow-wrap: anywhere; }
-.kp-note { font-size: 0.75rem; color: var(--text-muted); }
-.reader-pages { display: flex; flex-direction: column; align-items: center; gap: 14px; min-width: 0; }
-.reader-page { position: relative; width: 100%; background: #fff; border-radius: 6px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25); overflow: hidden; }
+.kp-quote { font-size: 13.5px; overflow-wrap: anywhere; line-height: 1.6; }
+.kp-note { font-size: 12.5px; color: var(--muted); }
+.reader-pages { display: flex; flex-direction: column; align-items: center; gap: var(--s3); min-width: 0; }
+.reader-page { position: relative; width: 100%; background: #fff; border-radius: var(--radius-s); box-shadow: var(--shadow); overflow: hidden; }
 .reader-page canvas { display: block; }
-.reader-page-no { position: absolute; right: 8px; bottom: 6px; font-size: 0.7rem; color: #64748b; z-index: 3; }
+.reader-page-no { position: absolute; right: 8px; bottom: 6px; font-size: 11px; color: #6b7280; z-index: 3; }
 .reader-page .textLayer { z-index: 2; }
 .reader-page .textLayer .kp-hl { color: transparent; border-radius: 2px; mix-blend-mode: multiply; }
 .kp-flash { animation: kp-flash 1.2s ease-out 2; }
-@keyframes kp-flash { 0% { outline: 3px solid var(--primary); } 100% { outline: 3px solid transparent; } }
+@keyframes kp-flash { 0% { outline: 3px solid var(--accent); } 100% { outline: 3px solid transparent; } }
 
-/* ---------- Memory panel ---------- */
-.resume-card { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-.memory-grid { grid-template-columns: minmax(220px, 1fr) minmax(280px, 2fr); }
-.mem-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 118px; gap: 8px; align-items: center; margin: 6px 0; font-size: 0.85rem; }
-.mem-bar { height: 10px; border-radius: 999px; background: var(--surface-hover, var(--border)); overflow: hidden; }
-.mem-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--text-muted); transition: width 0.4s ease; }
-.mem-bar.strong > span { background: var(--success); }
-.mem-bar.fading > span { background: var(--warning); }
+/* ---------- Side key points (本講重點) ---------- */
+.keypoints { list-style: none; display: flex; flex-direction: column; gap: var(--s2); }
+.keypoints li { cursor: pointer; }
+
+/* ---------- Memory card on the overview ---------- */
+.mem-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 120px; gap: var(--s2); align-items: center; margin: 8px 0; font-size: 13.5px; }
+.mem-bar { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.mem-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--faint); transition: width .6s var(--ease); }
+.mem-bar.strong > span { background: var(--accent); }
+.mem-bar.fading > span { background: var(--warn); }
 .mem-bar.weak > span { background: var(--danger); }
-.mem-val { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
-.mem-val.strong { color: var(--success); }
-.mem-val.fading { color: var(--warning); }
+.mem-val { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; color: var(--muted); }
+.mem-val.strong { color: var(--primary); }
+.mem-val.fading { color: var(--warn); }
 .mem-val.weak { color: var(--danger); }
-.heatmap { display: grid; grid-template-columns: repeat(7, 14px); gap: 4px; margin-top: 10px; }
-.heat { width: 14px; height: 14px; border-radius: 3px; background: var(--surface-hover, var(--border)); }
-.heat.h1 { background: rgba(139, 92, 246, 0.35); }
-.heat.h2 { background: rgba(139, 92, 246, 0.55); }
-.heat.h3 { background: rgba(139, 92, 246, 0.75); }
-.heat.h4 { background: rgb(139, 92, 246); }
-
-/* ---------- Quiz: confidence, hidden choices, tools, result notes ---------- */
-.confidence-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted); }
-.confidence-row button { padding: 4px 10px; font-size: 0.8rem; border-radius: 999px; }
-.confidence-row button.on { background: var(--primary); color: var(--on-primary, #fff); border-color: var(--primary); }
-.choices-hidden { filter: blur(6px); pointer-events: none; user-select: none; }
-.reveal-btn { margin: 4px 0 8px; font-size: 0.85rem; }
-.hide-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; }
-.result-notes { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; line-height: 1.6; }
-
-/* ---------- Focus timer ---------- */
-.pomodoro { font-variant-numeric: tabular-nums; }
-.pomodoro.running { background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.6); }
+.heatmap { display: grid; grid-template-columns: repeat(7, 14px); gap: 4px; margin-top: var(--s2); }
+.heat { width: 14px; height: 14px; border-radius: 4px; background: var(--track); }
+.heat.h1 { background: color-mix(in srgb, var(--accent) 30%, var(--track)); }
+.heat.h2 { background: color-mix(in srgb, var(--accent) 55%, var(--track)); }
+.heat.h3 { background: color-mix(in srgb, var(--accent) 80%, var(--track)); }
+.heat.h4 { background: var(--accent); }
 
 /* ---------- Tutor ---------- */
-.tutor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.tutor-log { display: flex; flex-direction: column; gap: 10px; min-height: 220px; max-height: 55vh; overflow-y: auto; padding: 12px;
-  border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); margin: 10px 0; }
-.bubble { max-width: 85%; padding: 10px 14px; border-radius: 16px; line-height: 1.6; overflow-wrap: anywhere; }
-.bubble.student { align-self: flex-end; background: var(--primary); color: var(--on-primary, #fff); border-bottom-right-radius: 4px; }
-.bubble.tutor { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.tutor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s3); }
+.tutor-head h3 { font-family: var(--font-head); font-size: 16px; }
+.tutor-log { display: flex; flex-direction: column; gap: var(--s3); min-height: 220px; max-height: 60vh; overflow-y: auto; padding: var(--s4);
+  border-radius: var(--radius-m); background: var(--surface); border: 1px solid var(--line); margin: var(--s3) 0; }
+.bubble { max-width: 85%; padding: 10px 16px; border-radius: 18px; line-height: 1.7; overflow-wrap: anywhere; font-size: 14.5px; }
+.bubble.student { align-self: flex-end; background: var(--primary); color: var(--primary-ink); border-bottom-right-radius: 6px; }
+.bubble.tutor { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 6px; }
 .bubble.tutor p { margin: 4px 0; }
-.bubble.typing { color: var(--text-muted); font-style: italic; }
-.bubble.error { border-color: var(--danger); }
-.tutor-suggest { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-.tutor-suggest button { font-size: 0.8rem; border-radius: 999px; padding: 4px 12px; }
-.tutor-input { display: flex; gap: 8px; align-items: stretch; }
+.bubble.typing { color: var(--muted); font-style: italic; }
+.bubble.error { box-shadow: inset 0 0 0 1px var(--danger); }
+.tutor-suggest { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: var(--s2); }
+.tutor-input { display: flex; gap: var(--s2); align-items: flex-end; }
 .tutor-input textarea { flex: 1; min-width: 0; }
-.recall-box { width: 100%; max-width: 640px; }
 
 /* ---------- Small screens ---------- */
-@media (max-width: 900px) {
-  .reader-layout { grid-template-columns: 1fr; }
-  .kp-list { position: static; max-height: 260px; }
-  .memory-grid { grid-template-columns: 1fr; }
+@container app (max-width: 900px) {
+  .reader-layout { grid-template-columns: minmax(0, 1fr); }
+  .kp-list { position: static; }
 }
-@media (max-width: 600px) {
+@container app (max-width: 640px) {
   .mem-row { grid-template-columns: 40px minmax(0, 1fr); }
   .mem-val { grid-column: 2; text-align: left; }
   .bubble { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kp-flash { animation: none; outline: 3px solid var(--primary); }
+  .kp-flash { animation: none; outline: 3px solid var(--accent); }
 }

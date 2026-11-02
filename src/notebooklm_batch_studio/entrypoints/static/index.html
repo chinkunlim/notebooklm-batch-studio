@@ -1,2239 +1,696 @@
+<!doctype html>
 <!--
-用途：Gemini Notebook 學習工作室 本機管理介面與學生研讀專區 (Single Page Application)。
-提供課程批次生成管理、即時佇列監控、學生研讀工作台、3D 翻轉卡牌、語音導讀播放器與 Anki 匯出。
+用途：Gemini Notebook 學習工作室 本機網頁（http://127.0.0.1:8768）。
+四個頁面（研讀總覽、研讀工作室、弱點複習、批次排程）加上側欄底部的使用方法、專注模式與設計與自訂。
+設計依據 SPEC-009 與 docs/design/version_05_claude_template.html（ADR-008）；資料全部來自本機 API。
 -->
-<!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant" data-palette="forest" data-mode="light" data-style="flow" data-motion="full">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Gemini Notebook 學習工作室</title>
+  <meta name="description" content="Gemini Notebook 學習工作室（127.0.0.1:8768）：批次生成講義產出物，並在同一個地方研讀與複習。">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <link rel="icon" type="image/png" href="/static/icon-192.png">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
-  <meta name="theme-color" content="#7c3aed">
+  <meta name="theme-color" content="#1f4d3a">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <script>
-    /* Design v2 is the default; ?design=v1 brings back the old look (remembered), ?design=v2 returns. */
-    (function () {
-      var design = 'v2';
-      try {
-        var wanted = new URLSearchParams(location.search).get('design');
-        if (wanted) localStorage.setItem('studioDesign', wanted);
-        design = wanted || localStorage.getItem('studioDesign') || 'v2';
-      } catch (e) { /* storage blocked: use the default */ }
-      if (design !== 'v1') document.documentElement.classList.add('design-v2');
-    })();
-  </script>
-  <style>
-    /* 全域色彩與元件樣式表 */
-    :root {
-      --bg: #0f172a;
-      --surface: #1e293b;
-      --surface-hover: #334155;
-      --border: #334155;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #38bdf8;
-      --primary-hover: #0ea5e9;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --radius: 8px;
-      --surface-2: #0f172a;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      padding: 24px;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-    h1 { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
-    .badge {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-    .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
-    .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-    .badge-neutral { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
-    .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    button, .btn {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: var(--radius);
-      cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 500;
-      transition: all 0.15s ease;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    button:hover, .btn:hover { background: var(--surface-hover); border-color: var(--primary); }
-    button.primary, .btn.primary { background: var(--primary); color: #0f172a; border-color: var(--primary); font-weight: 600; }
-    button.primary:hover, .btn.primary:hover { background: var(--primary-hover); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 32px; }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .card:hover { border-color: var(--primary); }
-    .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .card-title { font-size: 1.125rem; font-weight: 600; }
-    .card-subtitle { font-size: 0.8rem; color: var(--text-muted); }
-    .progress-bar-bg {
-      background: var(--surface-2);
-      height: 8px;
-      border-radius: 4px;
-      overflow: hidden;
-      margin-top: 6px;
-    }
-    .progress-bar-fill {
-      background: var(--primary);
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.3s ease;
-    }
-    .status-counts {
-      display: flex;
-      gap: 12px;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 1000;
-    }
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      max-width: 820px;
-      width: 100%;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    input[type="text"], input[type="number"], select, textarea {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: var(--radius);
-      font-size: 0.875rem;
-      width: 100%;
-    }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.875rem; }
-    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { color: var(--text-muted); font-weight: 600; }
-    .empty-state {
-      text-align: center;
-      padding: 48px 16px;
-      color: var(--text-muted);
-      border: 2px dashed var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 24px;
-    }
-
-    /* 研讀工作台專屬樣式 */
-    .study-nav-btn {
-      text-align: left;
-      background: transparent;
-      border: 1px solid transparent;
-      padding: 9px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      color: var(--text);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      transition: all 0.15s ease;
-    }
-    .study-nav-btn:hover { background: var(--surface-hover); }
-    .study-nav-btn.active { background: #1e3a8a; border-color: #38bdf8; font-weight: 600; color: #fff; }
-
-    .choice-btn {
-      display: block;
-      width: 100%;
-      text-align: left;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      padding: 10px 14px;
-      margin-bottom: 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      font-size: 0.9rem;
-      color: var(--text);
-    }
-    .choice-btn:hover { border-color: var(--primary); }
-    .choice-btn.selected { border-color: var(--primary); background: rgba(56, 189, 248, 0.18); font-weight: 600; }
-    .choice-btn.correct { border-color: #22c55e; background: rgba(34, 197, 94, 0.2); font-weight: 600; }
-    .choice-btn.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.2); }
-
-    .flip-card-wrap {
-      perspective: 1000px;
-      width: 100%;
-      max-width: 580px;
-      height: 320px;
-      cursor: pointer;
-    }
-    .flip-card-inner {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      text-align: center;
-      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-      transform-style: preserve-3d;
-    }
-    .flip-card-inner.flipped { transform: rotateY(180deg); }
-    .flip-card-face {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      padding: 28px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      box-sizing: border-box;
-    }
-    .flip-card-front { background: var(--surface); color: var(--text); }
-    .flip-card-back {
-      background: var(--surface-2);
-      color: var(--primary);
-      transform: rotateY(180deg);
-      border-color: var(--primary);
-    }
-  </style>
-  <link rel="stylesheet" href="/static/studio.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
   <link rel="stylesheet" href="/static/studio-theme.css">
+  <link rel="stylesheet" href="/static/studio.css">
   <link rel="stylesheet" href="/static/studio-learning.css">
   <link rel="stylesheet" href="/static/vendor/pdfjs/text_layer.css">
+  <script>
+    /* Apply the remembered palette and light/dark mode before the first paint (no flash). */
+    (function () {
+      var root = document.documentElement;
+      function pref(key, fallback) { try { return localStorage.getItem('v05.' + key) || fallback; } catch (e) { return fallback; } }
+      var mode = pref('mode', 'auto');
+      root.dataset.mode = mode === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : mode;
+      root.dataset.palette = pref('palette', 'forest');
+      root.dataset.style = pref('style', 'flow');
+      root.dataset.glass = pref('glass', 'false') === 'true' ? 'on' : 'off';
+    })();
+  </script>
 </head>
 <body>
-  <header class="app-header">
-    <div class="header-top">
-      <a href="/" class="brand" onclick="goHome(); return false;" title="回到首頁">
-        <span class="brand-logo" aria-hidden="true">📚</span>
-        <span>
-          <h1>Gemini Notebook 學習工作室</h1>
-          <small>本機課程學習產出（127.0.0.1:8768）</small>
-        </span>
-      </a>
-      <!-- 視角切換器 -->
-      <nav class="view-switch" aria-label="切換畫面">
-        <button id="btnViewAdmin" class="primary" onclick="switchMainView('admin')">⚙️ 管理控制台</button>
-        <button id="btnViewStudy" onclick="switchMainView('study')">🎓 學生研讀專區</button>
-        <button onclick="openUsageModal()">📘 使用方法</button>
-        <button id="btnFocus" onclick="toggleFocusMode()" title="全螢幕專注模式（Esc 離開）">⛶ 專注</button>
-      </nav>
-    </div>
+<div class="app loading" id="app">
+<div class="shell">
 
-    <div class="header-bar">
-      <!-- 狀態（只顯示，不能按） -->
-      <div class="status-strip" aria-label="系統狀態">
-        <span class="status-label">狀態</span>
-        <span id="authBadge" class="badge badge-neutral">檢查認證中...</span>
-        <span id="queueBadge" class="badge badge-neutral">佇列閒置</span>
-        <span id="quotaBadge" class="badge badge-neutral" title="Gemini Notebook 生成額度（5 小時 / 每週）">額度讀取中...</span>
-      </div>
-      <!-- 動作按鈕 -->
-      <div class="controls" id="adminControls">
-        <button id="btnStartQueue" class="btn-go" onclick="startQueue()">▶️ 啟動批次生成</button>
-        <button id="btnPauseQueue" class="btn-pause" style="display:none;" onclick="pauseQueue()">⏸️ 溫和暫停</button>
-        <button id="btnResumeQueue" class="btn-go" style="display:none;" onclick="resumeQueue()">▶️ 繼續執行</button>
-        <button class="primary" onclick="openAddModal()">➕ 加入課程</button>
-        <details class="more-menu">
-          <summary aria-label="更多功能">⋯ 更多</summary>
-          <div class="menu">
-            <button onclick="resumeQuota()" title="喚醒因配額暫停的項目">⚡ 立即喚醒等待額度的工作</button>
-            <button onclick="openNamingModal()">🏷️ 命名規則</button>
-            <button id="btnTheme" onclick="toggleTheme()">☀️ 淺色</button>
-            <a href="/docs" target="_blank" class="btn">📖 OpenAPI 文件</a>
+  <!-- Dock: avatar + 4 pages; the now-playing record; tools at the bottom -->
+  <aside class="dock" aria-label="主要頁面">
+    <span class="dock-ind" id="dockPill" aria-hidden="true"><svg class="ind-svg"><path class="ind-path"/></svg><i class="ind-dot"></i></span>
+    <div class="dock-head"><button class="avatar" id="dockAvatar" title="設計與自訂" aria-label="設計與自訂"><span>LK</span></button><span class="label dock-name" id="dockName">LK 的學習</span></div>
+    <nav class="dock-track" id="dockTrack">
+      <button class="dock-btn on" data-view="overview" aria-label="研讀總覽"><i class="icon-house"></i><span class="label">研讀總覽</span><span class="tip">研讀總覽</span></button>
+      <button class="dock-btn" data-view="studio" aria-label="研讀工作室"><i class="icon-book-open"></i><span class="label">研讀工作室</span><span class="tip">研讀工作室</span></button>
+      <button class="dock-btn" data-view="review" aria-label="弱點複習"><i class="icon-circle-help"></i><span class="label">弱點複習</span><span class="tip">弱點複習</span></button>
+      <button class="dock-btn" data-view="queue" aria-label="批次排程"><i class="icon-clock"></i><span class="label">批次排程</span><span class="tip">批次排程</span></button>
+    </nav>
+    <div class="dock-disc-wrap" id="discWrap">
+      <button class="dock-disc" id="dockDisc" aria-label="正在播放" aria-expanded="false"><span class="vinyl-icon" style="--d:40px" id="dockDiscIcon"></span><span class="tip">正在播放</span></button>
+      <div class="disc-pop" id="discPop" role="dialog" aria-label="迷你播放器">
+        <div class="dp-top">
+          <span class="vinyl-icon" style="--d:64px" id="popDisc"></span>
+          <div class="dp-info">
+            <div class="dp-now"><span class="eq"><i></i><i></i><i></i></span><span id="dpState">已暫停</span></div>
+            <div class="dp-title" id="dpTitle">語音摘要</div>
+            <div class="dp-sub" id="dpSub"></div>
           </div>
-        </details>
-      </div>
-    </div>
-  </header>
-
-  <!-- ================= 管理控制台視角 (Admin View) ================= -->
-  <main id="adminView">
-    <section>
-      <h2 style="font-size: 1.2rem; margin-bottom: 12px;">📚 已註冊課程</h2>
-      <div id="courseContainer" class="grid">
-        <div class="empty-state">載入課程中...</div>
-      </div>
-    </section>
-
-    <!-- Course Detail Section (dynamically shown) -->
-    <section id="courseDetailSection" style="display: none; margin-top: 32px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h2 id="detailTitle" style="font-size: 1.25rem;">課程詳細進度</h2>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <span id="detailCourseActions"></span>
-          <button onclick="closeDetail()">✖ 關閉詳細資訊</button>
         </div>
+        <div class="dp-scrub" id="dpScrub" role="slider" tabindex="0" aria-label="播放進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="dp-track"><i id="dpBar" style="width:0%"></i><span class="dp-knob" id="dpKnob" style="left:0%"></span></div>
+        </div>
+        <div class="dp-times"><span id="dpTime">00:00</span><span id="dpDur">00:00</span></div>
+        <div class="dp-transport">
+          <button class="well sm" id="dpBack" aria-label="倒退 15 秒"><i class="icon-rotate-ccw"></i></button>
+          <button class="well sm" id="dpPrev" aria-label="上一講"><i class="icon-skip-back"></i></button>
+          <button class="well sm play" id="dpPlay" aria-label="播放"><i class="icon-play" id="dpIcon"></i></button>
+          <button class="well sm" id="dpNext" aria-label="下一講"><i class="icon-skip-forward"></i></button>
+          <button class="well sm" id="dpFwd" aria-label="快轉 15 秒"><i class="icon-rotate-cw"></i></button>
+        </div>
+        <div class="dp-foot"><button class="btn btn-ghost" id="dpSpeed" aria-label="播放速度">1×</button><button class="btn btn-soft" id="dpGo">回到研讀</button></div>
       </div>
-      <div id="detailContent" class="card"></div>
-      <details id="detailSelectionBox" class="card" style="margin-top: 16px;">
-        <summary style="cursor: pointer; font-weight: 600; color: #38bdf8;">🧩 產出內容（這門課要生成哪些；新增的會排入佇列，取消的不再生成，已完成的檔案不會刪）</summary>
-        <div id="detailSelection" style="margin-top: 12px;">載入中...</div>
-      </details>
-      <details id="detailOptionsBox" class="card" style="margin-top: 16px;">
-        <summary style="cursor: pointer; font-weight: 600; color: #38bdf8;">⚙️ 產出設定（之後生成的內容才會套用；已生成的請按「重新生成」）</summary>
-        <div id="detailOptions" style="margin-top: 12px;">載入中...</div>
-      </details>
-    </section>
-  </main>
-
-  <!-- ================= 學生研讀專區視角 (Student Study Portal) ================= -->
-  <div id="studyView" style="display: none;">
-    <!-- Course Selector & Overall Stats -->
-    <div class="card" style="margin-bottom: 20px; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-      <div style="display: flex; align-items: center; gap: 12px; min-width: 280px;">
-        <label style="font-weight: 600; font-size: 0.95rem; white-space: nowrap;">📖 研讀課程：</label>
-        <select id="studyCourseSelect" onchange="onStudyCourseSelected()" style="max-width: 320px; font-weight: 600; color: #38bdf8;"></select>
-      </div>
-      <div id="studySummaryStats" style="display: flex; gap: 16px; font-size: 0.85rem; color: var(--text-muted); align-items: center;"></div>
     </div>
+    <div class="dock-tools">
+      <button class="dock-btn" id="btnDockX" aria-label="展開側欄"><i class="icon-panel-left-open"></i><span class="label">收合側欄</span><span class="tip">展開側欄</span></button>
+      <button class="dock-btn" id="btnHelp" aria-label="使用方法"><i class="icon-info"></i><span class="label">使用方法</span><span class="tip">使用方法</span></button>
+      <button class="dock-btn" id="btnFocus" aria-label="專注模式"><i class="icon-scan"></i><span class="label">專注模式</span><span class="tip">專注模式</span></button>
+      <button class="dock-btn" id="btnCustom" aria-label="設計與自訂"><i class="icon-sliders-horizontal"></i><span class="label">設計與自訂</span><span class="tip">設計與自訂</span></button>
+    </div>
+  </aside>
 
-    <!-- 2-Column Study Layout -->
-    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
-      <!-- Left Sidebar: Lecture Navigation -->
-      <div class="card" style="width: 280px; flex-shrink: 0; padding: 14px;">
-        <h3 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--primary);">📚 章節課綱導覽</h3>
-        <div id="studyLectureList" style="display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow-y: auto;"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="brand" id="brandHome" title="回到研讀總覽">
+        <span class="brand-title"><span class="brand-long">Gemini Notebook </span>學習工作室</span>
+        <span class="brand-sub" id="pageName">研讀總覽</span>
+      </button>
+      <label class="course-pick"><span class="sr-only">研讀課程</span><select class="select" id="studyCourseSelect" aria-label="研讀課程"><option value="">載入課程中…</option></select></label>
+      <div class="status" aria-label="系統狀態" aria-live="polite">
+        <span id="authBadge" data-state=""><i class="dot"></i>檢查登入中</span>
+        <span id="queueBadge" data-state="">佇列讀取中</span>
+        <span id="quotaBadge" data-state="" title="Gemini Notebook 生成額度（5 小時 / 每週）">額度讀取中</span>
       </div>
+    </header>
 
-      <!-- Right Main: Study Workspace -->
-      <div style="flex: 1; min-width: 340px; display: flex; flex-direction: column; gap: 16px;">
-        <!-- Active Chapter Title Bar -->
-        <div class="card" style="padding: 14px 20px; flex-direction: row; justify-content: space-between; align-items: center;">
+    <div class="views">
+
+      <!-- ============ 研讀總覽 ============ -->
+      <section class="view on lg" id="view-overview" data-pace="relax">
+        <div class="hero rise" style="--i:0">
           <div>
-            <h2 id="studyActiveChapterTitle" style="font-size: 1.2rem; font-weight: 700;">載入中...</h2>
-            <p id="studyActiveChapterSub" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+            <h1 class="h1" id="greet">你好</h1>
+            <p class="pace-relax-only">今天照自己的節奏來。聽完一講、做一回測驗，就是很好的一天。</p>
+            <p class="pace-sprint-only" id="sprintLine">今天先完成最重要的三件事。</p>
           </div>
-          <!-- Top Tabs -->
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            <button id="btnTabToday" class="study-tab-btn primary" onclick="switchStudyTab('today')">🏠 今天</button>
-            <button id="btnTabReader" class="study-tab-btn" onclick="switchStudyTab('reader')">📄 課件</button>
-            <button id="btnTabAudio" class="study-tab-btn" onclick="switchStudyTab('audio')">🎧 語音導讀</button>
-            <button id="btnTabQuiz" class="study-tab-btn" onclick="switchStudyTab('quiz')">📝 互動測驗</button>
-            <button id="btnTabMistakes" class="study-tab-btn" onclick="switchStudyTab('mistakes')">📕 弱點錯題集 <span id="badgeMistakeCount" class="badge badge-warning" style="display:none;">0</span></button>
-            <button id="btnTabFlashcards" class="study-tab-btn" onclick="switchStudyTab('flashcards')">🗂️ 3D 抽認卡</button>
-            <button id="btnTabReports" class="study-tab-btn" onclick="switchStudyTab('reports')">📑 報告・圖表・心智圖</button>
-            <button id="btnTabTutor" class="study-tab-btn" onclick="switchStudyTab('tutor')">🧑‍🏫 問家教</button>
+          <div class="seg" data-seg="pace">
+            <button data-value="relax" class="on">放鬆漫遊</button>
+            <button data-value="sprint">衝刺</button>
           </div>
         </div>
 
-        <!-- Tab 0: Today / study plan -->
-        <div id="tabPanelToday" class="card" style="padding: 24px;">
-          <div id="todayContainer">載入中...</div>
-        </div>
-
-        <!-- Course material reader with highlighted key points -->
-        <div id="tabPanelReader" class="card" style="padding: 20px; display: none;">
-          <div id="readerContainer">載入中...</div>
-        </div>
-
-        <!-- Socratic tutor -->
-        <div id="tabPanelTutor" class="card" style="padding: 20px; display: none;">
-          <div id="tutorContainer">載入中...</div>
-        </div>
-
-        <!-- Tab 1: Audio Player Panel -->
-        <div id="tabPanelAudio" class="card" style="padding: 24px; display: none;">
-          <h3 style="font-size: 1.1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-            <span>🎧 Gemini Notebook Studio 語音導讀 (Audio Overview)</span>
-          </h3>
-          <div id="audioPlayerContainer"></div>
-        </div>
-
-        <!-- Tab 2: Interactive Quiz Panel -->
-        <div id="tabPanelQuiz" class="card" style="display: none; padding: 24px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-            <div id="quizKindButtons" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
-            <div id="quizScoreHeader" style="font-size: 0.95rem; font-weight: 600; color: #4ade80;"></div>
+        <div class="card continue rise" style="--i:1" id="continueCard">
+          <span class="vinyl-icon" style="--d:56px" id="contDisc"></span>
+          <div style="min-width:0">
+            <div class="eyebrow" id="contEyebrow">開始研讀</div>
+            <div class="continue-title" id="contTitle">選一門課開始</div>
+            <div class="small muted num" id="contSub"></div>
           </div>
-          <div id="quizContainer"></div>
-          <div id="quizActionBar" style="position: sticky; bottom: 10px; background: #1e293b; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--primary); display: none; justify-content: space-between; align-items: center; margin-top: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-            <div id="quizProgressText" style="font-size: 0.95rem; font-weight: 600;">已作答：0 / 0 題</div>
-            <button class="primary" style="font-weight: 600; padding: 8px 18px;" onclick="submitQuizAttempt()">交卷評分並記錄作答歷程</button>
-          </div>
+          <button class="btn btn-primary" id="contGo">進入研讀</button>
         </div>
 
-        <!-- Tab 3: Weakness Notebook Panel -->
-        <div id="tabPanelMistakes" class="card" style="display: none; padding: 24px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-            <div>
-              <h3 style="font-size: 1.1rem;">📕 弱點錯題集 (Weakness Notebook)</h3>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">自動記錄做錯的題目，提供重測演練並支援一鍵匯出 Anki 錯題包。</p>
+        <div class="grid-3">
+          <article class="card rise" style="--i:2">
+            <div class="card-head"><h2 class="h2">今日策略</h2><span class="eyebrow">由你決定</span></div>
+            <span class="field-label">今天要讀幾講</span>
+            <div class="goal-options" id="goalOptions">
+              <button data-goal="1" class="on">1 講</button><button data-goal="2">2 講</button><button data-goal="3">3 講</button>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="primary" onclick="downloadWeaknessAnki()">📥 匯出錯題專屬 Anki 卡牌 (.csv)</button>
+            <span class="field-label">專注時間　<b class="num" id="focusMin">45</b> 分鐘</span>
+            <input class="range" type="range" min="15" max="120" step="15" value="45" id="focusRange" aria-label="專注時間">
+            <div class="divider"></div>
+            <span class="field-label">學習循環</span>
+            <ul class="steps" id="todaySteps"><li class="loading-line">讀取學習計畫中…</li></ul>
+            <div class="pace-relax-only">
+              <div class="divider"></div>
+              <span class="field-label" id="weekLabel">本週節奏</span>
+              <div class="week" id="weekDots"></div>
             </div>
-          </div>
-          <div id="mistakesListContainer"></div>
-        </div>
-
-        <!-- Tab 4: 3D Flashcards Panel -->
-        <div id="tabPanelFlashcards" class="card" style="display: none; padding: 24px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-            <div>
-              <h3 style="font-size: 1.1rem;">🗂️ 3D 抽認卡 (Interactive Flashcards)</h3>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">點擊卡片正面/背面可 3D 翻轉，背面附帶講義出處標註。</p>
-            </div>
-            <button class="primary" onclick="downloadFlashcardsAnki()">📥 下載本章標準 Anki CSV</button>
-          </div>
-          <div id="flashcardsViewerContainer" style="display: flex; flex-direction: column; align-items: center; gap: 16px;"></div>
-        </div>
-
-        <!-- Tab 5: Reports & Mind Map Panel -->
-        <div id="tabPanelReports" class="card" style="display: none; padding: 24px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-            <div id="reportKindButtons" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
-          </div>
-          <div id="reportContentContainer" style="min-height: 400px; background: #0f172a; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Course Modal -->
-  <div id="addModal" class="modal-overlay">
-    <div class="modal">
-      <h3 style="font-size: 1.25rem;">➕ 加入課程</h3>
-      <div id="wizardSteps" class="wizard-steps"></div>
-      <div data-step="1">
-      <p style="font-size: 0.85rem; color: var(--text-muted);">
-        點選資料夾瀏覽，找到放講義 PDF 的課程資料夾後按「✅ 選這個資料夾」。可以選好幾門課。
-      </p>
-      <div style="background:#0f172a; border:1px solid var(--border); border-radius: var(--radius); padding: 10px;">
-        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
-          <button type="button" onclick="browseFolder(null)" style="padding:4px 10px; font-size:0.8rem;">🏠 開始位置</button>
-          <button type="button" id="btnFolderUp" onclick="browseFolder(currentBrowseParent)" style="padding:4px 10px; font-size:0.8rem;">⬆️ 上一層</button>
-          <span id="folderCurrent" style="font-size:0.8rem; color:var(--text-muted); word-break:break-all;"></span>
-          <button type="button" id="btnPickFolder" class="primary" onclick="pickCurrentFolder()" style="padding:4px 10px; font-size:0.8rem; margin-left:auto;">✅ 選這個資料夾</button>
-        </div>
-        <div id="folderList" style="max-height: 220px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; font-size:0.85rem;"></div>
-      </div>
-      <div style="margin-top:8px;">
-        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">已選的課程資料夾：</span>
-        <div id="pickedFolders" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; font-size:0.8rem;"><span style="color:var(--text-muted);">（還沒選）</span></div>
-        <textarea id="folderPaths" style="display:none;"></textarea>
-      </div>
-
-      </div>
-      <div data-step="2">
-      <div style="display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 140px;">
-          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">快速配置預設：</label>
-          <div style="display: flex; gap: 6px; margin-top: 4px;">
-            <button type="button" onclick="setPreset('full')">全功能</button>
-            <button type="button" onclick="setPreset('dual')">標準研讀</button>
-            <button type="button" onclick="setPreset('quiz')">純刷題</button>
-          </div>
-        </div>
-        <div style="flex: 1; min-width: 140px;">
-          <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">產出語言：</label>
-          <select id="courseLanguage" style="margin-top: 4px;">
-            <option value="zh-TW" selected>繁體中文 (zh-TW)</option>
-            <option value="en">English (en)</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Chapter Artifacts -->
-      <div style="margin-top: 10px; background: #0f172a; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);">
-        <span style="font-size: 0.85rem; font-weight: 600; color: #38bdf8;">📌 獨立 PDF 對應產出 (每份講義各自獨立產生)：</span>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; font-size: 0.85rem;">
-          <label><input type="checkbox" name="chap_art" value="audio" checked> 🎙️ Audio Overview</label>
-          <label><input type="checkbox" name="chap_art" value="quiz_1" checked> 📝 測驗 1・基礎 (easy)</label>
-          <label><input type="checkbox" name="chap_art" value="quiz_2" checked> 📝 測驗 2・理解 (medium)</label>
-          <label><input type="checkbox" name="chap_art" value="quiz_3" checked> 📝 測驗 3・模擬考 (hard)</label>
-          <label><input type="checkbox" name="chap_art" value="study_guide" checked> 📘 讀書指南</label>
-          <label><input type="checkbox" name="chap_art" value="video"> 🎬 Video Overview</label>
-          <label><input type="checkbox" name="chap_art" value="reports_briefing" checked> 📑 Reports: Briefing Doc</label>
-          <label><input type="checkbox" name="chap_art" value="reports_study_guide" checked> 📑 Reports: Study Guide</label>
-          <label><input type="checkbox" name="chap_art" value="reports_blog_post"> 📑 Reports: Blog Post</label>
-          <label><input type="checkbox" name="chap_art" value="reports_concept_explanation" checked> 📑 Reports: 概念解說</label>
-          <label><input type="checkbox" name="chap_art" value="quiz_academic"> 📝 進階・學術精研（研究所程度）</label>
-          <label><input type="checkbox" name="chap_art" value="quiz_concept"> ⚡ 進階・概念刷題（快速複習）</label>
-          <label><input type="checkbox" name="chap_art" value="data_table"> 📊 Data Table</label>
-          <label><input type="checkbox" name="chap_art" value="slide_deck"> 📑 Slide Deck</label>
-          <label><input type="checkbox" name="chap_art" value="mind_map" checked> 🧠 Mind Map</label>
-          <label><input type="checkbox" name="chap_art" value="flashcards" checked> 🗂️ Flashcards (Anki)</label>
-          <label><input type="checkbox" name="chap_art" value="infographic"> 🎨 Infographic</label>
-        </div>
-      </div>
-
-      <!-- Course-wide Artifacts -->
-      <div style="margin-top: 10px; background: #0f172a; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);">
-        <span style="font-size: 0.85rem; font-weight: 600; color: #38bdf8;">🌐 全課程 PDF 整合產出 (合併所有章節統整產生)：</span>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 8px; font-size: 0.85rem;">
-          <label><input type="checkbox" name="course_art" value="course_audio" checked> 🎙️ 全課 Audio Overview</label>
-          <label><input type="checkbox" name="course_art" value="course_mock_exam" checked> 📝 全課期末模擬考 (50 題)</label>
-          <label><input type="checkbox" name="course_art" value="course_video"> 🎬 全課 Video Overview</label>
-          <label><input type="checkbox" name="course_art" value="course_reports_briefing" checked> 📑 全課 Briefing Doc</label>
-          <label><input type="checkbox" name="course_art" value="course_reports_study_guide" checked> 📑 全課 Study Guide</label>
-          <label><input type="checkbox" name="course_art" value="course_reports_blog_post"> 📑 全課 Blog Post</label>
-          <label><input type="checkbox" name="course_art" value="course_reports_concept_explanation"> 📑 全課 概念解說</label>
-          <label><input type="checkbox" name="course_art" value="course_quiz_academic"> 📝 全課進階・學術精研考</label>
-          <label><input type="checkbox" name="course_art" value="course_quiz_concept"> ⚡ 全課進階・概念刷題考</label>
-          <label><input type="checkbox" name="course_art" value="course_mind_map" checked> 🧠 全課跨章 Mind Map</label>
-          <label><input type="checkbox" name="course_art" value="course_slide_deck"> 📑 全課 Slide Deck</label>
-          <label><input type="checkbox" name="course_art" value="course_data_table"> 📊 全課 Data Table</label>
-          <label><input type="checkbox" name="course_art" value="course_infographic"> 🎨 全課 Infographic</label>
-        </div>
-      </div>
-
-      </div>
-      <div data-step="3">
-      <details id="addOptionsBox" open style="margin-top: 10px; background: #0f172a; padding: 12px; border-radius: var(--radius); border: 1px solid var(--border);">
-        <summary style="cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #38bdf8;">⚙️ 進階產出設定（不改就用預設值；之後也能在課程頁修改）</summary>
-        <div id="addOptions" style="margin-top: 10px;">載入中...</div>
-      </details>
-
-      </div>
-      <div data-step="4">
-      <label style="display: flex; align-items: center; gap: 8px; margin-top: 10px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
-        <input type="checkbox" id="autoStartQueue" checked>
-        <span>🚀 加入後立即開始生成（取消勾選：先加入並暫停，設定好再到課程頁按「▶️ 開始生成」）</span>
-      </label>
-      <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; font-size: 0.85rem; color: #38bdf8;">
-        <input type="checkbox" id="reuseNotebook" checked>
-        <span>📒 Gemini Notebook 上已有同名筆記本就沿用（已上傳的 PDF 不重傳；取消勾選會另建新的筆記本）</span>
-      </label>
-
-      <div id="previewResults" style="display: none; background: #0f172a; padding: 12px; border-radius: var(--radius); font-size: 0.85rem; border: 1px solid var(--border);"></div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-        <button onclick="previewFolders()">🔍 重新估算</button>
-        <button class="primary" id="btnConfirmAdd" onclick="confirmAddFolders()" disabled>✅ 確認加入</button>
-      </div>
-      </div>
-      <div class="wizard-nav">
-        <button id="wizardBack" onclick="wizardGo(wizardStep - 1)">⬅️ 上一步</button>
-        <span style="flex: 1;"></span>
-        <button onclick="closeAddModal()">取消</button>
-        <button id="wizardNext" class="primary" onclick="wizardGo(wizardStep + 1)">下一步 ➡️</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Per-output Settings Modal -->
-  <div id="jobOptionsModal" class="modal-overlay" style="display: none;">
-    <div class="modal" style="max-width: 720px; max-height: 85vh; overflow-y: auto;">
-      <h3 id="jobOptionsTitle">⚙️ 這一份產出的設定</h3>
-      <p style="font-size: 0.8rem; color: var(--text-muted);">只影響這一份。選「沿用課程設定」就用課程的設定；尚未開始的工作會直接套用，已完成的請按「🔁 重新生成」。</p>
-      <div id="jobOptionsContent" style="font-size: 0.85rem;">載入中...</div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
-        <button class="primary" id="btnSaveJobOptions">💾 儲存</button>
-        <button onclick="document.getElementById('jobOptionsModal').style.display='none'">取消</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Usage Guide Modal -->
-  <div id="usageModal" class="modal-overlay" style="display: none;">
-    <div class="modal" style="max-width: 820px; max-height: 85vh; overflow-y: auto;">
-      <h3>📘 使用方法</h3>
-      <div id="usageContent" style="font-size: 0.9rem; line-height: 1.7;">載入中...</div>
-      <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
-        <button onclick="closeUsageModal()">關閉</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Naming Guide Modal -->
-  <div id="namingModal" class="modal-overlay" style="display: none;">
-    <div class="modal" style="max-width: 920px; max-height: 85vh; overflow-y: auto;">
-      <h3>🏷️ 命名規則：測驗與產出檔案怎麼命名</h3>
-      <div id="namingContent" style="font-size: 0.85rem;">載入中...</div>
-      <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
-        <button onclick="closeNamingModal()">關閉</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Prompt Editor Modal -->
-  <div id="promptModal" class="modal-overlay" style="display: none;">
-    <div class="modal" style="max-width: 680px;">
-      <h3 id="promptModalTitle">📝 檢視 / 編輯學術 Prompt</h3>
-      <p id="promptModalDesc" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;"></p>
-      <textarea id="promptInput" rows="10" style="font-family: monospace; font-size: 0.85rem; line-height: 1.4;"></textarea>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
-        <button class="primary" onclick="savePrompt()">💾 儲存 Prompt</button>
-        <button onclick="closePromptModal()">取消</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let activeJobId = null;
-    let activeCourseCode = null;
-    let currentCoursesList = [];
-    let currentStudyCourse = null;
-    let activeStudyLectureNo = null; // null represents course-wide
-    let activeStudyTab = 'today';
-    let activeQuizVariant = null;
-    let currentQuizData = null;
-    let currentQuizAnswers = {};
-    let currentFlashcards = [];
-    let currentFlashcardIdx = 0;
-
-    function escHtml(s) {
-      if (s === null || s === undefined) return '';
-      const d = document.createElement('div');
-      d.textContent = String(s);
-      return d.innerHTML;
-    }
-
-    function switchMainView(mode) {
-      const adminView = document.getElementById('adminView');
-      const studyView = document.getElementById('studyView');
-      const btnAdmin = document.getElementById('btnViewAdmin');
-      const btnStudy = document.getElementById('btnViewStudy');
-      const adminControls = document.getElementById('adminControls');
-
-      if (mode === 'study') {
-        adminView.style.display = 'none';
-        studyView.style.display = 'block';
-        btnAdmin.className = '';
-        btnStudy.className = 'primary';
-        adminControls.style.display = 'none';
-        initStudyPortal();
-      } else {
-        studyView.style.display = 'none';
-        adminView.style.display = 'block';
-        btnStudy.className = '';
-        btnAdmin.className = 'primary';
-        adminControls.style.display = 'flex';
-        fetchCourses();
-      }
-    }
-
-    async function initStudyPortal() {
-      const select = document.getElementById('studyCourseSelect');
-      select.innerHTML = '';
-      if (!currentCoursesList || currentCoursesList.length === 0) {
-        await fetchCourses();
-      }
-      if (currentCoursesList.length === 0) {
-        select.innerHTML = '<option value="">尚無註冊課程</option>';
-        return;
-      }
-      currentCoursesList.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.code;
-        opt.textContent = `${c.code} — ${c.name}`;
-        select.appendChild(opt);
-      });
-      const targetCode = currentCoursesList[0].code;
-      select.value = targetCode;
-      await loadStudyCourseData(targetCode);
-    }
-
-    async function onStudyCourseSelected() {
-      const select = document.getElementById('studyCourseSelect');
-      const code = select.value;
-      if (code) {
-        await loadStudyCourseData(code);
-      }
-    }
-
-    async function loadStudyCourseData(code, keepView = false) {
-      try {
-        const res = await fetch(`/api/courses/${code}`);
-        if (!res.ok) throw new Error('無法載入課程');
-        currentStudyCourse = await res.json();
-
-        // Fetch study history and mistakes count
-        const [histRes, mistRes] = await Promise.all([
-          fetch(`/api/courses/${code}/study/history`),
-          fetch(`/api/courses/${code}/study/mistakes?only_unresolved=true`)
-        ]);
-        const history = histRes.ok ? await histRes.json() : [];
-        const mistakes = mistRes.ok ? await mistRes.json() : [];
-
-        // Update overall summary stats
-        const avgScore = history.length > 0 
-          ? Math.round(history.reduce((acc, h) => acc + (h.score / h.total_questions) * 100, 0) / history.length)
-          : null;
-        document.getElementById('studySummaryStats').innerHTML = `
-          <span>📖 講義數: <strong>${currentStudyCourse.lectures.length}</strong> 講</span>
-          <span>📝 測驗作答: <strong>${history.length}</strong> 次</span>
-          <span>🎯 平均表現: <strong>${avgScore !== null ? avgScore + '%' : '尚未測驗'}</strong></span>
-          <span>📕 待複習錯題: <strong style="color: ${mistakes.length > 0 ? '#f59e0b' : '#10b981'};">${mistakes.length}</strong> 題</span>
-        `;
-
-        const badgeMistake = document.getElementById('badgeMistakeCount');
-        if (mistakes.length > 0) {
-          badgeMistake.style.display = 'inline-block';
-          badgeMistake.textContent = mistakes.length;
-        } else {
-          badgeMistake.style.display = 'none';
-        }
-
-        renderStudyLectureSidebar(currentStudyCourse, history);
-        // After a quiz is saved, stay where the student is (refresh numbers only).
-        if (keepView) return;
-        activeStudyTab = 'today';
-        if (currentStudyCourse.lectures && currentStudyCourse.lectures.length > 0) {
-          selectStudyLecture(currentStudyCourse.lectures[0].no);
-        } else {
-          selectStudyLecture(null);
-        }
-      } catch (e) {
-        console.error('Failed to load study course:', e);
-      }
-    }
-
-    function renderStudyLectureSidebar(course, history) {
-      const list = document.getElementById('studyLectureList');
-      list.innerHTML = '';
-
-      // Course-wide option
-      const courseBtn = document.createElement('button');
-      courseBtn.className = `study-nav-btn ${activeStudyLectureNo === null ? 'active' : ''}`;
-      courseBtn.onclick = () => selectStudyLecture(null);
-      courseBtn.innerHTML = `<span>🌐 全課跨章總複習</span>`;
-      list.appendChild(courseBtn);
-
-      // Chapter options
-      (course.lectures || []).forEach(lec => {
-        const attempts = history.filter(h => h.lecture_no === lec.no);
-        const best = attempts.length > 0 ? Math.max(...attempts.map(a => Math.round((a.score / a.total_questions) * 100))) : null;
-
-        const btn = document.createElement('button');
-        btn.className = `study-nav-btn ${activeStudyLectureNo === lec.no ? 'active' : ''}`;
-        btn.id = `navLec-${lec.no}`;
-        btn.onclick = () => selectStudyLecture(lec.no);
-        btn.innerHTML = `
-          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;">
-            第 ${String(lec.no).padStart(2, '0')} 講: ${lec.topic}
-          </span>
-          ${best !== null ? `<span class="badge badge-success" style="font-size:0.7rem;">${best}%</span>` : ''}
-        `;
-        list.appendChild(btn);
-      });
-    }
-
-    function selectStudyLecture(lectureNo) {
-      activeStudyLectureNo = lectureNo;
-      document.querySelectorAll('.study-nav-btn').forEach(btn => btn.classList.remove('active'));
-      if (lectureNo === null) {
-        document.querySelector('.study-nav-btn')?.classList.add('active');
-        document.getElementById('studyActiveChapterTitle').textContent = `🌐 全課跨章節統整`;
-        document.getElementById('studyActiveChapterSub').textContent = `跨章節綜合分析、全課期末考與跨章心智圖`;
-      } else {
-        const activeBtn = document.getElementById(`navLec-${lectureNo}`);
-        if (activeBtn) activeBtn.classList.add('active');
-        const lec = (currentStudyCourse.lectures || []).find(l => l.no === lectureNo);
-        document.getElementById('studyActiveChapterTitle').textContent = `第 ${String(lectureNo).padStart(2, '0')} 講：${lec ? lec.topic : ''}`;
-        document.getElementById('studyActiveChapterSub').textContent = lec ? `講義來源：${lec.filename}` : '';
-      }
-      switchStudyTab(activeStudyTab);
-    }
-
-    function switchStudyTab(tabName) {
-      activeStudyTab = tabName;
-      stopMockTimer();
-      if (typeof stopReader === 'function') stopReader();
-      ['Today', 'Reader', 'Audio', 'Quiz', 'Mistakes', 'Flashcards', 'Reports', 'Tutor'].forEach(t => {
-        const panel = document.getElementById(`tabPanel${t}`);
-        const btn = document.getElementById(`btnTab${t}`);
-        if (panel) panel.style.display = 'none';
-        if (btn) btn.className = 'study-tab-btn';
-      });
-
-      const activeBtn = document.getElementById(`btnTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
-      if (activeBtn) activeBtn.className = 'study-tab-btn primary';
-
-      if (tabName === 'today') {
-        document.getElementById('tabPanelToday').style.display = 'block';
-        loadTodayPanel();
-      } else if (tabName === 'audio') {
-        document.getElementById('tabPanelAudio').style.display = 'block';
-        loadAudioPlayer();
-      } else if (tabName === 'quiz') {
-        document.getElementById('tabPanelQuiz').style.display = 'block';
-        loadQuizForChapter(null);
-      } else if (tabName === 'mistakes') {
-        document.getElementById('tabPanelMistakes').style.display = 'block';
-        loadWeaknessNotebook();
-      } else if (tabName === 'flashcards') {
-        document.getElementById('tabPanelFlashcards').style.display = 'block';
-        loadFlashcardsViewer();
-      } else if (tabName === 'reports') {
-        document.getElementById('tabPanelReports').style.display = 'block';
-        loadReportInViewer('guide');
-      } else if (tabName === 'reader') {
-        document.getElementById('tabPanelReader').style.display = 'block';
-        loadReader();
-      } else if (tabName === 'tutor') {
-        document.getElementById('tabPanelTutor').style.display = 'block';
-        loadTutor();
-      }
-      if (typeof rememberPlace === 'function' && tabName !== 'today') rememberPlace({ tab: tabName });
-    }
-
-    async function loadAudioPlayer() {
-      const container = document.getElementById('audioPlayerContainer');
-      container.innerHTML = '<div style="color:var(--text-muted);">正在搜尋音訊檔案...</div>';
-      if (!currentStudyCourse) return;
-
-      const code = currentStudyCourse.code;
-      const isCourse = activeStudyLectureNo === null;
-      const targetType = isCourse ? 'course_audio' : 'audio';
-
-      // Find job or artifact file
-      const job = (currentStudyCourse.jobs || []).find(j => 
-        j.artifact_type === targetType && (isCourse ? j.lecture_no === null : j.lecture_no === activeStudyLectureNo)
-      );
-
-      if (job && job.output_file) {
-        const streamPath = job.rel_path || job.output_file.split('/').pop();
-        const streamUrl = `/api/artifacts/${code}/download/${encodeURIComponent(streamPath)}`;
-        container.innerHTML = `
-          <div style="background: #0f172a; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border);">
-            <div style="font-weight: 600; margin-bottom: 8px;">🎙️ ${isCourse ? '全課統整語音導讀' : '本講義語音總覽'}</div>
-            <audio id="portalAudio" controls style="width: 100%; margin-bottom: 14px;">
-              <source src="${streamUrl}">
-              您的瀏覽器不支援 HTML5 音訊標籤。
-            </audio>
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-              <div style="display: flex; gap: 6px; align-items: center;">
-                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">播放速度：</span>
-                <button class="btn" onclick="setAudioSpeed(0.75)" style="padding:4px 8px; font-size:0.75rem;">0.75x</button>
-                <button class="btn primary" onclick="setAudioSpeed(1.0)" style="padding:4px 8px; font-size:0.75rem;">1.0x</button>
-                <button class="btn" onclick="setAudioSpeed(1.25)" style="padding:4px 8px; font-size:0.75rem;">1.25x</button>
-                <button class="btn" onclick="setAudioSpeed(1.5)" style="padding:4px 8px; font-size:0.75rem;">1.5x</button>
-                <button class="btn" onclick="setAudioSpeed(2.0)" style="padding:4px 8px; font-size:0.75rem;">2.0x</button>
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <button class="btn" onclick="jumpAudio(-15)">⏪ -15s</button>
-                <button class="btn" onclick="jumpAudio(15)">+15s ⏩</button>
-                <a href="${streamUrl}" download class="btn">📥 下載音檔</a>
-                ${isCourse ? '' : `<button class="primary" onclick="markStep('audio')">✅ 我聽完了</button>`}
-              </div>
-            </div>
-          </div>
-        `;
-        // Pick up where the student stopped last time, at the same speed (per course and lecture).
-        attachAudioResume(document.getElementById('portalAudio'), `audio:${code}:${activeStudyLectureNo ?? 'course'}`);
-      } else {
-        container.innerHTML = `
-          <div class="empty-state" style="padding: 32px 16px;">
-            <p>🎧 該講次語音導讀尚未生成或仍在排隊佇列中。</p>
-            <p style="font-size:0.8rem; margin-top:8px;">可點擊頂部「⚙️ 管理控制台」確認任務生成狀態。</p>
-          </div>
-        `;
-      }
-    }
-
-    function setAudioSpeed(rate) {
-      const audio = document.getElementById('portalAudio');
-      if (audio) audio.playbackRate = rate;
-    }
-    function jumpAudio(secs) {
-      const audio = document.getElementById('portalAudio');
-      if (audio) audio.currentTime += secs;
-    }
-
-    // Quizzes a student can take: lecture quizzes per chapter, mock exams for the whole course.
-    const QUIZ_KINDS = {
-      lecture: [['quiz_1', '📝 測驗 1・基礎'], ['quiz_2', '📝 測驗 2・理解'], ['quiz_3', '📝 測驗 3・模擬考'],
-                ['quiz_academic', '🎓 學術精研'], ['quiz_concept', '⚡ 概念刷題']],
-      course: [['course_mock_exam', '📝 全課程模擬考'], ['course_quiz_academic', '🎓 全課程學術精研'],
-               ['course_quiz_concept', '⚡ 全課程概念刷題']],
-    };
-
-    function availableQuizzes() {
-      const isCourse = activeStudyLectureNo === null;
-      return QUIZ_KINDS[isCourse ? 'course' : 'lecture'].map(([type, label]) => {
-        const job = (currentStudyCourse.jobs || [])
-          .filter(j => j.artifact_type === type && j.status === 'done' && j.output_file
-            && (isCourse ? j.lecture_no === null : j.lecture_no === activeStudyLectureNo))
-          .sort((a, b) => (b.version || 1) - (a.version || 1))[0];
-        // The quiz files are named "<variant>[_vN]_quiz.json"; that prefix selects the newest version.
-        const variant = job ? job.output_file.split('/').pop().replace(/_quiz\.json$/, '') : null;
-        return { type, label, variant, version: job ? job.version || 1 : null };
-      }).filter(k => k.variant);
-    }
-
-    async function loadQuizForChapter(variant) {
-      stopMockTimer();
-      const kinds = availableQuizzes();
-      if (!variant || !kinds.some(k => k.variant === variant)) variant = kinds.length ? kinds[0].variant : null;
-      activeQuizVariant = variant;
-      document.getElementById('quizKindButtons').innerHTML = kinds.map(k =>
-        `<button class="${k.variant === variant ? 'primary' : ''}" onclick="loadQuizForChapter('${k.variant}')">${k.label}${k.version > 1 ? ` v${k.version}` : ''}</button>`).join('');
-
-      const container = document.getElementById('quizContainer');
-      const scoreHeader = document.getElementById('quizScoreHeader');
-      const actionBar = document.getElementById('quizActionBar');
-      scoreHeader.textContent = '';
-      actionBar.style.display = 'none';
-      container.innerHTML = '<div style="color:var(--text-muted);">正在載入題目與解析...</div>';
-
-      if (!variant) {
-        container.innerHTML = '<div class="empty-state">這個範圍還沒有完成的測驗，可在管理控制台的「🧩 產出內容」勾選後生成。</div>';
-        return;
-      }
-      const code = currentStudyCourse.code;
-      const lecNo = activeStudyLectureNo !== null ? activeStudyLectureNo : 0;
-      try {
-        const res = await fetch(`/api/courses/${code}/lectures/${lecNo}/quiz/${encodeURIComponent(variant)}?with_answers=true`);
-        if (!res.ok) throw new Error('尚無此風格測驗資料');
-        currentQuizData = await res.json();
-        currentQuizAnswers = {};
-
-        const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
-        if (!questions || questions.length === 0) {
-          container.innerHTML = '<div class="empty-state">此章節尚未生成測驗題目，請至管理控制台啟動。</div>';
-          return;
-        }
-
-        renderQuizQuestions(currentQuizData.quiz || currentQuizData.json_data, variant);
-        if (variant.startsWith('course_')) {
-          const n = questions.length;
-          document.getElementById('quizContainer').insertAdjacentHTML('afterbegin',
-            `<div class="plan-card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-               <span>📝 模擬考模式：限時 ${Math.round(n * 1.5)} 分鐘、交卷前看不到答案，交卷後顯示各章答對率。</span>
-               <button class="primary" onclick="startMockTimer(${n}); this.closest('.plan-card').remove();">⏱ 開始計時</button></div>`);
-        }
-      } catch (e) {
-        container.innerHTML = `<div class="empty-state">尚未生成此章節測驗，可在管理控制台排入生成。</div>`;
-      }
-    }
-
-    function renderQuizQuestions(quiz, variant) {
-      const container = document.getElementById('quizContainer');
-      const actionBar = document.getElementById('quizActionBar');
-      container.innerHTML = '';
-      currentQuizAnswers = {};
-      // New choice order on every attempt (first try, full retake and wrong-only retake).
-      quiz.questions = quiz.questions.map(q => shuffleQuestion(q));
-
-      quiz.questions.forEach((q, qIdx) => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.marginBottom = '16px';
-        card.style.background = 'var(--surface-2)';
-
-        let choicesHtml = '';
-        (q.choices || []).forEach((c, cIdx) => {
-          const letter = String.fromCharCode(65 + cIdx);
-          const choiceText = c.text !== undefined ? c.text : c;
-          choicesHtml += `
-            <div class="choice-btn" id="choice-${qIdx}-${cIdx}" onclick="selectChoice(${qIdx}, ${cIdx})">
-              <strong>${letter}.</strong> ${escHtml(choiceText)}
-            </div>
-          `;
-        });
-
-        card.innerHTML = `
-          <div style="font-weight: 600; font-size: 1rem; margin-bottom: 12px; color: var(--text);">
-            ${qIdx + 1}. ${escHtml(q.question)}
-          </div>
-          <div>${choicesHtml}</div>
-          <div id="explanation-${qIdx}" style="display: none; margin-top: 14px; padding: 12px; background: var(--surface); border-left: 4px solid var(--primary); border-radius: 4px; font-size: 0.9rem; line-height: 1.6;">
-            <p style="color: #4ade80; font-weight: 600; margin-bottom: 4px;">
-              正確解答：選項 ${String.fromCharCode(65 + q.answer_index)}
-            </p>
-            <p style="margin: 0; color: var(--text);">${escHtml(q.explanation || '暫無解析')}</p>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-
-      actionBar.style.display = 'flex';
-      updateQuizProgress();
-    }
-
-    function selectChoice(qIdx, cIdx) {
-      currentQuizAnswers[qIdx] = cIdx;
-      const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
-      const choices = questions[qIdx].choices;
-      for (let i = 0; i < choices.length; i++) {
-        const el = document.getElementById(`choice-${qIdx}-${i}`);
-        if (el) el.classList.remove('selected');
-      }
-      const selectedEl = document.getElementById(`choice-${qIdx}-${cIdx}`);
-      if (selectedEl) selectedEl.classList.add('selected');
-      updateQuizProgress();
-    }
-
-    function updateQuizProgress() {
-      const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
-      const total = questions.length;
-      const answered = Object.keys(currentQuizAnswers).length;
-      document.getElementById('quizProgressText').textContent = `已作答：${answered} / ${total} 題`;
-    }
-
-    async function submitQuizAttempt() {
-      const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
-      const total = questions.length;
-      let score = 0;
-      const mistakes = [];
-
-      const wrongIndexes = [];
-      questions.forEach((q, qIdx) => {
-        const selected = currentQuizAnswers[qIdx] !== undefined ? currentQuizAnswers[qIdx] : -1;
-        const correct = q.answer_index;
-        const expEl = document.getElementById(`explanation-${qIdx}`);
-        if (expEl) expEl.style.display = 'block';
-
-        (q.choices || []).forEach((c, cIdx) => {
-          const el = document.getElementById(`choice-${qIdx}-${cIdx}`);
-          if (el) {
-            if (cIdx === correct) el.classList.add('correct');
-            else if (cIdx === selected) el.classList.add('wrong');
-          }
-        });
-
-        if (selected === correct) {
-          score++;
-        } else {
-          wrongIndexes.push(qIdx);
-          mistakes.push({
-            question_text: q.question,
-            choices: q.choices.map(c => c.text !== undefined ? c.text : c),
-            correct_index: correct,
-            selected_index: selected,
-            explanation: q.explanation || '',
-            confidence: (window.quizConfidence || {})[qIdx] || null
-          });
-        }
-      });
-
-      const pct = Math.round((score / total) * 100);
-      document.getElementById('quizScoreHeader').textContent = `得分：${score} / ${total} (${pct}%)`;
-      renderQuizResult(score, total, wrongIndexes);
-
-      // Record to backend SQLite
-      const code = currentStudyCourse.code;
-      try {
-        await fetch(`/api/courses/${code}/study/quiz-attempts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lecture_no: activeQuizVariant === 'mixed_review' ? null : activeStudyLectureNo,
-            quiz_variant: activeQuizVariant,
-            score,
-            total_questions: total,
-            mistakes,
-            confidence: typeof confidenceSummary === 'function' ? confidenceSummary(wrongIndexes, total) : null
-          })
-        });
-        loadStudyCourseData(code, true);
-        if (mistakes.length) showToast(`${mistakes.length} 題錯題已加入「📕 錯題集」`, 'info');
-      } catch (e) {
-        console.error('Failed to save attempt:', e);
-      }
-    }
-
-    async function loadWeaknessNotebook() {
-      const container = document.getElementById('mistakesListContainer');
-      container.innerHTML = '<div style="color:var(--text-muted);">正在載入弱點錯題...</div>';
-      const code = currentStudyCourse.code;
-      const lecQuery = activeStudyLectureNo !== null ? `&lecture_no=${activeStudyLectureNo}` : '';
-
-      try {
-        const res = await fetch(`/api/courses/${code}/study/mistakes?only_unresolved=true${lecQuery}`);
-        const mistakes = await res.json();
-        window.currentMistakes = mistakes;
-        await loadSavedExplanations();
-
-        if (!mistakes || mistakes.length === 0) {
-          container.innerHTML = `
-            <div class="empty-state">
-              <p>🎉 太棒了！目前沒有未掌握的弱點錯題！</p>
-              <p style="font-size:0.8rem; margin-top:8px;">在「📝 互動測驗」中作答錯誤的題目會自動彙整於此。</p>
-            </div>
-          `;
-          return;
-        }
-
-        container.innerHTML = mistakes.map(m => `
-          <div class="card" id="mistakeCard-${m.id}" style="background: var(--surface-2); margin-bottom: 14px;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <span class="badge badge-warning">講義第 ${m.lecture_no || '全課'} 講錯題</span>
-              <button class="btn" style="padding: 4px 10px; font-size: 0.8rem; border-color: #10b981; color: #10b981;" onclick="resolveMistake('${m.id}')">
-                ✅ 我已精通此題 (消除)
-              </button>
-            </div>
-            <div style="font-weight: 600; font-size: 0.95rem; margin-top: 6px;">${escHtml(m.question_text)}</div>
-            <div style="margin-top: 8px;">
-              ${(m.choices || []).map((c, idx) => {
-                const letter = String.fromCharCode(65 + idx);
-                let style = 'padding: 6px 12px; margin-bottom: 4px; border-radius: 4px; font-size: 0.85rem;';
-                if (idx === m.correct_index) style += ' background: rgba(34,197,94,0.2); border: 1px solid #22c55e; font-weight: 600;';
-                else if (idx === m.selected_index) style += ' background: rgba(239,68,68,0.2); border: 1px solid #ef4444;';
-                else style += ' background: var(--surface); color: var(--text-muted);';
-                return `<div style="${style}">${letter}. ${escHtml(c)}</div>`;
-              }).join('')}
-            </div>
-            <div style="margin-top: 10px; padding: 10px; background: var(--surface); border-left: 3px solid var(--primary); font-size: 0.85rem;">
-              <strong>解析：</strong> ${escHtml(m.explanation)}
-            </div>
-            ${explanationSlot(m.question_text, `explainMistake('${m.id}', this)`, `explainMistake('${m.id}', this, true)`)}
-          </div>
-        `).join('');
-      } catch (e) {
-        container.innerHTML = `<div class="empty-state">無法讀取錯題記錄。</div>`;
-      }
-    }
-
-    async function resolveMistake(id) {
-      const code = currentStudyCourse.code;
-      try {
-        await fetch(`/api/courses/${code}/study/mistakes/${id}/resolve`, { method: 'POST' });
-        const card = document.getElementById(`mistakeCard-${id}`);
-        if (card) card.remove();
-        loadStudyCourseData(code);
-      } catch (e) {
-        alert('標記失敗: ' + e.message);
-      }
-    }
-
-    function downloadWeaknessAnki() {
-      const code = currentStudyCourse.code;
-      const lecQuery = activeStudyLectureNo !== null ? `?lecture_no=${activeStudyLectureNo}` : '';
-      window.location.href = `/api/courses/${code}/study/mistakes/anki.csv${lecQuery}`;
-    }
-
-    async function loadFlashcardsViewer() {
-      const container = document.getElementById('flashcardsViewerContainer');
-      container.innerHTML = '<div style="color:var(--text-muted);">正在載入抽認卡...</div>';
-      const code = currentStudyCourse.code;
-      const lecNo = activeStudyLectureNo || 1;
-
-      try {
-        const res = await fetch(`/api/courses/${code}/study/flashcards?lecture_no=${lecNo}`);
-        const data = await res.json();
-        currentFlashcards = data.cards || [];
-        currentFlashcardIdx = 0;
-
-        if (currentFlashcards.length === 0) {
-          container.innerHTML = `
-            <div class="empty-state">
-              <p>🗂️ 本章節抽認卡尚未生成或無法解析。</p>
-              <p style="font-size:0.8rem; margin-top:8px;">可至管理控制台勾選 Flashcards 進行批次生成。</p>
-            </div>
-          `;
-          return;
-        }
-
-        renderCurrentFlashcard();
-      } catch (e) {
-        container.innerHTML = `<div class="empty-state">載入抽認卡失敗。</div>`;
-      }
-    }
-
-    function renderCurrentFlashcard() {
-      const container = document.getElementById('flashcardsViewerContainer');
-      const card = currentFlashcards[currentFlashcardIdx];
-      const total = currentFlashcards.length;
-
-      container.innerHTML = `
-        <div class="flip-card-wrap" onclick="toggleFlipCard()">
-          <div class="flip-card-inner" id="flashcardInner">
-            <!-- Front -->
-            <div class="flip-card-face flip-card-front">
-              <span class="badge badge-neutral" style="position: absolute; top: 16px; left: 16px;">正面・核心概念</span>
-              <span style="font-size: 0.8rem; color: var(--text-muted); position: absolute; top: 16px; right: 16px;">點擊翻面 🔄</span>
-              <div style="font-size: 1.3rem; font-weight: 700; line-height: 1.5;">${escHtml(card.front)}</div>
-            </div>
-            <!-- Back -->
-            <div class="flip-card-face flip-card-back">
-              <span class="badge badge-success" style="position: absolute; top: 16px; left: 16px;">背面・詳細解答</span>
-              <div style="font-size: 1.1rem; line-height: 1.6; max-height: 70%; overflow-y: auto;">${escHtml(card.back)}</div>
-              ${card.source ? `<div style="font-size: 0.8rem; color: #94a3b8; margin-top: 14px;">出處：${escHtml(card.source)}</div>` : ''}
-            </div>
-          </div>
-        </div>
-
-        <!-- Controls -->
-        <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
-          <button class="btn" onclick="prevFlashcard()" ${currentFlashcardIdx === 0 ? 'disabled' : ''}>⬅️ 上一張</button>
-          <span style="font-size: 0.9rem; font-weight: 600; min-width: 80px; text-align: center;">${currentFlashcardIdx + 1} / ${total}</span>
-          <button class="btn" onclick="nextFlashcard()" ${currentFlashcardIdx === total - 1 ? 'disabled' : ''}>下一張 ➡️</button>
-          <button class="btn" onclick="shuffleFlashcards()">🔀 隨機抽卡</button>
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px;">
-          <span style="font-size: 0.85rem; color: var(--text-muted);">翻面後誠實評估：</span>
-          <button onclick="rateCurrentFlashcard(false)">😕 不記得</button>
-          <button class="primary" onclick="rateCurrentFlashcard(true)">🙂 記得</button>
-        </div>
-      `;
-    }
-
-    function toggleFlipCard() {
-      const inner = document.getElementById('flashcardInner');
-      if (inner) inner.classList.toggle('flipped');
-    }
-    function prevFlashcard() {
-      if (currentFlashcardIdx > 0) {
-        currentFlashcardIdx--;
-        renderCurrentFlashcard();
-      }
-    }
-    function nextFlashcard() {
-      if (currentFlashcardIdx < currentFlashcards.length - 1) {
-        currentFlashcardIdx++;
-        renderCurrentFlashcard();
-      }
-    }
-    function shuffleFlashcards() {
-      currentFlashcards.sort(() => Math.random() - 0.5);
-      currentFlashcardIdx = 0;
-      renderCurrentFlashcard();
-    }
-    function downloadFlashcardsAnki() {
-      const code = currentStudyCourse.code;
-      const lecNo = activeStudyLectureNo || 1;
-      const job = (currentStudyCourse.jobs || []).find(j => j.artifact_type === 'flashcards' && j.lecture_no === lecNo);
-      if (job && job.output_file) {
-        const target = job.rel_path || job.output_file.split('/').pop();
-        const csvName = target.replace('.json', '.csv');
-        window.location.href = `/api/artifacts/${code}/download/${encodeURIComponent(csvName)}`;
-      } else {
-        alert('尚未生成該章節抽認卡 CSV。');
-      }
-    }
-
-    // Study-portal viewers for every document-like output (newest finished version first).
-    const REPORT_KINDS = {
-      guide: { label: '📘 讀書指南', types: ['study_guide', 'reports_study_guide'] },
-      concept: { label: '💡 概念解說', types: ['reports_concept_explanation'] },
-      briefing: { label: '📋 簡報文件', types: ['reports_briefing'] },
-      blog: { label: '✍️ 部落格文章', types: ['reports_blog_post'] },
-      infographic: { label: '🎨 資訊圖表', types: ['infographic'] },
-      table: { label: '📊 資料表', types: ['data_table'] },
-      mindmap: { label: '🧠 心智圖', types: ['mind_map'] },
-      slides: { label: '🖥️ 投影片', types: ['slide_deck'] },
-    };
-
-    function pickLatestJob(types) {
-      const isCourse = activeStudyLectureNo === null;
-      const wanted = types.map(t => (isCourse ? `course_${t}` : t));
-      return (currentStudyCourse.jobs || [])
-        .filter(j => wanted.includes(j.artifact_type) && j.output_file && ['done', 'needs_review'].includes(j.status)
-          && (isCourse ? j.lecture_no === null : j.lecture_no === activeStudyLectureNo))
-        .sort((a, b) => (b.version || 1) - (a.version || 1))[0];
-    }
-
-    function parseCsv(text) {
-      const rows = []; let row = []; let cell = ''; let quoted = false;
-      text = text.replace(/^\uFEFF/, '');
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        if (quoted) {
-          if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
-          else if (ch === '"') quoted = false;
-          else cell += ch;
-        } else if (ch === '"') quoted = true;
-        else if (ch === ',') { row.push(cell); cell = ''; }
-        else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
-        else if (ch !== '\r') cell += ch;
-      }
-      if (cell || row.length) { row.push(cell); rows.push(row); }
-      return rows;
-    }
-
-    async function loadReportInViewer(kind) {
-      const buttons = document.getElementById('reportKindButtons');
-      buttons.innerHTML = Object.entries(REPORT_KINDS).map(([key, k]) =>
-        `<button class="${key === kind ? 'primary' : ''}" onclick="loadReportInViewer('${key}')">${k.label}</button>`).join('');
-      const container = document.getElementById('reportContentContainer');
-      const spec = REPORT_KINDS[kind] || REPORT_KINDS.guide;
-      const job = pickLatestJob(spec.types);
-      if (!job) {
-        container.innerHTML = `<div class="empty-state">這個範圍還沒有「${spec.label}」。可到管理控制台的「🧩 產出內容」勾選後生成。</div>`;
-        return;
-      }
-      const code = currentStudyCourse.code;
-      const path = job.rel_path || job.output_file.split('/').pop();
-      const enc = encodeURI(path);
-      const dl = `/api/artifacts/${code}/download/${enc}`;
-      const readable = ['guide', 'concept'].includes(kind) && activeStudyLectureNo !== null;
-      const header = `<div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">v${job.version || 1}${job.status === 'needs_review' ? '・⚠️ 需審查' : ''}・<a href="${dl}" target="_blank">開新分頁 / 下載</a>${readable ? `<button class="primary" style="margin-left:auto;" onclick="markStep('guide')">✅ 我讀完了</button>` : ''}</div>`;
-      const ext = path.split('.').pop().toLowerCase();
-      if (['md', 'opml', 'json'].includes(ext)) {
-        container.innerHTML = header + `<iframe src="/api/artifacts/${code}/view/${enc}" style="width:100%; height:620px; border:none; border-radius:var(--radius);"></iframe>`;
-      } else if (ext === 'png') {
-        const stem = path.replace(/\.png$/, '');
-        const extras = [['_A4.pdf', 'A4 PDF'], ['_iPadAir4.png', 'iPad Air 4'], ['_MacBookPro14.png', 'MacBook Pro 14']];
-        const links = [];
-        for (const [suffix, name] of extras) {
-          const url = `/api/artifacts/${code}/download/${encodeURI(stem + suffix)}`;
-          try { if ((await fetch(url, { method: 'HEAD' })).ok) links.push(`<a class="btn" href="${url}" target="_blank" style="padding:2px 8px; font-size:0.75rem;">${name}</a>`); } catch (e) { /* optional copy */ }
-        }
-        container.innerHTML = header + (links.length ? `<div style="display:flex; gap:6px; margin-bottom:10px;">裝置版本：${links.join('')}</div>` : '') +
-          `<img src="${dl}" alt="${escHtml(spec.label)}" style="max-width:100%; border-radius:var(--radius); background:#fff;">`;
-      } else if (ext === 'csv') {
-        const rows = parseCsv(await (await fetch(dl)).text()).filter(r => r.some(c => c.trim()));
-        const [head, ...body] = rows;
-        container.innerHTML = header + `<table><thead><tr>${(head || []).map(c => `<th>${escHtml(c)}</th>`).join('')}</tr></thead>
-          <tbody>${body.map(r => `<tr>${r.map(c => `<td>${escHtml(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-      } else if (ext === 'pdf' || ext === 'html') {
-        container.innerHTML = header + `<iframe src="${dl}" style="width:100%; height:620px; border:none; border-radius:var(--radius); background:#fff;"></iframe>`;
-      } else {
-        container.innerHTML = header + `<div class="empty-state">這個格式（.${escHtml(ext)}）無法在網頁預覽，請用上方連結下載。</div>`;
-      }
-    }
-
-    // ================= 管理控制台邏輯 (Admin Functions) =================
-    async function fetchStatus() {
-      try {
-        const res = await fetch('/api/status');
-        const data = await res.json();
-        const authBadge = document.getElementById('authBadge');
-        if (data.auth && data.auth.authenticated) {
-          authBadge.className = 'badge badge-success';
-          authBadge.textContent = 'Gemini Notebook 已登入';
-        } else {
-          authBadge.className = 'badge badge-danger';
-          authBadge.textContent = 'Gemini Notebook 未登入';
-        }
-        const queueBadge = document.getElementById('queueBadge');
-        const btnStart = document.getElementById('btnStartQueue');
-        const btnPause = document.getElementById('btnPauseQueue');
-        const btnResume = document.getElementById('btnResumeQueue');
-        const counts = data.queue_counts || {};
-
-        if (data.queue_running) {
-          queueBadge.className = 'badge badge-warning';
-          queueBadge.textContent = `🟢 佇列運行中 (${counts.running || 0} 運行 / ${counts.pending || 0} 等待 / ${counts.done || 0} 完成)`;
-          if (btnStart) btnStart.style.display = 'none';
-          if (btnPause) btnPause.style.display = 'inline-block';
-          if (btnResume) btnResume.style.display = 'none';
-        } else if (counts.pending > 0 || counts.quota_wait > 0) {
-          queueBadge.className = 'badge badge-neutral';
-          queueBadge.textContent = `⏸️ 佇列已暫停 (${counts.pending || 0} 等待 / ${counts.done || 0} 完成)`;
-          if (btnStart) btnStart.style.display = 'none';
-          if (btnPause) btnPause.style.display = 'none';
-          if (btnResume) btnResume.style.display = 'inline-block';
-        } else {
-          queueBadge.className = 'badge badge-neutral';
-          queueBadge.textContent = `⚪ 佇列閒置 (${counts.pending || 0} 等待 / ${counts.done || 0} 完成)`;
-          if (btnStart) btnStart.style.display = 'inline-block';
-          if (btnPause) btnPause.style.display = 'none';
-          if (btnResume) btnResume.style.display = 'none';
-        }
-      } catch (e) {
-        console.error('Status fetch failed:', e);
-      }
-    }
-
-    async function fetchQuota() {
-      const badge = document.getElementById('quotaBadge');
-      try {
-        const res = await fetch('/api/notebooklm/quota');
-        const data = await res.json();
-        if (!res.ok) {
-          badge.className = 'badge badge-neutral';
-          badge.textContent = '額度：無法讀取';
-          badge.title = data.detail || '';
-          return;
-        }
-        const names = { five_hour: '5小時', weekly: '每週' };
-        const parts = (data.windows || []).map(w => `${names[w.kind] || w.kind} ${Math.round(w.remaining_percent)}%`);
-        const low = (data.windows || []).some(w => w.remaining_percent <= 0);
-        badge.className = low ? 'badge badge-danger' : 'badge badge-success';
-        badge.textContent = parts.length ? `額度剩餘：${parts.join(' / ')}` : '額度：未提供';
-        badge.title = (data.windows || []).map(w => `${names[w.kind] || w.kind} 重置：${new Date(w.resets_at).toLocaleString()}`).join('\n')
-          + (data.source_limit ? `\n每本筆記本來源上限：${data.source_limit}` : '');
-      } catch (e) {
-        badge.textContent = '額度：無法讀取';
-      }
-    }
-
-    async function startQueue() {
-      try {
-        await fetch('/api/queue/start', { method: 'POST' });
-        await fetchStatus();
-        await fetchCourses();
-      } catch (e) {
-        alert('啟動佇列失敗: ' + e.message);
-      }
-    }
-
-    async function pauseQueue() {
-      try {
-        await fetch('/api/queue/pause', { method: 'POST' });
-        await fetchStatus();
-        await fetchCourses();
-      } catch (e) {
-        alert('暫停佇列失敗: ' + e.message);
-      }
-    }
-
-    async function resumeQueue() {
-      try {
-        await fetch('/api/queue/resume', { method: 'POST' });
-        await fetchStatus();
-        await fetchCourses();
-      } catch (e) {
-        alert('繼續執行失敗: ' + e.message);
-      }
-    }
-
-    async function setupCourse(code, event) {
-      if (event) event.stopPropagation();
-      try {
-        alert(`開始為課程 [${code}] 在 Gemini Notebook 建立筆記本並上傳 PDF 講義...（這可能需要 1~2 分鐘，請稍候）`);
-        const res = await fetch(`/api/courses/${code}/setup`, { method: 'POST' });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || '建立筆記本失敗');
-        }
-        const data = await res.json();
-        alert(`✅ 筆記本建立成功！ID: ${data.notebook_id}`);
-        fetchCourses();
-        if (activeCourseCode === code) viewCourseDetail(code);
-      } catch (e) {
-        alert('建立筆記本失敗: ' + e.message);
-      }
-    }
-
-    async function retryUpload(code, lectureNo) {
-      try {
-        alert(`開始重新上傳講義第 ${lectureNo} 講至 Gemini Notebook...`);
-        const res = await fetch(`/api/courses/${code}/lectures/${lectureNo}/retry_upload`, { method: 'POST' });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.detail || '重試上傳失敗');
-        }
-        const data = await res.json();
-        alert(`講義上傳狀態：${data.upload_status}`);
-        viewCourseDetail(code);
-      } catch (e) {
-        alert('重試上傳失敗: ' + e.message);
-      }
-    }
-
-    async function refinePrompts(code) {
-      try {
-        alert(`正在呼叫本機 Ollama (gemma4) 與學術母版為課程 [${code}] 潤飾所有任務 Prompt...`);
-        const res = await fetch(`/api/courses/${code}/refine_prompts`, { method: 'POST' });
-        if (!res.ok) throw new Error('潤飾失敗');
-        const data = await res.json();
-        alert(`✅ 成功潤飾 ${data.updated_jobs_count} 項任務 Prompt！`);
-        viewCourseDetail(code);
-      } catch (e) {
-        alert('Prompt 潤飾失敗: ' + e.message);
-      }
-    }
-
-    async function syncFromNotebookLM(code) {
-      try {
-        alert(`正在向 Gemini Notebook 查詢課程 [${code}] 遠端所有生成物，並同步下載至本機...`);
-        const res = await fetch(`/api/courses/${code}/sync`, { method: 'POST' });
-        if (!res.ok) throw new Error('同步失敗');
-        const data = await res.json();
-        alert(`✅ 同步完成！\n遠端共 ${data.remote_artifacts_found} 項產物，成功下載同步 ${data.synced_count} 個新檔案至本機！`);
-        viewCourseDetail(code);
-      } catch (e) {
-        alert('同步失敗: ' + e.message);
-      }
-    }
-
-    async function resumeQuota() {
-      try {
-        // Wakes the jobs waiting for quota and resumes the queue (one existing route does both).
-        const res = await fetch('/api/queue/resume', { method: 'POST' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        showToast(`✅ 已喚醒 ${data.data} 個等待額度的工作，佇列繼續執行。`, 'success');
-        await fetchStatus();
-      } catch (e) {
-        alert('喚醒失敗: ' + e.message);
-      }
-    }
-
-    async function fetchCourses() {
-      try {
-        const res = await fetch('/api/courses');
-        const courses = await res.json();
-        currentCoursesList = courses;
-        const container = document.getElementById('courseContainer');
-
-        if (!courses || courses.length === 0) {
-          container.innerHTML = '<div class="empty-state">尚無註冊課程，請點擊上方按鈕「➕ 加入課程資料夾」。</div>';
-          return;
-        }
-
-        container.innerHTML = courses.map(c => {
-          // Field names follow GET /api/courses (counts / total_jobs / lecture_count). Refs: ISSUE-020
-          const stats = c.counts || {};
-          const total = (c.total_jobs || 0) - (stats.skipped || 0);
-          const done = stats.done || 0;
-          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-          const hasNb = !!c.notebook_id;
-
-          return `
-            <div class="card" onclick="viewCourseDetail('${c.code}')" style="cursor: pointer;">
-              <div class="card-header">
-                <div>
-                  <div class="card-title">${c.name} (${c.code}) ${c.paused ? '<span class="badge badge-warning">⏸ 暫停中</span>' : ''}</div>
-                  <div class="card-subtitle">${c.lecture_count} 份講義 PDF</div>
+          </article>
+
+          <article class="card rise" style="--i:3">
+            <div class="card-head"><h2 class="h2">章節路線</h2><span class="eyebrow" id="routeCourse"></span></div>
+            <ol class="path" id="routeList"></ol>
+          </article>
+
+          <article class="card rise mastery-card" style="--i:4">
+            <div class="card-head"><h2 class="h2">掌握程度</h2><span class="eyebrow">全課</span></div>
+            <div class="mastery-body">
+              <div class="mastery">
+                <div class="big-ring" data-p="0" id="masteryRing"><svg viewBox="0 0 148 148"><circle class="bg" cx="74" cy="74" r="64"/><circle class="fg" cx="74" cy="74" r="64"/></svg><div><b class="num" id="masteryVal">0%</b><small>學習進度</small></div></div>
+                <div class="stat-pair">
+                  <div class="stat"><b id="statDone">0 / 0</b><span>已完成講次</span></div>
+                  <div class="stat"><b id="statAcc">—</b><span>近七天正確率</span></div>
                 </div>
-                <span class="badge ${hasNb ? 'badge-success' : 'badge-warning'}">
-                  ${hasNb ? '已連線' : '待初始化'}
+              </div>
+              <div class="pace-relax-only">
+                <span class="field-label" id="dueLabel">間隔複習</span>
+                <div class="leitner" id="dueLeitner"></div>
+              </div>
+              <div class="pace-sprint-only">
+                <span class="field-label">考試倒數</span>
+                <div class="countdown" id="countdownBox"></div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="grid-2 wide-left section-gap">
+          <article class="card rise" style="--i:5">
+            <div class="card-head"><h2 class="h2">各講進度</h2><span class="eyebrow">點任一步驟直接前往</span></div>
+            <div id="chapterRows"></div>
+          </article>
+          <article class="card rise" style="--i:6">
+            <div class="card-head"><h2 class="h2">記憶強度</h2><span class="eyebrow">遺忘曲線估計</span></div>
+            <div id="memoryPanel"><p class="loading-line">讀取中…</p></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============ 研讀工作室 ============ -->
+      <section class="view lg" id="view-studio">
+        <div class="subbar">
+          <div class="crumbs" id="crumbs">課程</div>
+          <div class="row" style="flex-wrap:wrap">
+            <button class="btn btn-ghost pomodoro" id="btnPomodoro" title="25 分鐘專注計時（再按一次暫停）">專注 25:00</button>
+            <div class="seg" data-seg="layout"><button data-value="stage" class="on">主舞台</button><button data-value="split">雙欄</button><button data-value="stack">上下</button></div>
+            <div class="seg" data-seg="studioPane"><button data-value="courses">課程目錄</button><button data-value="study" class="on">研讀</button></div>
+          </div>
+        </div>
+
+        <!-- 課程目錄: courses on the left, the chosen course's lectures on the right -->
+        <div class="resizable" data-col-key="courses" id="paneCourses" hidden>
+          <div class="card">
+            <div class="card-head"><h2 class="h2">我的課程</h2><span class="eyebrow" id="courseCount"></span></div>
+            <div class="course-list" id="courseList"></div>
+          </div>
+          <div class="card">
+            <div class="eyebrow" id="cdCode"></div>
+            <h2 class="h1" style="margin:4px 0 8px" id="cdName">選一門課</h2>
+            <p class="muted" style="margin-bottom:16px" id="cdMeta"></p>
+            <ul class="lectures" id="lectureList"></ul>
+          </div>
+        </div>
+
+        <!-- 研讀: blocks below are placed by applyLayout() -->
+        <div id="paneStudy" class="study resizable" data-layout="stage" data-col-key="study">
+          <div class="study-main" id="studyMain"></div>
+          <div class="col-resizer" role="separator" aria-orientation="vertical" aria-label="拖曳調整欄寬，按兩下還原" tabindex="0"><button class="col-toggle" aria-label="收合右欄"><i class="icon-panel-right-close"></i></button></div>
+          <aside class="study-side side-col" id="studySide"></aside>
+        </div>
+
+        <div hidden id="studyParts">
+          <article class="card blk" id="readerCard"><button class="blk-grip" draggable="true" aria-label="拖曳移動這個區塊"><i class="icon-grip-horizontal"></i></button>
+            <div id="readerHome">
+              <div id="readerContent">
+                <div class="card-head"><span class="eyebrow" id="readerEyebrow">講義</span></div>
+                <div id="readerContainer"><p class="loading-line">選一講後顯示講義</p></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card player-wrap blk no-audio" id="playerCard"><button class="blk-grip" draggable="true" aria-label="拖曳移動這個區塊"><i class="icon-grip-horizontal"></i></button>
+            <div class="player-controls">
+              <span class="eyebrow">語音摘要</span>
+              <span class="row" style="gap:4px">
+                <span class="hint" id="flipHint">點唱盤切換視覺</span>
+                <span class="player-tools">
+                  <button class="icon-btn" id="audioDone" title="標記聽完" aria-label="標記聽完"><i class="icon-circle-check"></i></button>
+                  <a class="icon-btn" id="audioDl" href="#" download title="下載音檔" aria-label="下載音檔"><i class="icon-download"></i></a>
                 </span>
-              </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                  <span>生成進度: ${done} / ${total}</span>
-                  <span>${pct}%</span>
+              </span>
+            </div>
+            <audio id="portalAudio" preload="metadata"></audio>
+            <div class="player-inner">
+            <div class="deck" id="deck">
+              <div class="visual" id="visual" title="點一下切換視覺">
+                <div class="orbit-arc"><svg class="arc" viewBox="0 0 184 184"><circle class="arc-bg" cx="92" cy="92" r="81"/><circle class="arc-fg" id="arcFg" cx="92" cy="92" r="81"/></svg><span class="bead" id="bead"></span></div>
+                <div class="skin skin-vinyl on" data-skin="vinyl">
+                  <div class="orbit">
+                    <div class="vinyl" id="vinyl">
+                      <div class="art">
+                        <svg viewBox="0 0 60 60" aria-hidden="true">
+                          <circle cx="30" cy="30" r="30" fill="#1b211d"/>
+                          <circle cx="30" cy="30" r="22" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+                          <circle cx="30" cy="30" r="15" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+                        </svg>
+                        <span class="spindle"></span>
+                      </div>
+                    </div>
+                    <div class="tonearm" id="tonearm"><span class="arm-base"></span><span class="arm-shaft"></span><span class="arm-head"></span></div>
+                  </div>
+                  <canvas class="horizon viz" id="horizonCanvas"></canvas>
                 </div>
-                <div class="progress-bar-bg">
-                  <div class="progress-bar-fill" style="width: ${pct}%;"></div>
+                <div class="skin" data-skin="sine"><div class="viz-disc"><canvas class="viz"></canvas></div></div>
+                <div class="skin" data-skin="ring"><div class="viz-disc"><canvas class="viz"></canvas></div></div>
+                <div class="skin" data-skin="led"><div class="viz-disc"><canvas class="viz"></canvas></div></div>
+              </div>
+
+              <div class="deck-info">
+                <div class="now"><span class="eq"><i></i><i></i><i></i></span><span id="nowLabel">已暫停</span></div>
+                <div class="track-title" id="trackTitle">語音摘要</div>
+                <div class="track-sub" id="trackSub"></div>
+                <div class="time"><span id="tCur">00:00</span> / <span id="tDur">00:00</span></div>
+                <div class="transport">
+                  <button class="well" id="back15" aria-label="倒退 15 秒"><i class="icon-rotate-ccw"></i></button>
+                  <button class="well" id="prevSec" aria-label="上一講"><i class="icon-skip-back"></i></button>
+                  <button class="well play" id="playBtn" aria-label="播放"><i class="icon-play" id="playIcon"></i></button>
+                  <button class="well" id="nextSec" aria-label="下一講"><i class="icon-skip-forward"></i></button>
+                  <button class="well" id="fwd15" aria-label="快轉 15 秒"><i class="icon-rotate-cw"></i></button>
+                  <div class="speed-wrap">
+                    <button class="well speed" id="speedBtn" aria-haspopup="menu" aria-expanded="false" aria-label="播放速度">1×</button>
+                    <div class="speed-menu" id="speedMenu" role="menu">
+                      <button data-v="0.75" role="menuitem">0.75×</button><button data-v="1" role="menuitem">1×</button><button data-v="1.25" role="menuitem">1.25×</button><button data-v="1.5" role="menuitem">1.5×</button><button data-v="2" role="menuitem">2×</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div class="status-counts">
-                <span>排隊: ${stats.pending || 0}</span>
-                <span>生成中: ${stats.running || 0}</span>
-                <span>完成: ${stats.done || 0}</span>
-                ${stats.quota_wait ? `<span style="color: var(--warning)">等待額度: ${stats.quota_wait}</span>` : ''}
-                ${stats.needs_review ? `<span style="color: var(--warning)">需審查: ${stats.needs_review}</span>` : ''}
-                ${stats.failed ? `<span style="color: var(--danger)">失敗: ${stats.failed}</span>` : ''}
-              </div>
-              <div style="display: flex; gap: 8px; margin-top: 4px;">
-                ${!hasNb ? `<button class="primary" style="font-size: 0.75rem;" onclick="setupCourse('${c.code}', event)">⚡ 建立筆記本與上傳</button>` : ''}
-                <button class="btn" style="font-size: 0.75rem;" onclick="viewCourseDetail('${c.code}')">詳情與清單 ➔</button>
+                <div class="player-empty" id="playerEmpty">這一講的語音摘要還沒生成，可到「批次排程」確認。</div>
               </div>
             </div>
-          `;
-        }).join('');
-      } catch (e) {
-        console.error('Fetch courses failed:', e);
-      }
-    }
+            </div>
+          </article>
 
-    async function viewCourseDetail(code, silent = false) {
-      activeCourseCode = code;
-      const sec = document.getElementById('courseDetailSection');
-      const title = document.getElementById('detailTitle');
-      const content = document.getElementById('detailContent');
+          <article class="card blk" id="sideInfo"><button class="blk-grip" draggable="true" aria-label="拖曳移動這個區塊"><i class="icon-grip-horizontal"></i></button>
+            <div class="card-head"><h2 class="h2">本講重點</h2><span class="eyebrow">點一下回到講義</span></div>
+            <div id="sideKeypoints"><p class="loading-line">選一講後顯示</p></div>
+          </article>
 
-      sec.style.display = 'block';
-      title.textContent = `課程詳細進度：${code}`;
-      if (!silent) {
-        content.innerHTML = '<div style="color:var(--text-muted);">載入中...</div>';
-        sec.scrollIntoView({ behavior: 'smooth' });
-        loadCourseOptions(code);
-        loadArtifactSelection(code);
-      }
-
-      try {
-        const res = await fetch(`/api/courses/${code}`);
-        const data = await res.json();
-
-        let lecturesTable = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 6px;">
-            <h4 style="font-size: 1rem; color: #38bdf8;">📄 講義 PDF 上傳與 Gemini Notebook 解析狀態</h4>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>講次</th>
-                <th>主題</th>
-                <th>檔名</th>
-                <th>狀態</th>
-                <th>Gemini Notebook Source ID</th>
-                <th>動作</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(data.lectures || []).map(l => {
-                let badgeClass = 'badge-neutral';
-                let statusText = l.upload_status || 'pending';
-                if (statusText === 'ready') badgeClass = 'badge-success';
-                else if (statusText === 'uploading' || statusText === 'parsing') badgeClass = 'badge-warning';
-                else if (statusText === 'failed') badgeClass = 'badge-danger';
-
-                return `
-                  <tr>
-                    <td>L${String(l.no).padStart(2, '0')}</td>
-                    <td>${l.topic}</td>
-                    <td><code>${l.filename}</code></td>
-                    <td><span class="badge ${badgeClass}">${statusText}</span></td>
-                    <td><code style="font-size:0.75rem;">${l.source_id || '—'}</code></td>
-                    <td>
-                      ${statusText === 'failed' ? `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="retryUpload('${code}', ${l.no})">🔄 重傳</button>` : ''}
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        `;
-
-        const jobs = data.jobs || [];
-        const versionsBySlot = {};
-        jobs.forEach(j => {
-          const slot = `${j.lecture_no}|${j.artifact_type}`;
-          versionsBySlot[slot] = Math.max(versionsBySlot[slot] || 0, j.version || 1);
-        });
-        const jobRow = j => {
-                const st = STATUS_LABELS[j.status] || { text: j.status, cls: 'badge-neutral' };
-                const scope = j.lecture_no ? `L${String(j.lecture_no).padStart(2, '0')}` : '全課程';
-                const target = j.rel_path || (j.output_file ? j.output_file.split('/').pop() : null);
-                const dlName = target ? target.split('/').pop() : null;
-                const dlLink = target ? `<a href="/api/artifacts/${code}/download/${encodeURI(target)}" target="_blank" class="btn" style="padding: 2px 8px; font-size: 0.75rem;">📥 ${escHtml(dlName.split('.').pop().toUpperCase())}</a>` : '—';
-                const hasOwn = j.style_options ? ' ✱' : '';
-                const promptBtn = `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">📝 Prompt</button>
-                  <button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="openJobOptions('${j.id}')" title="只調整這一份產出的設定">⚙️ 設定${hasOwn}</button>`;
-                const slot = `${j.lecture_no}|${j.artifact_type}`;
-                const total = versionsBySlot[slot] || 1;
-                const ver = `<span class="badge ${j.version > 1 ? 'badge-warning' : 'badge-neutral'}">v${j.version || 1}</span>` +
-                  (total > 1 && j.version === total ? `<div style="font-size:0.7rem; color:var(--text-muted);">已生成 ${total} 版</div>` : '');
-                let statusExtra = '';
-                if (j.status === 'quota_wait' && j.cooldown_until) {
-                  statusExtra = `<div style="font-size:0.7rem; color:var(--text-muted);">${formatResume(j.cooldown_until)}</div>`;
-                } else if ((j.status === 'needs_review' || j.status === 'failed') && j.error_message) {
-                  statusExtra = `<div style="font-size:0.7rem; color:var(--text-muted);">${escHtml(j.error_message.slice(0, 80))}</div>`;
-                }
-                const lecArg = j.lecture_no === null ? 'null' : j.lecture_no;
-                const regenBtn = (j.status === 'done' || j.status === 'needs_review') && j.version === total
-                  ? `<button class="btn" style="padding: 2px 8px; font-size: 0.75rem; white-space: nowrap;" onclick="regenerateArtifact('${code}', ${lecArg}, '${j.artifact_type}', '${escHtml(j.label || j.artifact_type)}', ${total + 1})">🔁 重新生成</button>`
-                  : '';
-                return `
-                  <tr>
-                    <td>${scope}</td>
-                    <td><strong>${escHtml(j.label || j.artifact_type)}</strong><div style="font-size:0.7rem; color:var(--text-muted);"><code>${j.artifact_type}</code></div></td>
-                    <td>${ver}</td>
-                    <td><span class="badge ${st.cls}">${st.text}</span>${statusExtra}</td>
-                    <td>${promptBtn}</td>
-                    <td>${dlLink}</td>
-                    <td>${regenBtn}</td>
-                  </tr>
-                `;
-};
-        const tableHead = `<table><thead><tr><th>範圍</th><th>產物種類</th><th>版本</th><th>狀態</th><th>Prompt / 設定</th><th>檔案</th><th>動作</th></tr></thead><tbody>`;
-        // One collapsible group per lecture (plus whole-course); unfinished groups open by default.
-        const groups = new Map();
-        jobs.filter(j => j.status !== 'skipped').forEach(j => {
-          const key = j.lecture_no === null ? 'course' : j.lecture_no;
-          if (!groups.has(key)) groups.set(key, []);
-          groups.get(key).push(j);
-        });
-        const lectureTopic = no => ((data.lectures || []).find(l => l.no === no) || {}).topic || '';
-        const groupHtml = [...groups.entries()].sort((a, b) => (a[0] === 'course') - (b[0] === 'course') || a[0] - b[0]).map(([key, list]) => {
-          const done = list.filter(j => j.status === 'done').length;
-          const attention = list.some(j => ['failed', 'needs_review'].includes(j.status));
-          const busy = list.some(j => ['running', 'pending', 'quota_wait'].includes(j.status));
-          const title = key === 'course' ? '🌐 整門課' : `第 ${String(key).padStart(2, '0')} 講・${escHtml(lectureTopic(key))}`;
-          const badge = attention ? 'badge-danger' : done === list.length ? 'badge-success' : 'badge-warning';
-          return `<details class="job-group" ${attention || busy ? 'open' : ''}>
-            <summary><span>${title}</span><span class="badge ${badge}">${done} / ${list.length} 完成${attention ? '・需處理' : ''}</span></summary>
-            <div>${tableHead}${list.map(jobRow).join('')}</tbody></table></div></details>`;
-        }).join('');
-        const jobsTable = `
-          ${renderStatusBar(jobs, data.paused)}
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-            <h4 style="font-size: 1rem; color: var(--primary);">⚙️ 生成項目 <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">（依講次分組，每 15 秒自動更新）</span></h4>
-            <details class="more-menu"><summary>🛠️ 進階工具</summary><div class="menu">
-              <button onclick="syncFromNotebookLM('${code}')">🔄 從 Gemini Notebook 同步網頁上做的產出</button>
-              <button onclick="refinePrompts('${code}')">🤖 用 Ollama Gemma4 潤飾 Prompt</button>
-            </div></details>
-          </div>
-          ${groupHtml}
-        `;
-
-        // Technical upload details are rarely needed: keep them collapsed at the bottom.
-        // Keep the groups the user opened or closed when the page refreshes itself.
-        const openState = new Map([...content.querySelectorAll('details.job-group')].map(d => [d.querySelector('summary span').textContent, d.open]));
-        content.innerHTML = jobsTable + `<details class="job-group" style="margin-top:16px;"><summary><span>📄 講義上傳與 Gemini Notebook 技術資訊</span><span class="badge badge-neutral">${(data.lectures || []).length} 份 PDF</span></summary><div>${lecturesTable}</div></details>`;
-        if (silent) content.querySelectorAll('details.job-group').forEach(d => {
-          const key = d.querySelector('summary span').textContent;
-          if (openState.has(key)) d.open = openState.get(key);
-        });
-        document.getElementById('detailCourseActions').innerHTML = (data.paused
-          ? `<span class="badge badge-warning" style="margin-right:6px;">⏸ 這門課暫停中</span><button class="primary" onclick="setCoursePaused('${code}', false)">▶️ 開始生成</button>`
-          : `<button onclick="setCoursePaused('${code}', true)">⏸ 暫停這門課</button>`) +
-          ` <button onclick="deleteCourse('${code}')" style="color:var(--danger);">🗑️ 刪除課程</button>`;
-      } catch (e) {
-        content.innerHTML = `<div style="color:var(--danger)">載入失敗: ${e.message}</div>`;
-      }
-    }
-
-    const STATUS_LABELS = {
-      done: { text: '✅ 完成', cls: 'badge-success' },
-      pending: { text: '⏳ 排隊中', cls: 'badge-neutral' },
-      running: { text: '⚙️ 生成中', cls: 'badge-warning' },
-      quota_wait: { text: '⏸ 等待額度', cls: 'badge-warning' },
-      needs_review: { text: '⚠️ 需審查', cls: 'badge-warning' },
-      failed: { text: '❌ 失敗', cls: 'badge-danger' },
-    };
-
-    function formatResume(iso) {
-      const t = new Date(iso);
-      const mins = Math.max(0, Math.round((t - new Date()) / 60000));
-      const hhmm = t.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-      return mins > 0 ? `預計 ${hhmm} 自動繼續（約 ${mins} 分鐘後）` : '額度已重置，即將自動繼續';
-    }
-
-    function renderStatusBar(jobs, paused) {
-      const counts = {};
-      jobs.forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; });
-      const order = ['done', 'running', 'pending', 'quota_wait', 'needs_review', 'failed'];
-      const chips = order.map(k => `<span class="badge ${STATUS_LABELS[k].cls}" style="font-size:0.8rem;">${STATUS_LABELS[k].text} ${counts[k] || 0}</span>`).join(' ');
-      const waits = jobs.filter(j => j.status === 'quota_wait' && j.cooldown_until).map(j => j.cooldown_until).sort();
-      const resume = paused
-        ? `<div style="font-size:0.8rem; color:var(--warning); margin-top:6px;">⏸ 這門課暫停中，按右上角「▶️ 開始生成」才會繼續。</div>`
-        : (waits.length ? `<div style="font-size:0.8rem; color:var(--warning); margin-top:6px;">⏸ 額度用完的工作會等額度重置，${formatResume(waits[0])}。網頁服務開著就會自己接著跑。</div>` : '');
-      return `<div style="margin-top: 20px; padding: 10px 12px; background:#0f172a; border:1px solid var(--border); border-radius: var(--radius);">
-        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;"><strong style="font-size:0.85rem; margin-right:6px;">📊 共 ${jobs.length} 項</strong>${chips}</div>${resume}
-      </div>`;
-    }
-
-    async function setCoursePaused(code, paused) {
-      try {
-        const res = await fetch(`/api/courses/${code}/${paused ? 'pause' : 'start'}`, { method: 'POST' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        await viewCourseDetail(code, true);
-        await fetchCourses();
-      } catch (e) {
-        alert('操作失敗：' + e.message);
-      }
-    }
-
-    async function deleteCourse(code) {
-      if (!(await askConfirm(`刪除課程 ${code}？\n\n• 本機的工作紀錄與學習紀錄會刪除\n• 產出檔案移到 DATA_DIR/deleted/（可找回）\n• 講義 PDF 和 Gemini Notebook 上的筆記本不會動`, { okLabel: '刪除', danger: true }))) return;
-      try {
-        const res = await fetch(`/api/courses/${code}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        alert(`已刪除 ${code}（${data.removed_jobs} 項工作）。` + (data.moved_to ? `\n產出已移到：${data.moved_to}` : ''));
-        closeDetail();
-        activeCourseCode = null;
-        await fetchCourses();
-      } catch (e) {
-        alert('刪除失敗：' + e.message);
-      }
-    }
-
-    async function regenerateArtifact(code, lectureNo, artifactType, label, nextVersion) {
-      const scope = lectureNo === null ? '全課程' : `L${String(lectureNo).padStart(2, '0')}`;
-      if (!(await askConfirm(`重新生成 ${scope}「${label}」為 v${nextVersion}？\n舊版本會保留，這會使用 Gemini Notebook 額度。`, { okLabel: '重新生成' }))) return;
-      try {
-        const res = await fetch(`/api/courses/${code}/jobs/regenerate`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ artifact_type: artifactType, lecture_no: lectureNo }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        await viewCourseDetail(code, true);
-      } catch (e) {
-        alert('重新生成失敗：' + e.message);
-      }
-    }
-
-    const OPTION_LABELS = {
-      infographic_orientation: ['資訊圖表方向', { landscape: '橫式', portrait: '直式（A4 / iPad）', square: '方形' }],
-      infographic_detail: ['資訊圖表詳細程度', { concise: '精簡', standard: '標準', detailed: '詳細' }],
-      infographic_style: ['資訊圖表風格', { auto_select: '自動', sketch_note: '手繪筆記', professional: '專業', bento_grid: '便當格', editorial: '雜誌', instructional: '教學', bricks: '積木', clay: '黏土', anime: '動漫', kawaii: '可愛', scientific: '科學' }],
-      device_exports: ['資訊圖表另存裝置版本（A4 PDF / iPad Air 4 / MacBook Pro 14）', null],
-      audio_format: ['語音形式', { deep_dive: '深度對談', brief: '簡短摘要', critique: '評論', debate: '辯論' }],
-      audio_length: ['語音長度', { short: '短', default: '標準', long: '長' }],
-      slide_format: ['投影片形式', { detailed_deck: '詳細版（自學）', presenter_slides: '講者版（上台）' }],
-      slide_length: ['投影片長度', { default: '標準', short: '精簡' }],
-      slide_download: ['投影片下載格式', { pdf: 'PDF', pptx: 'PowerPoint (PPTX)' }],
-      video_format: ['影片形式', { explainer: '講解', brief: '簡短', short: '直式短片' }],
-      video_style: ['影片風格', { auto_select: '自動', classic: '經典', whiteboard: '白板', kawaii: '可愛', anime: '動漫', watercolor: '水彩', retro_print: '復古印刷', heritage: '傳統', paper_craft: '紙藝' }],
-      quiz_questions: ['每份測驗題數（10–60）', 'number'],
-      flashcards_quantity: ['閃卡數量', { fewer: '較少', standard: '標準', more: '較多' }],
-      flashcards_difficulty: ['閃卡難度', { easy: '簡單', medium: '中等', hard: '困難' }],
-      quiz_difficulty: ['測驗難度', { auto: '依測驗而定（1 簡單、2 中等、3 困難）', easy: '全部簡單', medium: '全部中等', hard: '全部困難' }],
-      video_style_prompt: ['影片自訂風格描述（填了就用這段描述，直式短片不適用）', 'text'],
-      chapter_range: ['整門課產出涵蓋的講次（例如 1-3 或 1,3,5-6；留空＝全部）', 'text'],
-      extra_instructions: ['補充指示（加在每一份產出的要求後面，例如「考試以申論題為主」）', 'textarea'],
-    };
-    // Course-only fields shown at the top of the course settings panel.
-    const COURSE_FIELD_LABELS = {
-      language: ['產出語言', { 'zh-TW': '繁體中文', en: 'English', bilingual: '中英雙語' }],
-      mock_exam_questions: ['全課程模擬考題數（10–100）', 'number'],
-    };
-
-    function renderOptionField(key, label, names, value, choices, inherit, defaults) {
-      const dflt = defaults ? defaults[key] : undefined;
-      const mark = v => (dflt !== undefined && v === dflt ? '（預設）' : '');
-      const inheritOpt = inherit !== undefined ? `<option value="">沿用課程設定（${escHtml(String(inherit))}）</option>` : '';
-      if (names === null) {
-        if (inherit !== undefined) {
-          return `<label>${label}<select data-opt="${key}" style="margin-top:4px;">${inheritOpt}
-            <option value="true" ${value === true ? 'selected' : ''}>是${mark(true)}</option><option value="false" ${value === false ? 'selected' : ''}>否${mark(false)}</option></select></label>`;
-        }
-        return `<label style="display:flex; gap:8px; align-items:center;"><input type="checkbox" data-opt="${key}" ${value ? 'checked' : ''}> ${label}${dflt !== undefined ? `（預設：${dflt ? '開' : '關'}）` : ''}</label>`;
-      }
-      if (names === 'textarea') {
-        return `<label style="grid-column: 1 / -1;">${label}<textarea data-opt="${key}" rows="2" style="margin-top:4px;" placeholder="${inherit !== undefined ? '留空就只用課程的補充指示' : '例如：考試以申論題為主；重點放在第 3 章的公式'}">${escHtml(value || '')}</textarea></label>`;
-      }
-      if (names === 'text') {
-        return `<label>${label}<input type="text" data-opt="${key}" value="${escHtml(value || '')}" style="margin-top:4px;"></label>`;
-      }
-      if (names === 'number') {
-        const range = choices[key] || {};
-        return `<label>${label}${dflt !== undefined ? `（預設 ${dflt}）` : ''}<input type="number" min="${range.min ?? ''}" max="${range.max ?? ''}" data-opt="${key}" data-num="1" value="${value ?? ''}" placeholder="${inherit !== undefined ? '留空就沿用課程設定' : ''}" style="margin-top:4px;"></label>`;
-      }
-      const opts = (choices[key] || []).map(c => `<option value="${c}" ${c === value ? 'selected' : ''}>${names[c] || c}${mark(c)}</option>`).join('');
-      return `<label>${label}<select data-opt="${key}" style="margin-top:4px;">${inheritOpt}${opts}</select></label>`;
-    }
-
-    function collectOptions(selector) {
-      const options = {};
-      document.querySelectorAll(`${selector} [data-opt]`).forEach(el => {
-        let v = el.type === 'checkbox' ? el.checked : el.value;
-        if (el.dataset.num) v = v === '' ? '' : parseInt(v, 10);
-        if (el.tagName === 'SELECT' && (v === 'true' || v === 'false')) v = v === 'true';
-        options[el.dataset.opt] = v;
-      });
-      return options;
-    }
-
-    async function loadCourseOptions(code) {
-      const box = document.getElementById('detailOptions');
-      try {
-        const res = await fetch(`/api/courses/${code}/options`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        const all = { ...COURSE_FIELD_LABELS, ...OPTION_LABELS };
-        box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; font-size: 0.85rem;">
-          ${Object.keys(all).map(key => renderOptionField(key, all[key][0], all[key][1], data.options[key], data.choices, undefined, data.defaults)).join('')}
+          <article class="card bench blk" id="bench" data-arr="matrix"><button class="blk-grip" draggable="true" aria-label="拖曳移動這個區塊"><i class="icon-grip-horizontal"></i></button>
+            <div class="card-head">
+              <h2 class="h2" id="benchTitle">講義與學習產出物</h2>
+              <div class="seg" data-seg="arr">
+                <button data-value="matrix" class="on">全景矩陣</button><button data-value="vertical">垂直羅盤</button><button data-value="pinned">常用釘選</button><button data-value="triad">認知三階</button>
+              </div>
+            </div>
+            <div class="bench-body">
+              <div>
+                <div class="bench-tiles" id="benchTiles"></div>
+                <div class="triad" id="triad"></div>
+                <div class="more-row" id="moreRow"></div>
+              </div>
+              <div class="bench-stage" id="benchStage"></div>
+            </div>
+          </article>
         </div>
-        <div style="margin-top:10px;"><button type="button" onclick="resetCourseOptions('${code}')" style="font-size:0.8rem;">↺ 全部恢復預設值</button>
-        </div>
-        <div style="display:flex; justify-content:flex-end; margin-top: 12px;"><button class="primary" onclick="saveCourseOptions('${code}')">💾 儲存產出設定</button></div>`;
-      } catch (e) {
-        box.innerHTML = `<div style="color:var(--danger)">設定載入失敗：${escHtml(e.message)}</div>`;
-      }
-    }
 
-    async function loadArtifactSelection(code) {
-      const box = document.getElementById('detailSelection');
-      try {
-        const res = await fetch(`/api/courses/${code}/artifact-types`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        const grid = (scope, title) => `
-          <div style="font-weight:600; margin: 8px 0 6px;">${title}</div>
-          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; font-size: 0.85rem;">
-            ${data.choices[scope].map(c => `<label><input type="checkbox" data-scope="${scope}" value="${c.value}" ${data[scope].includes(c.value) ? 'checked' : ''}> ${escHtml(c.label)}</label>`).join('')}
-          </div>`;
-        box.innerHTML = grid('chapter', '📌 每一講各自產生') + grid('course', '🌐 整門課合併產生') +
-          `<div style="display:flex; justify-content:flex-end; margin-top: 12px;"><button class="primary" onclick="saveArtifactSelection('${code}')">💾 儲存產出內容</button></div>`;
-      } catch (e) {
-        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
-      }
-    }
-
-    async function saveArtifactSelection(code) {
-      const pick = scope => [...document.querySelectorAll(`#detailSelection input[data-scope="${scope}"]:checked`)].map(b => b.value);
-      try {
-        const res = await fetch(`/api/courses/${code}/artifact-types`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chapter: pick('chapter'), course: pick('course') }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        alert(`已儲存：新排入 ${data.queued + data.revived} 項、取消 ${data.skipped} 項尚未開始的工作。已完成的檔案都保留。`);
-        await viewCourseDetail(code, true);
-      } catch (e) {
-        alert('儲存失敗：' + e.message);
-      }
-    }
-
-    async function resetCourseOptions(code) {
-      if (!(await askConfirm('把這門課的產出設定全部恢復成預設值？', { okLabel: '恢復預設' }))) return;
-      const data = await (await fetch(`/api/courses/${code}/options`)).json();
-      await fetch(`/api/courses/${code}/options`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ options: data.defaults }),
-      });
-      await loadCourseOptions(code);
-    }
-
-    async function saveCourseOptions(code) {
-      const options = collectOptions('#detailOptions');
-      try {
-        const res = await fetch(`/api/courses/${code}/options`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ options }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        alert('已儲存。之後生成的內容會套用新設定；已生成的內容可按「🔁 重新生成」。');
-      } catch (e) {
-        alert('儲存失敗：' + e.message);
-      }
-    }
-
-    async function openNamingModal() {
-      document.getElementById('namingModal').style.display = 'flex';
-      const box = document.getElementById('namingContent');
-      try {
-        const data = await (await fetch('/api/naming-guide')).json();
-        box.innerHTML = `<ul style="margin: 0 0 12px 18px; line-height: 1.7;">${data.rules.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
-          <table><thead><tr><th>代碼</th><th>名稱</th><th>意思</th><th>Gemini Notebook 標題</th><th>本機檔名</th></tr></thead><tbody>
-          ${data.artifacts.map(a => `<tr><td><code>${a.artifact_type}</code></td><td>${escHtml(a.label)}</td><td style="min-width:180px;">${escHtml(a.meaning)}</td><td><code>${escHtml(a.notebooklm_title)}</code></td><td><code>${escHtml(a.local_files)}</code></td></tr>`).join('')}
-          </tbody></table>`;
-      } catch (e) {
-        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
-      }
-    }
-
-    async function openJobOptions(jobId) {
-      document.getElementById('jobOptionsModal').style.display = 'flex';
-      const box = document.getElementById('jobOptionsContent');
-      box.innerHTML = '載入中...';
-      try {
-        const res = await fetch(`/api/jobs/${jobId}/options`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        document.getElementById('jobOptionsTitle').textContent = `⚙️ ${data.label} 的設定`;
-        const describe = (key, v) => {
-          const names = OPTION_LABELS[key] ? OPTION_LABELS[key][1] : null;
-          if (typeof v === 'boolean') return v ? '是' : '否';
-          if (names && typeof names === 'object') return names[v] || v;
-          return v || '無';
-        };
-        box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;">
-          ${data.fields.map(key => {
-            const [label, names] = OPTION_LABELS[key];
-            const inherit = key === 'extra_instructions' ? '' : describe(key, data.effective[key]);
-            return renderOptionField(key, label, names, data.overrides[key], data.choices, inherit, data.defaults);
-          }).join('')}
-        </div>
-        ${data.unsupported.map(u => `<div style="margin-top:10px; color:var(--text-muted); font-size:0.8rem;">⏳ ${escHtml(u)}</div>`).join('')}`;
-        document.getElementById('btnSaveJobOptions').onclick = () => saveJobOptions(jobId);
-      } catch (e) {
-        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
-      }
-    }
-
-    async function saveJobOptions(jobId) {
-      try {
-        const res = await fetch(`/api/jobs/${jobId}/options`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ options: collectOptions('#jobOptionsContent') }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        document.getElementById('jobOptionsModal').style.display = 'none';
-        if (activeCourseCode) await viewCourseDetail(activeCourseCode, true);
-      } catch (e) {
-        alert('儲存失敗：' + e.message);
-      }
-    }
-
-    async function openUsageModal() {
-      document.getElementById('usageModal').style.display = 'flex';
-      const box = document.getElementById('usageContent');
-      try {
-        const data = await (await fetch('/api/usage-guide')).json();
-        const note = data.note ? `<p class="plan-card" style="margin-bottom:8px;">ℹ️ ${escHtml(data.note)}</p>` : '';
-        box.innerHTML = note + data.sections.map(sec => `
-          <h4 style="color:#38bdf8; margin: 14px 0 6px;">${escHtml(sec.heading)}</h4>
-          <ol style="margin: 0 0 0 20px;">${sec.steps.map(st => `<li>${escHtml(st)}</li>`).join('')}</ol>
-        `).join('');
-      } catch (e) {
-        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
-      }
-    }
-
-    function closeUsageModal() {
-      document.getElementById('usageModal').style.display = 'none';
-    }
-
-    function closeNamingModal() {
-      document.getElementById('namingModal').style.display = 'none';
-    }
-
-    function closeDetail() {
-      document.getElementById('courseDetailSection').style.display = 'none';
-    }
-
-    async function openPromptEditor(jobId, desc) {
-      activeJobId = jobId;
-      document.getElementById('promptModalTitle').textContent = `📝 編輯 Prompt：${desc}`;
-      document.getElementById('promptModalDesc').textContent = '這段指令會在向 Gemini Notebook 生成這份產出時送出。留空就用內建的指令。';
-      document.getElementById('promptModal').style.display = 'flex';
-
-      try {
-        const res = await fetch(`/api/jobs/${jobId}/prompt`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        document.getElementById('promptInput').value = data.custom_prompt || '';
-      } catch (e) {
-        document.getElementById('promptInput').value = '';
-      }
-    }
-
-    function closePromptModal() {
-      document.getElementById('promptModal').style.display = 'none';
-      activeJobId = null;
-    }
-
-    async function savePrompt() {
-      if (!activeJobId) return;
-      const prompt = document.getElementById('promptInput').value;
-      try {
-        const res = await fetch(`/api/jobs/${activeJobId}/prompt`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt })
-        });
-        if (!res.ok) throw new Error('儲存失敗');
-        alert('Prompt 儲存成功！');
-        closePromptModal();
-      } catch (e) {
-        alert('儲存失敗: ' + e.message);
-      }
-    }
-
-    function setPreset(name) {
-      const chapBoxes = document.querySelectorAll('input[name="chap_art"]');
-      const courseBoxes = document.querySelectorAll('input[name="course_art"]');
-      if (name === 'full') {
-        // Video is the most expensive output (~10% of the 5-hour quota each); tick it by hand when needed.
-        chapBoxes.forEach(b => b.checked = b.value !== 'video');
-        courseBoxes.forEach(b => b.checked = b.value !== 'course_video');
-      } else if (name === 'dual') {
-        const dualCh = ['audio', 'quiz_1', 'quiz_2', 'quiz_3', 'study_guide', 'flashcards', 'mind_map', 'infographic', 'reports_concept_explanation'];
-        const dualCo = ['course_mock_exam', 'course_mind_map', 'course_audio'];
-        chapBoxes.forEach(b => b.checked = dualCh.includes(b.value));
-        courseBoxes.forEach(b => b.checked = dualCo.includes(b.value));
-      } else if (name === 'quiz') {
-        const quizCh = ['quiz_1', 'quiz_2', 'quiz_3', 'flashcards'];
-        const quizCo = ['course_mock_exam'];
-        chapBoxes.forEach(b => b.checked = quizCh.includes(b.value));
-        courseBoxes.forEach(b => b.checked = quizCo.includes(b.value));
-      }
-    }
-
-    function getSelectedArtifacts() {
-      const chapterArts = Array.from(document.querySelectorAll('input[name="chap_art"]:checked')).map(el => el.value);
-      const courseArts = Array.from(document.querySelectorAll('input[name="course_art"]:checked')).map(el => el.value);
-      const language = document.getElementById('courseLanguage').value;
-      return { chapterArts, courseArts, language };
-    }
-
-    function openAddModal() {
-      document.getElementById('addModal').style.display = 'flex';
-      browseFolder(null);
-      loadAddOptions();
-      wizardGo(1);
-    }
-
-    let currentBrowsePath = null;
-    let currentBrowseParent = null;
-    let pickedFolders = [];
-
-    async function browseFolder(path) {
-      const list = document.getElementById('folderList');
-      try {
-        const res = await fetch('/api/folders' + (path ? `?path=${encodeURIComponent(path)}` : ''));
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        currentBrowsePath = data.path;
-        currentBrowseParent = data.parent;
-        document.getElementById('folderCurrent').textContent = data.path ? `📂 ${data.path}（${data.pdf_count} 個 PDF）` : '從這裡開始找課程資料夾';
-        document.getElementById('btnFolderUp').disabled = !data.parent;
-        document.getElementById('btnPickFolder').disabled = !data.path || data.pdf_count === 0;
-        list.innerHTML = data.folders.length ? data.folders.map((f, i) => `
-          <div style="display:flex; gap:6px; align-items:center;">
-            <button type="button" data-idx="${i}" class="folder-open" style="flex:1; text-align:left; padding:6px 10px;">📁 ${escHtml(f.name)} ${f.pdf_count ? `<span class="badge badge-success">${f.pdf_count} 個 PDF</span>` : ''}</button>
-            ${f.pdf_count ? `<button type="button" data-idx="${i}" class="folder-pick primary" style="padding:6px 10px;">✅ 選</button>` : ''}
-          </div>`).join('') : '<div style="color:var(--text-muted);">（這裡沒有子資料夾）</div>';
-        list.querySelectorAll('.folder-open').forEach(b => b.onclick = () => browseFolder(data.folders[b.dataset.idx].path));
-        list.querySelectorAll('.folder-pick').forEach(b => b.onclick = () => addPickedFolder(data.folders[b.dataset.idx].path));
-      } catch (e) {
-        list.innerHTML = `<div style="color:var(--danger)">無法開啟：${escHtml(e.message)}</div>`;
-      }
-    }
-
-    function pickCurrentFolder() {
-      if (currentBrowsePath) addPickedFolder(currentBrowsePath);
-    }
-
-    function addPickedFolder(path) {
-      if (!pickedFolders.includes(path)) pickedFolders.push(path);
-      renderPickedFolders();
-    }
-
-    function removePickedFolder(idx) {
-      pickedFolders.splice(idx, 1);
-      renderPickedFolders();
-    }
-
-    function renderPickedFolders() {
-      document.getElementById('folderPaths').value = pickedFolders.join('\n');
-      document.getElementById('btnConfirmAdd').disabled = true;
-      const box = document.getElementById('pickedFolders');
-      box.innerHTML = pickedFolders.length ? pickedFolders.map((p, i) =>
-        `<span class="badge badge-neutral" style="text-transform:none; font-size:0.8rem;">📚 ${escHtml(p.split('/').pop())} <a href="#" onclick="removePickedFolder(${i}); return false;" style="color:var(--danger); margin-left:4px;">✕</a></span>`).join('')
-        : '<span style="color:var(--text-muted);">（還沒選）</span>';
-    }
-    function closeAddModal() {
-      document.getElementById('addModal').style.display = 'none';
-      document.getElementById('previewResults').style.display = 'none';
-      pickedFolders = [];
-      renderPickedFolders();
-    }
-
-    async function previewFolders() {
-      const raw = document.getElementById('folderPaths').value;
-      const folders = raw.split('\n').map(s => s.trim()).filter(Boolean);
-      if (folders.length === 0) {
-        alert('請先點選至少一個課程資料夾！');
-        return;
-      }
-      const { chapterArts, courseArts } = getSelectedArtifacts();
-      try {
-        const res = await fetch('/api/courses/preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            folders,
-            chapter_artifacts: chapterArts,
-            course_artifacts: courseArts
-          })
-        });
-        const results = await res.json();
-        const box = document.getElementById('previewResults');
-        box.style.display = 'block';
-        box.innerHTML = results.map(r => `
-          <div style="margin-bottom:8px;">
-            <strong>${r.is_valid ? '✅ ' + r.course_code + ' (' + r.course_name + ')' : '❌ 無效資料夾'}</strong>
-            <div>${r.is_valid ? '掃描到 ' + r.lecture_count + ' 講次，依目前勾選預估 ' + r.estimated_jobs + ' 項任務' + (r.quota_estimate_available ? '，約用 ' + r.estimated_quota_percent + '% 的 5 小時額度（目前剩 ' + r.five_hour_remaining_percent + '%）' + (r.estimated_wait_hours > 0 ? '，需等額度重置約 ' + r.estimated_wait_hours + ' 小時' : '，目前額度足夠') + (r.weekly_remaining_percent !== null ? '；本週額度剩 ' + r.weekly_remaining_percent + '%' : '') + (r.weekly_warning ? '<br>⚠️ ' + r.weekly_warning : '') : '（無法讀取額度，未估算時間）') : r.error}</div>
+        <!-- Feature panels: each lives here and is moved into the workbench stage when its tile is chosen -->
+        <div hidden id="panelHome">
+          <div id="panelQuiz">
+            <div class="panel-head"><div class="chips" id="quizKindButtons"></div><span class="quiz-score" id="quizScoreHeader"></span></div>
+            <div id="quizContainer"></div>
+            <div class="quiz-bar" id="quizActionBar" style="display:none">
+              <span id="quizProgressText">已作答 0 / 0 題</span>
+              <button class="btn btn-primary" onclick="submitQuizAttempt()">交卷並記錄</button>
+            </div>
           </div>
-        `).join('');
-        document.getElementById('btnConfirmAdd').disabled = !results.some(r => r.is_valid);
-      } catch (e) {
-        alert('預覽失敗: ' + e.message);
-      }
-    }
+          <div id="panelFlash">
+            <div class="panel-head"><span class="panel-note">點卡片翻面；背面附講義出處。翻面後誠實評估，記得的會隔更久再出現。</span><button class="btn btn-ghost btn-sm" onclick="downloadFlashcardsAnki()">下載 Anki CSV</button></div>
+            <div id="flashcardsViewerContainer"></div>
+          </div>
+          <div id="panelReports">
+            <div class="panel-head"><div class="chips" id="reportKindButtons"></div></div>
+            <div id="reportContentContainer"></div>
+          </div>
+          <div id="panelTutor"><div id="tutorContainer"></div></div>
+        </div>
+      </section>
 
-    let addDefaults = null;
+      <!-- ============ 弱點複習 ============ -->
+      <section class="view lg" id="view-review">
+        <div class="subbar">
+          <div><h1 class="h1">弱點複習</h1><p class="muted small">把錯過的題目變成記得住的題目</p></div>
+          <div class="row" style="flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="downloadWeaknessAnki()">匯出錯題 Anki CSV</button>
+            <div class="seg" data-seg="reviewTab"><button class="on" data-value="mistakes">錯題集</button><button data-value="cards">今日學習卡</button></div>
+          </div>
+        </div>
+        <div class="resizable" data-col-key="review" id="reviewMistakes">
+          <div class="card"><ul class="mistakes" id="mistakeList"><li class="loading-line">讀取錯題中…</li></ul></div>
+          <div class="card mistake-detail" id="mistakeDetail"><p class="loading-line">選一題查看詳解</p></div>
+        </div>
+        <div class="resizable" data-col-key="reviewCards" id="reviewCards" hidden>
+          <div class="card">
+            <div class="card-head"><h2 class="h2">今日學習卡</h2><span class="eyebrow num" id="cardCount"></span></div>
+            <div id="reviewDeck"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2 class="h2">複習盒</h2><span class="eyebrow">間隔重複</span></div>
+            <div class="leitner" style="height:140px" id="reviewLeitner"></div>
+            <p class="small muted section-gap">記得的卡片會移到下一格，間隔越來越長（1、3、7、14、30 天）；忘記的卡片回到第一格，10 分鐘後再出現。</p>
+          </div>
+        </div>
+      </section>
 
-    async function loadAddOptions() {
-      const box = document.getElementById('addOptions');
-      try {
-        const data = await (await fetch('/api/generation-options')).json();
-        addDefaults = data.defaults;
-        const all = { mock_exam_questions: COURSE_FIELD_LABELS.mock_exam_questions, ...OPTION_LABELS };
-        box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; font-size: 0.85rem;">
-          ${Object.keys(all).map(key => renderOptionField(key, all[key][0], all[key][1], data.defaults[key], data.choices, undefined, data.defaults)).join('')}
-        </div>`;
-      } catch (e) {
-        box.innerHTML = `<div style="color:var(--danger)">載入失敗：${escHtml(e.message)}</div>`;
-      }
-    }
+      <!-- ============ 批次排程 ============ -->
+      <section class="view lg" id="view-queue">
+        <div class="subbar">
+          <div><h1 class="h1">批次排程</h1><p class="muted small">選資料夾、勾產出物，其餘交給排程</p></div>
+          <div class="row" style="flex-wrap:wrap">
+            <button class="btn btn-primary" id="btnStartQueue" onclick="startQueue()">啟動批次生成</button>
+            <button class="btn btn-soft" id="btnPauseQueue" style="display:none" onclick="pauseQueue()">溫和暫停</button>
+            <button class="btn btn-primary" id="btnResumeQueue" style="display:none" onclick="resumeQueue()">繼續執行</button>
+            <button class="btn btn-soft" onclick="openAddModal()">加入課程</button>
+            <details class="more-menu">
+              <summary class="btn btn-ghost" aria-label="更多功能">更多</summary>
+              <div class="menu">
+                <button class="btn btn-ghost" onclick="resumeQuota()" title="喚醒因額度暫停的項目">立即喚醒等待額度的工作</button>
+                <button class="btn btn-ghost" onclick="openNamingModal()">命名規則</button>
+                <a href="/docs" target="_blank" rel="noopener">OpenAPI 文件</a>
+              </div>
+            </details>
+          </div>
+        </div>
+        <div class="queue resizable" data-col-key="queue">
+          <div class="card">
+            <div class="card-head"><h2 class="h2">已註冊課程</h2><span class="eyebrow">點一門課查看與設定</span></div>
+            <ul class="course-rows" id="courseContainer"><li class="loading-line">載入課程中…</li></ul>
+            <div id="courseDetailSection" style="display:none">
+              <div class="divider"></div>
+              <div class="card-head"><div><h2 class="h2" id="detailTitle">課程</h2><p class="hint">每門課各自保存設定，新加入的課程從預設值開始。</p></div><div class="row" id="detailCourseActions" style="flex-wrap:wrap"></div></div>
+              <details class="sec" id="detailOptionsBox" open>
+                <summary><span>課程設定</span><span class="sec-sum">語言、考試日期、題數、各產出物的形式與補充指示</span><i class="icon-chevron-down"></i></summary>
+                <div class="sec-body" id="detailOptions"><p class="loading-line">載入中…</p></div>
+              </details>
+              <details class="sec" id="detailSelectionBox">
+                <summary><span>產出內容</span><span class="sec-sum">新增的會排入佇列，取消的不再生成，已完成的檔案不會刪</span><i class="icon-chevron-down"></i></summary>
+                <div class="sec-body" id="detailSelection"><p class="loading-line">載入中…</p></div>
+              </details>
+              <details class="sec" id="detailJobsBox" open>
+                <summary><span>生成項目</span><span class="sec-sum">依講次分組，每 15 秒自動更新</span><i class="icon-chevron-down"></i></summary>
+                <div class="sec-body" id="detailContent"><p class="loading-line">載入中…</p></div>
+              </details>
+            </div>
+          </div>
+          <div class="col-resizer" role="separator" aria-orientation="vertical" aria-label="拖曳調整欄寬，按兩下還原" tabindex="0"><button class="col-toggle" aria-label="收合右欄"><i class="icon-panel-right-close"></i></button></div>
+          <div class="card side-col">
+            <div class="card-head"><h2 class="h2">進行中</h2><span class="eyebrow">額度用完會自動續跑</span></div>
+            <div class="quota">
+              <span class="ring" data-p="0" style="width:56px;height:56px" id="quotaRing"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" cx="22" cy="22" r="19"/></svg><b id="quotaPct">—</b></span>
+              <div><b id="quotaTitle">生成額度</b><div class="small muted" id="quotaText">讀取中</div></div>
+            </div>
+            <ul class="jobs section-gap" id="activeJobs"></ul>
+          </div>
+        </div>
+      </section>
 
-    function changedAddOptions() {
-      // Send only what differs from the defaults, so untouched settings stay on the project defaults.
-      if (!addDefaults || !document.getElementById('addOptions').querySelector('[data-opt]')) return null;
-      const picked = collectOptions('#addOptions');
-      const changed = Object.fromEntries(Object.entries(picked).filter(([k, v]) => v !== addDefaults[k]));
-      return Object.keys(changed).length ? changed : null;
-    }
+      <!-- ============ 設計與自訂 ============ -->
+      <section class="view" id="view-custom">
+        <div class="subbar"><div><h1 class="h1">設計與自訂</h1><p class="muted small">每個人的學習方式不同，這裡的選擇都可以隨時改回來</p></div></div>
+        <div class="custom-grid">
+          <article class="card defaults-card" style="grid-column:1/-1">
+            <div><h2 class="h2">預設值</h2><p class="small muted">目前的設計就是預設。你在任何地方的調整（配色、版面、欄寬、排序、釘選、倍速…）都會記住，隨時可以一鍵還原；自訂的配色會保留。</p></div>
+            <button class="btn btn-soft" id="btnReset">全部恢復預設</button>
+          </article>
+          <article class="card">
+            <div class="card-head"><h2 class="h2">頭像</h2></div>
+            <div class="avatar-edit">
+              <div class="avatar avatar-big" id="avatarPreview"><span>LK</span></div>
+              <div>
+                <div class="row" style="flex-wrap:wrap">
+                  <label class="btn btn-soft" style="cursor:pointer">上傳照片<input type="file" accept="image/*" id="avatarFile" hidden></label>
+                  <input class="text-input" id="avatarInitials" maxlength="3" value="LK" aria-label="姓名縮寫">
+                </div>
+                <div class="presets" id="presets">
+                  <button data-icon="graduation-cap" aria-label="學士帽"><i class="icon-graduation-cap"></i></button>
+                  <button data-icon="brain" aria-label="大腦"><i class="icon-brain"></i></button>
+                  <button data-icon="book-open" aria-label="書本"><i class="icon-book-open"></i></button>
+                  <button data-icon="sparkles" aria-label="星芒"><i class="icon-sparkles"></i></button>
+                  <button data-icon="star" aria-label="星星"><i class="icon-star"></i></button>
+                  <button data-icon="layers-3" aria-label="層疊"><i class="icon-layers-3"></i></button>
+                </div>
+              </div>
+            </div>
+          </article>
 
-    async function confirmAddFolders() {
-      const raw = document.getElementById('folderPaths').value;
-      const folders = raw.split('\n').map(s => s.trim()).filter(Boolean);
-      const { chapterArts, courseArts, language } = getSelectedArtifacts();
-      const autoStart = document.getElementById('autoStartQueue').checked;
-      const reuseNotebook = document.getElementById('reuseNotebook').checked;
-      try {
-        const res = await fetch('/api/courses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            folders,
-            profile: 'full',
-            chapter_artifacts: chapterArts,
-            course_artifacts: courseArts,
-            language,
-            paused: !autoStart,
-            reuse_notebook: reuseNotebook,
-            options: changedAddOptions(),
-          })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-        if (autoStart) {
-          await fetch('/api/queue/start', { method: 'POST' });
-        }
-        alert(autoStart ? '已加入課程，開始自動生成。' : '已加入課程並暫停。到課程頁確認設定後，按「▶️ 開始生成」。');
-        closeAddModal();
-        await fetchStatus();
-        await fetchCourses();
-      } catch (e) {
-        alert('加入失敗: ' + e.message);
-      }
-    }
+          <article class="card">
+            <div class="card-head"><h2 class="h2">日光與暗夜</h2></div>
+            <div class="seg" data-seg="mode"><button data-value="light">日光</button><button data-value="dark">暗夜</button><button data-value="auto" class="on">自動</button></div>
+            <p class="hint" style="margin-top:8px">自動會跟著電腦或手機的系統設定切換。</p>
+            <div class="divider"></div>
+            <div class="toggle-row"><span>頁面動態<br><span class="small muted">減少後只保留必要的過渡</span></span><button class="switch" role="switch" aria-checked="true" id="swMotion" aria-label="頁面動態"></button></div>
+            <div class="toggle-row"><span>開啟時進入專注模式<br><span class="small muted">全螢幕並隱藏側欄</span></span><button class="switch" role="switch" aria-checked="false" id="swFocusOpen" aria-label="開啟時進入專注模式"></button></div>
+          </article>
 
-    window.addEventListener('DOMContentLoaded', () => {
-      fetchStatus();
-      fetchCourses();
-      fetchQuota();
-      setInterval(fetchStatus, 5000);
-      setInterval(fetchQuota, 60000);
-      setInterval(() => {
-        const sec = document.getElementById('courseDetailSection');
-        if (activeCourseCode && sec.style.display !== 'none') viewCourseDetail(activeCourseCode, true);
-      }, 15000);
-    });
-  </script>
-  <script src="/static/studio-core.js"></script>
-  <script src="/static/studio.js"></script>
-  <script src="/static/studio-learning.js"></script>
-  <script type="module" src="/static/studio-reader.js"></script>
+          <article class="card" style="grid-column:1/-1">
+            <div class="card-head"><h2 class="h2">配色</h2><span class="eyebrow">每組都有日光與暗夜；可以新增自己的配色</span></div>
+            <div class="opt-cards" id="paletteCards"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h2 class="h2">介面風格</h2></div>
+            <div class="toggle-row" style="margin-bottom:12px"><span>玻璃質感<br><span class="small muted">卡片半透明、背景柔和光暈</span></span><button class="switch" role="switch" aria-checked="false" id="swGlass" aria-label="玻璃質感"></button></div>
+            <div class="opt-cards" data-opt="style">
+              <button class="opt-card on" data-value="flow"><b>認知心流</b><span>均衡留白，重點用動態引導</span></button>
+              <button class="opt-card" data-value="editorial"><b>編輯典藏</b><span>襯線標題、寬鬆版面，像讀一本書</span></button>
+              <button class="opt-card" data-value="practice"><b>實戰刻意練習</b><span>緊湊排列，測驗與學習卡優先</span></button>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h2 class="h2">研讀版面</h2></div>
+            <div class="opt-cards" data-opt="layout">
+              <button class="opt-card on" data-value="stage"><b>主舞台</b><span>左邊看講義或任一產出物，右邊固定播放器與重點</span></button>
+              <button class="opt-card" data-value="split"><b>雙欄</b><span>左邊講義，右邊播放器與產出物</span></button>
+              <button class="opt-card" data-value="stack"><b>上下</b><span>播放器在上，講義與產出物在下，都用全寬</span></button>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h2 class="h2">學習產出物排列</h2></div>
+            <div class="opt-cards" data-opt="arr">
+              <button class="opt-card on" data-value="matrix"><b>全景矩陣</b><span>全部一次看完，點選直接展開</span></button>
+              <button class="opt-card" data-value="vertical"><b>垂直羅盤</b><span>左側清單，右側內容</span></button>
+              <button class="opt-card" data-value="pinned"><b>常用釘選</b><span>只顯示你釘選的項目，點卡片右上角的圖釘即可增減</span></button>
+              <button class="opt-card" data-value="triad"><b>認知三階</b><span>輸入、結構、提取三段</span></button>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h2 class="h2">播放器視覺</h2></div>
+            <div class="opt-cards" data-opt="skin">
+              <button class="opt-card on" data-value="vinyl"><b>黑膠</b><span>唱臂落針、環形進度</span></button>
+              <button class="opt-card" data-value="sine"><b>弦波</b><span>多重柔和弦波</span></button>
+              <button class="opt-card" data-value="ring"><b>環形</b><span>環狀頻譜</span></button>
+              <button class="opt-card" data-value="led"><b>聲譜</b><span>矩陣聲譜柱</span></button>
+            </div>
+            <div class="divider"></div>
+            <div class="toggle-row"><span>點擊唱盤切換視覺</span><button class="switch" role="switch" aria-checked="true" id="swFlip" aria-label="點擊唱盤切換視覺"></button></div>
+            <div class="toggle-row"><span>黑膠下方顯示弦波地平線</span><button class="switch" role="switch" aria-checked="false" id="swHorizon" aria-label="弦波地平線"></button></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><h2 class="h2">首頁節奏</h2></div>
+            <div class="opt-cards" data-opt="pace">
+              <button class="opt-card on" data-value="relax"><b>放鬆漫遊</b><span>溫和節奏與本週紀錄</span></button>
+              <button class="opt-card" data-value="sprint"><b>衝刺</b><span>考試倒數與今日必做</span></button>
+            </div>
+            <p class="hint" style="margin-top:12px">本機服務：http://127.0.0.1:8768　·　設定存在這個瀏覽器</p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <button class="btn btn-soft focus-exit" id="focusExit">離開專注</button>
+    <button class="side-fab" id="sideFab" aria-label="展開"><i class="icon-panel-right-open"></i><span class="tip">展開</span></button>
+  </div>
+</div>
+</div>
+
+<!-- ============ Dialogs used by the feature scripts ============ -->
+<!-- Add course: 4-step wizard -->
+<div id="addModal" class="modal-overlay">
+  <div class="modal">
+    <h3>加入課程</h3>
+    <div id="wizardSteps" class="wizard-steps"></div>
+    <div data-step="1" class="stack">
+      <p class="desc">點選資料夾瀏覽，找到放講義 PDF 的課程資料夾後按「選這個資料夾」。可以選好幾門課。</p>
+      <div class="folder-box">
+        <div class="folder-bar">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="browseFolder(null)">開始位置</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnFolderUp" onclick="browseFolder(currentBrowseParent)">上一層</button>
+          <span class="path-now" id="folderCurrent"></span>
+          <button type="button" class="btn btn-primary btn-sm" id="btnPickFolder" onclick="pickCurrentFolder()">選這個資料夾</button>
+        </div>
+        <div id="folderList" class="folder-list"></div>
+      </div>
+      <div>
+        <span class="field-label">已選的課程資料夾</span>
+        <div id="pickedFolders" class="picked"><span class="muted small">（還沒選）</span></div>
+        <textarea id="folderPaths" hidden></textarea>
+      </div>
+    </div>
+    <div data-step="2" class="stack">
+      <div class="row" style="flex-wrap:wrap;align-items:flex-end;gap:var(--s5)">
+        <div class="opt-field"><span>快速配置</span>
+          <div class="row" style="flex-wrap:wrap;gap:6px">
+            <button type="button" class="btn btn-soft btn-sm" onclick="setPreset('full')">全功能</button>
+            <button type="button" class="btn btn-soft btn-sm" onclick="setPreset('dual')">標準研讀</button>
+            <button type="button" class="btn btn-soft btn-sm" onclick="setPreset('quiz')">純刷題</button>
+          </div>
+        </div>
+        <label class="opt-field" style="min-width:200px"><span>產出語言</span>
+          <select id="courseLanguage" class="select"><option value="zh-TW" selected>繁體中文 (zh-TW)</option><option value="en">English (en)</option></select>
+        </label>
+      </div>
+      <div class="check-group">
+        <span class="field-label">每份 PDF 各自生成</span>
+        <div class="checks">
+          <label class="cbox"><input type="checkbox" name="chap_art" value="audio" checked>語音摘要</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="quiz_1" checked>測驗 1・基礎</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="quiz_2" checked>測驗 2・理解</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="quiz_3" checked>測驗 3・模擬考</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="study_guide" checked>讀書指南</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="video">影片摘要</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="reports_briefing" checked>報告：簡報文件</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="reports_study_guide" checked>報告：研讀指南</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="reports_blog_post">報告：部落格文章</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="reports_concept_explanation" checked>報告：概念解說</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="quiz_academic">進階・學術精研（研究所程度）</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="quiz_concept">進階・概念刷題（快速複習）</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="data_table">資料表</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="slide_deck">簡報投影片</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="mind_map" checked>心智圖</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="flashcards" checked>學習卡（Anki）</label>
+          <label class="cbox"><input type="checkbox" name="chap_art" value="infographic">資訊圖表</label>
+        </div>
+      </div>
+      <div class="check-group">
+        <span class="field-label">全部 PDF 整合生成（整門課）</span>
+        <div class="checks">
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_audio" checked>全課語音摘要</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_mock_exam" checked>全課期末模擬考</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_video">全課影片摘要</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_reports_briefing" checked>全課簡報文件</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_reports_study_guide" checked>全課研讀指南</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_reports_blog_post">全課部落格文章</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_reports_concept_explanation">全課概念解說</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_quiz_academic">全課學術精研考</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_quiz_concept">全課概念刷題考</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_mind_map" checked>全課跨章心智圖</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_slide_deck">全課簡報投影片</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_data_table">全課資料表</label>
+          <label class="cbox"><input type="checkbox" name="course_art" value="course_infographic">全課資訊圖表</label>
+        </div>
+      </div>
+    </div>
+    <div data-step="3" class="stack">
+      <p class="desc">不改就用預設值；之後也能在「批次排程」的課程設定修改。</p>
+      <div id="addOptions"><p class="loading-line">載入中…</p></div>
+    </div>
+    <div data-step="4" class="stack">
+      <label class="cbox"><input type="checkbox" id="autoStartQueue" checked>加入後立即開始生成（取消勾選：先加入並暫停，設定好再按「開始生成」）</label>
+      <label class="cbox"><input type="checkbox" id="reuseNotebook" checked>Gemini Notebook 上已有同名筆記本就沿用（已上傳的 PDF 不重傳）</label>
+      <div id="previewResults" class="preview-results" style="display:none"></div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="previewFolders()">重新估算</button>
+        <button class="btn btn-primary" id="btnConfirmAdd" onclick="confirmAddFolders()" disabled>確認加入</button>
+      </div>
+    </div>
+    <div class="wizard-nav">
+      <button class="btn btn-ghost" id="wizardBack" onclick="wizardGo(wizardStep - 1)">上一步</button>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" onclick="closeAddModalSafely()">取消</button>
+      <button class="btn btn-primary" id="wizardNext" onclick="wizardGo(wizardStep + 1)">下一步</button>
+    </div>
+  </div>
+</div>
+
+<!-- One output's own settings -->
+<div id="jobOptionsModal" class="modal-overlay">
+  <div class="modal narrow">
+    <h3 id="jobOptionsTitle">這一份產出的設定</h3>
+    <p class="desc">只影響這一份。選「沿用課程設定」就用課程的設定；尚未開始的工作會直接套用，已完成的請按「重新生成」。</p>
+    <div id="jobOptionsContent"><p class="loading-line">載入中…</p></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="document.getElementById('jobOptionsModal').style.display='none'">取消</button>
+      <button class="btn btn-primary" id="btnSaveJobOptions">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Usage guide -->
+<div id="usageModal" class="modal-overlay">
+  <div class="modal narrow">
+    <h3>使用方法</h3>
+    <div id="usageContent" class="dlg-body" style="padding:0"><p class="loading-line">載入中…</p></div>
+    <div class="modal-foot"><button class="btn btn-primary" onclick="closeUsageModal()">知道了</button></div>
+  </div>
+</div>
+
+<!-- Naming rules -->
+<div id="namingModal" class="modal-overlay">
+  <div class="modal">
+    <h3>命名規則：測驗與產出檔案怎麼命名</h3>
+    <div id="namingContent"><p class="loading-line">載入中…</p></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeNamingModal()">關閉</button></div>
+  </div>
+</div>
+
+<!-- Prompt editor -->
+<div id="promptModal" class="modal-overlay">
+  <div class="modal narrow">
+    <h3 id="promptModalTitle">編輯 Prompt</h3>
+    <p class="desc" id="promptModalDesc"></p>
+    <textarea id="promptInput" class="text-area" rows="10" style="font-family:ui-monospace,monospace;font-size:13.5px"></textarea>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closePromptModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePrompt()">儲存 Prompt</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="paletteDialog" aria-labelledby="paletteTitle">
+  <div class="dlg-head"><h2 class="h2" id="paletteTitle">新增配色</h2><button class="icon-btn" data-close aria-label="關閉"><i class="icon-x"></i></button></div>
+  <div class="dlg-body">
+    <div class="opt-field"><span>名稱</span><input class="text-input wide" id="palName" placeholder="例如：午後書房"></div>
+    <div class="color-row">
+      <label class="color-pick"><input type="color" id="palBg" value="#f4eee6"><span>背景</span></label>
+      <label class="color-pick"><input type="color" id="palPrimary" value="#1f4d3a"><span>主色</span></label>
+      <label class="color-pick"><input type="color" id="palAccent" value="#3f8f6b"><span>強調色</span></label>
+    </div>
+    <div class="pal-preview" id="palPreview"><div class="pp-card"><i class="pp-title"></i><i class="pp-line"></i><i class="pp-line short"></i><span class="pp-btn"></span></div></div>
+    <p class="hint">暗夜版本會依這三個顏色自動產生。文字顏色固定，請留意背景不要太深。</p>
+  </div>
+  <div class="dlg-foot" style="gap:8px"><button class="btn btn-ghost" data-close>取消</button><button class="btn btn-primary" id="palSave">新增</button></div>
+</dialog>
+
+<dialog id="resetDialog" aria-labelledby="resetTitle">
+  <div class="dlg-head"><h2 class="h2" id="resetTitle">全部恢復預設？</h2><button class="icon-btn" data-close aria-label="關閉"><i class="icon-x"></i></button></div>
+  <div class="dlg-body"><p>配色、日光暗夜、介面風格、研讀版面、欄寬與收合、產出物排列與排序、釘選、倍速、播放器視覺、頭像都會回到預設。自訂的配色會保留在清單裡。學習紀錄不受影響。</p></div>
+  <div class="dlg-foot" style="gap:8px"><button class="btn btn-ghost" data-close>取消</button><button class="btn btn-primary" id="resetGo">還原</button></div>
+</dialog>
+
+<div class="sr-only" aria-live="polite" id="srLive"></div>
+
+<div class="toast" id="toast" role="status">
+  <span>語音摘要聽完了。趁記憶最清楚，做一回測驗？</span>
+  <span class="row"><button class="btn btn-ghost" id="toastLater">晚點</button><button class="btn btn-primary" id="toastGo">開始</button></span>
+</div>
+
+<script src="/static/studio-core.js"></script>
+<script src="/static/studio-app.js"></script>
+<script src="/static/studio-batch.js"></script>
+<script src="/static/studio-settings.js"></script>
+<script src="/static/studio.js"></script>
+<script src="/static/studio-learning.js"></script>
+<script src="/static/studio-shell.js"></script>
+<script src="/static/studio-player.js"></script>
+<script src="/static/studio-bench.js"></script>
+<script src="/static/studio-start.js"></script>
+<script type="module" src="/static/studio-reader.js"></script>
 </body>
 </html>

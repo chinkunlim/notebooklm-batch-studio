@@ -1,8 +1,9 @@
-/* Gemini Notebook 學習工作室 — study and UX layer (loaded after the inline script in index.html).
-   Toasts / confirm dialog, theme, "today" plan, quiz review, explanations, mock-exam timer,
-   spaced review, audio resume and the add-course wizard. Uses globals from index.html:
-   currentStudyCourse, activeStudyLectureNo, activeQuizVariant, currentQuizData, currentQuizAnswers,
-   escHtml, selectStudyLecture, switchStudyTab, loadQuizForChapter. */
+/* Gemini Notebook 學習工作室 — study and UX layer (loaded after studio-app.js).
+   Toasts / confirm dialog, the overview built from the study plan, quiz review, explanations,
+   mock-exam timer, spaced review, audio resume and the add-course wizard. Uses globals from
+   studio-app.js (currentStudyCourse, activeStudyLectureNo, activeQuizVariant, currentQuizData,
+   currentQuizAnswers, studyHistory, escHtml, lectureName, selectStudyLecture, loadQuizForChapter)
+   and studio-shell.js (go, switchStudyTab, animateRings). */
 
 /* ---------- Toasts and confirm dialog ---------- */
 /**
@@ -21,7 +22,7 @@ function showToast(message, type = 'info', ms = 4500) {
     document.body.appendChild(stack);
   }
   const el = document.createElement('div');
-  el.className = `toast ${type}`;
+  el.className = `note ${type}`;
   el.textContent = message;
   stack.appendChild(el);
   setTimeout(() => el.remove(), ms);
@@ -40,13 +41,13 @@ function askConfirm(message, { okLabel = '確定', danger = false } = {}) {
       overlay = document.createElement('div');
       overlay.id = 'confirmOverlay';
       overlay.innerHTML = `<div id="confirmBox" role="dialog" aria-modal="true"><div id="confirmText"></div>
-        <div class="actions"><button id="confirmCancel">取消</button><button id="confirmOk" class="primary">確定</button></div></div>`;
+        <div class="actions"><button id="confirmCancel" class="btn btn-ghost">取消</button><button id="confirmOk" class="btn btn-primary">確定</button></div></div>`;
       document.body.appendChild(overlay);
     }
     document.getElementById('confirmText').textContent = message;
     const ok = document.getElementById('confirmOk');
     ok.textContent = okLabel;
-    ok.className = danger ? 'btn-danger' : 'primary';
+    ok.className = danger ? 'btn btn-danger' : 'btn btn-primary';
     const close = result => { overlay.style.display = 'none'; resolve(result); };
     ok.onclick = () => close(true);
     document.getElementById('confirmCancel').onclick = () => close(false);
@@ -56,79 +57,84 @@ function askConfirm(message, { okLabel = '確定', danger = false } = {}) {
   });
 }
 
-/* ---------- Theme (dark / light; follows the system until chosen) ---------- */
-/**
- * Apply the dark or light theme (or follow the system when none is chosen).
- * @param {string|null} theme 'dark', 'light' or null for the system setting
- */
-function applyTheme(theme) {
-  const root = document.documentElement;
-  if (theme) root.setAttribute('data-theme', theme); else root.removeAttribute('data-theme');
-  const light = theme ? theme === 'light' : window.matchMedia('(prefers-color-scheme: light)').matches;
-  document.body.classList.toggle('theme-light', light);
-  const btn = document.getElementById('btnTheme');
-  if (btn) btn.textContent = light ? '🌙 深色' : '☀️ 淺色';
-}
-
-/**
- * Switch between dark and light themes and remember the choice in this browser.
- */
-function toggleTheme() {
-  const light = document.body.classList.contains('theme-light');
-  const next = light ? 'dark' : 'light';
-  try { localStorage.setItem('studioTheme', next); } catch (e) { /* storage blocked */ }
-  applyTheme(next);
-}
-
-/* ---------- Today: plan, countdown, reviews ---------- */
+/* ---------- 研讀總覽: built from the study plan ---------- */
 let currentPlan = null;
+/**
+ * A label without its leading emoji (the server's step names start with one; v05 shows plain text).
+ * @param {string} text Label from the server
+ * @returns {string} Plain label
+ */
+function plainLabel(text) {
+  return String(text || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '').trim();
+}
+/** Which part of the learning cycle each step belongs to. */
+const STEP_TAGS = { audio: '輸入', guide: '輸入', flashcards: '間隔' };
 
 /**
- * Load the study plan and render the Today tab: next step, exam countdown, reviews due, lecture progress.
+ * Load the study plan and draw the overview: learning cycle, lecture route, progress, countdown and steps.
  * @returns {Promise<void>} Resolves when rendered
  */
 async function loadTodayPanel() {
-  const box = document.getElementById('todayContainer');
-  if (!box || !currentStudyCourse) return;
+  if (!currentStudyCourse) return;
   try {
     const res = await fetch(`/api/courses/${currentStudyCourse.code}/study/plan`);
     currentPlan = await res.json();
     if (!res.ok) throw new Error(currentPlan.detail || res.statusText);
   } catch (e) {
-    box.innerHTML = `<div class="empty-state">讀不到學習計畫：${escHtml(e.message)}</div>`;
+    document.getElementById('todaySteps').innerHTML = `<li class="small muted">讀不到學習計畫：${escHtml(e.message)}</li>`;
     return;
   }
   const p = currentPlan;
-  const countdown = p.days_left === null
-    ? `<div class="big">未設定</div><div style="font-size:0.8rem;color:var(--text-muted)">在管理控制台的「⚙️ 產出設定」填考試日期</div>`
-    : `<div class="big">${p.days_left >= 0 ? p.days_left : 0} 天</div><div style="font-size:0.8rem;color:var(--text-muted)">${escHtml(p.exam_date)}${p.days_left < 0 ? '（已過）' : ''}</div>`;
-  const next = p.next
-    ? `<div class="big" style="font-size:1.15rem;">${escHtml(p.next.label)}</div>
-       <div style="font-size:0.85rem;color:var(--text-muted);margin:4px 0 10px;">第 ${String(p.next.lecture_no).padStart(2, '0')} 講：${escHtml(p.next.topic)}</div>
-       <button class="primary" onclick="goToStep(${p.next.lecture_no}, '${p.next.step}')">▶️ 開始</button>`
-    : `<div class="big" style="font-size:1.15rem;">🎉 都完成了</div><div style="font-size:0.85rem;color:var(--text-muted)">做模擬考或複習錯題來檢查自己</div>`;
+  const tick = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  // 學習循環: the steps of the next lecture to study, then today's reviews
+  const focus = p.lectures.find(l => p.next && l.lecture_no === p.next.lecture_no) || p.lectures[0];
+  const steps = focus ? focus.steps.filter(st => st.available) : [];
   const dueCards = p.due.flashcards, dueMistakes = p.due.mistakes;
-  const reviews = `<div class="big">${dueCards + dueMistakes}</div>
-    <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">閃卡 ${dueCards} 張・錯題 ${dueMistakes} 題</div>
-    ${dueCards ? `<button onclick="startReviewSession()">🗂️ 複習到期閃卡</button>` : ''}
-    ${dueMistakes ? `<button onclick="switchStudyTab('mistakes')">📕 看錯題</button>` : ''}`;
-  const rows = p.lectures.map(lec => `
+  document.getElementById('todaySteps').innerHTML = (focus ? `<li class="steps-head">${lectureName(focus.lecture_no)}　${escHtml(focus.topic)}</li>` : '') +
+    steps.map(st => `<li class="${st.done ? 'done' : ''}" style="cursor:pointer" onclick="goToStep(${focus.lecture_no}, '${st.step}')"><span class="check">${tick}</span><span class="step-text">${escHtml(plainLabel(st.label))}</span><span class="tag">${STEP_TAGS[st.step] || '提取'}</span></li>`).join('') +
+    `<li class="${dueCards ? '' : 'done'}" style="cursor:pointer" onclick="startReviewSession()"><span class="check">${tick}</span><span class="step-text">複習 ${dueCards} 張到期學習卡</span><span class="tag">間隔</span></li>` +
+    (dueMistakes ? `<li style="cursor:pointer" onclick="switchStudyTab('mistakes')"><span class="check">${tick}</span><span class="step-text">看 ${dueMistakes} 題錯題</span><span class="tag warn">弱點</span></li>` : '') +
+    (!steps.length && !p.next ? '<li class="small muted">這門課的步驟都完成了，做模擬考或複習錯題來檢查自己。</li>' : '');
+  // 章節路線
+  document.getElementById('routeCourse').textContent = p.code;
+  const ring = n => `<span class="ring" data-p="${n}"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" cx="22" cy="22" r="19"/></svg><b>${n}</b></span>`;
+  document.getElementById('routeList').innerHTML = p.lectures.length ? p.lectures.map(l => {
+    const current = p.next && p.next.lecture_no === l.lecture_no;
+    const tag = l.percent >= 100 ? '<span class="tag good">完成</span>' : current ? '<span class="tag">研讀中</span>' : l.percent > 0 ? '<span class="tag warn">進行中</span>' : '<span class="tag">未開始</span>';
+    return `<li class="${current ? 'current' : ''}" onclick="selectStudyLecture(${l.lecture_no}); go('studio')">${ring(l.percent)}<div style="min-width:0"><div class="path-title">${escHtml(l.topic)}</div><div class="path-meta">${lectureName(l.lecture_no)}　·　完成 ${l.percent}%</div></div>${tag}</li>`;
+  }).join('') : '<li class="small muted">這門課還沒有講次。</li>';
+  // 掌握程度
+  const n = p.lectures.length;
+  const avg = n ? Math.round(p.lectures.reduce((a, l) => a + l.percent, 0) / n) : 0;
+  document.getElementById('masteryRing').dataset.p = avg;
+  document.getElementById('masteryVal').textContent = `${avg}%`;
+  document.getElementById('statDone').textContent = `${p.lectures.filter(l => l.percent >= 100).length} / ${n}`;
+  const weekAgo = Date.now() - 7 * 86400000;
+  const recent = (studyHistory || []).filter(h => h.total_questions && new Date(h.created_at).getTime() >= weekAgo);
+  document.getElementById('statAcc').textContent = recent.length
+    ? `${Math.round(recent.reduce((a, h) => a + h.score / h.total_questions, 0) / recent.length * 100)}%` : '—';
+  // 考試倒數 (衝刺)
+  const box = document.getElementById('countdownBox');
+  if (p.days_left === null) {
+    box.innerHTML = '<b>—</b><div><div style="font-weight:500">還沒設定考試日期</div><div class="small muted">到「批次排程」的課程設定填寫，複習計畫會跟著倒數調整。</div></div>';
+    document.getElementById('sprintLine').textContent = '今天先完成學習循環裡最重要的三件事。';
+  } else {
+    const d = Math.max(0, p.days_left);
+    box.innerHTML = `<b>${d}</b><div><div style="font-weight:500">天後考試</div><div class="small muted">${escHtml(p.exam_date)}${p.days_left < 0 ? '（已過）' : ''}</div></div>`;
+    document.getElementById('sprintLine').textContent = p.days_left < 0 ? '考試日期已過，可以在課程設定改成下一次考試。' : `距離考試還有 ${d} 天，今天先完成最重要的三件事。`;
+  }
+  // 各講進度: every step, one click away
+  document.getElementById('chapterRows').innerHTML = p.lectures.map(lec => `
     <div class="chapter-row">
-      <div><strong>第 ${String(lec.lecture_no).padStart(2, '0')} 講</strong><div style="font-size:0.8rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(lec.topic)}</div></div>
-      <div class="step-chips">${lec.steps.map(s => {
-        const cls = !s.available ? 'na' : (s.done ? 'done' : 'todo');
-        const click = s.available ? `onclick="goToStep(${lec.lecture_no}, '${s.step}')"` : '';
-        return `<button class="step-chip ${cls}" ${click} title="${s.available ? (s.done ? '已完成' : '還沒做') : '尚未生成'}">${s.done ? '✓ ' : ''}${escHtml(s.label)}</button>`;
+      <div><strong>${lectureName(lec.lecture_no)}</strong><div class="lec-topic">${escHtml(lec.topic)}</div></div>
+      <div class="step-chips">${lec.steps.map(st => {
+        const cls = !st.available ? 'na' : (st.done ? 'done' : 'todo');
+        const click = st.available ? `onclick="goToStep(${lec.lecture_no}, '${st.step}')"` : 'disabled';
+        return `<button class="step-chip ${cls}" ${click} title="${st.available ? (st.done ? '已完成' : '還沒做') : '尚未生成'}">${st.done ? '✓ ' : ''}${escHtml(plainLabel(st.label))}</button>`;
       }).join('')}</div>
-      <div style="min-width:90px;"><div class="meter" aria-label="進度 ${lec.percent}%"><span style="width:${lec.percent}%"></span></div><div style="font-size:0.75rem;text-align:right;color:var(--text-muted)">${lec.percent}%</div></div>
-    </div>`).join('');
-  box.innerHTML = `
-    <div class="plan-grid">
-      <div class="plan-card next"><h4>下一步</h4>${next}</div>
-      <div class="plan-card"><h4>距離考試</h4>${countdown}</div>
-      <div class="plan-card"><h4>今天要複習</h4>${reviews}</div>
-    </div>
-    <div class="plan-card"><h4>各講進度（點任一步驟直接前往）</h4>${rows}</div>`;
+      <div><div class="meter" aria-label="進度 ${lec.percent}%"><span style="width:${lec.percent}%"></span></div><div class="meter-label">${lec.percent}%</div></div>
+    </div>`).join('') || '<p class="small muted">還沒有講次。</p>';
+  if (typeof animateRings === 'function') animateRings(document.getElementById('view-overview'));
 }
 
 /**
@@ -155,7 +161,7 @@ async function markStep(step, done = true) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ lecture_no: activeStudyLectureNo, step, done }),
   });
-  if (res.ok) showToast(done ? '已記錄完成 ✓ 下一步會出現在「🏠 今天」' : '已取消完成標記', 'success');
+  if (res.ok) { showToast(done ? '已記錄完成，下一步會出現在「研讀總覽」' : '已取消完成標記', 'success'); loadTodayPanel(); }
   else showToast('記錄失敗', 'error');
 }
 
@@ -193,7 +199,7 @@ async function renderQuizResult(score, total, wrong) {
     if (!wrong.includes(i)) byChapter[tag].ok += 1;
   });
   const chapters = Object.entries(byChapter).sort();
-  const breakdown = chapters.length ? `<div style="margin-top:10px;font-size:0.85rem;">各章答對率：${chapters.map(([c, v]) => {
+  const breakdown = chapters.length ? `<div class="small" style="margin-top:10px">各章答對率　${chapters.map(([c, v]) => {
     const r = Math.round(100 * v.ok / v.all);
     return `<span class="badge ${r < 60 ? 'badge-danger' : r < 80 ? 'badge-warning' : 'badge-success'}" style="margin:2px;">${escHtml(c)} ${r}%</span>`;
   }).join('')}</div>` : '';
@@ -201,12 +207,12 @@ async function renderQuizResult(score, total, wrong) {
   const box = document.createElement('div');
   box.className = 'result-card';
   box.id = 'quizResultCard';
-  box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <div><div class="score">${score} / ${total}（${pct}%）</div><div style="color:var(--text-muted);">${message}</div>${breakdown}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${wrong.length ? `<button class="primary" onclick="retryWrongOnly()">🔁 只重做錯的 ${wrong.length} 題</button>` : ''}
-        <button onclick="loadQuizForChapter(activeQuizVariant)">↺ 整份重做</button>
-        ${wrong.length ? `<button onclick="switchStudyTab('mistakes')">📕 錯題集</button>` : ''}
+  box.innerHTML = `<div class="row" style="justify-content:space-between;flex-wrap:wrap;align-items:flex-start">
+      <div><div class="score">${score} / ${total}（${pct}%）</div><div class="muted">${message}</div>${breakdown}</div>
+      <div class="row" style="flex-wrap:wrap;gap:8px">
+        ${wrong.length ? `<button class="btn btn-primary" onclick="retryWrongOnly()">只重做錯的 ${wrong.length} 題</button>` : ''}
+        <button class="btn btn-ghost" onclick="loadQuizForChapter(activeQuizVariant)">整份重做</button>
+        ${wrong.length ? `<button class="btn btn-soft" onclick="switchStudyTab('mistakes')">看弱點複習</button>` : ''}
       </div></div>`;
   const container = document.getElementById('quizContainer');
   container.prepend(box);
@@ -267,8 +273,8 @@ async function loadSavedExplanations() {
  */
 function explanationBox(html, savedAt, askAgain) {
   const when = savedAt ? new Date(savedAt).toLocaleString('zh-TW', { dateStyle: 'short', timeStyle: 'short' }) : '';
-  return `<div class="explain-box"><div class="explain-head">📖 Gemini Notebook 解釋${when ? `（已儲存 ${escHtml(when)}）` : ''}
-    <button class="link-btn" onclick="${askAgain}">🔁 重新問</button></div>${html}</div>`;
+  return `<div class="explain-box"><div class="explain-head">Gemini Notebook 解釋${when ? `（已儲存 ${escHtml(when)}）` : ''}
+    <button class="link-btn" onclick="${askAgain}">重新問</button></div>${html}</div>`;
 }
 
 /**
@@ -281,7 +287,7 @@ function explanationBox(html, savedAt, askAgain) {
  */
 async function askExplanation(q, anchor, force, askAgain) {
   const original = anchor.textContent;
-  if (anchor.tagName === 'BUTTON') { anchor.disabled = true; anchor.textContent = '⏳ Gemini Notebook 回答中…'; }
+  if (anchor.tagName === 'BUTTON') { anchor.disabled = true; anchor.textContent = 'Gemini Notebook 回答中…'; }
   try {
     const res = await fetch(`/api/courses/${currentStudyCourse.code}/study/explain`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -344,7 +350,7 @@ function explainMistake(mistakeId, anchor, force = false) {
 function explanationSlot(question, askJs, askAgainJs) {
   const saved = savedExplanations.get(String(question).trim());
   if (saved) return explanationBox(saved.html || escHtml(saved.answer_md || ''), saved.created_at, askAgainJs);
-  return `<button class="why-btn" style="margin-top:8px;font-size:0.8rem;" onclick="${askJs}">🤔 為什麼？問 Gemini Notebook</button>`;
+  return `<button class="btn btn-ghost btn-sm why-btn" onclick="${askJs}">為什麼？問 Gemini Notebook</button>`;
 }
 
 /**
@@ -365,7 +371,7 @@ function startMockTimer(questionCount) {
   /** Update the countdown once a second; submit when time is up. */
   const tick = () => {
     const m = Math.floor(left / 60), s = left % 60;
-    el.textContent = `⏱ ${m}:${String(s).padStart(2, '0')}`;
+    el.textContent = `剩 ${m}:${String(s).padStart(2, '0')}`;
     el.classList.toggle('low', left <= 300);
     if (left <= 0) { stopMockTimer(); showToast('時間到，自動交卷', 'warning'); submitQuizAttempt(); }
     left -= 1;
@@ -411,7 +417,7 @@ async function rateCard(card, remembered, lectureNo) {
   if (!res.ok) { showToast('記錄失敗', 'error'); return; }
   const data = await res.json();
   const days = [0, 1, 3, 7, 14, 30][data.stage] || 0;
-  showToast(remembered ? `👍 ${days} 天後再複習` : '🔁 10 分鐘後會再出現', remembered ? 'success' : 'warning', 2200);
+  showToast(remembered ? `${days} 天後再複習` : '10 分鐘後會再出現', remembered ? 'success' : 'warning', 2200);
 }
 
 /**
@@ -424,51 +430,39 @@ async function rateCurrentFlashcard(remembered) {
   if (!card) return;
   await rateCard(card, remembered, activeStudyLectureNo);
   if (currentFlashcardIdx < currentFlashcards.length - 1) nextFlashcard();
-  else showToast('這一講的閃卡都看完了 🎉', 'success');
+  else showToast('這一講的學習卡都看完了', 'success');
 }
 
+/* ---------- Audio: remember the position per course and lecture ---------- */
 /**
- * Open the flashcards that are due now as a review session.
- * @returns {Promise<void>} Resolves when started
- */
-async function startReviewSession() {
-  const res = await fetch(`/api/courses/${currentStudyCourse.code}/study/reviews/due`);
-  const due = res.ok ? await res.json() : [];
-  if (!due.length) { showToast('目前沒有到期的閃卡 👍', 'success'); return; }
-  switchStudyTab('flashcards');
-  setTimeout(() => {
-    currentFlashcards = due.filter(d => d.kind === 'flashcard').map(d => ({ front: d.front, back: d.back, lecture_no: d.lecture_no }));
-    currentFlashcardIdx = 0;
-    renderCurrentFlashcard();
-    showToast(`開始複習 ${currentFlashcards.length} 張到期閃卡`, 'info');
-  }, 400);
-}
-
-/* ---------- Audio: remember position and speed ---------- */
-/**
- * Remember an audio player's position and speed, and restore them next time.
+ * Remember where the student stopped in an audio track and continue there next time (the track loads
+ * with the page, so this happens quietly).
+ * The speed is a global preference (設計與自訂 / the player), so only the position is stored here.
+ * Calling it again for a new track replaces the previous track's listeners.
  * @param {HTMLAudioElement} audio The player
  * @param {string} key Storage key for this course and lecture
  */
 function attachAudioResume(audio, key) {
   if (!audio) return;
+  (audio._resume || []).forEach(([ev, fn]) => audio.removeEventListener(ev, fn));
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { saved = null; }
-  audio.addEventListener('loadedmetadata', () => {
-    if (saved && saved.t > 5 && saved.t < audio.duration - 5) {
-      audio.currentTime = saved.t;
-      showToast(`從上次的 ${Math.floor(saved.t / 60)} 分 ${Math.floor(saved.t % 60)} 秒繼續`, 'info', 3000);
-    }
-    if (saved && saved.r) audio.playbackRate = saved.r;
-  }, { once: true });
   let last = 0;
-  /** Save the current position and speed for this course and lecture. */
-  const save = () => {
+  /** Restore the saved position once the track's length is known. */
+  const restore = () => {
+    if (saved && saved.t > 5 && saved.t < audio.duration - 5) {
+      audio.currentTime = saved.t;  // silent: the player's clock already shows where it continues
+    }
+    audio.removeEventListener('loadedmetadata', restore);
+  };
+  /** Save the current position for this course and lecture. */
+  const store = () => {
     try { localStorage.setItem(key, JSON.stringify({ t: audio.currentTime, r: audio.playbackRate })); } catch (e) { /* storage blocked */ }
   };
-  audio.addEventListener('timeupdate', () => { if (Date.now() - last > 5000) { last = Date.now(); save(); } });
-  audio.addEventListener('ratechange', save);
-  audio.addEventListener('pause', save);
+  /** Save at most every five seconds while playing. */
+  const onTime = () => { if (Date.now() - last > 5000) { last = Date.now(); store(); } };
+  audio._resume = [['loadedmetadata', restore], ['timeupdate', onTime], ['pause', store]];
+  audio._resume.forEach(([ev, fn]) => audio.addEventListener(ev, fn));
 }
 
 /* ---------- Add-course wizard ---------- */
@@ -494,13 +488,6 @@ function wizardGo(step) {
   document.getElementById('wizardNext').style.display = wizardStep < 4 ? '' : 'none';
   if (wizardStep === 4) previewFolders();
 }
-
-/* ---------- Start-up ---------- */
-document.addEventListener('DOMContentLoaded', () => {
-  let saved = null;
-  try { saved = localStorage.getItem('studioTheme'); } catch (e) { saved = null; }
-  applyTheme(saved);
-});
 
 /* Every remaining alert() becomes a non-blocking toast; the type follows the message. */
 window.alert = message => {

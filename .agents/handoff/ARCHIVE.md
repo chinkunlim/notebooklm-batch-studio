@@ -63,3 +63,7 @@
 - **下一步**: Phase 1 fully delivered. Verify with local run: 'uv run notebooklm-batch-studio web', then proceed to Phase 2 (interactive local quiz web app SPEC-004) or user 
 - **交接備註**: Phase 1 (1A-1E) completed 100% with 50 passing unit tests and clean code review guard
 - **本機對話紀錄**: `.agents/conversations/2026-10-22-0907-antigravity-summary.md`（只在這台電腦）
+
+### [2026-10-22 01:09 UTC] 建立任務 `TASK-006`: Update all documentation and architecture markdown files (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

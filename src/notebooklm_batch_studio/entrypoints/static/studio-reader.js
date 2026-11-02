@@ -1,7 +1,7 @@
 /* Gemini Notebook 學習工作室 — course material reader (ES module).
    Shows the lecture's own PDF with pdf.js (pages render when scrolled into view) and highlights the
    key points Gemini Notebook picked: each point carries a verbatim quote and page, found in the page's
-   text layer and marked in one of three colours by importance. Uses globals from index.html:
+   text layer and marked in one of three colours by importance. Uses globals from studio-app.js / studio.js:
    currentStudyCourse, activeStudyLectureNo, escHtml, showToast, askConfirm. */
 
 import * as pdfjsLib from '/static/vendor/pdfjs/pdf.min.mjs';
@@ -37,7 +37,7 @@ async function loadReader() {
   const box = document.getElementById('readerContainer');
   if (!currentStudyCourse) return;
   if (activeStudyLectureNo === null) {
-    box.innerHTML = '<div class="empty-state">課件是一講一份：請先在左邊選一講。</div>';
+    box.innerHTML = '<div class="empty-state">講義是一講一份：請先在「課程目錄」選一講。</div>';
     return;
   }
   stopReader();
@@ -48,10 +48,10 @@ async function loadReader() {
   box.innerHTML = `
     <div class="reader-bar">
       <div class="reader-tools">
-        <button onclick="readerZoom(-0.15)" aria-label="縮小">－</button>
+        <button class="icon-btn" onclick="readerZoom(-0.15)" aria-label="縮小"><i class="icon-zoom-out"></i></button>
         <span id="readerZoomLabel">${Math.round(reader.scale * 100)}%</span>
-        <button onclick="readerZoom(0.15)" aria-label="放大">＋</button>
-        <a class="btn" href="${pdfUrl}" target="_blank" rel="noopener">↗ 新分頁開啟</a>
+        <button class="icon-btn" onclick="readerZoom(0.15)" aria-label="放大"><i class="icon-zoom-in"></i></button>
+        <a class="btn btn-ghost btn-sm" href="${pdfUrl}" target="_blank" rel="noopener">新分頁開啟</a>
       </div>
       <div class="reader-legend">
         <span class="kp-dot kp-i3"></span>必考核心 <span class="kp-dot kp-i2"></span>重要概念 <span class="kp-dot kp-i1"></span>補充
@@ -100,12 +100,12 @@ function renderKeyPointList() {
   if (!reader.points.length) {
     list.innerHTML = `<div class="kp-empty">
         <p>還沒有重點。按下面的按鈕，請 Gemini Notebook 從這份講義挑出約 12 個重點，並在課件上標出原文。</p>
-        <button class="primary" onclick="generateKeyPoints(false)">✨ 產生重點</button>
+        <button class="btn btn-primary" onclick="generateKeyPoints(false)">產生重點</button>
         <p class="kp-hint">只會問一次並存起來，之後打開不再花額度。</p></div>`;
     return;
   }
-  list.innerHTML = `<div class="kp-head"><strong>📌 重點 ${reader.points.length} 個</strong>
-      <button class="link-btn" onclick="generateKeyPoints(true)">🔁 重新產生</button></div>` +
+  list.innerHTML = `<div class="kp-head"><strong>重點 ${reader.points.length} 個</strong>
+      <button class="link-btn" onclick="generateKeyPoints(true)">重新產生</button></div>` +
     reader.points.map((p, i) => `
       <button class="kp-item kp-i${p.importance}" id="kpItem-${i}" onclick="jumpToPoint(${i})">
         <span class="kp-page">${p.page ? `p.${p.page}` : '—'}</span>
@@ -125,7 +125,7 @@ async function generateKeyPoints(force) {
     : '請 Gemini Notebook 從這份講義挑出重點？會用到一次對話額度，結果會存起來重複使用。', { okLabel: '開始' });
   if (!ok) return;
   const list = document.getElementById('keyPointList');
-  list.innerHTML = '<div class="kp-empty">⏳ Gemini Notebook 正在閱讀講義、挑選重點（約 20–60 秒）…</div>';
+  list.innerHTML = '<div class="kp-empty">Gemini Notebook 正在閱讀講義、挑選重點（約 20–60 秒）…</div>';
   const code = currentStudyCourse.code;
   try {
     const res = await fetch(`/api/courses/${encodeURIComponent(code)}/lectures/${activeStudyLectureNo}/key-points`, {
@@ -136,7 +136,8 @@ async function generateKeyPoints(force) {
     reader.points = data.points || [];
     renderKeyPointList();
     document.querySelectorAll('.reader-page[data-rendered="1"]').forEach(page => highlightPage(Number(page.dataset.page)));
-    showToast(`✅ 找到 ${reader.points.length} 個重點`, 'success');
+    showToast(`找到 ${reader.points.length} 個重點`, 'success');
+    if (typeof loadSideKeypoints === 'function') loadSideKeypoints();
   } catch (e) {
     showToast(`產生重點失敗：${e.message}`, 'error');
     renderKeyPointList();

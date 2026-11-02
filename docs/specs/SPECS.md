@@ -18,4 +18,4 @@
 | [006-per-artifact-settings](006-per-artifact-settings.md) | Implemented | 每一項產出各自的生成設定（題型、題量、難度…），三層設定合併 | TASK-009, ADR-005 |
 | [007-student-experience](007-student-experience.md) | Implemented | 學生學習體驗：今天、交卷回饋、間隔複習、模擬考、解釋、介面 | TASK-009 |
 | [008-learning-aids](008-learning-aids.md) | Implemented | 學習輔助：課件重點標示、遺忘曲線記憶強度、信心評分、混合複習、家教、番茄鐘 | TASK-009, ADR-006 |
-| [009-study-studio-ui-redesign](009-study-studio-ui-redesign.md) | Planned | 研讀工作室與學生工作台介面重構：奢華黑膠唱機、全景九宮格、自訂主分頁、全設備 RWD、頭像自訂 | SPEC-009, ADR-007 |
+| [009-study-studio-ui-redesign](009-study-studio-ui-redesign.md) | Implemented | 研讀工作室與學生工作台介面重構（v05）：側欄四頁、真實音檔唱盤與迷你播放器、免分頁工作台、配色與自訂、全設備 RWD | TASK-011, ADR-007, ADR-008 |

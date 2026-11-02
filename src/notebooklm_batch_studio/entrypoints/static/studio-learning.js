@@ -1,14 +1,14 @@
 /* Gemini Notebook 學習工作室 — learning-psychology layer for the study portal.
-   - Forgetting curve: memory strength per lecture on "今天", weakest first (spacing).
+   - Forgetting curve: memory strength per lecture on the overview, weakest first (spacing).
    - Habit: study streak and a 4-week heatmap (goal gradient, habit formation).
    - Zeigarnik effect: "上次停在…" card that resumes unfinished work.
    - Metacognition: rate confidence before answering; "sure but wrong" questions are flagged.
    - Interleaving: mixed review across lectures.  Generation effect: hide choices / write before flipping.
    - Peak-end: a result summary that compares with the last attempt.  Pomodoro focus timer.
    - Socratic tutor (Gemini Notebook chat that guides with questions).
-   Uses globals from index.html / studio.js: currentStudyCourse, activeStudyLectureNo, activeQuizVariant,
-   currentQuizData, escHtml, showToast, selectStudyLecture, switchStudyTab, loadQuizForChapter,
-   renderQuizQuestions, quizQuestions, loadTodayPanel, loadFlashcardsViewer, selectChoice. */
+   Uses globals from studio-app.js / studio.js / studio-shell.js: currentStudyCourse, activeStudyLectureNo,
+   activeQuizVariant, currentQuizData, escHtml, showToast, selectStudyLecture, switchStudyTab,
+   loadQuizForChapter, renderQuizQuestions, quizQuestions, loadTodayPanel, loadFlashcardsViewer, selectChoice. */
 
 /* ---------- Helpers ---------- */
 /**
@@ -62,7 +62,7 @@ function savedPlace() {
 }
 
 /** Tab names shown in the resume card. */
-const TAB_NAMES = { reader: '📄 課件', audio: '🎧 語音', quiz: '📝 測驗', mistakes: '📕 錯題', flashcards: '🗂️ 閃卡', reports: '📑 報告', tutor: '🧑‍🏫 家教' };
+const TAB_NAMES = { reader: '講義', audio: '語音摘要', quiz: '測驗', mistakes: '錯題', flashcards: '學習卡', reports: '報告', tutor: 'AI 家教' };
 
 /**
  * Resume the remembered place.
@@ -75,13 +75,13 @@ function resumePlace() {
   if (place.tab === 'quiz' && place.variant) loadQuizForChapter(place.variant);
 }
 
-/* ---------- Forgetting curve, streak and heatmap on "今天" ---------- */
+/* ---------- Forgetting curve, streak and this week on the overview ---------- */
 /**
- * Draw the memory panel (resume card, streak, heatmap, memory strength) under the study plan.
+ * Draw the memory card (strength per lecture, streak, 4-week heatmap) and this week's dots.
  * @returns {Promise<void>}
  */
 async function renderMemoryPanel() {
-  const box = document.getElementById('todayContainer');
+  const box = document.getElementById('memoryPanel');
   if (!box || !currentStudyCourse) return;
   let data;
   try {
@@ -91,34 +91,31 @@ async function renderMemoryPanel() {
   } catch (e) {
     return;
   }
-  const place = savedPlace();
-  const placeTab = place && place.tab && place.tab !== 'today' ? place.tab : null;
-  const resume = placeTab ? `<div class="plan-card resume-card">
-      <div><h4>上次停在</h4><div class="big" style="font-size:1.05rem;">${lecLabel(place.lecture)}・${TAB_NAMES[placeTab] || placeTab}
-      ${place.answered ? `（上次答到第 ${place.answered} 題）` : ''}</div></div>
-      <button class="primary" onclick="resumePlace()">▶ 繼續</button></div>` : '';
   const levels = { strong: '穩固', fading: '開始遺忘', weak: '快忘了' };
   const practised = data.lectures.filter(l => l.percent !== null).sort((a, b) => a.percent - b.percent);
   const weakest = practised.find(l => l.level !== 'strong');
   const bars = data.lectures.map(l => l.percent === null
-    ? `<div class="mem-row"><span>${lecLabel(l.no)}</span><div class="mem-bar"><span style="width:0"></span></div><span class="mem-val muted">還沒練習</span></div>`
+    ? `<div class="mem-row"><span>${lecLabel(l.no)}</span><div class="mem-bar"><span style="width:0"></span></div><span class="mem-val">還沒練習</span></div>`
     : `<div class="mem-row" title="距上次練習 ${l.days_since} 天"><span>${lecLabel(l.no)}</span>
          <div class="mem-bar ${l.level}"><span style="width:${l.percent}%"></span></div>
          <span class="mem-val ${l.level}">${l.percent}% ${levels[l.level]}</span></div>`).join('');
   const heat = data.heatmap.map(d => `<span class="heat h${Math.min(4, d.count === 0 ? 0 : Math.ceil(d.count / 2))}" title="${d.date}：${d.count} 次"></span>`).join('');
-  const section = document.createElement('div');
-  section.id = 'memoryPanel';
-  section.innerHTML = `${resume}
-    <div class="plan-grid memory-grid">
-      <div class="plan-card"><h4>連續學習</h4><div class="big">🔥 ${data.streak} 天</div>
-        <div class="muted small">${data.studied_today ? '今天已經學過了，保持下去！' : '今天做一點點就能延續紀錄。'}</div>
-        <div class="heatmap" aria-label="最近四週的學習次數">${heat}</div></div>
-      <div class="plan-card"><h4>記憶強度（遺忘曲線估計）</h4>${bars}
-        ${weakest ? `<button class="primary" style="margin-top:8px;" onclick="selectStudyLecture(${weakest.no}); switchStudyTab('flashcards')">🧠 先複習 ${lecLabel(weakest.no)}（${weakest.percent}%）</button>` : ''}
-        <div class="muted small" style="margin-top:6px;">每次答對或「記得」都會讓記憶更持久；久沒碰就會慢慢下降。</div></div>
-    </div>`;
-  document.getElementById('memoryPanel')?.remove();
-  box.prepend(section);
+  box.innerHTML = `${bars}
+    ${weakest ? `<button class="btn btn-soft" style="margin-top:8px" onclick="selectStudyLecture(${weakest.no}); switchStudyTab('flashcards')">先複習 ${lecLabel(weakest.no)}（${weakest.percent}%）</button>` : ''}
+    <p class="hint" style="margin-top:8px">每次答對或「記得」都會讓記憶更持久；久沒碰就會慢慢下降。</p>
+    <div class="divider"></div>
+    <span class="field-label">連續學習 ${data.streak} 天　<span class="small muted">${data.studied_today ? '今天已經學過了' : '今天做一點點就能延續紀錄'}</span></span>
+    <div class="heatmap" aria-label="最近四週的學習次數">${heat}</div>`;
+  // This week (Monday to Sunday) from the same activity data
+  const counts = new Map(data.heatmap.map(d => [d.date, d.count]));
+  const today = new Date();
+  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  document.getElementById('weekDots').innerHTML = ['一', '二', '三', '四', '五', '六', '日'].map((name, i) => {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    return `<div>${name}<i class="${(counts.get(iso(d)) || 0) > 0 ? 'on' : ''}"></i></div>`;
+  }).join('');
+  document.getElementById('weekLabel').textContent = `本週節奏　連續 ${data.streak} 天`;
 }
 
 /* ---------- Metacognition: confidence before answering ---------- */
@@ -137,7 +134,7 @@ function addConfidenceButtons() {
     const row = document.createElement('div');
     row.className = 'confidence-row';
     row.innerHTML = '<span>作答前，你有多確定？</span>' +
-      [['sure', '😎 很確定'], ['unsure', '🤔 不太確定'], ['guess', '🎲 用猜的']]
+      [['sure', '很確定'], ['unsure', '不太確定'], ['guess', '用猜的']]
         .map(([v, label]) => `<button type="button" data-v="${v}" onclick="setConfidence(${i}, '${v}', this)">${label}</button>`).join('');
     exp.before(row);
   });
@@ -203,16 +200,16 @@ function decorateQuizResult(box, score, total, wrong) {
   const lines = [];
   if (previousAttempt && previousAttempt.total_questions === total) {
     const diff = score - previousAttempt.score;
-    lines.push(diff > 0 ? `📈 比上次多對 ${diff} 題，進步看得見！` : diff === 0 ? '➖ 和上次一樣，把錯題弄懂就能往上走。' : `📉 比上次少對 ${-diff} 題，間隔一段時間再測很正常，這正是在練記憶。`);
+    lines.push(diff > 0 ? `比上次多對 ${diff} 題，進步看得見。` : diff === 0 ? '和上次一樣，把錯題弄懂就能往上走。' : `比上次少對 ${-diff} 題，間隔一段時間再測很正常，這正是在練記憶。`);
   } else if (!previousAttempt) {
-    lines.push('🎉 第一次完成這份測驗！明天再做一次，記得會更牢。');
+    lines.push('第一次完成這份測驗。明天再做一次，記得會更牢。');
   }
   const summary = confidenceSummary(wrong, total);
   const sureWrong = wrong.filter(i => window.quizConfidence[i] === 'sure');
   if (sureWrong.length) {
-    lines.push(`⚠️ 有 ${sureWrong.length} 題你「很確定」卻答錯（第 ${sureWrong.map(i => i + 1).join('、')} 題）：這是最值得弄懂的誤解，看完解析印象會特別深。`);
+    lines.push(`有 ${sureWrong.length} 題你「很確定」卻答錯（第 ${sureWrong.map(i => i + 1).join('、')} 題）：這是最值得弄懂的誤解，看完解析印象會特別深。`);
   }
-  if (summary && summary.guess_right) lines.push(`🎲 有 ${summary.guess_right} 題是猜對的，下次複習時別跳過。`);
+  if (summary && summary.guess_right) lines.push(`有 ${summary.guess_right} 題是猜對的，下次複習時別跳過。`);
   if (!lines.length) return;
   box.insertAdjacentHTML('beforeend', `<div class="result-notes">${lines.map(l => `<div>${escHtml(l)}</div>`).join('')}</div>`);
   previousAttempt = { score, total_questions: total };
@@ -241,7 +238,7 @@ function applyHideChoices() {
     if (!wrap) return;
     wrap.classList.toggle('choices-hidden', hideChoices);
     if (hideChoices && !wrap.previousElementSibling?.classList.contains('reveal-btn')) {
-      wrap.insertAdjacentHTML('beforebegin', '<button type="button" class="reveal-btn" onclick="this.nextElementSibling.classList.remove(\'choices-hidden\'); this.remove();">🙈 先在心裡回答，再按這裡看選項</button>');
+      wrap.insertAdjacentHTML('beforebegin', '<button type="button" class="btn btn-soft btn-sm reveal-btn" onclick="this.nextElementSibling.classList.remove(\'choices-hidden\'); this.remove();">先在心裡回答，再按這裡看選項</button>');
     }
     if (!hideChoices) wrap.previousElementSibling?.classList.contains('reveal-btn') && wrap.previousElementSibling.remove();
   });
@@ -254,7 +251,7 @@ function addQuizTools() {
   const bar = document.getElementById('quizKindButtons');
   if (!bar || bar.querySelector('.mixed-btn')) return;
   bar.insertAdjacentHTML('beforeend', `
-    <button class="mixed-btn ${activeQuizVariant === 'mixed_review' ? 'primary' : ''}" onclick="startMixedReview()" title="從學過的各講隨機抽題（交錯練習）">🔀 混合複習</button>
+    <button class="chip mixed-btn${activeQuizVariant === 'mixed_review' ? ' on' : ''}" style="--hue:var(--h-flash)" onclick="startMixedReview()" title="從學過的各講隨機抽題（交錯練習）">混合複習</button>
     <label class="hide-toggle"><input type="checkbox" ${hideChoices ? 'checked' : ''} onchange="setHideChoices(this.checked)"> 先回想再看選項</label>`);
 }
 
@@ -285,9 +282,9 @@ async function startMixedReview() {
   activeQuizVariant = 'mixed_review';
   currentQuizData = { quiz, json_data: quiz };
   document.getElementById('quizScoreHeader').textContent = '';
-  document.querySelectorAll('#quizKindButtons button').forEach(b => b.classList.toggle('primary', b.classList.contains('mixed-btn')));
+  document.querySelectorAll('#quizKindButtons button').forEach(b => b.classList.toggle('on', b.classList.contains('mixed-btn')));
   renderQuizQuestions(quiz, 'mixed_review');
-  showToast(`🔀 從 ${new Set(pool.map(q => q.source)).size} 講抽出 ${quiz.questions.length} 題，交卷後看各講答對率。`, 'success');
+  showToast(`從 ${new Set(pool.map(q => q.source)).size} 講抽出 ${quiz.questions.length} 題，交卷後看各講答對率。`, 'success');
 }
 
 /* ---------- Pomodoro focus timer ---------- */
@@ -309,25 +306,16 @@ function togglePomodoro() {
     pomodoro.left -= 1;
     const m = String(Math.floor(pomodoro.left / 60)).padStart(2, '0');
     const s = String(pomodoro.left % 60).padStart(2, '0');
-    btn.textContent = `🍅 ${m}:${s}`;
+    btn.textContent = `專注 ${m}:${s}`;
     if (pomodoro.left <= 0) {
       clearInterval(pomodoro.timer);
       pomodoro.timer = null;
       pomodoro.left = 25 * 60;
-      btn.textContent = '🍅 25:00';
+      btn.textContent = '專注 25:00';
       btn.classList.remove('running');
-      showToast('🍅 專注 25 分鐘完成！休息 5 分鐘：閉上眼睛，回想剛才學到的 3 個重點（回想比重讀更能記住）。', 'success', 12000);
+      showToast('專注 25 分鐘完成。休息 5 分鐘：閉上眼睛，回想剛才學到的 3 個重點（回想比重讀更能記住）。', 'success', 12000);
     }
   }, 1000);
-}
-
-/**
- * Put the focus-timer button next to the study tabs.
- */
-function addPomodoroButton() {
-  const tabs = document.getElementById('btnTabToday')?.parentElement;
-  if (!tabs || document.getElementById('btnPomodoro')) return;
-  tabs.insertAdjacentHTML('beforeend', '<button id="btnPomodoro" class="study-tab-btn pomodoro" onclick="togglePomodoro()" title="25 分鐘專注計時（再按一次暫停）">🍅 25:00</button>');
 }
 
 /* ---------- Tutor ---------- */
@@ -340,16 +328,16 @@ async function loadTutor() {
   if (!currentStudyCourse) return;
   const lec = activeStudyLectureNo;
   box.innerHTML = `
-    <div class="tutor-head"><div><h3>🧑‍🏫 蘇格拉底家教 · ${lecLabel(lec)}</h3>
+    <div class="tutor-head"><div><h3>AI 家教　·　${lecLabel(lec)}</h3>
       <p class="muted small">家教不直接給答案，而是一步步用問題引導你想通（只根據這${lec === null ? '門課' : '一講'}的講義）。每則訊息會用到一次 Gemini Notebook 對話。</p></div>
-      <button class="link-btn" onclick="clearTutor()">🗑 重新開始</button></div>
+      <button class="btn btn-ghost btn-sm" onclick="clearTutor()">重新開始</button></div>
     <div id="tutorLog" class="tutor-log">載入中…</div>
     <div class="tutor-suggest">
-      ${['考考我這一講最核心的概念', '我不懂這一講在說什麼，請從頭引導我', '幫我找出我可能誤解的地方'].map(t => `<button type="button" onclick="sendTutor('${t}')">${t}</button>`).join('')}
+      ${['考考我這一講最核心的概念', '我不懂這一講在說什麼，請從頭引導我', '幫我找出我可能誤解的地方'].map(t => `<button type="button" class="chip" onclick="sendTutor('${t}')">${t}</button>`).join('')}
     </div>
     <form class="tutor-input" onsubmit="event.preventDefault(); sendTutor();">
-      <textarea id="tutorText" rows="2" placeholder="輸入你的想法或問題（⌘↵ 送出）" onkeydown="if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); sendTutor(); }"></textarea>
-      <button class="primary" type="submit" id="tutorSend">送出</button>
+      <textarea id="tutorText" class="text-area" rows="2" placeholder="輸入你的想法或問題（⌘↵ 送出）" onkeydown="if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); sendTutor(); }"></textarea>
+      <button class="btn btn-primary" type="submit" id="tutorSend">送出</button>
     </form>`;
   try {
     const res = await fetch(courseApi(`/study/tutor${lec === null ? '' : `?lecture_no=${lec}`}`));
@@ -419,8 +407,8 @@ async function clearTutor() {
  */
 function addRecallBox() {
   const box = document.getElementById('flashcardsViewerContainer');
-  if (!box || box.querySelector('.recall-box') || !box.querySelector('.flip-card-wrap')) return;
-  box.insertAdjacentHTML('afterbegin', '<textarea class="recall-box" rows="2" placeholder="✍️ 先寫下（或在心裡說出）你的答案，再翻面對照：自己想出來的比直接看更記得住。"></textarea>');
+  if (!box || box.querySelector('.recall-box') || !box.querySelector('.flashcard')) return;
+  box.insertAdjacentHTML('afterbegin', '<textarea class="recall-box text-area" rows="2" placeholder="先寫下（或在心裡說出）你的答案，再翻面對照：自己想出來的比直接看更記得住。"></textarea>');
 }
 
 /* ---------- Wire into the existing page ---------- */
@@ -441,7 +429,7 @@ function runAfter(name, after) {
 
 document.addEventListener('DOMContentLoaded', () => {
   try { hideChoices = localStorage.getItem('studioHideChoices') === '1'; } catch (e) { hideChoices = false; }
-  addPomodoroButton();
+  document.getElementById('btnPomodoro')?.addEventListener('click', togglePomodoro);
   runAfter('loadTodayPanel', renderMemoryPanel);
   runAfter('loadFlashcardsViewer', addRecallBox);
   runAfter('renderQuizQuestions', async () => {

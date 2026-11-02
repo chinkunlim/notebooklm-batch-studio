@@ -69,7 +69,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-007-fix-ollama-prompt-refinement-and.json
 │   │   ├── TASK-008-fix-notebooklm-language-artifact.json
 │   │   ├── TASK-009-mind-map-rename-versioned-regene.json
-│   │   └── TASK-010-update-all-markdown-records-acro.json
+│   │   ├── TASK-010-update-all-markdown-records-acro.json
+│   │   └── TASK-011-apply-v05-design-to-the-web-ui.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -116,6 +117,7 @@ notebooklm-batch-studio/
 │   │   ├── 005-job-versions-and-generation-options.md
 │   │   ├── 006-gemini-notebook-display-name.md
 │   │   ├── 007-study-studio-visual-tiering-and-agency-architecture.md
+│   │   ├── 008-v05-study-studio-shell.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -127,7 +129,8 @@ notebooklm-batch-studio/
 │   │   ├── version_01_classic_triptych.html
 │   │   ├── version_02_dual_column_sanctuary.html
 │   │   ├── version_03_luxury_turntable_visualizer.html
-│   │   └── version_04_workbench_customizer.html
+│   │   ├── version_04_workbench_customizer.html
+│   │   └── version_05_claude_template.html
 │   ├── known-issues/                       # [已知問題庫] 一問題一檔案
 │   │   ├── 001-ollama-refine-noop.md
 │   │   ├── 002-quiz-needs-review-status.md
@@ -247,10 +250,17 @@ notebooklm-batch-studio/
 │       │   │   ├── icon-512.png
 │       │   │   ├── index.html
 │       │   │   ├── manifest.webmanifest
+│       │   │   ├── studio-app.js
+│       │   │   ├── studio-batch.js
+│       │   │   ├── studio-bench.js
 │       │   │   ├── studio-core.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js
+│       │   │   ├── studio-player.js
 │       │   │   ├── studio-reader.js
+│       │   │   ├── studio-settings.js
+│       │   │   ├── studio-shell.js
+│       │   │   ├── studio-start.js
 │       │   │   ├── studio-theme.css
 │       │   │   ├── studio.css
 │       │   │   └── studio.js
