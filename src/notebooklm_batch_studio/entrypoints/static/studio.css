@@ -6,10 +6,11 @@
    2. Base
    ========================================================= */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; }
+/* No rubber-band bounce: overscrolling would pull the page away from the Dock and show a gap under it */
+html { -webkit-text-size-adjust: 100%; overscroll-behavior: none; background: var(--canvas); }
 body {
-  font-family: var(--font-sans); background: var(--canvas); color: var(--ink);
-  min-height: 100vh; -webkit-font-smoothing: antialiased; line-height: 1.6;
+  font-family: var(--font-sans); background: var(--canvas); color: var(--ink); overscroll-behavior: none;
+  min-height: 100vh; min-height: 100dvh; -webkit-font-smoothing: antialiased; line-height: 1.6;
 }
 [hidden] { display: none !important; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -24,7 +25,7 @@ a { color: var(--primary); }
    ========================================================= */
 .app {
   container: app / inline-size;
-  background: var(--canvas); color: var(--ink); overflow: clip; min-height: 100vh;
+  background: var(--canvas); color: var(--ink); overflow: clip; min-height: 100vh; min-height: 100dvh;
   transition: background var(--dur-page) var(--ease), color var(--dur-page) var(--ease);
 }
 @property --dock-w { syntax: '<length>'; inherits: true; initial-value: 76px; }
