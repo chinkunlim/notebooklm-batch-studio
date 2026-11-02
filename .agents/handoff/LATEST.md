@@ -5,22 +5,33 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-02 07:31 UTC`
-- **最近操作 Agent**: `system`
+- **最後更新時間**: `2026-11-02 12:59 UTC`
+- **最近操作 Agent**: `claude-code`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `1cf8c8d feat(web): apply v05 study studio design to the web UI (TASK-011) [agent:claude-code]`
+- **最新 Git Commit**: `815c881 feat(demo): standalone GitHub Pages demo with fictional BIO101 data [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-011**<br/>Apply v05 design to the web UI | 🟢 `in_progress` | `claude-code` | `-` | - | - | - |
-| **TASK-012**<br/>Course filter in 課程目錄: all / in progress / finished | ⚪ `open` | `-` | `-` | `src/notebooklm_batch_studio/entrypoints/static/studio-app.js`, `src/notebooklm_batch_studio/entrypoints/http/courses.py` | - | - |
-| **TASK-013**<br/>Apply one course's settings to other courses | ⚪ `open` | `-` | `-` | `src/notebooklm_batch_studio/services/course_settings.py`, `src/notebooklm_batch_studio/entrypoints/http/settings.py`, `src/notebooklm_batch_studio/entrypoints/mcp_course_settings.py`, `src/notebooklm_batch_studio/entrypoints/static/studio-settings.js` | - | - |
+| **TASK-012**<br/>Course filter in 課程目錄: all / in progress / finished | ⚪ `open` | `-` | `-` | `src/notebooklm_batch_studio/entrypoints/static/studio-app.js`, `src/notebooklm_batch_studio/entrypoints/http/courses.py` | - | **TODO**: v05 showed a 全部 / 進行中 / 已完成 filter above 我的課程 (課程目錄). Removed at migration because the backend has no rule for a course's study state. To do: define 進行中 / 已完成 (e.g. every lecture's plan steps done = 已完成; any study activity = 進行中), expose it on GET /api/courses (or the plan), add the seg back in renderCourseDirectory (studio-app.js) and remember the choice as a preference. Test the rule in tests/. |
+| **TASK-013**<br/>Apply one course's settings to other courses | ⚪ `open` | `-` | `-` | `src/notebooklm_batch_studio/services/course_settings.py`, `src/notebooklm_batch_studio/entrypoints/http/settings.py`, `src/notebooklm_batch_studio/entrypoints/mcp_course_settings.py`, `src/notebooklm_batch_studio/entrypoints/static/studio-settings.js` | - | **TODO**: v05 showed 「套用到其他課程」 in the course settings. Removed at migration: no endpoint copies settings between courses. To do: service method in course_settings.py that copies GenerationOptions + language / mock exam count (not the exam date) to chosen courses; POST /api/courses/{code}/options/copy {targets: [...]}; MCP tool copy_course_options(code, targets, confirm); a dialog in studio-settings.js to pick target courses; tests for the copy and the confirm guard. |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-02 12:59 UTC] Session Closeout (結束對話收尾) (by `claude-code`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: Apply the approved v05 design to the real web UI, then refine it with the user: local preferences, offline icons/fonts, font pairings, overview check-in and exa
+- **錯誤與根因**: Safari sidebar gap -> sticky + 100vh/dvh measured differently in Safari -> position fixed top/bottom 0 (ISSUE-031); page-switch jank -> View Transitions snapsho
+- **下一步**: User enables GitHub Pages (Settings -> Pages -> main /docs) to publish docs/demo/; open backlog TASK-012 (course filter) and TASK-013 (apply settings to other c
+- **交接備註**: v05 is live and pushed; 183 tests pass; demo at docs/demo/index.html verified in Chromium and WebKit
+- **本機對話紀錄**: `.agents/conversations/2026-11-02-2059-claude-code-summary.md`（只在這台電腦）
+
+### [2026-11-02 12:58 UTC] 完成任務 `TASK-011` — Apply v05 design to the web UI (by `claude-code`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: (無)
 
 ### [2026-11-02 07:31 UTC] 建立任務 `TASK-013`: Apply one course's settings to other courses (by `system`)
 - **狀態**: `open`
@@ -127,15 +138,3 @@
 ### [2026-11-01 02:17 UTC] 完成任務 `TASK-007` — Fix Ollama prompt refinement and needs_review job status (by `claude-code`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: (無)
-
-### [2026-11-01 02:13 UTC] 建立任務 `TASK-007`: Fix Ollama prompt refinement and needs_review job status (by `claude-code`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-10-22 04:03 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
-- **檢查結果**: 測試與 Code Review Guard 通過
-- **目標**: Update all project documentation and architecture markdown files (TASK-006) and push to GitHub
-- **錯誤與根因**: None; all checks and tests passed cleanly
-- **下一步**: Phase 1 fully delivered and verified; next agent can proceed to Phase 2 (interactive local quiz web app SPEC-004) or user acceptance
-- **交接備註**: Phase 1 documentation and code 100% complete, verified with agentctl finish and synced to origin/main
-- **本機對話紀錄**: `.agents/conversations/2026-10-22-1203-antigravity-summary.md`（只在這台電腦）

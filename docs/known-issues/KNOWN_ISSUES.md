@@ -43,3 +43,6 @@
 | [ISSUE-028](028-stale-static-cache.md) | 🟢 已根治 (Resolved) | 更新後瀏覽器仍使用舊的 CSS／JS | StaticFiles 沒送 Cache-Control，瀏覽器用啟發式快取 | `entrypoints/api.py` |
 | [ISSUE-029](029-sticky-broken-by-overflow-hidden.md) | 🟢 已根治 (Resolved) | 固定面板（sticky）不會固定：body 的 overflow-x: hidden | overflow-x: hidden 讓 body 變成捲動容器 | `static/studio.css` |
 | [ISSUE-030](030-key-point-quote-matching.md) | 🟢 已根治 (Resolved) | 課件重點原文比對失敗與引用標記外露 | 頁面未繪製即判定、PDF 文字分段、標點差異、Gemini 引用編號 | `static/studio-reader.js`、`services/learning_service.py` |
+| [ISSUE-031](031-safari-sidebar-gap.md) | 🟢 已根治 (Resolved) | Safari 捲到底時側欄下方露出一段 | 在 Safari 捲到頁面底部，左側側欄沒有延伸到視窗底，下方露出一段頁面背景；Chrome 正常。 | src/notebooklm_batch_studio/entrypoints/static/studio.css |
+| [ISSUE-032](032-page-switch-jank.md) | 🟢 已根治 (Resolved) | 頁面中間切換分頁時動畫卡頓、側欄跳動 | 捲到頁面中間再切換分頁，畫面卡一下、側欄跳動、底部短暫出現空隙；相鄰分頁切換又快得不自然。 | src/notebooklm_batch_studio/entrypoints/static/studio-shell.js, studio.css |
+| [ISSUE-033](033-stale-cache-overwrites-preferences.md) | 🟢 已根治 (Resolved) | 啟動時舊的瀏覽器快取可能蓋掉記在本機的偏好 | 偏好改存在本機資料庫後，啟動時套用快取會觸發儲存（配色、釘選、頭像），可能在伺服器資料回來前把舊值送出去。上線前測試發現。 | src/notebooklm_batch_studio/entrypoints/static/studio-shell.js, studio-start.js |

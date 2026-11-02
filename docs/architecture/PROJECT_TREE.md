@@ -168,6 +168,9 @@ notebooklm-batch-studio/
 │   │   ├── 028-stale-static-cache.md
 │   │   ├── 029-sticky-broken-by-overflow-hidden.md
 │   │   ├── 030-key-point-quote-matching.md
+│   │   ├── 031-safari-sidebar-gap.md
+│   │   ├── 032-page-switch-jank.md
+│   │   ├── 033-stale-cache-overwrites-preferences.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

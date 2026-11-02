@@ -68,7 +68,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(learning): live test fixes - quote matching ignores punctuation and empty text pieces (12/12 Gemini Notebook key points found), points fade only after their pages are drawn, citation markers stripped from tutor replies and explanations (by `@claude-code`)
 - fix(test): set SO_REUSEADDR on test server socket for Linux TIME_WAIT reuse (ISSUE-025) (by `@antigravity`)
 - fix(web): no gap under the sidebar when overscrolling (by `@claude-code`)
-- fix(web): paint the sidebar column behind the page as a safety net (by `@claude-code`)
+- fix(web): paint the sidebar column behind the page as a safety net — replaced by pinning the sidebar (next line) (by `@claude-code`)
 - fix(web): pin the sidebar to the window edges instead of vh-sized sticky (Safari gap) (by `@claude-code`)
 
 ### Documentation
@@ -84,6 +84,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs(standards): sync web app and architecture rules from template (by `@antigravity`)
 - docs(adr/docs): update adr/docs documentation (ADR-004, ADR-005, ADR-006, ADR-007, ISSUE-022, ISSUE-023, ISSUE-024, ISSUE-025, ISSUE-026, TASK-001, TASK-005, TASK-007, TASK-009) (by `@antigravity`)
 - docs(adr/docs): update adr/docs documentation (ADR-004, ADR-005, ADR-006, ADR-007, ISSUE-022, ISSUE-023, ISSUE-024, ISSUE-025, ISSUE-026, ISSUE-027, ISSUE-028, ISSUE-029, ISSUE-030, TASK-001, TASK-005, TASK-006, TASK-007, TASK-009) (by `@claude-code`)
+- docs(docs/issues): update docs/issues documentation (ADR-009, ISSUE-025, ISSUE-028, ISSUE-029, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-033, TASK-006, TASK-007, TASK-011, TASK-012, TASK-013) (by `@claude-code`)
 
 ### Chore
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)

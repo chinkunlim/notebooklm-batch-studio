@@ -128,8 +128,11 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - 功能層：`studio-core.js`（對話框、斷線提示、選項洗牌）、`studio-app.js`（研讀課程與講次、測驗、錯題、學習卡、報告檢視）、`studio-batch.js`（批次排程與工作清單）、`studio-settings.js`（課程設定、產出內容、Prompt、加入課程精靈）、`studio.js`（研讀總覽、交卷回饋、解釋、間隔複習、音檔續播）、`studio-learning.js`（記憶強度、信心評分、混合複習、番茄鐘、家教）、`studio-reader.js`（講義 PDF 閱讀器與重點畫線）。
   - 外殼層：`studio-shell.js`（偏好、側欄、頁面切換）、`studio-player.js`（播放真實語音摘要的唱盤與四種視覺）、`studio-bench.js`（工作台、三種版面、本講重點、今日學習卡）、`studio-start.js`（設計與自訂、欄寬、鍵盤與觸控、啟動）。
   - `studio-fonts.js`：設計與自訂的字型選擇與 Google Fonts 下載。
+  - `studio-focus.js`：番茄鐘（專注、短休息、長休息），計時收進側欄，習慣存在偏好。
+  - 側欄是 `position: fixed` 貼齊視窗上下緣（ISSUE-031）；換頁是腳本控制的淡出 / 浮上（ISSUE-032）。
   - `vendor/pdfjs/`：內建 PDF.js 4.10.38 閱讀核心，完全離線運作。
   - `vendor/lucide/`、`vendor/fonts/`：內建圖示字型與 Noto Sans / Serif TC，離線也能顯示（ADR-009）。
+- 線上示範頁：`scripts/build_demo.py` 把上述靜態檔內嵌成單一的 `docs/demo/index.html`，搭配 `scripts/demo/` 的虛構課程與在瀏覽器裡回應 API 的模擬層（GitHub Pages 用，不連後端）。
 - `mcp_server.py` 與 MCP 集群：
   - `mcp_server.py`：核心 MCP 工具（狀態、佇列控制、筆記本操作）。
   - `mcp_course_settings.py`：課程選項與產出設定工具。
