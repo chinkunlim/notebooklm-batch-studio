@@ -197,7 +197,7 @@ async function openNamingModal() {
   const box = document.getElementById('namingContent');
   try {
     const data = await (await fetch('/api/naming-guide')).json();
-    box.innerHTML = `<ul style="margin:0 0 12px 18px;line-height:1.8">${data.rules.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
+    box.innerHTML = `<ul style="margin:0 0 12px 20px;line-height:1.8">${data.rules.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
       <table><thead><tr><th>代碼</th><th>名稱</th><th>意思</th><th>Gemini Notebook 標題</th><th>本機檔名</th></tr></thead><tbody>
       ${data.artifacts.map(a => `<tr><td><code>${a.artifact_type}</code></td><td>${escHtml(a.label)}</td><td>${escHtml(a.meaning)}</td><td><code>${escHtml(a.notebooklm_title)}</code></td><td><code>${escHtml(a.local_files)}</code></td></tr>`).join('')}
       </tbody></table>`;

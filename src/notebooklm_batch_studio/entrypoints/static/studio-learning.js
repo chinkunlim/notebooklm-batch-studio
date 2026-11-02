@@ -77,12 +77,12 @@ function resumePlace() {
 
 /* ---------- Forgetting curve, streak and this week on the overview ---------- */
 /**
- * Draw the memory card (strength per lecture, streak, 4-week heatmap) and this week's dots.
+ * Fill the overview with the activity and memory data: 今日打卡 (status, streak, week, 4-week heatmap),
+ * memory strength on each lecture of 章節路線, and 掌握程度's "review this first".
  * @returns {Promise<void>}
  */
 async function renderMemoryPanel() {
-  const box = document.getElementById('memoryPanel');
-  if (!box || !currentStudyCourse) return;
+  if (!currentStudyCourse) return;
   let data;
   try {
     const res = await fetch(courseApi('/study/memory'));
@@ -91,31 +91,43 @@ async function renderMemoryPanel() {
   } catch (e) {
     return;
   }
+  renderCheckin(data);
   const levels = { strong: '穩固', fading: '開始遺忘', weak: '快忘了' };
-  const practised = data.lectures.filter(l => l.percent !== null).sort((a, b) => a.percent - b.percent);
-  const weakest = practised.find(l => l.level !== 'strong');
-  const bars = data.lectures.map(l => l.percent === null
-    ? `<div class="mem-row"><span>${lecLabel(l.no)}</span><div class="mem-bar"><span style="width:0"></span></div><span class="mem-val">還沒練習</span></div>`
-    : `<div class="mem-row" title="距上次練習 ${l.days_since} 天"><span>${lecLabel(l.no)}</span>
-         <div class="mem-bar ${l.level}"><span style="width:${l.percent}%"></span></div>
-         <span class="mem-val ${l.level}">${l.percent}% ${levels[l.level]}</span></div>`).join('');
-  const heat = data.heatmap.map(d => `<span class="heat h${Math.min(4, d.count === 0 ? 0 : Math.ceil(d.count / 2))}" title="${d.date}：${d.count} 次"></span>`).join('');
-  box.innerHTML = `${bars}
-    ${weakest ? `<button class="btn btn-soft" style="margin-top:8px" onclick="selectStudyLecture(${weakest.no}); switchStudyTab('flashcards')">先複習 ${lecLabel(weakest.no)}（${weakest.percent}%）</button>` : ''}
-    <p class="hint" style="margin-top:8px">每次答對或「記得」都會讓記憶更持久；久沒碰就會慢慢下降。</p>
-    <div class="divider"></div>
-    <span class="field-label">連續學習 ${data.streak} 天　<span class="small muted">${data.studied_today ? '今天已經學過了' : '今天做一點點就能延續紀錄'}</span></span>
-    <div class="heatmap" aria-label="最近四週的學習次數">${heat}</div>`;
-  // This week (Monday to Sunday) from the same activity data
+  data.lectures.forEach(l => {
+    const slot = document.querySelector(`#routeList [data-mem="${l.no}"]`);
+    if (!slot) return;
+    slot.innerHTML = l.percent === null ? '<span class="mem-val">還沒練習</span>'
+      : `<div class="mem-bar ${l.level}" title="距上次練習 ${l.days_since} 天"><span style="width:${l.percent}%"></span></div><span class="mem-val ${l.level}">記憶 ${l.percent}% ${levels[l.level]}</span>`;
+  });
+  const weakest = data.lectures.filter(l => l.percent !== null && l.level !== 'strong').sort((a, b) => a.percent - b.percent)[0];
+  document.getElementById('weakestBox').innerHTML = weakest
+    ? `<span class="field-label">最需要複習</span><button class="btn btn-soft" onclick="selectStudyLecture(${weakest.no}); switchStudyTab('flashcards')">${lecLabel(weakest.no)}　記憶 ${weakest.percent}%</button>`
+    : '<span class="field-label">最需要複習</span><p class="small muted">做完測驗或翻過學習卡後，這裡會指出最快忘記的一講。</p>';
+}
+
+/**
+ * 今日打卡: today's status, the streak, this week (Monday to Sunday) and the last four weeks.
+ * @param {{streak: number, studied_today: boolean, heatmap: Array<{date: string, count: number}>}} data Activity data
+ */
+function renderCheckin(data) {
+  document.getElementById('streakNum').textContent = data.streak;
+  const status = document.getElementById('todayStatus');
+  status.classList.toggle('done', data.studied_today);
+  status.innerHTML = data.studied_today ? '<i class="icon-circle-check"></i>今天已打卡' : '<i class="icon-circle"></i>今天還沒開始，做一點點就打卡';
   const counts = new Map(data.heatmap.map(d => [d.date, d.count]));
   const today = new Date();
   const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
   const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   document.getElementById('weekDots').innerHTML = ['一', '二', '三', '四', '五', '六', '日'].map((name, i) => {
     const d = new Date(monday); d.setDate(monday.getDate() + i);
-    return `<div>${name}<i class="${(counts.get(iso(d)) || 0) > 0 ? 'on' : ''}"></i></div>`;
+    const cls = [(counts.get(iso(d)) || 0) > 0 ? 'on' : '', iso(d) === iso(today) ? 'today' : ''].join(' ');
+    return `<div>${name}<i class="${cls}"></i></div>`;
   }).join('');
-  document.getElementById('weekLabel').textContent = `本週節奏　連續 ${data.streak} 天`;
+  const weekDays = [...Array(7).keys()].filter(i => { const d = new Date(monday); d.setDate(monday.getDate() + i); return (counts.get(iso(d)) || 0) > 0; }).length;
+  const total = data.heatmap.reduce((a, d) => a + d.count, 0);
+  document.getElementById('checkinStats').innerHTML = `<div><b class="num">${counts.get(iso(today)) || 0}</b><span>今天學習次數</span></div>
+    <div><b class="num">${weekDays} / 7</b><span>本週學習天數</span></div><div><b class="num">${total}</b><span>近四週次數</span></div>`;
+  document.getElementById('heatmap').innerHTML = data.heatmap.map(d => `<span class="heat h${Math.min(4, d.count === 0 ? 0 : Math.ceil(d.count / 2))}" title="${d.date}：${d.count} 次"></span>`).join('');
 }
 
 /* ---------- Metacognition: confidence before answering ---------- */
@@ -287,35 +299,47 @@ async function startMixedReview() {
   showToast(`從 ${new Set(pool.map(q => q.source)).size} 講抽出 ${quiz.questions.length} 題，交卷後看各講答對率。`, 'success');
 }
 
-/* ---------- Pomodoro focus timer ---------- */
-const pomodoro = { left: 25 * 60, timer: null };
+/* ---------- Focus timer (length = 今日策略's 專注時間; one timer, shown on both buttons) ---------- */
+const pomodoro = { left: 0, total: 0, timer: null };
 
 /**
- * Start or pause the 25-minute focus timer.
+ * Show the timer state on the overview and study-page buttons.
+ */
+function showPomodoro() {
+  const m = String(Math.floor(pomodoro.left / 60)).padStart(2, '0');
+  const s = String(pomodoro.left % 60).padStart(2, '0');
+  const idle = !pomodoro.timer && (!pomodoro.left || pomodoro.left === pomodoro.total);
+  const minutes = prefLoad('focusMin', '45');
+  ['btnPomodoro', 'btnFocusStart'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.toggle('running', !!pomodoro.timer);
+    btn.textContent = idle ? (id === 'btnFocusStart' ? '開始專注' : `專注 ${minutes}:00`) : `${pomodoro.timer ? '專注' : '暫停'} ${m}:${s}`;
+  });
+}
+
+/**
+ * Start, pause or resume the focus timer; a new round lasts as long as 今日策略's 專注時間.
  */
 function togglePomodoro() {
-  const btn = document.getElementById('btnPomodoro');
   if (pomodoro.timer) {
     clearInterval(pomodoro.timer);
     pomodoro.timer = null;
-    btn.classList.remove('running');
+    showPomodoro();
     return;
   }
-  btn.classList.add('running');
+  if (!pomodoro.left) pomodoro.left = pomodoro.total = parseInt(prefLoad('focusMin', '45'), 10) * 60;
   pomodoro.timer = setInterval(() => {
     pomodoro.left -= 1;
-    const m = String(Math.floor(pomodoro.left / 60)).padStart(2, '0');
-    const s = String(pomodoro.left % 60).padStart(2, '0');
-    btn.textContent = `專注 ${m}:${s}`;
     if (pomodoro.left <= 0) {
       clearInterval(pomodoro.timer);
       pomodoro.timer = null;
-      pomodoro.left = 25 * 60;
-      btn.textContent = '專注 25:00';
-      btn.classList.remove('running');
-      showToast('專注 25 分鐘完成。休息 5 分鐘：閉上眼睛，回想剛才學到的 3 個重點（回想比重讀更能記住）。', 'success', 12000);
+      pomodoro.left = 0;
+      showToast(`專注 ${Math.round(pomodoro.total / 60)} 分鐘完成。休息 5 分鐘：閉上眼睛，回想剛才學到的 3 個重點（回想比重讀更能記住）。`, 'success', 12000);
     }
+    showPomodoro();
   }, 1000);
+  showPomodoro();
 }
 
 /* ---------- Tutor ---------- */
@@ -430,6 +454,9 @@ function runAfter(name, after) {
 document.addEventListener('DOMContentLoaded', () => {
   hideChoices = prefLoad('hideChoices', '0') === '1';
   document.getElementById('btnPomodoro')?.addEventListener('click', togglePomodoro);
+  document.getElementById('btnFocusStart')?.addEventListener('click', togglePomodoro);
+  document.getElementById('focusRange')?.addEventListener('input', () => { if (!pomodoro.timer && pomodoro.left === pomodoro.total) { pomodoro.left = 0; showPomodoro(); } });
+  showPomodoro();
   runAfter('loadTodayPanel', renderMemoryPanel);
   runAfter('loadFlashcardsViewer', addRecallBox);
   runAfter('renderQuizQuestions', async () => {

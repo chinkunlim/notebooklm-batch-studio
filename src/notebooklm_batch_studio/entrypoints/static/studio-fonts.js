@@ -57,36 +57,70 @@ function applyFontChoices() {
   renderFontControls();
 }
 
-/** Fill both font menus (built-in, Mac and downloaded fonts) and the downloaded-font list. */
+/**
+ * The ready-made heading + body pairings (like Office theme fonts), plus two for every downloaded font.
+ * @returns {Array<{id: string, name: string, head: {id: string, family?: string}, body: {id: string, family?: string}}>} Pairings
+ */
+function fontPairs() {
+  const pairs = [
+    { id: 'auto', name: '預設', note: '跟著介面風格', head: { id: 'auto' }, body: { id: 'noto-sans' } },
+    { id: 'clean', name: '清爽黑體', note: 'Noto Sans / Noto Sans', head: { id: 'noto-sans' }, body: { id: 'noto-sans' } },
+    { id: 'book', name: '書卷', note: 'Noto Serif / Noto Sans', head: { id: 'noto-serif' }, body: { id: 'noto-sans' } },
+    { id: 'serif', name: '典雅宋體', note: 'Noto Serif / Noto Serif', head: { id: 'noto-serif' }, body: { id: 'noto-serif' } },
+    { id: 'mac', name: '蘋方（Mac）', note: 'PingFang / PingFang', head: { id: 'mac-sans' }, body: { id: 'mac-sans' } },
+    { id: 'mac-book', name: '宋體標題（Mac）', note: 'Songti / PingFang', head: { id: 'mac-serif' }, body: { id: 'mac-sans' } },
+  ];
+  downloadedFonts.forEach(f => {
+    const g = { id: `g:${f.slug}`, family: f.family };
+    pairs.push({ id: `${g.id}|head`, name: `${f.family} 標題`, note: `${f.family} / Noto Sans`, head: g, body: { id: 'noto-sans' } });
+    pairs.push({ id: `${g.id}|all`, name: `全部 ${f.family}`, note: `${f.family} / ${f.family}`, head: g, body: g });
+  });
+  return pairs;
+}
+
+/** Draw the pairing gallery, the custom menus and the downloaded-font list from the remembered choices. */
 function renderFontControls() {
+  const body = fontChoice('fontBody', 'noto-sans'), head = fontChoice('fontHead', 'auto');
+  // a pairing preview's heading: the style's own heading font for 預設
+  const headStack = c => (c.id === 'auto' ? (root.dataset.style === 'editorial' ? fontStack({ id: 'noto-serif' }) : fontStack(body)) : fontStack(c));
+  const quote = v => v.replace(/'/g, '');
+  $('#fontPairs').innerHTML = fontPairs().map(p => {
+    const on = p.head.id === head.id && p.body.id === body.id;
+    return `<button class="font-pair${on ? ' on' : ''}" role="radio" aria-checked="${on}" data-pair="${escHtml(p.id)}">
+      <span class="fp-head" style='font-family:${quote(headStack(p.head))}'>動作電位 Aa</span>
+      <span class="fp-body" style='font-family:${quote(fontStack(p.body))}'>讀起來舒服，記得更久。</span>
+      <span class="fp-name"><b>${escHtml(p.name)}</b><span>${escHtml(p.note)}</span></span></button>`;
+  }).join('');
   const options = [...BUILTIN_FONTS.map(f => ({ id: f.id, name: f.name })), ...downloadedFonts.map(f => ({ id: `g:${f.slug}`, name: `${f.family}（已下載）` }))];
   /**
    * Fill one font menu and select the remembered choice.
    * @param {HTMLSelectElement} sel Menu
-   * @param {string} key "fontBody" or "fontHead"
-   * @param {string} fallback Default choice id
+   * @param {string} current Chosen option id
    * @param {Array<{id: string, name: string}>} extra Options shown first (e.g. 跟著介面風格)
    */
-  const fill = (sel, key, fallback, extra) => {
-    const current = fontChoice(key, fallback).id;
+  const fill = (sel, current, extra) => {
     sel.innerHTML = [...extra, ...options].map(o => `<option value="${escHtml(o.id)}"${o.id === current ? ' selected' : ''}>${escHtml(o.name)}</option>`).join('');
   };
-  fill($('#fontBody'), 'fontBody', 'noto-sans', []);
-  fill($('#fontHead'), 'fontHead', 'auto', [{ id: 'auto', name: '跟著介面風格' }]);
-  $('#fontList').innerHTML = downloadedFonts.map(f => `<li><span><span class="font-name" style='font-family:${fontStack({ id: `g:${f.slug}`, family: f.family }).replace(/'/g, '')}'>${escHtml(f.family)}</span>
-    <span class="small muted">　${f.files} 個檔案・${(f.bytes / 1048576).toFixed(1)} MB</span></span><button class="btn btn-ghost btn-sm" data-font-del="${escHtml(f.slug)}">刪除</button></li>`).join('');
+  fill($('#fontHead'), head.id, [{ id: 'auto', name: '跟著介面風格' }]);
+  fill($('#fontBody'), body.id, []);
+  $('#fontCustomSum').textContent = `標題：${$('#fontHead').selectedOptions[0]?.textContent || ''}　內文：${$('#fontBody').selectedOptions[0]?.textContent || ''}`;
+  $('#fontList').innerHTML = downloadedFonts.map(f => `<li><span><span class="font-name" style='font-family:${quote(fontStack({ id: `g:${f.slug}`, family: f.family }))}'>${escHtml(f.family)}</span>
+    <span class="small muted">　${f.files} 個檔案・${(f.bytes / 1048576).toFixed(1)} MB</span></span><button class="btn btn-ghost btn-sm" data-font-del="${escHtml(f.slug)}">刪除</button></li>`).join('')
+    || '<li class="small muted">還沒有下載的字型。</li>';
   downloadedFonts.forEach(f => ensureFontCss({ id: `g:${f.slug}` }));
 }
 
 /**
- * Remember a font choice from one of the menus and apply it.
- * @param {string} key "fontBody" or "fontHead"
- * @param {string} id Chosen option id
+ * Choose a pairing from the gallery (sets both the heading and the body font).
+ * @param {string} id Pairing id
  */
-function chooseFont(key, id) {
-  const font = downloadedFonts.find(f => `g:${f.slug}` === id);
-  save(key, JSON.stringify(font ? { id, family: font.family } : { id }));
+function choosePair(id) {
+  const pair = fontPairs().find(p => p.id === id);
+  if (!pair) return;
+  save('fontHead', JSON.stringify(pair.head));
+  save('fontBody', JSON.stringify(pair.body));
   applyFontChoices();
+  announce(`字型：${pair.name}`);
 }
 
 /** Load the list of downloaded fonts from this computer. */
@@ -113,7 +147,7 @@ async function downloadGoogleFont() {
     if (!res.ok) throw new Error(data.detail || res.statusText);
     $('#gfName').value = '';
     await loadFonts();
-    showToast(`已下載 ${data.family}，可以在上面的選單選用`, 'success');
+    showToast(`已下載 ${data.family}，已加進上面的字型搭配`, 'success');
   } catch (e) {
     showToast(e.message, 'error', 8000);
   } finally {
@@ -139,3 +173,4 @@ $('#fontHead').addEventListener('change', e => chooseFont('fontHead', e.target.v
 $('#gfGet').addEventListener('click', downloadGoogleFont);
 $('#gfName').addEventListener('keydown', e => { if (e.key === 'Enter') downloadGoogleFont(); });
 $('#fontList').addEventListener('click', e => { const b = e.target.closest('[data-font-del]'); if (b) deleteFont(b.dataset.fontDel); });
+$('#fontPairs').addEventListener('click', e => { const b = e.target.closest('[data-pair]'); if (b) choosePair(b.dataset.pair); });

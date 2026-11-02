@@ -71,7 +71,7 @@ function plainLabel(text) {
 const STEP_TAGS = { audio: '輸入', guide: '輸入', flashcards: '間隔' };
 
 /**
- * Load the study plan and draw the overview: learning cycle, lecture route, progress, countdown and steps.
+ * Load the study plan and draw the overview: learning cycle, progress, exam countdown and the lecture route.
  * @returns {Promise<void>} Resolves when rendered
  */
 async function loadTodayPanel() {
@@ -84,9 +84,20 @@ async function loadTodayPanel() {
     document.getElementById('todaySteps').innerHTML = `<li class="small muted">讀不到學習計畫：${escHtml(e.message)}</li>`;
     return;
   }
-  const p = currentPlan;
+  renderCycle(currentPlan);
+  renderMastery(currentPlan);
+  renderExamBox(currentPlan);
+  renderRoute(currentPlan);
+  examReminder(currentPlan);
+  if (typeof animateRings === 'function') animateRings(document.getElementById('view-overview'));
+}
+
+/**
+ * 學習循環: the steps of the next lecture to study, then today's reviews.
+ * @param {object} p Study plan
+ */
+function renderCycle(p) {
   const tick = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-  // 學習循環: the steps of the next lecture to study, then today's reviews
   const focus = p.lectures.find(l => p.next && l.lecture_no === p.next.lecture_no) || p.lectures[0];
   const steps = focus ? focus.steps.filter(st => st.available) : [];
   const dueCards = p.due.flashcards, dueMistakes = p.due.mistakes;
@@ -95,17 +106,16 @@ async function loadTodayPanel() {
     `<li class="${dueCards ? '' : 'done'}" style="cursor:pointer" onclick="startReviewSession()"><span class="check">${tick}</span><span class="step-text">複習 ${dueCards} 張到期學習卡</span><span class="tag">間隔</span></li>` +
     (dueMistakes ? `<li style="cursor:pointer" onclick="switchStudyTab('mistakes')"><span class="check">${tick}</span><span class="step-text">看 ${dueMistakes} 題錯題</span><span class="tag warn">弱點</span></li>` : '') +
     (!steps.length && !p.next ? '<li class="small muted">這門課的步驟都完成了，做模擬考或複習錯題來檢查自己。</li>' : '');
-  // 章節路線
-  document.getElementById('routeCourse').textContent = p.code;
-  const ring = n => `<span class="ring" data-p="${n}"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" cx="22" cy="22" r="19"/></svg><b>${n}</b></span>`;
-  document.getElementById('routeList').innerHTML = p.lectures.length ? p.lectures.map(l => {
-    const current = p.next && p.next.lecture_no === l.lecture_no;
-    const tag = l.percent >= 100 ? '<span class="tag good">完成</span>' : current ? '<span class="tag">研讀中</span>' : l.percent > 0 ? '<span class="tag warn">進行中</span>' : '<span class="tag">未開始</span>';
-    return `<li class="${current ? 'current' : ''}" onclick="selectStudyLecture(${l.lecture_no}); go('studio')">${ring(l.percent)}<div style="min-width:0"><div class="path-title">${escHtml(l.topic)}</div><div class="path-meta">${lectureName(l.lecture_no)}　·　完成 ${l.percent}%</div></div>${tag}</li>`;
-  }).join('') : '<li class="small muted">這門課還沒有講次。</li>';
-  // 掌握程度
+}
+
+/**
+ * 掌握程度: overall progress, finished lectures and the last 7 days' quiz accuracy.
+ * @param {object} p Study plan
+ */
+function renderMastery(p) {
   const n = p.lectures.length;
   const avg = n ? Math.round(p.lectures.reduce((a, l) => a + l.percent, 0) / n) : 0;
+  document.getElementById('routeCourse').textContent = p.code;
   document.getElementById('masteryRing').dataset.p = avg;
   document.getElementById('masteryVal').textContent = `${avg}%`;
   document.getElementById('statDone').textContent = `${p.lectures.filter(l => l.percent >= 100).length} / ${n}`;
@@ -113,28 +123,96 @@ async function loadTodayPanel() {
   const recent = (studyHistory || []).filter(h => h.total_questions && new Date(h.created_at).getTime() >= weekAgo);
   document.getElementById('statAcc').textContent = recent.length
     ? `${Math.round(recent.reduce((a, h) => a + h.score / h.total_questions, 0) / recent.length * 100)}%` : '—';
-  // 考試倒數 (衝刺)
-  const box = document.getElementById('countdownBox');
+}
+
+/**
+ * What to focus on at this distance from the exam.
+ * @param {number} days Days left
+ * @returns {string} Advice
+ */
+function examTip(days) {
+  if (days < 0) return '考試日期已過，可以改成下一次考試。';
+  if (days === 0) return '今天考試：只看錯題和重點，相信自己。';
+  if (days <= 1) return '明天考試：複習錯題與學習卡，早點休息。';
+  if (days <= 7) return '最後一週：集中在錯題、到期學習卡和一回模擬考。';
+  if (days <= 14) return '考前兩週：每天一回測驗，弱的章節先補。';
+  if (days <= 30) return '考前一個月：開始全課複習，每週一次模擬考。';
+  return '還有時間：照章節路線穩定前進，每天一點點。';
+}
+
+/**
+ * 考試倒數 in the check-in card, or a date field to set the exam date right here.
+ * @param {object} p Study plan
+ */
+function renderExamBox(p) {
+  const box = document.getElementById('examBox');
+  const line = document.getElementById('sprintLine');
   if (p.days_left === null) {
-    box.innerHTML = '<b>—</b><div><div style="font-weight:500">還沒設定考試日期</div><div class="small muted">到「批次排程」的課程設定填寫，複習計畫會跟著倒數調整。</div></div>';
-    document.getElementById('sprintLine').textContent = '今天先完成學習循環裡最重要的三件事。';
-  } else {
-    const d = Math.max(0, p.days_left);
-    box.innerHTML = `<b>${d}</b><div><div style="font-weight:500">天後考試</div><div class="small muted">${escHtml(p.exam_date)}${p.days_left < 0 ? '（已過）' : ''}</div></div>`;
-    document.getElementById('sprintLine').textContent = p.days_left < 0 ? '考試日期已過，可以在課程設定改成下一次考試。' : `距離考試還有 ${d} 天，今天先完成最重要的三件事。`;
+    box.innerHTML = `<span class="field-label">考試倒數</span>
+      <p class="small muted" style="margin-bottom:8px">設定考試日期，研讀計畫與提醒會跟著倒數。</p>
+      <div class="row" style="flex-wrap:wrap"><input type="date" class="text-input" id="examDateInput" aria-label="考試日期"><button class="btn btn-soft btn-sm" onclick="saveExamDate()">設定</button></div>`;
+    line.textContent = '今天先完成學習循環裡最重要的三件事。';
+    return;
   }
-  // 各講進度: every step, one click away
-  document.getElementById('chapterRows').innerHTML = p.lectures.map(lec => `
-    <div class="chapter-row">
-      <div><strong>${lectureName(lec.lecture_no)}</strong><div class="lec-topic">${escHtml(lec.topic)}</div></div>
-      <div class="step-chips">${lec.steps.map(st => {
-        const cls = !st.available ? 'na' : (st.done ? 'done' : 'todo');
-        const click = st.available ? `onclick="goToStep(${lec.lecture_no}, '${st.step}')"` : 'disabled';
-        return `<button class="step-chip ${cls}" ${click} title="${st.available ? (st.done ? '已完成' : '還沒做') : '尚未生成'}">${st.done ? '✓ ' : ''}${escHtml(plainLabel(st.label))}</button>`;
-      }).join('')}</div>
-      <div><div class="meter" aria-label="進度 ${lec.percent}%"><span style="width:${lec.percent}%"></span></div><div class="meter-label">${lec.percent}%</div></div>
-    </div>`).join('') || '<p class="small muted">還沒有講次。</p>';
-  if (typeof animateRings === 'function') animateRings(document.getElementById('view-overview'));
+  const d = Math.max(0, p.days_left), soon = p.days_left >= 0 && p.days_left <= 7;
+  box.innerHTML = `<div class="exam ${soon ? 'soon' : ''}"><div class="exam-days"><b class="num">${d}</b><span>天後考試</span></div>
+    <div style="min-width:0"><div class="small muted num">${escHtml(p.exam_date)}　<button class="link-btn" onclick="editExamDate()">修改</button></div>
+    <div class="exam-tip">${escHtml(examTip(p.days_left))}</div></div></div>`;
+  line.textContent = p.days_left < 0 ? examTip(p.days_left) : `距離考試還有 ${d} 天。${examTip(p.days_left)}`;
+}
+
+/** Show the date field again to change the exam date. */
+function editExamDate() {
+  renderExamBox({ ...currentPlan, days_left: null });
+  const input = document.getElementById('examDateInput');
+  if (input && currentPlan.exam_date) input.value = currentPlan.exam_date;
+}
+
+/**
+ * Save the exam date typed in the check-in card (the course setting of the same name).
+ * @returns {Promise<void>}
+ */
+async function saveExamDate() {
+  const value = document.getElementById('examDateInput').value;
+  if (!value) { showToast('請先選考試日期', 'warning'); return; }
+  const res = await fetch(`/api/courses/${currentStudyCourse.code}/options`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ options: { exam_date: value } }),
+  });
+  if (!res.ok) { showToast('考試日期沒有存成功', 'error'); return; }
+  showToast('已設定考試日期', 'success', 2400);
+  loadTodayPanel();
+}
+
+/**
+ * Once a day, remind about the exam when it is two weeks away or closer.
+ * @param {object} p Study plan
+ */
+function examReminder(p) {
+  if (p.days_left === null || p.days_left < 0 || p.days_left > 14) return;
+  const key = `examNotice:${p.code}`, today = new Date().toDateString();
+  if (prefLoad(key, '') === today) return;
+  prefSave(key, today);
+  showToast(`${p.days_left === 0 ? '今天考試' : `距離考試還有 ${p.days_left} 天`}。${examTip(p.days_left)}`, p.days_left <= 3 ? 'warning' : 'info', 9000);
+}
+
+/**
+ * 章節路線: every lecture with its progress ring, steps (one click away) and a slot for memory strength.
+ * @param {object} p Study plan
+ */
+function renderRoute(p) {
+  const ring = n => `<span class="ring" data-p="${n}"><svg viewBox="0 0 44 44"><circle class="bg" cx="22" cy="22" r="19"/><circle class="fg" cx="22" cy="22" r="19"/></svg><b>${n}</b></span>`;
+  document.getElementById('routeList').innerHTML = p.lectures.map(l => {
+    const current = p.next && p.next.lecture_no === l.lecture_no;
+    const tag = l.percent >= 100 ? '<span class="tag good">完成</span>' : current ? '<span class="tag">研讀中</span>' : l.percent > 0 ? '<span class="tag warn">進行中</span>' : '<span class="tag">未開始</span>';
+    const chips = l.steps.map(st => {
+      const cls = !st.available ? 'na' : (st.done ? 'done' : 'todo');
+      const click = st.available ? `onclick="goToStep(${l.lecture_no}, '${st.step}')"` : 'disabled';
+      return `<button class="step-chip ${cls}" ${click} title="${st.available ? (st.done ? '已完成' : '還沒做') : '尚未生成'}">${st.done ? '✓ ' : ''}${escHtml(plainLabel(st.label))}</button>`;
+    }).join('');
+    return `<div class="route-row ${current ? 'current' : ''}">${ring(l.percent)}
+      <button class="route-title" onclick="selectStudyLecture(${l.lecture_no}); go('studio')"><span class="path-title">${escHtml(l.topic)}</span><span class="path-meta">${lectureName(l.lecture_no)}　·　完成 ${l.percent}%</span></button>
+      <div class="step-chips">${chips}</div><div class="route-mem" data-mem="${l.lecture_no}"></div>${tag}</div>`;
+  }).join('') || '<p class="small muted">這門課還沒有講次。</p>';
 }
 
 /**

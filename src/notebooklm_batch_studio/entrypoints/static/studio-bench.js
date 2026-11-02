@@ -326,6 +326,14 @@ function renderGreeting() {
   try { const a = JSON.parse(load('avatar', '{"type":"text","value":"LK"}')); if (a.type === 'text') name = a.value; } catch (e) { name = ''; }
   $('#greet').textContent = name ? `${word}，${name}` : word;
 }
+/** Update the date and time on 今日打卡 (every 15 seconds). */
+function tickClock() {
+  const now = new Date();
+  $('#clockTime').textContent = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+  $('#clockDate').textContent = now.toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'long' });
+}
+tickClock();
+setInterval(tickClock, 15000);
 /** Show the remembered 今天要讀幾講 and 專注時間 choices. */
 function applyTodayChoices() {
   const goal = load('goal', '1');

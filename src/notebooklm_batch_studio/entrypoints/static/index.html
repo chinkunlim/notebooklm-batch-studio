@@ -123,32 +123,23 @@
           <button class="btn btn-primary" id="contGo">進入研讀</button>
         </div>
 
-        <div class="grid-3">
-          <article class="card rise" style="--i:2">
-            <div class="card-head"><h2 class="h2">今日策略</h2><span class="eyebrow">由你決定</span></div>
-            <span class="field-label">今天要讀幾講</span>
-            <div class="goal-options" id="goalOptions">
-              <button data-goal="1" class="on">1 講</button><button data-goal="2">2 講</button><button data-goal="3">3 講</button>
+        <div class="grid-3 overview-row">
+          <!-- 今日打卡: date and time, today's status, streak, this week, exam countdown -->
+          <article class="card rise checkin" style="--i:2" id="checkinCard">
+            <div class="card-head"><h2 class="h2">今日打卡</h2><span class="eyebrow num" id="clockDate"></span></div>
+            <div class="checkin-top">
+              <div><div class="clock num" id="clockTime">--:--</div><div class="checkin-state" id="todayStatus">讀取中…</div></div>
+              <div class="streak"><b class="num" id="streakNum">0</b><span>連續天數</span></div>
             </div>
-            <span class="field-label">專注時間　<b class="num" id="focusMin">45</b> 分鐘</span>
-            <input class="range" type="range" min="15" max="120" step="15" value="45" id="focusRange" aria-label="專注時間">
-            <div class="divider"></div>
-            <span class="field-label">學習循環</span>
-            <ul class="steps" id="todaySteps"><li class="loading-line">讀取學習計畫中…</li></ul>
-            <div class="pace-relax-only">
-              <div class="divider"></div>
-              <span class="field-label" id="weekLabel">本週節奏</span>
-              <div class="week" id="weekDots"></div>
-            </div>
+            <div class="week" id="weekDots"></div>
+            <div class="pace-relax-only"><div class="heatmap" id="heatmap" aria-label="最近四週的學習次數"></div></div>
+            <div class="checkin-stats" id="checkinStats"></div>
+            <div class="exam-wrap"><div class="divider"></div><div id="examBox"></div></div>
           </article>
 
-          <article class="card rise" style="--i:3">
-            <div class="card-head"><h2 class="h2">章節路線</h2><span class="eyebrow" id="routeCourse"></span></div>
-            <ol class="path" id="routeList"></ol>
-          </article>
-
-          <article class="card rise mastery-card" style="--i:4">
-            <div class="card-head"><h2 class="h2">掌握程度</h2><span class="eyebrow">全課</span></div>
+          <!-- 掌握程度: overall progress, accuracy, what to review first, cards due -->
+          <article class="card rise mastery-card" style="--i:3">
+            <div class="card-head"><h2 class="h2">掌握程度</h2><span class="eyebrow" id="routeCourse">全課</span></div>
             <div class="mastery-body">
               <div class="mastery">
                 <div class="big-ring" data-p="0" id="masteryRing"><svg viewBox="0 0 148 148"><circle class="bg" cx="74" cy="74" r="64"/><circle class="fg" cx="74" cy="74" r="64"/></svg><div><b class="num" id="masteryVal">0%</b><small>學習進度</small></div></div>
@@ -157,28 +148,39 @@
                   <div class="stat"><b id="statAcc">—</b><span>近七天正確率</span></div>
                 </div>
               </div>
-              <div class="pace-relax-only">
-                <span class="field-label" id="dueLabel">間隔複習</span>
-                <div class="leitner" id="dueLeitner"></div>
-              </div>
-              <div class="pace-sprint-only">
-                <span class="field-label">考試倒數</span>
-                <div class="countdown" id="countdownBox"></div>
+              <div>
+                <div id="weakestBox" class="weakest"></div>
+                <div class="pace-relax-only">
+                  <span class="field-label" id="dueLabel">間隔複習</span>
+                  <div class="leitner" id="dueLeitner"></div>
+                </div>
               </div>
             </div>
           </article>
+
+          <!-- 今日策略: how much today, a focus timer of that length, the learning cycle -->
+          <article class="card rise" style="--i:4">
+            <div class="card-head"><h2 class="h2">今日策略</h2><span class="eyebrow">由你決定</span></div>
+            <span class="field-label">今天要讀幾講</span>
+            <div class="goal-options" id="goalOptions">
+              <button data-goal="1" class="on">1 講</button><button data-goal="2">2 講</button><button data-goal="3">3 講</button>
+            </div>
+            <span class="field-label">專注時間　<b class="num" id="focusMin">45</b> 分鐘</span>
+            <div class="row focus-row">
+              <input class="range" type="range" min="15" max="120" step="15" value="45" id="focusRange" aria-label="專注時間">
+              <button class="btn btn-soft btn-sm pomodoro" id="btnFocusStart">開始專注</button>
+            </div>
+            <div class="divider"></div>
+            <span class="field-label">學習循環</span>
+            <ul class="steps" id="todaySteps"><li class="loading-line">讀取學習計畫中…</li></ul>
+          </article>
         </div>
 
-        <div class="grid-2 wide-left section-gap">
-          <article class="card rise" style="--i:5">
-            <div class="card-head"><h2 class="h2">各講進度</h2><span class="eyebrow">點任一步驟直接前往</span></div>
-            <div id="chapterRows"></div>
-          </article>
-          <article class="card rise" style="--i:6">
-            <div class="card-head"><h2 class="h2">記憶強度</h2><span class="eyebrow">遺忘曲線估計</span></div>
-            <div id="memoryPanel"><p class="loading-line">讀取中…</p></div>
-          </article>
-        </div>
+        <!-- 章節路線: every lecture with its progress, steps and memory strength -->
+        <article class="card rise section-gap" style="--i:5">
+          <div class="card-head"><h2 class="h2">章節路線</h2><span class="eyebrow">點步驟直接前往；記憶強度依遺忘曲線估計</span></div>
+          <div class="route" id="routeList"></div>
+        </article>
       </section>
 
       <!-- ============ 研讀工作室 ============ -->
@@ -451,21 +453,27 @@
           </article>
 
           <article class="card" style="grid-column:1/-1">
-            <div class="card-head"><h2 class="h2">字型</h2><span class="eyebrow">內建字型離線也能用；也可以下載免費的 Google Fonts</span></div>
-            <div class="settings-grid">
-              <label class="opt-field"><span>內文字型</span><select class="select" id="fontBody" aria-label="內文字型"></select></label>
-              <label class="opt-field"><span>標題字型</span><select class="select" id="fontHead" aria-label="標題字型"></select></label>
-            </div>
-            <p class="font-sample" id="fontSample"><b>動作電位與突觸傳遞</b>　把錯過的題目變成記得住的題目。Study Studio 0123</p>
-            <div class="divider"></div>
-            <span class="field-label">下載 Google Fonts</span>
-            <div class="row" style="flex-wrap:wrap">
-              <input class="text-input wide" id="gfName" placeholder="字型名稱，例如 LXGW WenKai TC" style="max-width:320px" aria-label="Google Fonts 字型名稱">
-              <button class="btn btn-soft" id="gfGet">下載</button>
-              <a class="btn btn-ghost" href="https://fonts.google.com/?subset=chinese-traditional" target="_blank" rel="noopener">瀏覽 Google Fonts</a>
-            </div>
-            <p class="hint" style="margin-top:8px">名稱要和 fonts.google.com 上的一樣（英文）。下載後存在這台電腦（DATA_DIR/fonts），離線也能用；Google Fonts 都可免費使用（多為 SIL Open Font License）。</p>
-            <ul class="font-list" id="fontList"></ul>
+            <div class="card-head"><h2 class="h2">字型</h2><span class="eyebrow">選一組標題與內文的搭配；內建字型離線也能用</span></div>
+            <div class="font-pairs" id="fontPairs" role="radiogroup" aria-label="字型搭配"></div>
+            <details class="sec" id="fontCustomBox">
+              <summary><span>自訂搭配</span><span class="sec-sum" id="fontCustomSum"></span><i class="icon-chevron-down"></i></summary>
+              <div class="sec-body settings-grid">
+                <label class="opt-field"><span>標題字型</span><select class="select" id="fontHead" aria-label="標題字型"></select></label>
+                <label class="opt-field"><span>內文字型</span><select class="select" id="fontBody" aria-label="內文字型"></select></label>
+              </div>
+            </details>
+            <details class="sec" id="fontGoogleBox">
+              <summary><span>加入 Google Fonts</span><span class="sec-sum">免費字型，下載到這台電腦後離線也能用</span><i class="icon-chevron-down"></i></summary>
+              <div class="sec-body">
+                <div class="row" style="flex-wrap:wrap">
+                  <input class="text-input wide" id="gfName" placeholder="字型名稱，例如 LXGW WenKai TC" style="max-width:320px" aria-label="Google Fonts 字型名稱">
+                  <button class="btn btn-soft" id="gfGet">下載</button>
+                  <a class="btn btn-ghost" href="https://fonts.google.com/?subset=chinese-traditional" target="_blank" rel="noopener">瀏覽 Google Fonts</a>
+                </div>
+                <p class="hint" style="margin-top:8px">名稱要和 fonts.google.com 上的一樣（英文）。存在 DATA_DIR/fonts；下載後會出現在上面的搭配裡。Google Fonts 都可免費使用（多為 SIL Open Font License）。</p>
+                <ul class="font-list" id="fontList"></ul>
+              </div>
+            </details>
           </article>
 
           <article class="card">

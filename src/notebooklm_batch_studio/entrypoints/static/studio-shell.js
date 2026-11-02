@@ -364,7 +364,11 @@ const handlers = {
   pace: v => { $('#view-overview').dataset.pace = v; },
   mode: v => { modePref = v; root.dataset.mode = v === 'auto' ? (darkMQ.matches ? 'dark' : 'light') : v; vizColors(); },
   palette: v => { root.dataset.palette = PALETTES.some(p => p.id === v) || customPalettes.some(p => p.id === v) ? v : 'forest'; vizColors(); },
-  style: v => { root.dataset.style = v; if (v === 'practice' && load('arr', null) === null) setChoice('arr', 'pinned', false); },
+  style: v => {
+    root.dataset.style = v;
+    if (v === 'practice' && load('arr', null) === null) setChoice('arr', 'pinned', false);
+    if (typeof renderFontControls === 'function') renderFontControls();  // 預設 pairing follows the style
+  },
   arr: v => { $('#bench').dataset.arr = v; },
   skin: v => setSkin(v),
   speed: v => {
@@ -443,8 +447,25 @@ function updateMini() {
   $('#discWrap').classList.toggle('show', show || popOpen);
 }
 const pageNames = { overview: '研讀總覽', studio: '研讀工作室', review: '弱點複習', queue: '批次排程', custom: '設計與自訂' };
+/* Page change: the old page fades out, the window returns to the top while nothing is visible, and the
+   new page rises in. The Dock never moves; its indicator glides on a soft curve that takes longer for a
+   longer distance, so neighbouring pages feel as calm as far ones. */
+const PAGE_OUT_MS = 240;
+let pageTarget = null, pageTimer = 0;
 /**
- * Show one page, with a View Transition when the browser supports it; the playing record flies between places.
+ * Make the Dock indicator glide to a page (duration grows with the distance travelled).
+ * @param {string} view Page id
+ */
+function moveDockTo(view) {
+  const btns = $$('.dock .dock-btn'), from = btns.findIndex(b => b.classList.contains('on'));
+  const target = view === 'custom' ? $('#btnCustom') : $(`.dock-btn[data-view="${view}"]`);
+  const steps = from < 0 ? 1 : Math.abs(btns.indexOf(target) - from);
+  $('.dock').style.setProperty('--pill-dur', `${Math.min(1100, 620 + steps * 90)}ms`);
+  btns.forEach(b => b.classList.toggle('on', b === target));
+  placeDockPill();
+}
+/**
+ * Show one page with a gentle fade (instant when motion is reduced); the playing record flies between places.
  * @param {string} view Page id: overview | studio | review | queue | custom
  */
 function go(view) {
@@ -452,10 +473,19 @@ function go(view) {
   // going to the study page while the record sits in the Dock: the record flies back into the player
   if (view === 'studio' && view !== currentView && player.playing && $('#discWrap').classList.contains('show')) { backToPlayer(); return; }
   if (currentView === 'studio' && view !== 'studio' && player.playing && !$('#discWrap').classList.contains('show') && playerDisc()?.offsetParent) { toDock(view); return; }
-  if (!document.startViewTransition || lowMotion() || view === currentView) { showView(view); return; }
-  const vt = document.startViewTransition(() => showView(view));
-  // a transition can be skipped (another page change, hidden tab); the page still changes
-  [vt.ready, vt.finished, vt.updateCallbackDone].forEach(pr => pr && pr.catch(() => {}));
+  if (view === currentView && !pageTarget) { showView(view); return; }
+  if (lowMotion()) { showView(view); scrollTo(0, 0); return; }
+  moveDockTo(view);
+  const leaving = $('.view.on');
+  if (!pageTarget && leaving) leaving.classList.add('leaving');
+  pageTarget = view;
+  clearTimeout(pageTimer);
+  pageTimer = setTimeout(() => {
+    $$('.view.leaving').forEach(v => v.classList.remove('leaving'));
+    scrollTo(0, 0);
+    const next = pageTarget; pageTarget = null;
+    showView(next);
+  }, PAGE_OUT_MS);
 }
 /** The player's disc element for the current visual. */
 const playerDisc = () => (skin === 'vinyl' ? $('#vinyl') : $('#visual .skin.on .viz-disc'));

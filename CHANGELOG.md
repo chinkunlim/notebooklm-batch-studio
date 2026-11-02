@@ -37,6 +37,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(web): learning aids UI - course reader (pdf.js 4.10.38 vendored) with colour-coded key points, memory strength / streak / heatmap on Today, resume where you stopped, confidence ratings with sure-but-wrong feedback, peak-end comparison, mixed review, recall-first mode, flashcard answer box, pomodoro, Socratic tutor tab; static files served no-cache; sticky works (overflow-x clip); SPEC-008 (by `@claude-code`)
 - feat(web): apply v05 study studio design to the web UI (TASK-011) (`TASK-011`, by `@claude-code`)
 - feat(web): record preferences locally, bundle icons and fonts, add font choice and Google Fonts downloads (by `@claude-code`)
+- feat(web): gentle page switching, overview check-in and exam countdown, font pairing gallery (by `@claude-code`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

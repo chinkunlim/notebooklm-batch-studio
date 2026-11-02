@@ -11,6 +11,7 @@
   --font-head: var(--font-sans);
   --ease: cubic-bezier(.22, 1, .36, 1);
   --ease-arm: cubic-bezier(.34, 1.25, .64, 1);
+  --ease-gentle: cubic-bezier(.45, .05, .25, 1); /* soft start and soft landing */
   --dur-hover: .32s; --dur-slide: .5s; --dur-page: .7s;
   --gutter: clamp(16px, 3.2cqi, 40px);
   /* One hue per output type, kept in every palette (semantic colour = memory label) */
