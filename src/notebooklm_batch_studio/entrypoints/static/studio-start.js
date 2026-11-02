@@ -98,6 +98,7 @@ bindSwitch('#swFlip', 'flip', v => { flipOn = v; $('#visual').title = v ? 'é»žä¸
 bindSwitch('#swHorizon', 'horizon', v => { $('#deck').classList.toggle('with-horizon', v); sizeCanvases(); }, 'false');
 bindSwitch('#swFocusOpen', 'focusOpen', () => {}, 'false');
 bindSwitch('#swGlass', 'glass', v => { root.dataset.glass = v ? 'on' : 'off'; }, 'false');
+bindSwitch('#swPomoAuto', 'pomo.auto', () => {}, 'false');
 
 /* ---------- Avatar: photo, initials, presets ---------- */
 /**
@@ -351,7 +352,9 @@ function applyAllPreferences() {
   applyOrder(false);
   setDockX(load('dockX', 'false') === 'true', false);
   $$('.resizable').forEach(applyColumns);
+  setChoice('pomoStyle', load('pomoStyle', 'ring'), false);
   applyTodayChoices();
+  applyFocusHabits();
   if (typeof applyFontChoices === 'function') applyFontChoices();
   renderGreeting();
   prefMute = false;
@@ -375,6 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     if (await syncPreferences()) applyAllPreferences();
     loadFonts();
+    restorePomo();
     await fetchCourses();
     await initStudyPortal();
   } finally {

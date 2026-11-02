@@ -495,6 +495,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-batch.js
 │       │   │   ├── studio-bench.js
 │       │   │   ├── studio-core.js
+│       │   │   ├── studio-focus.js
 │       │   │   ├── studio-fonts.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js

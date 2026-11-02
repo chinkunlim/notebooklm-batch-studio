@@ -868,8 +868,23 @@ img, iframe, video, audio { max-width: 100%; }
 
 /* Top bar: course picker and live status */
 .topbar { grid-template-columns: minmax(0, 1fr) auto auto; }
-.course-pick { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
-.course-pick .select { max-width: 280px; font-weight: 500; }
+.course-pick { position: relative; min-width: 0; }
+.cp-btn { display: flex; align-items: center; gap: 12px; max-width: 340px; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line); text-align: left; transition: box-shadow var(--dur-hover) var(--ease); }
+.cp-btn:hover, .course-pick.open .cp-btn { box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow); }
+.cp-btn > [class^="icon-"] { font-size: 16px; color: var(--muted); }
+.cp-cover { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.cp-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.cp-text b { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cp-text span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cp-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; width: min(360px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); box-shadow: 0 24px 60px rgba(0,0,0,.2); padding: 8px;
+  opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity var(--dur-hover) var(--ease), transform var(--dur-hover) var(--ease); }
+.course-pick.open .cp-pop { opacity: 1; transform: none; pointer-events: auto; }
+.cp-item { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: var(--radius-m); text-align: left; }
+.cp-item:hover, .cp-item:focus-visible { background: var(--surface-2); outline: none; }
+.cp-item.on { background: var(--accent-soft); }
+.cp-item .cp-text { flex: 1; }
+.cp-item > [class^="icon-"] { font-size: 16px; color: var(--primary); }
+.cp-foot { display: flex; justify-content: flex-end; padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--line); }
 .status [data-state] .dot { background: var(--faint); }
 .status [data-state="ok"] .dot { background: var(--accent); }
 .status [data-state="warn"] .dot { background: var(--warn); }
@@ -1083,9 +1098,16 @@ img, iframe, video, audio { max-width: 100%; }
 .streak { text-align: center; background: var(--accent-soft); border-radius: var(--radius-m); padding: var(--s2) var(--s4); }
 .streak b { display: block; font-size: 28px; line-height: 1.1; color: var(--primary); }
 .streak span { font-size: 12px; color: var(--muted); }
-.week i.today { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
-.checkin .heatmap { margin-top: var(--s3); grid-template-columns: repeat(14, 12px); gap: 3px; }
-.checkin .heat { width: 12px; height: 12px; border-radius: 3px; }
+/* Four-week calendar in 今日打卡: weekday columns, one row per week, colour = how much was studied that day */
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-head { text-align: center; font-size: 12px; color: var(--muted); padding-bottom: 4px; }
+.cal-day { aspect-ratio: 1; max-height: 36px; display: grid; place-items: center; border-radius: 8px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); background: var(--surface-2); }
+.cal-day.h1 { background: color-mix(in srgb, var(--accent) 22%, var(--surface-2)); color: var(--ink); }
+.cal-day.h2 { background: color-mix(in srgb, var(--accent) 45%, var(--surface-2)); color: var(--ink); }
+.cal-day.h3 { background: color-mix(in srgb, var(--accent) 70%, var(--surface-2)); color: #fff; }
+.cal-day.h4 { background: var(--accent); color: #fff; }
+.cal-day.today { box-shadow: inset 0 0 0 2px var(--primary); color: var(--primary); font-weight: 700; }
+.cal-day.future { opacity: .4; }
 .exam { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s4); align-items: center; }
 .exam-days { text-align: center; }
 .exam-days b { display: block; font-size: 40px; line-height: 1; color: var(--primary); }
@@ -1114,3 +1136,46 @@ img, iframe, video, audio { max-width: 100%; }
 .checkin-stats b { display: block; font-size: 18px; }
 .checkin-stats span { font-size: 12px; color: var(--muted); }
 .exam-wrap { margin-top: auto; }
+.flash-field { border-radius: var(--radius-s); animation: flashField 1.6s var(--ease) 1; }
+@keyframes flashField { 0%, 60% { box-shadow: 0 0 0 4px var(--accent-soft), 0 0 0 6px var(--accent); } 100% { box-shadow: none; } }
+
+/* Focus timer in the Dock: a ring counting down (or digits), with a control card */
+.dock-focus-wrap { position: relative; height: 0; opacity: 0; transform: scale(.6); pointer-events: none; margin-top: calc(var(--s5) * -1);
+  transition: height var(--dur-slide) var(--ease), opacity var(--dur-slide) var(--ease), transform var(--dur-slide) var(--ease), margin var(--dur-slide) var(--ease); }
+.dock-focus-wrap.show { height: 48px; opacity: 1; transform: none; pointer-events: auto; margin-top: 0; }
+.dock-focus { position: relative; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; color: #fff; }
+.fr { position: relative; width: 48px; height: 48px; display: grid; place-items: center; }
+.fr svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.fr circle { fill: none; stroke-width: 3.5; }
+.fr-bg { stroke: rgba(255,255,255,.14); }
+.fr-fg { stroke: var(--h-quiz); stroke-linecap: round; stroke-dasharray: 125.66; transition: stroke-dashoffset 1s linear; }
+.dock-focus-wrap.break .fr-fg { stroke: var(--accent); }
+.fr-num { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; }
+.dock-focus-wrap.digits .fr svg { display: none; }
+.dock-focus-wrap.digits .fr { width: 56px; height: 30px; border-radius: 999px; background: color-mix(in srgb, var(--h-quiz) 80%, transparent); }
+.dock-focus-wrap.digits.break .fr { background: color-mix(in srgb, var(--accent) 80%, transparent); }
+.dock-focus-wrap.digits .fr-num { font-size: 12px; }
+.dock-focus-wrap.paused .fr { opacity: .6; }
+.dock-focus .label { left: 60px; color: #fff; font-variant-numeric: tabular-nums; }
+.dock-focus .tip { position: absolute; left: 56px; top: 50%; transform: translate(-4px, -50%); opacity: 0; pointer-events: none; background: #111; color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 8px; white-space: nowrap; transition: opacity var(--dur-hover) var(--ease), transform var(--dur-hover) var(--ease); }
+.dock-focus:hover .tip { opacity: 1; transform: translate(0, -50%); }
+@container app (min-width: 641px) { .app.dock-x .dock-focus .tip { display: none; } }
+.focus-pop { position: absolute; left: 60px; top: 50%; transform: translate(-8px, -50%); opacity: 0; pointer-events: none; z-index: 40; width: 300px;
+  background: var(--surface); color: var(--ink); border-radius: var(--radius-l); box-shadow: 0 24px 60px rgba(0,0,0,.28); border: 1px solid var(--line);
+  padding: var(--s5); display: flex; flex-direction: column; gap: var(--s3); transition: opacity var(--dur-slide) var(--ease), transform var(--dur-slide) var(--ease); }
+.focus-pop.open { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
+.fp-phase { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; }
+.fp-time { font-family: var(--font-head); font-size: 44px; font-weight: 700; line-height: 1; }
+.fp-bar { height: 4px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.fp-bar i { display: block; height: 100%; background: var(--h-quiz); transition: width 1s linear; }
+.dock-focus-wrap.break .fp-bar i { background: var(--accent); }
+.fp-actions { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.fly-timer { position: fixed; z-index: 90; pointer-events: none; border-radius: 50%; background: var(--dock-bg); box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+@container app (max-width: 640px) {
+  .dock-focus-wrap, .dock-focus-wrap.show { margin-top: 0; }
+  .dock-focus-wrap { width: 0; }
+  .dock-focus-wrap.show { width: 48px; }
+  .dock-focus .tip { display: none; }
+  .focus-pop { left: 50%; top: auto; bottom: 56px; transform: translate(-50%, 8px); width: min(300px, calc(100vw - 32px)); }
+  .focus-pop.open { transform: translate(-50%, 0); }
+}

@@ -338,7 +338,7 @@ setInterval(tickClock, 15000);
 function applyTodayChoices() {
   const goal = load('goal', '1');
   $$('#goalOptions button').forEach(x => x.classList.toggle('on', x.dataset.goal === goal));
-  const focusMin = load('focusMin', '45');
+  const focusMin = typeof todayFocus === 'function' ? todayFocus() : 25;
   $('#focusRange').value = focusMin; $('#focusMin').textContent = focusMin;
 }
 $('#goalOptions').addEventListener('click', e => {
@@ -346,7 +346,12 @@ $('#goalOptions').addEventListener('click', e => {
   $$('#goalOptions button').forEach(x => x.classList.toggle('on', x === b));
   save('goal', b.dataset.goal);
 });
-$('#focusRange').addEventListener('input', e => { $('#focusMin').textContent = e.target.value; save('focusMin', e.target.value); });
+// today only: the habit itself is changed in 設計與自訂 → 專注習慣
+$('#focusRange').addEventListener('input', e => {
+  $('#focusMin').textContent = e.target.value;
+  save('focusToday', JSON.stringify({ date: new Date().toDateString(), min: parseInt(e.target.value, 10) }));
+  if (typeof renderPomo === 'function' && !pomo.total) renderPomo();
+});
 /** The "continue where you stopped" card: last lecture and page, with the audio position. */
 function renderContinue() {
   const course = currentStudyCourse;

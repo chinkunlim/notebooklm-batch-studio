@@ -149,38 +149,43 @@ function renderExamBox(p) {
   const line = document.getElementById('sprintLine');
   if (p.days_left === null) {
     box.innerHTML = `<span class="field-label">考試倒數</span>
-      <p class="small muted" style="margin-bottom:8px">設定考試日期，研讀計畫與提醒會跟著倒數。</p>
-      <div class="row" style="flex-wrap:wrap"><input type="date" class="text-input" id="examDateInput" aria-label="考試日期"><button class="btn btn-soft btn-sm" onclick="saveExamDate()">設定</button></div>`;
+      <p class="small muted" style="margin-bottom:8px">在這門課的設定填考試日期，研讀計畫與提醒會跟著倒數。</p>
+      <button class="btn btn-soft btn-sm" onclick="openExamSetting()">到課程設定填寫</button>`;
     line.textContent = '今天先完成學習循環裡最重要的三件事。';
     return;
   }
   const d = Math.max(0, p.days_left), soon = p.days_left >= 0 && p.days_left <= 7;
   box.innerHTML = `<div class="exam ${soon ? 'soon' : ''}"><div class="exam-days"><b class="num">${d}</b><span>天後考試</span></div>
-    <div style="min-width:0"><div class="small muted num">${escHtml(p.exam_date)}　<button class="link-btn" onclick="editExamDate()">修改</button></div>
+    <div style="min-width:0"><div class="small muted num">${escHtml(p.exam_date)}　<button class="link-btn" onclick="openExamSetting()">到課程設定修改</button></div>
     <div class="exam-tip">${escHtml(examTip(p.days_left))}</div></div></div>`;
   line.textContent = p.days_left < 0 ? examTip(p.days_left) : `距離考試還有 ${d} 天。${examTip(p.days_left)}`;
 }
 
-/** Show the date field again to change the exam date. */
-function editExamDate() {
-  renderExamBox({ ...currentPlan, days_left: null });
-  const input = document.getElementById('examDateInput');
-  if (input && currentPlan.exam_date) input.value = currentPlan.exam_date;
-}
-
 /**
- * Save the exam date typed in the check-in card (the course setting of the same name).
- * @returns {Promise<void>}
+ * Open this course's settings on 批次排程 with the 考試日期 field in view and highlighted
+ * (the exam date is a course setting, so it is changed in one place only).
  */
-async function saveExamDate() {
-  const value = document.getElementById('examDateInput').value;
-  if (!value) { showToast('請先選考試日期', 'warning'); return; }
-  const res = await fetch(`/api/courses/${currentStudyCourse.code}/options`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ options: { exam_date: value } }),
-  });
-  if (!res.ok) { showToast('考試日期沒有存成功', 'error'); return; }
-  showToast('已設定考試日期', 'success', 2400);
-  loadTodayPanel();
+function openExamSetting() {
+  if (!currentStudyCourse) return;
+  const code = currentStudyCourse.code;
+  const already = activeCourseCode === code && document.querySelector('#detailOptions [data-opt="exam_date"]');
+  activeCourseCode = code;  // so opening 批次排程 does not load another course first
+  go('queue');
+  setTimeout(() => {
+    if (!already) viewCourseDetail(code);
+    document.getElementById('detailOptionsBox').open = true;
+    const t0 = Date.now();
+    /** Check every 150 ms (up to 4 s) for the exam-date field, then scroll to it and highlight it. */
+    const wait = () => {
+      const field = document.querySelector('#detailOptions [data-opt="exam_date"]');
+      if (!field) { if (Date.now() - t0 < 4000) setTimeout(wait, 150); return; }
+      const label = field.closest('.opt-field');
+      label.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      label.classList.add('flash-field');
+      setTimeout(() => { label.classList.remove('flash-field'); field.focus({ preventScroll: true }); }, 900);
+    };
+    wait();
+  }, 320);
 }
 
 /**

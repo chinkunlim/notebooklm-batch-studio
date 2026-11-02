@@ -78,6 +78,7 @@ async function initStudyPortal() {
   if (currentCoursesList.length === 0) {
     select.innerHTML = '<option value="">還沒有課程</option>';
     renderCourseDirectory();
+    renderCoursePicker();
     onStudyDataChanged();
     return;
   }
@@ -119,6 +120,7 @@ async function loadStudyCourseData(code, keepView = false) {
     const select = document.getElementById('studyCourseSelect');
     if (select.value !== code) select.value = code;
     renderCourseDirectory();
+    renderCoursePicker();
     if (!keepView) {
       const place = typeof savedPlace === 'function' ? savedPlace() : null;
       const lectures = currentStudyCourse.lectures || [];
@@ -190,6 +192,58 @@ function renderCourseDirectory() {
     return row(l.no, l.topic, `${b !== null ? `最佳 ${b}%` : '還沒做測驗'}　·　${doneOutputs(l.no)} 項產出物`);
   }).join('') + row(null, '全課跨章總複習', `模擬考、全課心智圖與語音　·　${doneOutputs(null)} 項產出物`) : '';
 }
+
+/**
+ * Draw the course picker in the top bar (button with the current course, and the list it opens).
+ */
+function renderCoursePicker() {
+  const course = currentStudyCourse;
+  const cover = document.getElementById('cpCover');
+  cover.textContent = course ? String(course.code).slice(0, 3) : '';
+  cover.style.background = course ? courseColour(course.code) : 'var(--track)';
+  document.getElementById('cpName').textContent = course ? course.name : (currentCoursesList.length ? '選一門課' : '還沒有課程');
+  document.getElementById('cpMeta').textContent = course ? `${course.code}　·　${(course.lectures || []).length} 講` : '';
+  const items = currentCoursesList.map(c => {
+    const stats = c.counts || {};
+    const total = (c.total_jobs || 0) - (stats.skipped || 0);
+    const pct = total > 0 ? Math.round(((stats.done || 0) / total) * 100) : 0;
+    const on = course && course.code === c.code;
+    return `<button class="cp-item${on ? ' on' : ''}" role="option" aria-selected="${on}" data-code="${escHtml(c.code)}">
+      <span class="cp-cover" style="background:${courseColour(c.code)}">${escHtml(String(c.code).slice(0, 3))}</span>
+      <span class="cp-text"><b>${escHtml(c.name)}</b><span>${escHtml(c.code)}　·　${c.lecture_count} 講　·　產出 ${pct}%</span></span>
+      ${on ? '<i class="icon-check"></i>' : ''}</button>`;
+  }).join('');
+  document.getElementById('coursePop').innerHTML = (items || '<p class="small muted" style="padding:12px">還沒有課程。</p>') +
+    '<div class="cp-foot"><button class="btn btn-ghost btn-sm" data-manage>管理課程</button></div>';
+}
+
+/**
+ * Open or close the course picker list.
+ * @param {boolean} open True to open
+ */
+function setCoursePop(open) {
+  document.getElementById('coursePick').classList.toggle('open', open);
+  document.getElementById('coursePickBtn').setAttribute('aria-expanded', open);
+  if (open) (document.querySelector('#coursePop .cp-item.on') || document.querySelector('#coursePop .cp-item'))?.focus();
+}
+
+document.getElementById('coursePickBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  setCoursePop(!document.getElementById('coursePick').classList.contains('open'));
+});
+document.getElementById('coursePop').addEventListener('click', e => {
+  if (e.target.closest('[data-manage]')) { setCoursePop(false); go('queue'); return; }
+  const item = e.target.closest('.cp-item');
+  if (!item) return;
+  setCoursePop(false);
+  if (!currentStudyCourse || item.dataset.code !== currentStudyCourse.code) pickStudyCourse(item.dataset.code);
+});
+document.getElementById('coursePop').addEventListener('keydown', e => {
+  const items = [...document.querySelectorAll('#coursePop .cp-item')], i = items.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus(); }
+  if (e.key === 'Escape') { setCoursePop(false); document.getElementById('coursePickBtn').focus(); }
+});
+document.addEventListener('click', e => { if (!e.target.closest('#coursePick')) setCoursePop(false); });
 
 /**
  * Switch the study course from the 課程目錄 list.

@@ -75,6 +75,26 @@
         <div class="dp-foot"><button class="btn btn-ghost" id="dpSpeed" aria-label="播放速度">1×</button><button class="btn btn-soft" id="dpGo">回到研讀</button></div>
       </div>
     </div>
+    <!-- Appears while a focus or break round is running: a ring (or digits) counting down -->
+    <div class="dock-focus-wrap" id="focusWrap">
+      <button class="dock-focus" id="dockFocus" aria-label="專注計時" aria-expanded="false">
+        <span class="fr" id="focusRing"><svg viewBox="0 0 48 48" aria-hidden="true"><circle class="fr-bg" cx="24" cy="24" r="20"/><circle class="fr-fg" id="focusArc" cx="24" cy="24" r="20"/></svg><b class="fr-num" id="dockFocusNum">25</b></span>
+        <span class="label" id="dockFocusLabel">專注</span><span class="tip" id="dockFocusTip">專注中</span>
+      </button>
+      <div class="focus-pop" id="focusPop" role="dialog" aria-label="專注計時">
+        <div class="fp-phase"><span id="fpPhase">專注</span><span class="small muted" id="fpRound"></span></div>
+        <div class="fp-time num" id="fpTime">25:00</div>
+        <div class="fp-bar"><i id="fpBar"></i></div>
+        <p class="small muted" id="fpNext"></p>
+        <div class="fp-actions">
+          <button class="btn btn-primary" id="fpToggle">暫停</button>
+          <button class="btn btn-ghost" id="fpPlus">+5 分鐘</button>
+          <button class="btn btn-ghost" id="fpSkip">跳過</button>
+          <button class="btn btn-ghost" id="fpStop">結束</button>
+        </div>
+        <button class="link-btn" id="fpHabits">調整專注習慣</button>
+      </div>
+    </div>
     <div class="dock-tools">
       <button class="dock-btn" id="btnDockX" aria-label="展開側欄"><i class="icon-panel-left-open"></i><span class="label">收合側欄</span><span class="tip">展開側欄</span></button>
       <button class="dock-btn" id="btnHelp" aria-label="使用方法"><i class="icon-info"></i><span class="label">使用方法</span><span class="tip">使用方法</span></button>
@@ -89,7 +109,15 @@
         <span class="brand-title"><span class="brand-long">Gemini Notebook </span>學習工作室</span>
         <span class="brand-sub" id="pageName">研讀總覽</span>
       </button>
-      <label class="course-pick"><span class="sr-only">研讀課程</span><select class="select" id="studyCourseSelect" aria-label="研讀課程"><option value="">載入課程中…</option></select></label>
+      <div class="course-pick" id="coursePick">
+        <select id="studyCourseSelect" class="sr-only" tabindex="-1" aria-hidden="true"><option value="">載入課程中…</option></select>
+        <button class="cp-btn" id="coursePickBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="切換研讀課程">
+          <span class="cp-cover" id="cpCover"></span>
+          <span class="cp-text"><b id="cpName">載入課程中…</b><span id="cpMeta"></span></span>
+          <i class="icon-chevrons-up-down"></i>
+        </button>
+        <div class="cp-pop" id="coursePop" role="listbox" aria-label="研讀課程"></div>
+      </div>
       <div class="status" aria-label="系統狀態" aria-live="polite">
         <span id="authBadge" data-state=""><i class="dot"></i>檢查登入中</span>
         <span id="queueBadge" data-state="">佇列讀取中</span>
@@ -131,8 +159,7 @@
               <div><div class="clock num" id="clockTime">--:--</div><div class="checkin-state" id="todayStatus">讀取中…</div></div>
               <div class="streak"><b class="num" id="streakNum">0</b><span>連續天數</span></div>
             </div>
-            <div class="week" id="weekDots"></div>
-            <div class="pace-relax-only"><div class="heatmap" id="heatmap" aria-label="最近四週的學習次數"></div></div>
+            <div class="cal" id="checkinCal" aria-label="最近四週的學習日曆"></div>
             <div class="checkin-stats" id="checkinStats"></div>
             <div class="exam-wrap"><div class="divider"></div><div id="examBox"></div></div>
           </article>
@@ -165,11 +192,12 @@
             <div class="goal-options" id="goalOptions">
               <button data-goal="1" class="on">1 講</button><button data-goal="2">2 講</button><button data-goal="3">3 講</button>
             </div>
-            <span class="field-label">專注時間　<b class="num" id="focusMin">45</b> 分鐘</span>
+            <span class="field-label">今天的專注時間　<b class="num" id="focusMin">25</b> 分鐘</span>
             <div class="row focus-row">
-              <input class="range" type="range" min="15" max="120" step="15" value="45" id="focusRange" aria-label="專注時間">
+              <input class="range" type="range" min="10" max="90" step="5" value="25" id="focusRange" aria-label="今天的專注時間">
               <button class="btn btn-soft btn-sm pomodoro" id="btnFocusStart">開始專注</button>
             </div>
+            <p class="hint" id="focusHint">只改今天；平常的習慣在「設計與自訂 → 專注習慣」。</p>
             <div class="divider"></div>
             <span class="field-label">學習循環</span>
             <ul class="steps" id="todaySteps"><li class="loading-line">讀取學習計畫中…</li></ul>
@@ -188,7 +216,7 @@
         <div class="subbar">
           <div class="crumbs" id="crumbs">課程</div>
           <div class="row" style="flex-wrap:wrap">
-            <button class="btn btn-ghost pomodoro" id="btnPomodoro" title="25 分鐘專注計時（再按一次暫停）">專注 25:00</button>
+            <button class="btn btn-ghost pomodoro" id="btnPomodoro" title="番茄鐘：開始專注，計時會收進側欄">專注 25:00</button>
             <div class="seg" data-seg="layout"><button data-value="stage" class="on">主舞台</button><button data-value="split">雙欄</button><button data-value="stack">上下</button></div>
             <div class="seg" data-seg="studioPane"><button data-value="courses">課程目錄</button><button data-value="study" class="on">研讀</button></div>
           </div>
@@ -476,6 +504,20 @@
             </details>
           </article>
 
+          <article class="card" id="habitCard">
+            <div class="card-head"><h2 class="h2">專注習慣</h2><span class="eyebrow">番茄鐘</span></div>
+            <div class="settings-grid">
+              <label class="opt-field"><span>專注　<b class="num" data-habit-val="focus">25</b> 分鐘</span><input class="range" type="range" min="10" max="90" step="5" data-habit="focus" aria-label="專注分鐘"></label>
+              <label class="opt-field"><span>短休息　<b class="num" data-habit-val="short">5</b> 分鐘</span><input class="range" type="range" min="3" max="15" step="1" data-habit="short" aria-label="短休息分鐘"></label>
+              <label class="opt-field"><span>長休息　<b class="num" data-habit-val="long">15</b> 分鐘</span><input class="range" type="range" min="10" max="30" step="5" data-habit="long" aria-label="長休息分鐘"></label>
+              <label class="opt-field"><span>每 <b class="num" data-habit-val="rounds">4</b> 輪後長休息</span><input class="range" type="range" min="2" max="6" step="1" data-habit="rounds" aria-label="幾輪後長休息"></label>
+            </div>
+            <div class="divider"></div>
+            <div class="toggle-row"><span>側欄計時顯示</span><div class="seg" data-seg="pomoStyle"><button data-value="ring" class="on">圓圈倒退</button><button data-value="digits">數字</button></div></div>
+            <div class="toggle-row"><span>休息結束後自動開始下一輪<br><span class="small muted">關閉時會等你按「開始」</span></span><button class="switch" role="switch" aria-checked="false" id="swPomoAuto" aria-label="自動開始下一輪"></button></div>
+            <p class="hint">這裡是平常的習慣；研讀總覽「今日策略」的專注時間只改今天。</p>
+          </article>
+
           <article class="card">
             <div class="card-head"><h2 class="h2">介面風格</h2></div>
             <div class="toggle-row" style="margin-bottom:12px"><span>玻璃質感<br><span class="small muted">卡片半透明、背景柔和光暈</span></span><button class="switch" role="switch" aria-checked="false" id="swGlass" aria-label="玻璃質感"></button></div>
@@ -717,6 +759,7 @@
 <script src="/static/studio-player.js"></script>
 <script src="/static/studio-bench.js"></script>
 <script src="/static/studio-fonts.js"></script>
+<script src="/static/studio-focus.js"></script>
 <script src="/static/studio-start.js"></script>
 <script type="module" src="/static/studio-reader.js"></script>
 </body>

@@ -4,7 +4,7 @@
    - Zeigarnik effect: "上次停在…" card that resumes unfinished work.
    - Metacognition: rate confidence before answering; "sure but wrong" questions are flagged.
    - Interleaving: mixed review across lectures.  Generation effect: hide choices / write before flipping.
-   - Peak-end: a result summary that compares with the last attempt.  Pomodoro focus timer.
+   - Peak-end: a result summary that compares with the last attempt. (The focus timer is in studio-focus.js.)
    - Socratic tutor (Gemini Notebook chat that guides with questions).
    Uses globals from studio-app.js / studio.js / studio-shell.js: currentStudyCourse, activeStudyLectureNo,
    activeQuizVariant, currentQuizData, escHtml, showToast, selectStudyLecture, switchStudyTab,
@@ -106,7 +106,7 @@ async function renderMemoryPanel() {
 }
 
 /**
- * 今日打卡: today's status, the streak, this week (Monday to Sunday) and the last four weeks.
+ * 今日打卡: today's status, the streak, and a four-week calendar (Monday to Sunday, this week last).
  * @param {{streak: number, studied_today: boolean, heatmap: Array<{date: string, count: number}>}} data Activity data
  */
 function renderCheckin(data) {
@@ -116,18 +116,23 @@ function renderCheckin(data) {
   status.innerHTML = data.studied_today ? '<i class="icon-circle-check"></i>今天已打卡' : '<i class="icon-circle"></i>今天還沒開始，做一點點就打卡';
   const counts = new Map(data.heatmap.map(d => [d.date, d.count]));
   const today = new Date();
-  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
   const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  document.getElementById('weekDots').innerHTML = ['一', '二', '三', '四', '五', '六', '日'].map((name, i) => {
-    const d = new Date(monday); d.setDate(monday.getDate() + i);
-    const cls = [(counts.get(iso(d)) || 0) > 0 ? 'on' : '', iso(d) === iso(today) ? 'today' : ''].join(' ');
-    return `<div>${name}<i class="${cls}"></i></div>`;
-  }).join('');
+  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const start = new Date(monday); start.setDate(monday.getDate() - 21);
+  // a four-week calendar: 一 … 日 columns, one row per week, this week last
+  let cells = ['一', '二', '三', '四', '五', '六', '日'].map(n => `<span class="cal-head">${n}</span>`).join('');
+  for (let i = 0; i < 28; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const n = counts.get(iso(d)) || 0, future = d > today && iso(d) !== iso(today);
+    const level = n === 0 ? 0 : Math.min(4, Math.ceil(n / 2));
+    const label = d.getDate() === 1 ? `${d.getMonth() + 1}/1` : d.getDate();
+    cells += `<span class="cal-day h${level}${iso(d) === iso(today) ? ' today' : ''}${future ? ' future' : ''}" title="${iso(d)}：${n} 次">${label}</span>`;
+  }
+  document.getElementById('checkinCal').innerHTML = cells;
   const weekDays = [...Array(7).keys()].filter(i => { const d = new Date(monday); d.setDate(monday.getDate() + i); return (counts.get(iso(d)) || 0) > 0; }).length;
   const total = data.heatmap.reduce((a, d) => a + d.count, 0);
   document.getElementById('checkinStats').innerHTML = `<div><b class="num">${counts.get(iso(today)) || 0}</b><span>今天學習次數</span></div>
     <div><b class="num">${weekDays} / 7</b><span>本週學習天數</span></div><div><b class="num">${total}</b><span>近四週次數</span></div>`;
-  document.getElementById('heatmap').innerHTML = data.heatmap.map(d => `<span class="heat h${Math.min(4, d.count === 0 ? 0 : Math.ceil(d.count / 2))}" title="${d.date}：${d.count} 次"></span>`).join('');
 }
 
 /* ---------- Metacognition: confidence before answering ---------- */
@@ -299,49 +304,6 @@ async function startMixedReview() {
   showToast(`從 ${new Set(pool.map(q => q.source)).size} 講抽出 ${quiz.questions.length} 題，交卷後看各講答對率。`, 'success');
 }
 
-/* ---------- Focus timer (length = 今日策略's 專注時間; one timer, shown on both buttons) ---------- */
-const pomodoro = { left: 0, total: 0, timer: null };
-
-/**
- * Show the timer state on the overview and study-page buttons.
- */
-function showPomodoro() {
-  const m = String(Math.floor(pomodoro.left / 60)).padStart(2, '0');
-  const s = String(pomodoro.left % 60).padStart(2, '0');
-  const idle = !pomodoro.timer && (!pomodoro.left || pomodoro.left === pomodoro.total);
-  const minutes = prefLoad('focusMin', '45');
-  ['btnPomodoro', 'btnFocusStart'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.classList.toggle('running', !!pomodoro.timer);
-    btn.textContent = idle ? (id === 'btnFocusStart' ? '開始專注' : `專注 ${minutes}:00`) : `${pomodoro.timer ? '專注' : '暫停'} ${m}:${s}`;
-  });
-}
-
-/**
- * Start, pause or resume the focus timer; a new round lasts as long as 今日策略's 專注時間.
- */
-function togglePomodoro() {
-  if (pomodoro.timer) {
-    clearInterval(pomodoro.timer);
-    pomodoro.timer = null;
-    showPomodoro();
-    return;
-  }
-  if (!pomodoro.left) pomodoro.left = pomodoro.total = parseInt(prefLoad('focusMin', '45'), 10) * 60;
-  pomodoro.timer = setInterval(() => {
-    pomodoro.left -= 1;
-    if (pomodoro.left <= 0) {
-      clearInterval(pomodoro.timer);
-      pomodoro.timer = null;
-      pomodoro.left = 0;
-      showToast(`專注 ${Math.round(pomodoro.total / 60)} 分鐘完成。休息 5 分鐘：閉上眼睛，回想剛才學到的 3 個重點（回想比重讀更能記住）。`, 'success', 12000);
-    }
-    showPomodoro();
-  }, 1000);
-  showPomodoro();
-}
-
 /* ---------- Tutor ---------- */
 /**
  * Show the tutor conversation for the selected lecture.
@@ -453,10 +415,6 @@ function runAfter(name, after) {
 
 document.addEventListener('DOMContentLoaded', () => {
   hideChoices = prefLoad('hideChoices', '0') === '1';
-  document.getElementById('btnPomodoro')?.addEventListener('click', togglePomodoro);
-  document.getElementById('btnFocusStart')?.addEventListener('click', togglePomodoro);
-  document.getElementById('focusRange')?.addEventListener('input', () => { if (!pomodoro.timer && pomodoro.left === pomodoro.total) { pomodoro.left = 0; showPomodoro(); } });
-  showPomodoro();
   runAfter('loadTodayPanel', renderMemoryPanel);
   runAfter('loadFlashcardsViewer', addRecallBox);
   runAfter('renderQuizQuestions', async () => {

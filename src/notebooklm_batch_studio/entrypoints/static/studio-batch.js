@@ -237,7 +237,7 @@ async function fetchCourses() {
     const container = document.getElementById('courseContainer');
     if (!courses || courses.length === 0) {
       container.innerHTML = '<li class="empty-state">還沒有課程。按右上角「加入課程」，點選放講義 PDF 的資料夾。</li>';
-      renderCourseDirectory();
+      renderCourseDirectory(); renderCoursePicker();
       return;
     }
     // Field names follow GET /api/courses (counts / total_jobs / lecture_count). Refs: ISSUE-020
@@ -262,7 +262,7 @@ async function fetchCourses() {
           <span class="meter"><span style="width:${pct}%"></span></span></button>
         ${!hasNb ? `<button class="btn btn-soft btn-sm" style="margin:4px 12px 8px" onclick="setupCourse('${escHtml(c.code)}', event)">建立筆記本並上傳</button>` : ''}</li>`;
     }).join('');
-    renderCourseDirectory();
+    renderCourseDirectory(); renderCoursePicker();
   } catch (e) {
     console.error('Fetch courses failed:', e);
   }
