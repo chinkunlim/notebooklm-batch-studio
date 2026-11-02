@@ -6,8 +6,8 @@
   --loop: infinite; /* playback-only loops (they run only while audio plays) */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 40px; --s8: 48px;
   --radius-s: 10px; --radius-m: 14px; --radius-l: 20px;
-  --font-sans: "Noto Sans TC", -apple-system, "PingFang TC", system-ui, sans-serif;
-  --font-serif: "Noto Serif TC", "Songti TC", serif;
+  --font-sans: "Noto Sans TC Variable", "Noto Sans TC", -apple-system, "PingFang TC", system-ui, sans-serif;
+  --font-serif: "Noto Serif TC Variable", "Noto Serif TC", "Songti TC", serif;
   --font-head: var(--font-sans);
   --ease: cubic-bezier(.22, 1, .36, 1);
   --ease-arm: cubic-bezier(.34, 1.25, .64, 1);

@@ -70,7 +70,9 @@ notebooklm-batch-studio/
 │   │   ├── TASK-008-fix-notebooklm-language-artifact.json
 │   │   ├── TASK-009-mind-map-rename-versioned-regene.json
 │   │   ├── TASK-010-update-all-markdown-records-acro.json
-│   │   └── TASK-011-apply-v05-design-to-the-web-ui.json
+│   │   ├── TASK-011-apply-v05-design-to-the-web-ui.json
+│   │   ├── TASK-012-course-filter-in-all-in-progress.json
+│   │   └── TASK-013-apply-one-course-s-settings-to-o.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -104,7 +106,8 @@ notebooklm-batch-studio/
 │   │   ├── 20261101_cff6ba027876_add_upload_status_and_custom_prompt.py
 │   │   ├── 20261101_d0a82d2914ab_persist_course_artifact_selections.py
 │   │   ├── 20261101_d21a28b5d5a0_add_course_paused_and_reuse_notebook_.py
-│   │   └── 20261101_d6e896ae4e2c_add_job_version_artifact_ids_and_course_.py
+│   │   ├── 20261101_d6e896ae4e2c_add_job_version_artifact_ids_and_course_.py
+│   │   └── 20261102_89158d42494d_add_ui_preferences.py
 │   ├── DB.md
 │   ├── env.py
 │   └── script.py.mako
@@ -118,6 +121,7 @@ notebooklm-batch-studio/
 │   │   ├── 006-gemini-notebook-display-name.md
 │   │   ├── 007-study-studio-visual-tiering-and-agency-architecture.md
 │   │   ├── 008-v05-study-studio-shell.md
+│   │   ├── 009-local-preferences-and-offline-fonts.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -199,10 +203,14 @@ notebooklm-batch-studio/
 │       │   │   ├── learning_repository.py
 │       │   │   ├── mappers.py
 │       │   │   ├── models.py
+│       │   │   ├── preferences_repository.py
 │       │   │   ├── repository.py
 │       │   │   ├── review_repository.py
 │       │   │   ├── session.py
 │       │   │   └── study_repository.py
+│       │   ├── fonts/
+│       │   │   ├── __init__.py
+│       │   │   └── google_fonts.py
 │       │   ├── notebooklm/
 │       │   │   ├── __init__.py
 │       │   │   ├── client.py
@@ -232,14 +240,247 @@ notebooklm-batch-studio/
 │       │   │   ├── __init__.py
 │       │   │   ├── artifacts.py
 │       │   │   ├── courses.py
+│       │   │   ├── fonts.py
 │       │   │   ├── learning.py
 │       │   │   ├── plan.py
+│       │   │   ├── preferences.py
 │       │   │   ├── queue.py
 │       │   │   ├── settings.py
 │       │   │   ├── study.py
 │       │   │   └── system.py
 │       │   ├── static/
 │       │   │   ├── vendor/
+│       │   │   │   ├── fonts/
+│       │   │   │   │   ├── noto-sans-tc/
+│       │   │   │   │   │   ├── files/
+│       │   │   │   │   │   │   ├── noto-sans-tc-0-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-1-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-10-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-101-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-102-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-103-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-104-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-105-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-106-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-107-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-108-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-109-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-11-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-110-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-111-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-112-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-113-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-114-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-115-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-116-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-117-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-118-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-119-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-12-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-120-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-121-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-122-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-123-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-2-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-23-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-24-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-25-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-26-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-27-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-28-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-29-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-30-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-31-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-32-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-33-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-34-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-35-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-36-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-37-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-38-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-39-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-4-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-40-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-41-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-42-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-43-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-44-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-45-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-46-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-47-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-48-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-49-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-50-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-51-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-52-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-53-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-54-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-55-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-56-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-57-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-58-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-59-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-60-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-61-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-62-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-63-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-64-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-65-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-66-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-67-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-68-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-69-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-70-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-71-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-72-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-73-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-74-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-75-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-76-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-77-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-78-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-79-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-80-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-81-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-82-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-83-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-84-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-85-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-86-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-87-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-88-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-89-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-90-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-91-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-92-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-93-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-94-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-95-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-96-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-cyrillic-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-latin-ext-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-sans-tc-latin-wght-normal.woff2
+│       │   │   │   │   │   │   └── noto-sans-tc-vietnamese-wght-normal.woff2
+│       │   │   │   │   │   ├── LICENSE
+│       │   │   │   │   │   └── noto-sans-tc.css
+│       │   │   │   │   ├── noto-serif-tc/
+│       │   │   │   │   │   ├── files/
+│       │   │   │   │   │   │   ├── noto-serif-tc-0-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-1-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-10-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-101-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-102-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-103-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-104-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-105-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-106-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-107-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-108-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-109-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-11-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-110-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-111-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-112-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-113-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-114-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-115-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-116-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-117-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-118-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-119-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-12-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-120-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-121-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-122-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-123-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-2-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-23-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-24-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-25-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-26-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-27-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-28-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-29-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-30-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-31-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-32-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-33-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-34-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-35-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-36-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-37-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-38-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-39-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-4-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-40-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-41-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-42-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-43-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-44-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-45-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-46-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-47-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-48-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-49-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-50-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-51-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-52-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-53-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-54-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-55-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-56-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-57-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-58-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-59-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-60-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-61-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-62-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-63-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-64-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-65-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-66-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-67-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-68-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-69-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-70-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-71-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-72-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-73-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-74-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-75-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-76-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-77-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-78-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-79-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-80-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-81-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-82-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-83-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-84-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-85-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-86-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-87-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-88-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-89-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-90-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-91-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-92-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-93-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-94-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-95-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-96-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-cyrillic-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-latin-ext-wght-normal.woff2
+│       │   │   │   │   │   │   ├── noto-serif-tc-latin-wght-normal.woff2
+│       │   │   │   │   │   │   └── noto-serif-tc-vietnamese-wght-normal.woff2
+│       │   │   │   │   │   ├── LICENSE
+│       │   │   │   │   │   └── noto-serif-tc.css
+│       │   │   │   │   └── README.md
+│       │   │   │   ├── lucide/
+│       │   │   │   │   ├── LICENSE
+│       │   │   │   │   ├── lucide.css
+│       │   │   │   │   ├── lucide.woff2
+│       │   │   │   │   └── README.md
 │       │   │   │   └── pdfjs/
 │       │   │   │       ├── LICENSE
 │       │   │   │       ├── pdf.min.mjs
@@ -254,6 +495,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-batch.js
 │       │   │   ├── studio-bench.js
 │       │   │   ├── studio-core.js
+│       │   │   ├── studio-fonts.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js
 │       │   │   ├── studio-player.js
@@ -268,8 +510,10 @@ notebooklm-batch-studio/
 │       │   ├── api.py
 │       │   ├── cli.py
 │       │   ├── mcp_course_settings.py
+│       │   ├── mcp_fonts.py
 │       │   ├── mcp_job_prompts.py
 │       │   ├── mcp_learning.py
+│       │   ├── mcp_preferences.py
 │       │   ├── mcp_server.py
 │       │   ├── mcp_study_plan.py
 │       │   ├── port_check.py
@@ -289,9 +533,11 @@ notebooklm-batch-studio/
 │       │   ├── course_parser.py
 │       │   ├── course_settings.py
 │       │   ├── folder_browser.py
+│       │   ├── font_service.py
 │       │   ├── job_views.py
 │       │   ├── learning_service.py
 │       │   ├── orchestrator.py
+│       │   ├── preferences_service.py
 │       │   ├── prompt_generator.py
 │       │   ├── quiz_reader.py
 │       │   ├── quota_planner.py
@@ -316,6 +562,7 @@ notebooklm-batch-studio/
 │   ├── test_course_reregistration.py
 │   ├── test_db.py
 │   ├── test_domain_and_queue.py
+│   ├── test_fonts.py
 │   ├── test_guides_and_reports.py
 │   ├── test_job_settings.py
 │   ├── test_learning.py
@@ -323,6 +570,7 @@ notebooklm-batch-studio/
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
 │   ├── test_port_check.py
+│   ├── test_preferences.py
 │   ├── test_quota_and_limits.py
 │   ├── test_remaining_fixes.py
 │   ├── test_rename.py

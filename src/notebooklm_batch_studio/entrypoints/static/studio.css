@@ -1049,3 +1049,10 @@ img, iframe, video, audio { max-width: 100%; }
   .choice-btn, .step-chip { min-height: 44px; }
 }
 .steps li.steps-head { display: block; padding: 0; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 字型 card (設計與自訂) */
+.font-sample { margin-top: var(--s4); padding: var(--s4); border-radius: var(--radius-m); background: var(--surface-2); font-size: 16px; line-height: 1.8; }
+.font-sample b { font-family: var(--font-head); font-size: 18px; }
+.font-list { list-style: none; display: flex; flex-direction: column; gap: 4px; margin-top: var(--s3); }
+.font-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: 8px 12px; border-radius: var(--radius-s); background: var(--surface-2); font-size: 14px; }
+.font-list .font-name { font-size: 16px; }

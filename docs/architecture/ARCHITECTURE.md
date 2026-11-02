@@ -120,12 +120,16 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `plan.py`：學生個人學習計畫（Today）、複習排程、作答 AI 詳解保存與考前倒數。
   - `settings.py`：產出細部選項設定（題型、題量、語言、方向、風格）、三層設定繼承與重設、版本化重新生成 (`POST /api/courses/{code}/jobs/regenerate`)、產出物開關、課程暫停／開始／刪除、點選式資料夾瀏覽 (`/api/folders`)。
   - `system.py`：系統健康檢查、即時額度狀態、命名規則與研讀導引指南 (`/api/usage-guide`)。
+  - `preferences.py`：網頁偏好讀寫與重設（`/api/preferences`，存在 SQLite `ui_preferences`，ADR-009）。
+  - `fonts.py`：下載 Google Fonts 到 `DATA_DIR/fonts/` 並離線提供（`/api/fonts`，ADR-009）。
 - `entrypoints/static/`：前端使用者介面（純原生 JS，無編譯負擔）：
   - `index.html`：v05 介面（SPEC-009、ADR-008）：側欄四頁（研讀總覽、研讀工作室、弱點複習、批次排程）、側欄底部工具（使用方法、專注模式、設計與自訂）與對話框。
   - `studio-theme.css`（配色 tokens）、`studio.css`（版面與元件）、`studio-learning.css`（閱讀器、記憶卡、家教）。
   - 功能層：`studio-core.js`（對話框、斷線提示、選項洗牌）、`studio-app.js`（研讀課程與講次、測驗、錯題、學習卡、報告檢視）、`studio-batch.js`（批次排程與工作清單）、`studio-settings.js`（課程設定、產出內容、Prompt、加入課程精靈）、`studio.js`（研讀總覽、交卷回饋、解釋、間隔複習、音檔續播）、`studio-learning.js`（記憶強度、信心評分、混合複習、番茄鐘、家教）、`studio-reader.js`（講義 PDF 閱讀器與重點畫線）。
   - 外殼層：`studio-shell.js`（偏好、側欄、頁面切換）、`studio-player.js`（播放真實語音摘要的唱盤與四種視覺）、`studio-bench.js`（工作台、三種版面、本講重點、今日學習卡）、`studio-start.js`（設計與自訂、欄寬、鍵盤與觸控、啟動）。
+  - `studio-fonts.js`：設計與自訂的字型選擇與 Google Fonts 下載。
   - `vendor/pdfjs/`：內建 PDF.js 4.10.38 閱讀核心，完全離線運作。
+  - `vendor/lucide/`、`vendor/fonts/`：內建圖示字型與 Noto Sans / Serif TC，離線也能顯示（ADR-009）。
 - `mcp_server.py` 與 MCP 集群：
   - `mcp_server.py`：核心 MCP 工具（狀態、佇列控制、筆記本操作）。
   - `mcp_course_settings.py`：課程選項與產出設定工具。

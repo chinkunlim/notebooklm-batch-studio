@@ -20,3 +20,4 @@
 | [ADR-006](006-gemini-notebook-display-name.md) | 產品改名 Gemini Notebook：只改顯示名稱，不改程式識別名稱 | Accepted | 2026-11-01 | — |
 | [ADR-007](007-study-studio-visual-tiering-and-agency-architecture.md) | 研讀工作室認知視覺分級、奢華留聲形態與自主掌控架構 | Accepted（部分由 ADR-008 取代） | 2026-11-02 | `mockups_gallery.html`, `SPEC-009` |
 | [ADR-008](008-v05-study-studio-shell.md) | 研讀工作室 v05 外殼：側欄導覽、設計與自訂移到側欄底部、靜態檔依職責拆分 | Accepted | 2026-11-02 | src/notebooklm_batch_studio/entrypoints/static/, docs/design/version_05_claude_template.html, SPEC-009 |
+| [ADR-009](009-local-preferences-and-offline-fonts.md) | 網頁偏好記錄在本機資料庫；圖示與字型內建、可下載 Google Fonts | Accepted | 2026-11-02 | src/notebooklm_batch_studio/services/preferences_service.py, src/notebooklm_batch_studio/services/font_service.py, src/notebooklm_batch_studio/adapters/fonts/google_fonts.py, static/vendor/, tests/test_preferences.py, tests/test_fonts.py |

@@ -78,6 +78,7 @@ renderPalettes();
 
 /* ---------- Switches ---------- */
 const SWITCHES = [];
+const SWITCH_SYNC = [];
 /**
  * Wire a switch to a remembered preference and apply it now.
  * @param {string} id Switch selector
@@ -90,6 +91,7 @@ function bindSwitch(id, key, apply, def) {
   sw.setAttribute('aria-checked', v); apply(v);
   sw.addEventListener('click', () => { const nv = sw.getAttribute('aria-checked') !== 'true'; sw.setAttribute('aria-checked', nv); save(key, nv); apply(nv); });
   SWITCHES.push(() => { sw.setAttribute('aria-checked', def); apply(def === 'true'); });
+  SWITCH_SYNC.push(() => { const nv = load(key, def) === 'true'; sw.setAttribute('aria-checked', nv); apply(nv); });
 }
 bindSwitch('#swMotion', 'motion', v => { root.dataset.motion = v ? 'full' : 'reduced'; }, 'true');
 bindSwitch('#swFlip', 'flip', v => { flipOn = v; $('#visual').title = v ? '點一下切換視覺' : ''; $('#flipHint').textContent = v ? '點唱盤切換視覺' : '視覺可在「設計與自訂」切換'; }, 'true');
@@ -101,17 +103,39 @@ bindSwitch('#swGlass', 'glass', v => { root.dataset.glass = v ? 'on' : 'off'; },
 /**
  * Render the avatar everywhere from a {type, value} description and remember it.
  * @param {{type: string, value: string}} a Avatar: type text | icon | img
+ * @param {boolean} persist Remember it (false while applying remembered preferences)
  */
-function applyAvatar(a) {
+function applyAvatar(a, persist = true) {
   const html = a.type === 'img' ? `<img src="${a.value}" alt="">` : a.type === 'icon' ? `<i class="icon-${a.value}"></i>` : `<span>${a.value || 'G'}</span>`;
   ['#dockAvatar', '#avatarPreview'].forEach(s => { $(s).innerHTML = html; });
   $('#dockName').textContent = (a.type === 'text' && a.value ? a.value : '我') + ' 的學習';
   $$('#presets button').forEach(b => b.classList.toggle('on', a.type === 'icon' && b.dataset.icon === a.value));
-  save('avatar', JSON.stringify(a));
+  if (persist) save('avatar', JSON.stringify(a));
+}
+/**
+ * Shrink a photo to at most 256 px (JPEG) so the remembered avatar stays small.
+ * @param {string} dataUrl Picked image as a data URL
+ * @returns {Promise<string>} Smaller JPEG data URL
+ */
+function shrinkAvatar(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 256 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
 }
 $('#avatarFile').addEventListener('change', e => {
   const f = e.target.files[0]; if (!f) return;
-  const r = new FileReader(); r.onload = () => applyAvatar({ type: 'img', value: r.result }); r.readAsDataURL(f);
+  const r = new FileReader();
+  r.onload = async () => applyAvatar({ type: 'img', value: await shrinkAvatar(r.result) });
+  r.readAsDataURL(f);
 });
 $('#avatarInitials').addEventListener('input', e => applyAvatar({ type: 'text', value: e.target.value.trim().toUpperCase().slice(0, 3) }));
 $('#presets').addEventListener('click', e => { const b = e.target.closest('button'); if (b) applyAvatar({ type: 'icon', value: b.dataset.icon }); });
@@ -284,33 +308,55 @@ $$('.resizable').forEach(el => {
 $('#btnReset').addEventListener('click', () => $('#resetDialog').showModal());
 $('#resetGo').addEventListener('click', () => {
   const keep = ['customPalettes', 'course'];
-  Object.keys(mem).filter(k => !keep.includes(k)).forEach(forget);
+  // the server keeps only these keys; memory and the browser cache follow
+  prefQueue = {};
+  fetch('/api/preferences/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keep }) }).catch(() => {});
+  Object.keys(mem).filter(k => !keep.includes(k)).forEach(k => delete mem[k]);
   try { Object.keys(localStorage).filter(k => k.startsWith('v05.') && !keep.includes(k.slice(4))).forEach(k => localStorage.removeItem(k)); } catch (e) {}
   Object.entries(DEFAULTS).forEach(([k, v]) => setChoice(k, v, false));
   pinnedIds = [...DEFAULT_PINS]; order = [...DEFAULT_ORDER]; applyOrder(false);
   SWITCHES.forEach(f => f());
   setDockX(false, false);
   applyAvatar({ type: 'text', value: 'LK' }); $('#avatarInitials').value = 'LK';
-  $$('.resizable').forEach(applyColumns); updateMini(); renderPalettes(); renderGreeting();
+  $$('.resizable').forEach(applyColumns); updateMini(); renderPalettes(); renderGreeting(); applyFontChoices(); applyTodayChoices();
   $('#resetDialog').close(); notify('已恢復預設設計');
 });
 
 /* ---------- Init: preferences first, then the data ---------- */
 const q = new URLSearchParams(location.search);
 if (q.get('still')) root.dataset.motion = 'reduced';
-setChoice('palette', load('palette', 'forest'), false);
-setChoice('mode', load('mode', 'auto'), false);
-setChoice('style', load('style', 'flow'), false);
-setChoice('arr', load('arr', 'matrix'), false);
-setChoice('pace', load('pace', 'relax'), false);
-setChoice('speed', load('speed', '1'), false);
-setChoice('skin', load('skin', 'vinyl'), false);
-try { applyAvatar(JSON.parse(load('avatar', '{"type":"text","value":"LK"}'))); } catch (e) { applyAvatar({ type: 'text', value: 'LK' }); }
-setChoice('layout', load('layout', 'stage'), false);
-applyOrder(false);
-setDockX(load('dockX', 'false') === 'true', false);
+/**
+ * Apply every remembered preference to the page: palette, mode, style, layout, order, pins, switches,
+ * avatar, Dock width, column widths and today's choices. Runs once from the browser cache (first paint)
+ * and again when the preferences recorded on this computer arrive.
+ */
+function applyAllPreferences() {
+  prefMute = true;
+  customPalettes = readCustomPalettes(); renderPalettes();
+  setChoice('palette', load('palette', 'forest'), false);
+  setChoice('mode', load('mode', 'auto'), false);
+  setChoice('style', load('style', 'flow'), false);
+  setChoice('arr', load('arr', 'matrix'), false);
+  setChoice('pace', load('pace', 'relax'), false);
+  setChoice('speed', load('speed', '1'), false);
+  setChoice('skin', load('skin', 'vinyl'), false);
+  let avatar;
+  try { avatar = JSON.parse(load('avatar', '{"type":"text","value":"LK"}')); } catch (e) { avatar = { type: 'text', value: 'LK' }; }
+  applyAvatar(avatar, false);
+  if (avatar.type === 'text') $('#avatarInitials').value = avatar.value;
+  SWITCH_SYNC.forEach(f => f());
+  pinnedIds = readPins(); order = readOrder();
+  setChoice('layout', load('layout', 'stage'), false);
+  applyOrder(false);
+  setDockX(load('dockX', 'false') === 'true', false);
+  $$('.resizable').forEach(applyColumns);
+  applyTodayChoices();
+  if (typeof applyFontChoices === 'function') applyFontChoices();
+  renderGreeting();
+  prefMute = false;
+}
+applyAllPreferences();
 setTrack(null);
-renderGreeting();
 renderContinue();
 document.fonts && document.fonts.ready.then(() => { refreshThumbs(); sizeCanvases(); });
 window.addEventListener('resize', () => sizeCanvases());
@@ -326,6 +372,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (currentView === 'queue' && activeCourseCode && $('#courseDetailSection').style.display !== 'none') viewCourseDetail(activeCourseCode, true);
   }, 15000);
   try {
+    if (await syncPreferences()) applyAllPreferences();
+    loadFonts();
     await fetchCourses();
     await initStudyPortal();
   } finally {

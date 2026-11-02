@@ -5,20 +5,30 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-02 04:24 UTC`
-- **最近操作 Agent**: `claude-code`
+- **最後更新時間**: `2026-11-02 07:31 UTC`
+- **最近操作 Agent**: `system`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `31eee32 docs(adr/docs): update adr/docs documentation (ADR-004, ADR-005, ADR-006, ADR-007, ISSUE-022, ISSUE-023, ISSUE-024, ISSUE-025, ISSUE-026, ISSUE-027, ISSUE-028, ISSUE-029, ISSUE-030, TASK-001, TASK-005, TASK-006, TASK-007, TASK-009) [agent:claude-code]`
+- **最新 Git Commit**: `1cf8c8d feat(web): apply v05 study studio design to the web UI (TASK-011) [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
 | **TASK-011**<br/>Apply v05 design to the web UI | 🟢 `in_progress` | `claude-code` | `-` | - | - | - |
+| **TASK-012**<br/>Course filter in 課程目錄: all / in progress / finished | ⚪ `open` | `-` | `-` | `src/notebooklm_batch_studio/entrypoints/static/studio-app.js`, `src/notebooklm_batch_studio/entrypoints/http/courses.py` | - | - |
+| **TASK-013**<br/>Apply one course's settings to other courses | ⚪ `open` | `-` | `-` | `src/notebooklm_batch_studio/services/course_settings.py`, `src/notebooklm_batch_studio/entrypoints/http/settings.py`, `src/notebooklm_batch_studio/entrypoints/mcp_course_settings.py`, `src/notebooklm_batch_studio/entrypoints/static/studio-settings.js` | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-02 07:31 UTC] 建立任務 `TASK-013`: Apply one course's settings to other courses (by `system`)
+- **狀態**: `open`
+- **相關範圍**: `src/notebooklm_batch_studio/services/course_settings.py, src/notebooklm_batch_studio/entrypoints/http/settings.py, src/notebooklm_batch_studio/entrypoints/mcp_course_settings.py, src/notebooklm_batch_studio/entrypoints/static/studio-settings.js`
+
+### [2026-11-02 07:31 UTC] 建立任務 `TASK-012`: Course filter in 課程目錄: all / in progress / finished (by `system`)
+- **狀態**: `open`
+- **相關範圍**: `src/notebooklm_batch_studio/entrypoints/static/studio-app.js, src/notebooklm_batch_studio/entrypoints/http/courses.py`
 
 ### [2026-11-02 04:24 UTC] 建立任務 `TASK-011`: Apply v05 design to the web UI (by `claude-code`)
 - **狀態**: `in_progress`
@@ -129,11 +139,3 @@
 - **下一步**: Phase 1 fully delivered and verified; next agent can proceed to Phase 2 (interactive local quiz web app SPEC-004) or user acceptance
 - **交接備註**: Phase 1 documentation and code 100% complete, verified with agentctl finish and synced to origin/main
 - **本機對話紀錄**: `.agents/conversations/2026-10-22-1203-antigravity-summary.md`（只在這台電腦）
-
-### [2026-10-22 01:11 UTC] 完成任務 `TASK-006` — Update all documentation and architecture markdown files (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Update all documentation and architecture markdown files to match Phase 1 completion and remove template placeholders
-
-### [2026-10-22 01:09 UTC] 認領任務 `TASK-006` (Update all documentation and architecture markdown files) (by `antigravity`)
-- **相關範圍**: `-`
-- **接棒自**: `antigravity`

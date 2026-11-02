@@ -22,10 +22,12 @@ from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from notebooklm_batch_studio.adapters.db.learning_repository import LearningRepository
+from notebooklm_batch_studio.adapters.db.preferences_repository import PreferencesRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
+from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.config.logging_setup import setup_logging
@@ -33,16 +35,20 @@ from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.entrypoints.http.artifacts import artifacts_router
 from notebooklm_batch_studio.entrypoints.http.courses import courses_router
+from notebooklm_batch_studio.entrypoints.http.fonts import fonts_router
 from notebooklm_batch_studio.entrypoints.http.learning import learning_router
 from notebooklm_batch_studio.entrypoints.http.plan import plan_router
+from notebooklm_batch_studio.entrypoints.http.preferences import preferences_router
 from notebooklm_batch_studio.entrypoints.http.queue import queue_router
 from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.entrypoints.port_check import busy_port_message, port_is_free
+from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.preferences_service import PreferencesService
 from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
@@ -297,6 +303,22 @@ def _build_learning(service: BatchStudioService, cfg: AppConfig, engine: Engine 
     )
 
 
+def _build_preferences(cfg: AppConfig, engine: Engine | None) -> PreferencesService:
+    """Create the web-preferences service with request-scoped storage (ADR-009).
+
+    Args:
+        cfg: Application configuration.
+        engine: Shared engine, or None to open one from the configured database URL.
+
+    Returns:
+        PreferencesService.
+    """
+    session = _request_scoped(
+        sessionmaker(bind=engine or create_db_engine(cfg.database_url), expire_on_commit=False)
+    )
+    return PreferencesService(PreferencesRepository(cast(Session, session)))
+
+
 def create_app(
     config: AppConfig | None = None,
     service: BatchStudioService | None = None,
@@ -335,6 +357,8 @@ def create_app(
     app.state.study_service = active_study
     app.state.study_plan = study_plan or _build_study_plan(active_service, active_study, cfg, shared_engine)
     app.state.learning = _build_learning(active_service, cfg, shared_engine)
+    app.state.preferences = _build_preferences(cfg, shared_engine)
+    app.state.fonts = FontService(cfg.fonts_dir, GoogleFontsClient())
     app.state.config = cfg
 
     app.add_middleware(HostValidationMiddleware, allowed_hosts=cfg.http_allowed_hosts)
@@ -353,6 +377,8 @@ def create_app(
         config=cfg,
         study_plan=app.state.study_plan,
         learning=app.state.learning,
+        preferences=app.state.preferences,
+        fonts=app.state.fonts,
     )
     app.mount("/mcp", mcp_server.streamable_http_app())
     app.mount("/static", NoCacheStaticFiles(directory=Path(__file__).parent / "static"), name="static")
@@ -365,6 +391,8 @@ def create_app(
     app.include_router(settings_router)
     app.include_router(plan_router)
     app.include_router(learning_router)
+    app.include_router(preferences_router)
+    app.include_router(fonts_router)
 
     return app
 

@@ -70,3 +70,7 @@ class CourseNotFoundError(StudioError):
 
 class DuplicateCourseError(StudioError):
     """Raised when attempting to add a course that already exists with conflicting settings."""
+
+
+class FontDownloadError(StudioError):
+    """Raised when a Google Fonts family cannot be downloaded (network error, unknown family, too large)."""

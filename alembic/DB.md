@@ -9,7 +9,7 @@
 
 ## 1. 資料庫實體綱要 (Schema & Tables)
 
-系統共維護 11 張核心實體資料表：
+系統共維護 12 張核心實體資料表：
 
 | 資料表 | 用途 | 關鍵欄位 | 關聯 / 索引 |
 |---|---|---|---|
@@ -24,6 +24,7 @@
 | `explanations` | Gemini Notebook 對測驗題目的 AI 詳解保存 | `id` (PK), `course_code`, `lecture_no`, `question_key`, `question`, `answer_md` | 索引 `course_code` |
 | `key_points` | 講義 PDF 的 Gemini Notebook 重點標註萃取 | `id` (PK), `course_code`, `lecture_no`, `points_json` | 索引 `course_code` |
 | `tutor_messages` | 蘇格拉底式引導家教對話歷程 | `id` (PK UUID), `course_code`, `lecture_no`, `role`, `text`, `conversation_id` | 索引 `course_code` |
+| `ui_preferences` | 網頁偏好（設計與自訂、版面、欄寬、頭像、字型、每講音檔位置；ADR-009） | `key` (PK), `value`, `updated_at` | `key` |
 
 ---
 

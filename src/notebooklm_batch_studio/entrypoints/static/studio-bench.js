@@ -326,18 +326,19 @@ function renderGreeting() {
   try { const a = JSON.parse(load('avatar', '{"type":"text","value":"LK"}')); if (a.type === 'text') name = a.value; } catch (e) { name = ''; }
   $('#greet').textContent = name ? `${word}，${name}` : word;
 }
-(() => {
+/** Show the remembered 今天要讀幾講 and 專注時間 choices. */
+function applyTodayChoices() {
   const goal = load('goal', '1');
   $$('#goalOptions button').forEach(x => x.classList.toggle('on', x.dataset.goal === goal));
-  $('#goalOptions').addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    $$('#goalOptions button').forEach(x => x.classList.toggle('on', x === b));
-    save('goal', b.dataset.goal);
-  });
   const focusMin = load('focusMin', '45');
   $('#focusRange').value = focusMin; $('#focusMin').textContent = focusMin;
-  $('#focusRange').addEventListener('input', e => { $('#focusMin').textContent = e.target.value; save('focusMin', e.target.value); });
-})();
+}
+$('#goalOptions').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $$('#goalOptions button').forEach(x => x.classList.toggle('on', x === b));
+  save('goal', b.dataset.goal);
+});
+$('#focusRange').addEventListener('input', e => { $('#focusMin').textContent = e.target.value; save('focusMin', e.target.value); });
 /** The "continue where you stopped" card: last lecture and page, with the audio position. */
 function renderContinue() {
   const course = currentStudyCourse;
@@ -354,7 +355,7 @@ function renderContinue() {
   const lec = place && place.lecture !== undefined ? place.lecture : activeStudyLectureNo;
   let audioAt = '';
   try {
-    const a = JSON.parse(localStorage.getItem(`audio:${course.code}:${lec === null ? 'course' : lec}`) || 'null');
+    const a = JSON.parse(load(`audio:${course.code}:${lec === null ? 'course' : lec}`, 'null'));
     if (a && a.t > 5) audioAt = `語音摘要停在 ${fmt(a.t)}`;
   } catch (e) { audioAt = ''; }
   const tabName = place && place.tab && typeof TAB_NAMES !== 'undefined' ? TAB_NAMES[place.tab] : '';

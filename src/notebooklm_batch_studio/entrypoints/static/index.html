@@ -15,10 +15,10 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <meta name="theme-color" content="#1f4d3a">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/lucide-static@0.460.0/font/lucide.css">
+  <!-- Icons and fonts are bundled (static/vendor), so the page looks the same offline -->
+  <link rel="stylesheet" href="/static/vendor/lucide/lucide.css">
+  <link rel="stylesheet" href="/static/vendor/fonts/noto-sans-tc/noto-sans-tc.css">
+  <link rel="stylesheet" href="/static/vendor/fonts/noto-serif-tc/noto-serif-tc.css">
   <link rel="stylesheet" href="/static/studio-theme.css">
   <link rel="stylesheet" href="/static/studio.css">
   <link rel="stylesheet" href="/static/studio-learning.css">
@@ -450,6 +450,24 @@
             <div class="opt-cards" id="paletteCards"></div>
           </article>
 
+          <article class="card" style="grid-column:1/-1">
+            <div class="card-head"><h2 class="h2">字型</h2><span class="eyebrow">內建字型離線也能用；也可以下載免費的 Google Fonts</span></div>
+            <div class="settings-grid">
+              <label class="opt-field"><span>內文字型</span><select class="select" id="fontBody" aria-label="內文字型"></select></label>
+              <label class="opt-field"><span>標題字型</span><select class="select" id="fontHead" aria-label="標題字型"></select></label>
+            </div>
+            <p class="font-sample" id="fontSample"><b>動作電位與突觸傳遞</b>　把錯過的題目變成記得住的題目。Study Studio 0123</p>
+            <div class="divider"></div>
+            <span class="field-label">下載 Google Fonts</span>
+            <div class="row" style="flex-wrap:wrap">
+              <input class="text-input wide" id="gfName" placeholder="字型名稱，例如 LXGW WenKai TC" style="max-width:320px" aria-label="Google Fonts 字型名稱">
+              <button class="btn btn-soft" id="gfGet">下載</button>
+              <a class="btn btn-ghost" href="https://fonts.google.com/?subset=chinese-traditional" target="_blank" rel="noopener">瀏覽 Google Fonts</a>
+            </div>
+            <p class="hint" style="margin-top:8px">名稱要和 fonts.google.com 上的一樣（英文）。下載後存在這台電腦（DATA_DIR/fonts），離線也能用；Google Fonts 都可免費使用（多為 SIL Open Font License）。</p>
+            <ul class="font-list" id="fontList"></ul>
+          </article>
+
           <article class="card">
             <div class="card-head"><h2 class="h2">介面風格</h2></div>
             <div class="toggle-row" style="margin-bottom:12px"><span>玻璃質感<br><span class="small muted">卡片半透明、背景柔和光暈</span></span><button class="switch" role="switch" aria-checked="false" id="swGlass" aria-label="玻璃質感"></button></div>
@@ -690,6 +708,7 @@
 <script src="/static/studio-shell.js"></script>
 <script src="/static/studio-player.js"></script>
 <script src="/static/studio-bench.js"></script>
+<script src="/static/studio-fonts.js"></script>
 <script src="/static/studio-start.js"></script>
 <script type="module" src="/static/studio-reader.js"></script>
 </body>

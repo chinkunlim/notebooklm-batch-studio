@@ -4,26 +4,108 @@
    (localStorage keys "v05.*"). The shell continues in studio-player.js, studio-bench.js and
    studio-start.js (which starts the page); feature functions come from the scripts loaded before. */
 
-/* Preferences live in memory for this visit and in localStorage across visits (storage may be blocked) */
+/* Preferences are recorded on this computer (GET / PUT /api/preferences, SQLite in DATA_DIR, ADR-009).
+   This visit reads them from memory; localStorage ("v05.*") is only a cache so the first paint already
+   has the right palette. Changes are sent to the server in small batches. */
 const mem = {};
+let prefQueue = {}, prefTimer = 0;
+// nothing is sent until the recorded preferences have arrived (or the server did not answer), and not
+// while preferences are being applied, so a stale browser cache never overwrites the recorded copy
+let prefsReady = false, prefMute = false;
 /**
- * Read a stored preference, ignoring storage errors (private mode, blocked storage).
+ * A preference key the server accepts (letters, digits and . _ : -); other characters are escaped.
+ * @param {string} key Preference name
+ * @returns {string} Safe key
+ */
+function prefKey(key) {
+  return String(key).replace(/[^A-Za-z0-9._:-]/g, c => '_' + c.codePointAt(0).toString(16)).slice(0, 120);
+}
+/**
+ * Read a preference (memory first, then the browser cache).
  * @param {string} key Preference name without the "v05." prefix
  * @param {*} fallback Value when nothing is stored
  * @returns {string|*} Stored value or the fallback
  */
-function load(key, fallback) { if (key in mem) return mem[key]; try { return localStorage.getItem('v05.' + key) ?? fallback; } catch (e) { return fallback; } }
+function load(key, fallback) {
+  const k = prefKey(key);
+  if (k in mem) return mem[k];
+  try { return localStorage.getItem('v05.' + k) ?? fallback; } catch (e) { return fallback; }
+}
 /**
- * Store a preference, ignoring storage errors.
+ * Store a preference here and on this computer's server.
  * @param {string} key Preference name without the "v05." prefix
  * @param {*} value Value (kept as text)
  */
-function save(key, value) { mem[key] = String(value); try { localStorage.setItem('v05.' + key, value); } catch (e) {} }
+function save(key, value) {
+  const k = prefKey(key);
+  mem[k] = String(value);
+  try { localStorage.setItem('v05.' + k, value); } catch (e) { /* cache only */ }
+  queuePref(k, String(value));
+}
 /**
- * Forget a preference so its default applies again.
+ * Forget a preference so its default applies again (here and on the server).
  * @param {string} key Preference name without the "v05." prefix
  */
-function forget(key) { delete mem[key]; try { localStorage.removeItem('v05.' + key); } catch (e) {} }
+function forget(key) {
+  const k = prefKey(key);
+  delete mem[k];
+  try { localStorage.removeItem('v05.' + k); } catch (e) { /* cache only */ }
+  queuePref(k, null);
+}
+/**
+ * Add one change to the next batch sent to the server (sent 300 ms after the last change).
+ * @param {string} key Safe preference key
+ * @param {string|null} value New value, or null to delete
+ */
+function queuePref(key, value) {
+  if (!prefsReady || prefMute) return;
+  prefQueue[key] = value;
+  clearTimeout(prefTimer);
+  prefTimer = setTimeout(() => flushPrefs(false), 300);
+}
+/**
+ * Send the waiting preference changes to the server.
+ * @param {boolean} keepalive True when the page is closing (the request still finishes)
+ */
+function flushPrefs(keepalive) {
+  const values = prefQueue;
+  if (!Object.keys(values).length) return;
+  prefQueue = {};
+  fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values }), keepalive })
+    .then(res => { if (!res.ok) console.warn('Preferences not saved', res.status); })
+    .catch(() => { prefQueue = { ...values, ...prefQueue }; });  // server not answering: try again with the next change
+}
+addEventListener('pagehide', () => flushPrefs(true));
+/**
+ * Load the preferences recorded on this computer into memory and the browser cache.
+ * The first time (nothing recorded yet) this browser's own settings are uploaded instead, so they are kept.
+ * @returns {Promise<boolean>} True when the server answered
+ */
+async function syncPreferences() {
+  let server;
+  try {
+    const res = await fetch('/api/preferences');
+    server = res.ok ? (await res.json()).values || {} : null;
+  } catch (e) {
+    server = null;
+  }
+  prefsReady = true;
+  if (!server) return false;  // server not answering: keep using the browser cache
+  let local = {};
+  try { Object.keys(localStorage).filter(k => k.startsWith('v05.')).forEach(k => { local[k.slice(4)] = localStorage.getItem(k); }); } catch (e) { local = {}; }
+  if (!Object.keys(server).length && Object.keys(local).length) {
+    Object.entries(local).forEach(([k, v]) => queuePref(prefKey(k), v));
+    flushPrefs(false);
+    return true;
+  }
+  Object.keys(mem).forEach(k => delete mem[k]);
+  Object.assign(mem, server);
+  try {
+    Object.keys(local).filter(k => !(k in server)).forEach(k => localStorage.removeItem('v05.' + k));
+    Object.entries(server).forEach(([k, v]) => localStorage.setItem('v05.' + k, v));
+  } catch (e) { /* cache only */ }
+  return true;
+}
 /**
  * Read a preference (name used by the feature scripts).
  * @param {string} key Preference name without the "v05." prefix

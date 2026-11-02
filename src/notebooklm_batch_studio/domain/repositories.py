@@ -417,10 +417,42 @@ class StudyRepositoryProtocol(Protocol):
         ...
 
 
+class PreferencesRepositoryProtocol(Protocol):
+    """Storage for web preferences (key-value text pairs)."""
+
+    def all(self) -> dict[str, str]:
+        """Return every stored preference.
+
+        Returns:
+            Mapping of key to value.
+        """
+        ...
+
+    def apply(self, changes: dict[str, str | None]) -> None:
+        """Save and delete preferences in one transaction (None deletes the key).
+
+        Args:
+            changes: Mapping of key to new value, or None to delete it.
+        """
+        ...
+
+    def delete_except(self, keep: list[str]) -> int:
+        """Delete every preference except the listed keys.
+
+        Args:
+            keep: Keys to keep.
+
+        Returns:
+            Number of deleted preferences.
+        """
+        ...
+
+
 __all__ = [
     "CourseRepositoryProtocol",
     "NotebookLMClientProtocol",
     "OllamaClientProtocol",
+    "PreferencesRepositoryProtocol",
     "QueueRepositoryProtocol",
     "StudyRepositoryProtocol",
 ]

@@ -15,10 +15,12 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 
 from notebooklm_batch_studio.adapters.db.learning_repository import LearningRepository
+from notebooklm_batch_studio.adapters.db.preferences_repository import PreferencesRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
+from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.config.logging_setup import setup_logging
@@ -26,12 +28,16 @@ from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
 from notebooklm_batch_studio.entrypoints.mcp_course_settings import register_course_settings_tools
+from notebooklm_batch_studio.entrypoints.mcp_fonts import register_font_tools
 from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
 from notebooklm_batch_studio.entrypoints.mcp_learning import register_learning_tools
+from notebooklm_batch_studio.entrypoints.mcp_preferences import register_preferences_tools
 from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
 from notebooklm_batch_studio.services.folder_browser import browse_folders
+from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.preferences_service import PreferencesService
 from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
@@ -623,6 +629,8 @@ def build_mcp_server(
     config: AppConfig | None = None,
     study_plan: StudyPlanService | None = None,
     learning: LearningService | None = None,
+    preferences: PreferencesService | None = None,
+    fonts: FontService | None = None,
 ) -> MCPServer:
     """Build and configure the MCPServer instance with all batch studio tools.
 
@@ -633,6 +641,8 @@ def build_mcp_server(
         study_plan: Optional study-plan service (built from the database when omitted and the
             other services are built here too).
         learning: Optional learning service (reader, memory, tutor); built like study_plan.
+        preferences: Optional web-preferences service (ADR-009); built like study_plan.
+        fonts: Optional font service for downloaded Google Fonts (ADR-009); built from config when omitted.
 
     Returns:
         Configured MCPServer with registered tool handlers.
@@ -667,6 +677,8 @@ def build_mcp_server(
                 )
             if learning is None:
                 learning = LearningService(course_repo, LearningRepository(session), adapter)
+            if preferences is None:
+                preferences = PreferencesService(PreferencesRepository(session))
     else:
         active_service = service
         active_study = study_service
@@ -685,11 +697,27 @@ def build_mcp_server(
     _register_selection_tools(mcp, active_service)
     register_course_settings_tools(mcp, active_service)
     register_job_prompt_tools(mcp, active_service)
+    _register_study_aid_tools(mcp, study_plan, learning)
+    if preferences is not None:
+        register_preferences_tools(mcp, preferences)
+    register_font_tools(mcp, fonts or FontService(cfg.fonts_dir, GoogleFontsClient()))
+    return mcp
+
+
+def _register_study_aid_tools(
+    mcp: MCPServer, study_plan: StudyPlanService | None, learning: LearningService | None
+) -> None:
+    """Register the study-plan and learning-aid tools when those services exist.
+
+    Args:
+        mcp: MCPServer instance.
+        study_plan: Study-plan service, or None.
+        learning: Learning service, or None.
+    """
     if study_plan is not None:
         register_study_plan_tools(mcp, study_plan)
     if learning is not None:
         register_learning_tools(mcp, learning)
-    return mcp
 
 
 def main() -> None:

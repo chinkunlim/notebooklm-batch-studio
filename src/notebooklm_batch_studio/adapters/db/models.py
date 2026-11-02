@@ -333,3 +333,19 @@ class TutorMessageRecord(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     conversation_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class UiPreferenceRecord(Base):
+    """One remembered web preference (table `ui_preferences`, ADR-009).
+
+    Attributes:
+        key: Preference name, e.g. "palette" or "col.stage" (primary key).
+        value: Preference value as text (JSON for structured values).
+        updated_at: When it was last saved (UTC).
+    """
+
+    __tablename__ = "ui_preferences"
+
+    key: Mapped[str] = mapped_column(String(120), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)

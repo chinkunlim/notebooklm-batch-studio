@@ -446,7 +446,7 @@ function attachAudioResume(audio, key) {
   if (!audio) return;
   (audio._resume || []).forEach(([ev, fn]) => audio.removeEventListener(ev, fn));
   let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { saved = null; }
+  try { saved = JSON.parse(prefLoad(key, 'null')); } catch (e) { saved = null; }
   let last = 0;
   /** Restore the saved position once the track's length is known. */
   const restore = () => {
@@ -457,7 +457,7 @@ function attachAudioResume(audio, key) {
   };
   /** Save the current position for this course and lecture. */
   const store = () => {
-    try { localStorage.setItem(key, JSON.stringify({ t: audio.currentTime, r: audio.playbackRate })); } catch (e) { /* storage blocked */ }
+    prefSave(key, JSON.stringify({ t: Math.round(audio.currentTime), r: audio.playbackRate }));
   };
   /** Save at most every five seconds while playing. */
   const onTime = () => { if (Date.now() - last > 5000) { last = Date.now(); store(); } };

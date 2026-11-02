@@ -31,21 +31,21 @@ function lecLabel(no) {
 
 /* ---------- Zeigarnik: remember where the student stopped ---------- */
 /**
- * Remember the current place (course, lecture, tab, quiz, answered count) in this browser.
+ * Remember the current place (course, lecture, tab, quiz, answered count) with the recorded preferences.
  * @param {object} extra Fields to merge, e.g. {tab: 'quiz'} or {answered: 12}
  */
 function rememberPlace(extra) {
   if (!currentStudyCourse) return;
   try {
-    const key = `studioPlace:${currentStudyCourse.code}`;
-    const prev = JSON.parse(localStorage.getItem(key) || '{}');
+    const key = `place:${currentStudyCourse.code}`;
+    const prev = JSON.parse(prefLoad(key, '{}'));
     const place = { ...prev, lecture: activeStudyLectureNo, variant: activeQuizVariant, at: Date.now() };
     // The answered count belongs to one quiz: drop it when the lecture, quiz or tab changes.
     if (prev.lecture !== place.lecture || prev.variant !== place.variant || (extra.tab && extra.tab !== 'quiz')) {
       delete place.answered;
     }
     Object.assign(place, extra);
-    localStorage.setItem(key, JSON.stringify(place));
+    prefSave(key, JSON.stringify(place));
   } catch (e) { /* storage blocked: nothing to remember */ }
 }
 
@@ -55,7 +55,7 @@ function rememberPlace(extra) {
  */
 function savedPlace() {
   try {
-    return JSON.parse(localStorage.getItem(`studioPlace:${currentStudyCourse.code}`) || 'null');
+    return JSON.parse(prefLoad(`place:${currentStudyCourse.code}`, 'null'));
   } catch (e) {
     return null;
   }
@@ -224,7 +224,7 @@ let hideChoices = false;
  */
 function setHideChoices(on) {
   hideChoices = on;
-  try { localStorage.setItem('studioHideChoices', on ? '1' : '0'); } catch (e) { /* ignore */ }
+  prefSave('hideChoices', on ? '1' : '0');
   applyHideChoices();
 }
 
@@ -428,7 +428,7 @@ function runAfter(name, after) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  try { hideChoices = localStorage.getItem('studioHideChoices') === '1'; } catch (e) { hideChoices = false; }
+  hideChoices = prefLoad('hideChoices', '0') === '1';
   document.getElementById('btnPomodoro')?.addEventListener('click', togglePomodoro);
   runAfter('loadTodayPanel', renderMemoryPanel);
   runAfter('loadFlashcardsViewer', addRecallBox);

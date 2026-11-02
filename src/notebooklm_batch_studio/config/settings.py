@@ -129,6 +129,15 @@ class AppConfig:
         return self.data_dir / "state"
 
     @property
+    def fonts_dir(self) -> Path:
+        """Folder for Google Fonts the user downloaded (ADR-009).
+
+        Returns:
+            `<data_dir>/fonts`.
+        """
+        return self.data_dir / "fonts"
+
+    @property
     def logs_dir(self) -> Path:
         """Folder for log files.
 
