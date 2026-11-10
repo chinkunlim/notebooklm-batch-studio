@@ -1,0 +1,27 @@
+{
+  "id": "TASK-015",
+  "title": "Fix WorkerPool blocked_quota_types permanent stall on resume and empty quota_wait",
+  "status": "open",
+  "agent": "",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [
+    "src/notebooklm_batch_studio/services/worker_pool.py",
+    "src/notebooklm_batch_studio/services/orchestrator.py",
+    "src/notebooklm_batch_studio/adapters/db/repository.py",
+    "src/notebooklm_batch_studio/domain/repositories.py",
+    "tests/test_worker_pool.py"
+  ],
+  "done_items": "",
+  "todo_items": "Refs: ISSUE-035. (1) WorkerPool.resume() must call self.blocked_quota_types.clear(). (2) WorkerPool._quota_probe_loop() must also clear self.blocked_quota_types (or prune types with no active QUOTA_WAIT jobs in DB) when awakened == 0 so deleting a course or retrying jobs never leaves blocked_quota_types stuck in memory. (3) QueueRepository.refresh_quota_wait(artifact_type=None, force=False) should support force=True for manual resume_quota_wait(), and BatchStudioService.resume_quota_wait() / retry_job() should clear the corresponding types from worker_pool.blocked_quota_types. (4) Add unit tests in tests/test_worker_pool.py.",
+  "blockers": "",
+  "created_at": "2026-11-09 08:10 UTC",
+  "updated_at": "2026-11-09 08:10 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-09 08:10 UTC",
+      "action": "created",
+      "agent": "system"
+    }
+  ]
+}

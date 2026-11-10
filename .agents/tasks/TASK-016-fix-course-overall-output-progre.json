@@ -1,0 +1,26 @@
+{
+  "id": "TASK-016",
+  "title": "Fix course overall output progress not updating and exclude skipped jobs from progress_percent",
+  "status": "open",
+  "agent": "",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [
+    "src/notebooklm_batch_studio/services/orchestrator.py",
+    "src/notebooklm_batch_studio/entrypoints/static/studio-batch.js",
+    "src/notebooklm_batch_studio/entrypoints/static/studio-start.js",
+    "tests/test_course_settings.py"
+  ],
+  "done_items": "",
+  "todo_items": "Refs: ISSUE-036. (1) Backend orchestrator.py (list_courses_summary & get_course_detail): exclude skipped jobs from active total when computing progress_percent. (2) Frontend studio-batch.js / studio-start.js: when queue counts change in fetchStatus() (or during the 15s poll / after syncFromNotebookLM / retryUpload / regenerateArtifact), call fetchCourses() so #courseContainer cards, top-bar #coursePick, and 課程目錄 #courseList update their overall progress; also refresh currentStudyCourse and loadTodayPanel() when done count increases; filter out skipped jobs in renderStatusBar(). (3) Add regression test in tests/test_course_settings.py.",
+  "blockers": "",
+  "created_at": "2026-11-09 09:21 UTC",
+  "updated_at": "2026-11-09 09:21 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-09 09:21 UTC",
+      "action": "created",
+      "agent": "system"
+    }
+  ]
+}

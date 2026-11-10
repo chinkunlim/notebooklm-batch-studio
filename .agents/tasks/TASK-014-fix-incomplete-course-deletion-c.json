@@ -1,0 +1,29 @@
+{
+  "id": "TASK-014",
+  "title": "Fix incomplete course deletion cleanup (DB tables, preferences, and study UI state)",
+  "status": "open",
+  "agent": "",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [
+    "src/notebooklm_batch_studio/adapters/db/repository.py",
+    "src/notebooklm_batch_studio/entrypoints/static/studio-app.js",
+    "src/notebooklm_batch_studio/entrypoints/static/studio-batch.js",
+    "src/notebooklm_batch_studio/entrypoints/static/studio-bench.js",
+    "src/notebooklm_batch_studio/entrypoints/static/studio-reader.js",
+    "src/notebooklm_batch_studio/entrypoints/static/studio.js",
+    "tests/test_course_settings.py"
+  ],
+  "done_items": "",
+  "todo_items": "Refs: ISSUE-034. Keep moving output files to DATA_DIR/deleted/. (1) Backend CourseRepository.delete_course(code): also delete KeyPointsRecord, TutorMessageRecord, and course-specific UiPreferenceRecord keys (place:<code>, examNotice:<code>, audio:<code>:%, and course == code). (2) Frontend: on deleteCourse(code), forget course preferences and reset #activeJobs; when currentCoursesList.length === 0 in initStudyPortal(), reset currentStudyCourse = null, activeStudyLectureNo = null, studyHistory = [], studyMistakes = [] and clear all study/overview/review DOM panels (top-bar picker, 課程目錄 right pane, breadcrumbs, PDF reader, audio player, side keypoints, workbench panels, 研讀總覽, 弱點複習). (3) Add regression tests in tests/test_course_settings.py.",
+  "blockers": "",
+  "created_at": "2026-11-09 08:06 UTC",
+  "updated_at": "2026-11-09 08:06 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-09 08:06 UTC",
+      "action": "created",
+      "agent": "system"
+    }
+  ]
+}

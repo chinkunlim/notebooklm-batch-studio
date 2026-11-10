@@ -1,0 +1,6 @@
+# Exclude third-party vendor libraries to eliminate noise in Graphify
+src/notebooklm_batch_studio/entrypoints/static/vendor/
+**/vendor/**
+*.min.js
+*.min.mjs
+*.map

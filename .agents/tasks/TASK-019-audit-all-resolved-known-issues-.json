@@ -1,0 +1,34 @@
+{
+  "id": "TASK-019",
+  "title": "Audit all resolved known issues with verification evidence and exclude vendor noise from graphify",
+  "status": "in_progress",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [
+    ".graphifyignore",
+    "graphify-out/GRAPH_REPORT.md",
+    "docs/known-issues/",
+    "tests/",
+    "src/notebooklm_batch_studio/services/orchestrator.py",
+    "src/notebooklm_batch_studio/services/worker_pool.py"
+  ],
+  "done_items": "1. Excluded third-party vendor noise in graphify via .graphifyignore (pruned 4,762 nodes from pdfjs/lucide/fonts, cutting noise by >50% and revealing true domain God nodes).\\n2. Audited all 33 marked-Resolved known issues against source code and automated tests (183 tests passing).\\n3. Uncovered fake/partial resolutions: ISSUE-024 claimed queue resume fixed, but left blocked_quota_types stuck in memory spawning ISSUE-035; ISSUE-008 left progress percent denominator containing skipped jobs spawning ISSUE-036; 6 frontend UI issues (018, 022, 026, 029, 031, 032) lack automated regression tests relying only on manual notes.",
+  "todo_items": "Enforce automated test coverage for the 6 unverified UI issues via TASK-017 chaos suite, and resolve the root causes of the pseudo-fixes via TASK-014, TASK-015, and TASK-016.",
+  "blockers": "",
+  "created_at": "2026-11-10 03:08 UTC",
+  "updated_at": "2026-11-10 03:08 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-10 03:08 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-10 03:08 UTC",
+      "action": "claimed",
+      "agent": "antigravity",
+      "previous_agent": "antigravity"
+    }
+  ]
+}
