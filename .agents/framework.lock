@@ -1,7 +1,7 @@
 {
   "framework_version": "3.5.0",
-  "template_commit": "03df8ff",
-  "installed_at": "2026-11-10T11:03:44Z",
+  "template_commit": "7a71f3c",
+  "installed_at": "2026-11-10T11:10:52Z",
   "skills": [
     "adr-issue-tracker",
     "api-adapter-scaffold",
@@ -36,7 +36,7 @@
     ".agents/skills/api-adapter-scaffold/scripts/scaffold_adapter.py": "4fcbb68706c76d83e3c86ca647074efdd1a95143ae882cfe7eb36527559ce260",
     ".agents/skills/code-review-guard/SKILL.md": "2ed3d488f0dbb6a086a4e12eefb8067d1b02a801a01ab1cbc0118d71c4b52cc9",
     ".agents/skills/code-review-guard/scripts/review_guard.py": "161152b1e22e7ba6b6ba92e4e9546c21b80986398903f1e3297a505ce94a170d",
-    ".agents/skills/compliance-scanner/SKILL.md": "0f2c85a1cf1db8d593111ae6233612ab77cc573aacd0d2100bf44c55bbc04329",
+    ".agents/skills/compliance-scanner/SKILL.md": "286c9bb4d63a7a7f35a82742b55a975b8c881387671ee172fd8b9622729f7f61",
     ".agents/skills/compliance-scanner/scripts/scan_compliance.py": "64a1918871e9587fa89e4376da5f2447656862d09094d99c599ed5c877bc5eb8",
     ".agents/skills/project-auditor/SKILL.md": "5ecc2ca2c328615c4ea1ba309015b00dd3ccde5da61eec7368e4114f3a582b04",
     ".agents/skills/project-auditor/scripts/audit_project_integrity.py": "3d5438d5d485c28cbed83039b5bdc40eeb8daff4d44702144aada9462cc06827",
