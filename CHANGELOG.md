@@ -90,6 +90,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)
 - chore(deps): upgrade notebooklm-py to 0.8.6; docs: per-artifact settings design, known issues 016-017, README web features (by `@claude-code`)
 - chore(framework): sync framework updates and add project-auditor skill (by `@antigravity`)
+- chore(framework): update framework to v3.5.0 with compliance-scanner skill (by `@antigravity`)
 
 ## [0.1.0] - 2026-10-21
 ### Added
