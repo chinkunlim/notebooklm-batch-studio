@@ -34,8 +34,15 @@ class CourseParserTest(unittest.TestCase):
         self.assertEqual(name3, "細胞生物學專題")
 
         code4, name4 = parse_course_folder_name("115-1 心理學研究法")
-        self.assertEqual(code4, "115-1")
-        self.assertEqual(name4, "心理學研究法")
+        self.assertEqual(code4, "115-1 心理學研究法")
+        self.assertEqual(name4, "115-1 心理學研究法")
+
+        code5, name5 = parse_course_folder_name("115-1 生涯諮商")
+        self.assertEqual(code5, "115-1 生涯諮商")
+        self.assertEqual(name5, "115-1 生涯諮商")
+        self.assertNotEqual(
+            code4, code5, "Two courses in the same semester must not have colliding codes! Refs: ISSUE-037"
+        )
 
     def test_parse_lecture_filename(self) -> None:
         """Lecture number and topic are extracted from various filename conventions."""

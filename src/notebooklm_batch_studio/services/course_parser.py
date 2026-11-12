@@ -18,6 +18,11 @@ logger = logging.getLogger(__name__)
 def parse_course_folder_name(folder_name: str) -> tuple[str, str]:
     """Infer course code and course title from a folder name.
 
+    If an alphanumeric prefix contains letters (e.g. 'BIO101', 'CS-50'), it is treated
+    as the course code. If the prefix is purely numeric or a semester tag (e.g. '115-1'),
+    it is not a unique course code on its own, so the full folder name is used to prevent
+    collision across different courses in the same semester. Refs: ISSUE-037
+
     Args:
         folder_name: The basename of the course folder.
 
@@ -29,9 +34,13 @@ def parse_course_folder_name(folder_name: str) -> tuple[str, str]:
     if not match:
         match = re.match(r"^([A-Za-z0-9]+)[\s_\-]+(.+)$", clean_name)
     if match:
-        code = match.group(1).strip().upper()
-        name = match.group(2).strip()
-        return code, name
+        code_candidate = match.group(1).strip()
+        name_candidate = match.group(2).strip()
+        # Pure numeric-hyphen patterns (like '115-1', '114-2', '2026-1') represent terms/semesters,
+        # not unique subject codes. Use full folder name to avoid collision. Refs: ISSUE-037
+        if re.match(r"^\d+(?:-\d+)*$", code_candidate):
+            return clean_name, clean_name
+        return code_candidate.upper(), name_candidate
     return clean_name, clean_name
 
 

@@ -70,6 +70,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(web): no gap under the sidebar when overscrolling (by `@claude-code`)
 - fix(web): paint the sidebar column behind the page as a safety net — replaced by pinning the sidebar (next line) (by `@claude-code`)
 - fix(web): pin the sidebar to the window edges instead of vh-sized sticky (Safari gap) (by `@claude-code`)
+- fix(parser): prevent course code collision for semester-prefixed folders (ISSUE-037, TASK-020) (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

@@ -72,6 +72,20 @@ class ReRegistrationTest(unittest.TestCase):
         self.assertIsNone(by_no[2].source_id)
         self.assertIsNone(by_no[3].source_id)
 
+    def test_different_course_same_code_does_not_inherit_stale_notebook_id(self) -> None:
+        """When a different course with different source_dir collides, do not inherit notebook_id.
+
+        Refs: ISSUE-037
+        """
+        different = Course(code="PSY", name="生涯諮商", source_dir="/other_dir", lectures=[])
+        self.repo.save_course(different)
+        saved = self.repo.get_course("PSY")
+        self.assertIsNotNone(saved)
+        self.assertIsNone(
+            saved.notebook_id,
+            "Different course must not inherit stale notebook_id from old course. Refs: ISSUE-037",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

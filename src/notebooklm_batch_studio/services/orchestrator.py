@@ -24,6 +24,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     Course,
     JobStatus,
+    Lecture,
     ProfileName,
 )
 from notebooklm_batch_studio.domain.repositories import (
@@ -115,6 +116,87 @@ class BatchStudioService:
         logger.info("Registered course %s with %d lectures", course.code, len(course.lectures))
         return course
 
+    async def _ensure_notebook_id(self, course: Course) -> tuple[str, dict[str, str]]:
+        """Resolve or create the Gemini Notebook notebook ID for a course.
+
+        Args:
+            course: Course entity.
+
+        Returns:
+            Tuple of (notebook_id, existing_sources_mapping).
+        """
+        existing_sources: dict[str, str] = {}
+        if course.notebook_id:
+            return course.notebook_id, existing_sources
+
+        # Clean title format: avoid repeating name if code equals or contains name. Refs: ISSUE-037
+        title = (
+            course.name
+            if course.code == course.name or course.code in course.name
+            else f"[{course.code}] {course.name}"
+        )
+        found = await self.notebooklm_client.find_notebook_by_title(title) if course.reuse_notebook else None
+        if found:
+            notebook_id = found
+            existing_sources = await self.notebooklm_client.list_ready_sources(found)
+            logger.info("Reusing Gemini Notebook notebook %s for %s", found, course.code)
+        else:
+            notebook_id = await self.notebooklm_client.create_notebook(title)
+            logger.info("Created Gemini Notebook notebook %s for %s", notebook_id, course.code)
+
+        self.course_repo.update_notebook_id(course.code, notebook_id)
+        return notebook_id, existing_sources
+
+    async def _upload_single_lecture(
+        self,
+        course_code: str,
+        source_dir: str,
+        notebook_id: str,
+        lec: Lecture,
+        existing_sources: dict[str, str],
+    ) -> None:
+        """Upload a single lecture PDF to Gemini Notebook or reuse existing source.
+
+        Args:
+            course_code: Identifier of the course.
+            source_dir: Filesystem path to the lecture directory.
+            notebook_id: Target Gemini Notebook notebook ID.
+            lec: Lecture metadata object.
+            existing_sources: Map of existing filename to source ID.
+        """
+        if not lec.source_id and lec.filename in existing_sources:
+            src_id = existing_sources[lec.filename]
+            self.course_repo.update_lecture_upload_status(course_code, lec.no, "ready", source_id=src_id)
+            logger.info("Lecture %d reuses existing source %s", lec.no, src_id)
+            return
+
+        if lec.source_id:
+            self.course_repo.update_lecture_upload_status(
+                course_code, lec.no, "ready", source_id=lec.source_id
+            )
+            return
+
+        pdf_file = Path(source_dir) / lec.filename
+        if not pdf_file.exists():
+            self.course_repo.update_lecture_upload_status(
+                course_code, lec.no, "failed", error_message=f"File not found: {lec.filename}"
+            )
+            return
+
+        try:
+            self.course_repo.update_lecture_upload_status(course_code, lec.no, "uploading")
+            source_id = await self.notebooklm_client.upload_source(notebook_id, str(pdf_file))
+            self.course_repo.update_lecture_upload_status(course_code, lec.no, "parsing", source_id=source_id)
+            await self.notebooklm_client.wait_source_ready(notebook_id, source_id)
+            self.course_repo.update_lecture_upload_status(course_code, lec.no, "ready", source_id=source_id)
+            logger.info("Uploaded lecture %d (%s) -> source %s (ready)", lec.no, lec.filename, source_id)
+        except Exception as upload_err:
+            self.course_repo.update_lecture_upload_status(
+                course_code, lec.no, "failed", error_message=str(upload_err)
+            )
+            logger.exception("Failed to upload lecture %d (%s): %s", lec.no, lec.filename, upload_err)
+            raise
+
     async def setup_notebook_and_sources(self, course_code: str) -> Course:
         """Ensure Google Gemini Notebook notebook is created and all PDFs are uploaded.
 
@@ -134,62 +216,12 @@ class BatchStudioService:
             raise CourseNotFoundError(f"Course not found: {course_code}")
         await self._check_source_limit(course)
 
-        notebook_id = course.notebook_id
-        existing_sources: dict[str, str] = {}
-        if not notebook_id:
-            title = f"[{course.code}] {course.name}"
-            found = (
-                await self.notebooklm_client.find_notebook_by_title(title) if course.reuse_notebook else None
-            )
-            if found:
-                # Re-adding a course reuses its notebook and already-uploaded PDFs instead of
-                # creating a second notebook with the same name.
-                notebook_id = found
-                existing_sources = await self.notebooklm_client.list_ready_sources(found)
-                logger.info("Reusing Gemini Notebook notebook %s for %s", found, course_code)
-            else:
-                notebook_id = await self.notebooklm_client.create_notebook(title)
-                logger.info("Created Gemini Notebook notebook %s for %s", notebook_id, course_code)
-            self.course_repo.update_notebook_id(course_code, notebook_id)
+        notebook_id, existing_sources = await self._ensure_notebook_id(course)
 
         for lec in course.lectures:
-            if not lec.source_id and lec.filename in existing_sources:
-                self.course_repo.update_lecture_upload_status(
-                    course_code, lec.no, "ready", source_id=existing_sources[lec.filename]
-                )
-                logger.info("Lecture %d reuses existing source %s", lec.no, existing_sources[lec.filename])
-                continue
-            if not lec.source_id:
-                pdf_file = Path(course.source_dir) / lec.filename
-                if not pdf_file.exists():
-                    self.course_repo.update_lecture_upload_status(
-                        course_code, lec.no, "failed", error_message=f"File not found: {lec.filename}"
-                    )
-                    continue
-
-                try:
-                    self.course_repo.update_lecture_upload_status(course_code, lec.no, "uploading")
-                    source_id = await self.notebooklm_client.upload_source(notebook_id, str(pdf_file))
-                    self.course_repo.update_lecture_upload_status(
-                        course_code, lec.no, "parsing", source_id=source_id
-                    )
-                    await self.notebooklm_client.wait_source_ready(notebook_id, source_id)
-                    self.course_repo.update_lecture_upload_status(
-                        course_code, lec.no, "ready", source_id=source_id
-                    )
-                    logger.info(
-                        "Uploaded lecture %d (%s) -> source %s (ready)", lec.no, lec.filename, source_id
-                    )
-                except Exception as upload_err:
-                    self.course_repo.update_lecture_upload_status(
-                        course_code, lec.no, "failed", error_message=str(upload_err)
-                    )
-                    logger.exception("Failed to upload lecture %d (%s): %s", lec.no, lec.filename, upload_err)
-                    raise
-            else:
-                self.course_repo.update_lecture_upload_status(
-                    course_code, lec.no, "ready", source_id=lec.source_id
-                )
+            await self._upload_single_lecture(
+                course_code, course.source_dir, notebook_id, lec, existing_sources
+            )
 
         updated = self.course_repo.get_course(course_code)
         return updated or course

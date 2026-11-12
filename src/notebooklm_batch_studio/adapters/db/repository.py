@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import logging
 from datetime import timedelta
 
 from sqlalchemy import delete, func, select
@@ -30,6 +31,8 @@ from notebooklm_batch_studio.domain.models import (
     JobStatus,
     Lecture,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CourseRepository:
@@ -128,10 +131,22 @@ class CourseRepository:
             )
             self.session.add(existing)
         else:
+            # Refs: ISSUE-037 — If existing course has different name and different source_dir,
+            # this is a code collision from a different course. Do not inherit stale notebook_id!
+            if existing.name != course.name and existing.source_dir != course.source_dir:
+                logger.warning(
+                    "Course code %s collision: %s (%s) vs existing %s (%s). Resetting notebook_id.",
+                    course.code,
+                    course.name,
+                    course.source_dir,
+                    existing.name,
+                    existing.source_dir,
+                )
+                existing.notebook_id = course.notebook_id
+            elif course.notebook_id:
+                existing.notebook_id = course.notebook_id
             existing.name = course.name
             existing.source_dir = course.source_dir
-            if course.notebook_id:
-                existing.notebook_id = course.notebook_id
             existing.profile = course.profile.value
             existing.language = course.language
             if course.exam_date:  # a rescan without course.toml keeps a date set in the web app
