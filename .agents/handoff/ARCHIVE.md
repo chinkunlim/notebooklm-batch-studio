@@ -134,3 +134,10 @@
   5. 已知問題修復：ISSUE-016 ~ ISSUE-024 根治，包含資料庫連線釋放、選項位置打散、Prompt 編輯與立即喚醒按鈕等
   6. 資料庫遷移：新增 `study_progress`, `review_items`, `explanations`, `key_points`, `tutor_messages` 等實體表
 - **相關 Commit**: `391057f` ~ `465781e`
+
+### [2026-11-01 13:10 UTC] 全專案 Markdown 文件同步與檢查 (by `antigravity`)
+- **檢查結果**: 173 項單元與整合測試 100% 通過、Code Review Guard 通過、Alembic Check 與 Ruff / Mypy 通過
+- **目標**: 全面審查並同步全專案所有 Markdown 文件（ARCHITECTURE.md, alembic/DB.md, README.md, PROJECT_RULES.md, LATEST.md），使之與 Claude 最新 10 個 Commit 擴充之功能完全一致
+- **錯誤與根因**: Claude 大幅擴充了 SPEC-006（獨立產出設定）、SPEC-007（學生研讀計畫）、SPEC-008（學習心理學與 PDF 閱讀器）、Alembic 新增 8 張資料表、Design v2 UI 與修正 016~024，但 ARCHITECTURE.md、alembic/DB.md、README.md 索引與 PROJECT_RULES 未同步更新 -> 本次全面補齊架構層次、Mermaid 圖、11 張實體資料表綱要與業務工作流程
+- **下一步**: 所有程式碼與 100% 文件皆已同步無缺，可直接執行 `uv run notebooklm-batch-studio web` 或雙擊 macOS 一鍵 Launcher 進行端對端驗證
+- **交接備註**: 全專案所有規格（SPEC-001 ~ 008）、架構決策（ADR-001 ~ 006）、已知問題（ISSUE-001 ~ 024）與文檔結構 100% 同步

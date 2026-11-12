@@ -1,7 +1,7 @@
 {
   "id": "TASK-020",
   "title": "Fix course code collision overwriting existing course and inheriting stale notebook_id",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
@@ -13,15 +13,22 @@
     "tests/test_course_reregistration.py"
   ],
   "done_items": "Identified exact root cause: folder name regex parsed semester prefix '115-1' as course code for both '115-1 心理學研究法' and '115-1 生涯諮商', leading to CourseRepository.save_course matching existing record and silently inheriting the previous course notebook_id without creating a new one. Created ISSUE-037.",
-  "todo_items": "1. Prevent code collisions in course_parser.py when folders share semester prefix.\\n2. Guard against silent overwrite and notebook_id inheritance in CourseRepository.save_course when name or source_dir differs.\\n3. Add regression tests in tests/test_course_reregistration.py following TDD iron laws.",
+  "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-12 10:31 UTC",
-  "updated_at": "2026-11-12 10:31 UTC",
+  "updated_at": "2026-11-12 16:03 UTC",
   "history": [
     {
       "timestamp": "2026-11-12 10:31 UTC",
       "action": "created_and_claimed",
       "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-12 16:03 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": ""
     }
-  ]
+  ],
+  "summary": ""
 }
