@@ -123,3 +123,14 @@
 - **下一步**: System is fully synchronized, all 121 tests pass; user can run 'uv run notebooklm-batch-studio web' to test dashboard or batch CLI
 - **交接備註**: All documentation, architecture diagrams, specs, ADRs, known issues, and test suites are 100% synchronized and verified.
 - **本機對話紀錄**: `.agents/conversations/2026-11-01-1511-antigravity-summary.md`（只在這台電腦）
+
+### [2026-11-01 12:45 UTC] 學習輔助功能與系統全面大更新 (by `claude-code`)
+- **檢查結果**: 173 項測試全數通過
+- **主要內容**:
+  1. SPEC-006: 各產出項目獨立規格自訂（題量、難度、投影片格式等）與三層設定繼承
+  2. SPEC-007: 學生研讀工作台 Today 計畫、考前倒數、跨講混合複習與 AI 詳解保存
+  3. SPEC-008: 內建離線 PDF.js 講義閱讀器、Gemini Notebook 重點萃取畫線、艾賓浩斯半衰期記憶強度計算與連續天數熱圖、作答信心比對（sure-but-wrong 警示）、蘇格拉底式引導家教
+  4. Design v2 深色質感介面、macOS Chrome App 全螢幕專注模式一鍵啟動腳本
+  5. 已知問題修復：ISSUE-016 ~ ISSUE-024 根治，包含資料庫連線釋放、選項位置打散、Prompt 編輯與立即喚醒按鈕等
+  6. 資料庫遷移：新增 `study_progress`, `review_items`, `explanations`, `key_points`, `tutor_messages` 等實體表
+- **相關 Commit**: `391057f` ~ `465781e`

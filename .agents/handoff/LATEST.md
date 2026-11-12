@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-10 03:08 UTC`
+- **最後更新時間**: `2026-11-12 10:31 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `a01ee0c docs(docs/issues): update docs/issues documentation (ADR-009, ISSUE-025, ISSUE-028, ISSUE-029, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-033, TASK-006, TASK-007, TASK-011, TASK-012, TASK-013) [agent:claude-code]`
+- **最新 Git Commit**: `a716512 chore(framework): sync compliance-scanner fix from template [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -21,11 +21,16 @@
 | **TASK-016**<br/>Fix course overall output progress not updating and exclude skipped jobs from progress_percent | ⚪ `open` | `-` | `-` | `src/notebooklm_batch_studio/services/orchestrator.py`, `src/notebooklm_batch_studio/entrypoints/static/studio-batch.js`, `src/notebooklm_batch_studio/entrypoints/static/studio-start.js`, `tests/test_course_settings.py` | - | **TODO**: Refs: ISSUE-036. (1) Backend orchestrator.py (list_courses_summary & get_course_detail): exclude skipped jobs from active total when computing progress_percent. (2) Frontend studio-batch.js / studio-start.js: when queue counts change in fetchStatus() (or during the 15s poll / after syncFromNotebookLM / retryUpload / regenerateArtifact), call fetchCourses() so #courseContainer cards, top-bar #coursePick, and 課程目錄 #courseList update their overall progress; also refresh currentStudyCourse and loadTodayPanel() when done count increases; filter out skipped jobs in renderStatusBar(). (3) Add regression test in tests/test_course_settings.py. |
 | **TASK-017**<br/>Dummy-mode end-to-end chaos & foolproof test suite (simulate naive user exploring all features with mock files) | ⚪ `open` | `-` | `-` | `tests/`, `src/notebooklm_batch_studio/entrypoints/static/`, `tests/fixtures/` | - | **TODO**: Simulate a naive / chaos user exploring and stress-testing ALL studio features offline with dummy files (no real NotebookLM needed). (1) Fixtures: prepare dummy files for all 12 artifact types (PDF, MP3, Quiz JSON, Markdown guides/reports, OPML/JSON mind maps, PNG infographics, CSV tables, mock video). (2) Chaos user journeys: (a) Empty & zero states: click every button/tab/picker in overview, study studio, review, batch before adding courses, and after deleting the only course; (b) Batch operations: add empty/invalid folders, toggling artifact picks, rapid start/pause/resume/wake, delete course while busy, prompt editing with extremes; (c) Study studio: test all 4 workbench arrangements, drag reordering, unpinning all items, layout switching (stage/split/stack), turntable player with missing audio, pdf reader with missing pdf, quiz with 0 answers / all wrong / all right, flashcard rating, tutor spamming; (d) Review & Overview: clear all mistakes, Leitner box transitions, exam countdown with extreme/past dates; (e) Settings & Customization: rapid palette/font switching, extreme custom palette, dark mode toggling. (3) Deliverable: automated dummy-mode simulation test suite in tests/ (e.g. tests/test_dummy_user_simulation.py) verifying zero crashes and 100% graceful degradation. |
 | **TASK-018**<br/>Analyze graphify report and project workflow for code alignment and entanglement | 🟢 `in_progress` | `antigravity` | `-` | `graphify-out/GRAPH_REPORT.md`, `docs/specs/010-user-end-to-end-workflow.md`, `docs/architecture/WORKFLOW_AND_COUPLING_ANALYSIS.md`, `src/notebooklm_batch_studio/services/orchestrator.py`, `src/notebooklm_batch_studio/services/worker_pool.py`, `src/notebooklm_batch_studio/entrypoints/static/` | 1. Completed deep analysis of graphify report (9270 nodes, 18667 edges, 392 communities, vendor noise vs core hubs).\n2. Identified four system entanglements: God Service (BatchStudioService), frontend 12-script global state spaghetti, job planning mixed into worker pool, and dual-state desynchronization (memory vs DB).\n3. Audited codebase conformance against SPEC-010 8-stage workflow (revealing gaps in phase 4 progress/quota recovery and phase 8 course deletion).\n4. Formulated decoupling & streamlining blueprint (StudioBus, service triage, SSOT) in docs/architecture/WORKFLOW_AND_COUPLING_ANALYSIS.md. | **TODO**: Execute refactoring according to tasks: TASK-014 (delete cleanup), TASK-015 (worker quota unblock), TASK-016 (progress update), TASK-017 (chaos test), followed by front/backend decoupling. |
-| **TASK-019**<br/>Audit all resolved known issues with verification evidence and exclude vendor noise from graphify | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
+| **TASK-019**<br/>Audit all resolved known issues with verification evidence and exclude vendor noise from graphify | 🟢 `in_progress` | `antigravity` | `-` | `.graphifyignore`, `graphify-out/GRAPH_REPORT.md`, `docs/known-issues/`, `tests/`, `src/notebooklm_batch_studio/services/orchestrator.py`, `src/notebooklm_batch_studio/services/worker_pool.py` | 1. Excluded third-party vendor noise in graphify via .graphifyignore (pruned 4,762 nodes from pdfjs/lucide/fonts, cutting noise by >50% and revealing true domain God nodes).\n2. Audited all 33 marked-Resolved known issues against source code and automated tests (183 tests passing).\n3. Uncovered fake/partial resolutions: ISSUE-024 claimed queue resume fixed, but left blocked_quota_types stuck in memory spawning ISSUE-035; ISSUE-008 left progress percent denominator containing skipped jobs spawning ISSUE-036; 6 frontend UI issues (018, 022, 026, 029, 031, 032) lack automated regression tests relying only on manual notes. | **TODO**: Enforce automated test coverage for the 6 unverified UI issues via TASK-017 chaos suite, and resolve the root causes of the pseudo-fixes via TASK-014, TASK-015, and TASK-016. |
+| **TASK-020**<br/>Fix course code collision overwriting existing course and inheriting stale notebook_id | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-12 10:31 UTC] 建立任務 `TASK-020`: Fix course code collision overwriting existing course and inheriting stale notebook_id (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-10 03:08 UTC] 認領任務 `TASK-019` (Audit all resolved known issues with verification evidence and exclude vendor noise from graphify) (by `antigravity`)
 - **相關範圍**: `-`
@@ -129,14 +134,3 @@
 - **錯誤與根因**: Claude 大幅擴充了 SPEC-006（獨立產出設定）、SPEC-007（學生研讀計畫）、SPEC-008（學習心理學與 PDF 閱讀器）、Alembic 新增 8 張資料表、Design v2 UI 與修正 016~024，但 ARCHITECTURE.md、alembic/DB.md、README.md 索引與 PROJECT_RULES 未同步更新 -> 本次全面補齊架構層次、Mermaid 圖、11 張實體資料表綱要與業務工作流程
 - **下一步**: 所有程式碼與 100% 文件皆已同步無缺，可直接執行 `uv run notebooklm-batch-studio web` 或雙擊 macOS 一鍵 Launcher 進行端對端驗證
 - **交接備註**: 全專案所有規格（SPEC-001 ~ 008）、架構決策（ADR-001 ~ 006）、已知問題（ISSUE-001 ~ 024）與文檔結構 100% 同步
-
-### [2026-11-01 12:45 UTC] 學習輔助功能與系統全面大更新 (by `claude-code`)
-- **檢查結果**: 173 項測試全數通過
-- **主要內容**:
-  1. SPEC-006: 各產出項目獨立規格自訂（題量、難度、投影片格式等）與三層設定繼承
-  2. SPEC-007: 學生研讀工作台 Today 計畫、考前倒數、跨講混合複習與 AI 詳解保存
-  3. SPEC-008: 內建離線 PDF.js 講義閱讀器、Gemini Notebook 重點萃取畫線、艾賓浩斯半衰期記憶強度計算與連續天數熱圖、作答信心比對（sure-but-wrong 警示）、蘇格拉底式引導家教
-  4. Design v2 深色質感介面、macOS Chrome App 全螢幕專注模式一鍵啟動腳本
-  5. 已知問題修復：ISSUE-016 ~ ISSUE-024 根治，包含資料庫連線釋放、選項位置打散、Prompt 編輯與立即喚醒按鈕等
-  6. 資料庫遷移：新增 `study_progress`, `review_items`, `explanations`, `key_points`, `tutor_messages` 等實體表
-- **相關 Commit**: `391057f` ~ `465781e`

@@ -53,3 +53,7 @@ build/
 *.sqlite
 *.sqlite3
 *.db-journal
+
+# === Git Worktrees ===
+.worktrees/
+

@@ -82,7 +82,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-016-fix-course-overall-output-progre.json
 │   │   ├── TASK-017-dummy-mode-end-to-end-chaos-fool.json
 │   │   ├── TASK-018-analyze-graphify-report-and-proj.json
-│   │   └── TASK-019-audit-all-resolved-known-issues-.json
+│   │   ├── TASK-019-audit-all-resolved-known-issues-.json
+│   │   └── TASK-020-fix-course-code-collision-overwr.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -185,6 +186,7 @@ notebooklm-batch-studio/
 │   │   ├── 034-course-delete-incomplete-cleanup.md
 │   │   ├── 035-worker-pool-blocked-quota-types-stuck.md
 │   │   ├── 036-course-overall-progress-not-updating.md
+│   │   ├── 037-course-code-collision-overwrites-notebook.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

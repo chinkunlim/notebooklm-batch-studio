@@ -85,6 +85,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs(adr/docs): update adr/docs documentation (ADR-004, ADR-005, ADR-006, ADR-007, ISSUE-022, ISSUE-023, ISSUE-024, ISSUE-025, ISSUE-026, TASK-001, TASK-005, TASK-007, TASK-009) (by `@antigravity`)
 - docs(adr/docs): update adr/docs documentation (ADR-004, ADR-005, ADR-006, ADR-007, ISSUE-022, ISSUE-023, ISSUE-024, ISSUE-025, ISSUE-026, ISSUE-027, ISSUE-028, ISSUE-029, ISSUE-030, TASK-001, TASK-005, TASK-006, TASK-007, TASK-009) (by `@claude-code`)
 - docs(docs/issues): update docs/issues documentation (ADR-009, ISSUE-025, ISSUE-028, ISSUE-029, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-033, TASK-006, TASK-007, TASK-011, TASK-012, TASK-013) (by `@claude-code`)
+- docs: register ISSUE-037 and TASK-020 for course code collision (by `@antigravity`)
 
 ### Chore
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)
