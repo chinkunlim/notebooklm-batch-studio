@@ -183,7 +183,7 @@ function toggleReaderComments(code, no) {
 function toggleKpViewMode() {
   kpViewMode = kpViewMode === 'page' ? 'all' : 'page';
   const btn = document.getElementById('kpModeBtn');
-  if (btn) btn.textContent = kpViewMode === 'page' ? '顯示全部' : '僅看本頁';
+  if (btn) btn.innerHTML = kpViewMode === 'page' ? '<span>顯示</span><span>全部</span>' : '<span>僅看</span><span>本頁</span>';
   syncActivePageComments(readerCurrentPage);
 }
 

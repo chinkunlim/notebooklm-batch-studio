@@ -139,9 +139,9 @@ function renderKeyPointList() {
         <button class="btn btn-primary" onclick="generateKeyPoints(false)">產生重點</button></div>`;
     return;
   }
-  list.innerHTML = `<div class="kp-head"><strong>重點與備註 ${allPts.length} 則</strong>
-      <span class="row" style="gap:8px"><button type="button" class="link-btn" id="kpModeBtn" onclick="toggleKpViewMode()">顯示全部</button>
-      <button class="link-btn" onclick="generateKeyPoints(true)">重新產生</button></span></div>` +
+  list.innerHTML = `<div class="kp-head"><strong class="kp-title"><span class="kp-nowrap">重點與備註</span><span class="kp-nowrap">${allPts.length} 則</span></strong>
+      <span class="row kp-head-acts"><button type="button" class="link-btn" id="kpModeBtn" onclick="toggleKpViewMode()"><span>顯示</span><span>全部</span></button>
+      <button class="link-btn" onclick="generateKeyPoints(true)"><span>重新</span><span>產生</span></button></span></div>` +
     allPts.map(p => {
       const click = p._user ? `jumpToReaderPage(${p.page || 1})` : `jumpToPoint(${p._idx})`;
       const idAttr = p._user ? '' : ` id="kpItem-${p._idx}"`;

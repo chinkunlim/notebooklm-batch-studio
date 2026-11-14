@@ -424,9 +424,8 @@ function initSideCardCollapses() {
  */
 function updateStudyViewportHeight() {
   const pane = document.getElementById('paneStudy');
-  if (!pane || pane.hidden || pane.dataset.layout !== 'split') return;
-  const avail = Math.max(460, Math.floor(window.innerHeight - 24));
-  pane.style.setProperty('--study-h', `${avail}px`);
+  if (!pane) return;
+  pane.style.removeProperty('--study-h');
 }
 
 /**
