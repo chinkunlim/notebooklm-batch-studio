@@ -117,36 +117,69 @@ function parkPanels() {
  * @param {string} id Workbench item id
  */
 function selectTool(id) {
-  if (id === 'notes' && $('#paneStudy').dataset.layout === 'split') {
-    // in 雙欄 the notes have their own card on the left
-    ensureReader();
-    $('#readerCard').scrollIntoView({ behavior: lowMotion() ? 'auto' : 'smooth', block: 'start' });
-    return;
-  }
+  const isSplit = $('#paneStudy').dataset.layout === 'split';
   currentTool = id;
   const t = TOOLS.find(x => x.id === id) || TOOLS[0];
   $$('#bench [data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === id));
-  const st = $('#benchStage');
-  st.style.setProperty('--hue', `var(${t.hue})`);
+  const st = $('#benchStage'), sp = $('#splitStage'), rh = $('#readerHome');
   parkPanels();
   st.innerHTML = '';
-  if (id === 'notes') {
-    st.append(readerContent);
-    ensureReader();
+  if (sp) sp.innerHTML = '';
+  if (isSplit) {
+    // in 雙欄 the notes have their own card on the left
+    renderSplitStage(id, t);
   } else {
-    st.append($('#' + PANEL_FOR[id]));
-    if (id === 'quiz') ensureLoaded('quiz', () => loadQuizForChapter(null));
-    else if (id === 'flash') ensureLoaded('flash', loadFlashcardsViewer);
-    else if (id === 'tutor') ensureLoaded('tutor', loadTutor);
-    else if (id === 'qa_notes') ensureLoaded('qa_notes', loadCourseNotes);
-    if (REPORT_GROUPS[id]) currentReportGroup = REPORT_GROUPS[id];
-    // the report viewer is shared: show this item's output again when coming back from another report item
-    if (REPORT_GROUPS[id] && loadedFor.reportShown !== id) { loadedFor.reportShown = id; loadReportInViewer(REPORT_GROUPS[id][0]); }
+    rh.hidden = false;
+    if (sp) sp.hidden = true;
+    st.hidden = false;
+    st.style.setProperty('--hue', `var(${t.hue})`);
+    if (id === 'notes') { st.append(readerContent); ensureReader(); }
+    else { st.append($('#' + PANEL_FOR[id])); loadToolPanel(id); }
+    st.style.animation = 'none'; void st.offsetWidth; st.style.animation = '';
   }
-  st.style.animation = 'none'; void st.offsetWidth; st.style.animation = '';
+  if (REPORT_GROUPS[id]) currentReportGroup = REPORT_GROUPS[id];
+  // the report viewer is shared: show this item's output again when coming back from another report item
+  if (REPORT_GROUPS[id] && loadedFor.reportShown !== id) { loadedFor.reportShown = id; loadReportInViewer(REPORT_GROUPS[id][0]); }
   if (currentStudyCourse && typeof rememberPlace === 'function') rememberPlace({ tab: TAB_FOR[id] });
   renderPins();
   requestAnimationFrame(refreshThumbs);
+}
+
+/**
+ * Render the selected workbench tool inside the left-hand #readerCard in 雙欄 layout.
+ * @param {string} id Workbench item id
+ * @param {{name: string, hue: string}} t Tool descriptor
+ */
+function renderSplitStage(id, t) {
+  const st = $('#benchStage'), sp = $('#splitStage'), rh = $('#readerHome');
+  st.hidden = true;
+  if (id === 'notes') {
+    rh.hidden = false;
+    if (sp) sp.hidden = true;
+    ensureReader();
+    return;
+  }
+  rh.hidden = true;
+  sp.hidden = false;
+  sp.style.setProperty('--hue', `var(${t.hue})`);
+  const head = Object.assign(document.createElement('div'), { className: 'card-head split-stage-head' });
+  const title = document.createElement('span');
+  title.className = 'eyebrow';
+  title.textContent = `${typeof lectureName === 'function' ? lectureName(activeStudyLectureNo) : ''}　${t.name}`.trim();
+  head.appendChild(title);
+  sp.append(head, $('#' + PANEL_FOR[id]));
+  loadToolPanel(id);
+}
+
+/**
+ * Load the data for a non-notes workbench tool panel.
+ * @param {string} id Workbench item id
+ */
+function loadToolPanel(id) {
+  if (id === 'quiz') ensureLoaded('quiz', () => loadQuizForChapter(null));
+  else if (id === 'flash') ensureLoaded('flash', loadFlashcardsViewer);
+  else if (id === 'tutor') ensureLoaded('tutor', loadTutor);
+  else if (id === 'qa_notes') ensureLoaded('qa_notes', loadCourseNotes);
 }
 /**
  * Return status kind ('done' | 'running' | 'queued' | 'missing') for a workbench item.
@@ -278,8 +311,7 @@ function applyLayout(v) {
   b.side.forEach(id => side.append($('#' + id)));
   ps.classList.toggle('side-empty', v !== 'stack' && b.side.length === 0);
   $('#benchTitle').textContent = v === 'split' ? '學習產出物' : '講義與學習產出物';
-  if (v === 'split') selectTool(currentTool === 'notes' ? 'report' : currentTool);
-  else selectTool(currentTool === 'report' ? 'notes' : currentTool);
+  selectTool(currentTool || 'notes');
   renderPins();
   applyColumns($('#paneStudy'));
   if (typeof switchStudySidePane === 'function') switchStudySidePane();
