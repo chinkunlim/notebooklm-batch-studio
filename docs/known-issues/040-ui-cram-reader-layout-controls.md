@@ -1,6 +1,6 @@
 # ISSUE-040：UI/UX: Topbar alignment, native select styling, nav/cram toggles, auto-keypoints/bookmarks/zoom-presets, and right-column collapse
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已解決 (Resolved)
 - **發現日期**：2026-11-14
 - **Agent**：`antigravity`
 - **任務**：`-`

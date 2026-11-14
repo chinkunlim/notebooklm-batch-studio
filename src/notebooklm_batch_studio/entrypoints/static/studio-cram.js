@@ -16,8 +16,13 @@ let cramAudioHooked = false;
 async function toggleCramMode() {
   cramModeActive = !cramModeActive;
   const btn = document.getElementById('cramModeBtn');
+  const state = document.getElementById('cramModeState');
   const panel = document.getElementById('cramPanel');
-  if (btn) btn.classList.toggle('btn-primary', cramModeActive);
+  if (btn) {
+    btn.classList.toggle('is-active', cramModeActive);
+    btn.setAttribute('aria-pressed', String(cramModeActive));
+  }
+  if (state) state.textContent = cramModeActive ? 'ON' : 'OFF';
   if (panel) panel.hidden = !cramModeActive;
   if (cramModeActive) await refreshCramPack();
   else if (typeof syncStudyLectureSwitcher === 'function') syncStudyLectureSwitcher();
@@ -43,11 +48,16 @@ async function refreshCramPack() {
   const qs = `hours=${encodeURIComponent(hours)}${lecs.length ? `&lectures=${lecs.join(',')}` : ''}`;
   try {
     const res = await fetch(`/api/courses/${course.code}/study/cram-pack?${qs}`);
-    if (!res.ok) throw new Error(res.statusText);
+    if (!res.ok) throw new Error(res.statusText || `HTTP ${res.status}`);
     cramPackCache = await res.json();
     renderCramPanel(cramPackCache, lecs);
     applyCramLectureFilter(cramPackCache);
   } catch (err) {
+    const body = document.getElementById('cramPanelBody');
+    if (body) {
+      body.innerHTML = `<div class="empty-state">無法載入考前急救包（${escHtml(err.message)}）` +
+        `<br><button type="button" class="btn btn-soft btn-sm" onclick="refreshCramPack()">重新載入</button></div>`;
+    }
     showToast(`載入考前急救包失敗：${err.message}`, 'error');
   }
 }
@@ -70,6 +80,7 @@ function applyCramLectureFilter(pack) {
     opts.push(`<option value="${l.no}">${icon} L${pad2(l.no)} ${escHtml(l.topic)} (${mem}${err})</option>`);
   });
   select.innerHTML = opts.join('');
+  renderLecturePopover();
 }
 
 /**
@@ -280,3 +291,83 @@ document.addEventListener('keydown', e => {
     toggleLayoutGuides();
   }
 });
+
+/**
+ * Sync the warm-paper custom lecture popover UI from #studyLectureSelect options.
+ * @returns {void}
+ */
+function renderLecturePopover() {
+  const select = document.getElementById('studyLectureSelect');
+  const pop = document.getElementById('lecPop');
+  const label = document.getElementById('lecPickLabel');
+  if (!select || !pop || !label) return;
+  const opts = [...select.options];
+  const active = opts.find(o => o.value === select.value) || opts[0];
+  label.textContent = active ? active.textContent : '選擇講次…';
+  pop.innerHTML = opts.map(o => {
+    const on = o.value === select.value ? ' on' : '';
+    return `<button type="button" class="lec-pop-item${on}" role="option" aria-selected="${o.value === select.value}" data-val="${escHtml(o.value)}">${escHtml(o.textContent)}</button>`;
+  }).join('');
+  pop.querySelectorAll('.lec-pop-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      select.value = btn.dataset.val;
+      document.getElementById('lecPick')?.classList.remove('open');
+      document.getElementById('lecPickBtn')?.setAttribute('aria-expanded', 'false');
+      renderLecturePopover();
+      if (typeof jumpToStudyLecture === 'function') jumpToStudyLecture(select.value);
+    });
+  });
+}
+
+document.getElementById('lecPickBtn')?.addEventListener('click', e => {
+  e.stopPropagation();
+  const wrap = document.getElementById('lecPick');
+  if (!wrap) return;
+  const open = wrap.classList.toggle('open');
+  e.currentTarget.setAttribute('aria-expanded', String(open));
+});
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('lecPick');
+  if (wrap && !wrap.contains(e.target)) {
+    wrap.classList.remove('open');
+    document.getElementById('lecPickBtn')?.setAttribute('aria-expanded', 'false');
+  }
+});
+
+/**
+ * Toggle collapse/expand of the study right column via the existing col-toggle button.
+ * @returns {void}
+ */
+function toggleStudySideCollapse() {
+  const tg = document.querySelector('#paneStudy > .col-resizer .col-toggle');
+  if (tg) tg.click();
+}
+
+/**
+ * Attach vertical collapse/expand chevron buttons to right-column study cards.
+ * @returns {void}
+ */
+function initSideCardCollapses() {
+  ['playerCard', 'sideInfo', 'bench'].forEach(id => {
+    const card = document.getElementById(id);
+    if (!card || card.dataset.collapseHooked) return;
+    const head = card.querySelector(':scope > .card-head, :scope > .player-controls, :scope > .bench-head');
+    if (!head) return;
+    card.dataset.collapseHooked = '1';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'card-collapse-btn';
+    btn.title = '收合 / 展開此區塊';
+    btn.setAttribute('aria-expanded', 'true');
+    btn.innerHTML = '<i class="icon-chevron-up"></i>';
+    btn.addEventListener('click', () => {
+      const collapsed = card.classList.toggle('is-collapsed');
+      btn.setAttribute('aria-expanded', String(!collapsed));
+      btn.innerHTML = collapsed ? '<i class="icon-chevron-down"></i>' : '<i class="icon-chevron-up"></i>';
+    });
+    head.appendChild(btn);
+  });
+}
+
+initSideCardCollapses();

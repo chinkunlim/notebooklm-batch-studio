@@ -1,6 +1,6 @@
 # ISSUE-039：UI/UX: Focus mode sidebar & exit icon, cram panel spacing/exit, PDF reader auto-fit/margin comments/scroll-stop
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已解決 (Resolved)
 - **發現日期**：2026-11-14
 - **Agent**：`antigravity`
 - **任務**：`-`

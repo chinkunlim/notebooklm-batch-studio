@@ -571,6 +571,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-player.js
 │       │   │   ├── studio-qa-drawer.js
 │       │   │   ├── studio-queue.js
+│       │   │   ├── studio-reader-notes.js
 │       │   │   ├── studio-reader.js
 │       │   │   ├── studio-remote-artifacts.js
 │       │   │   ├── studio-settings.js

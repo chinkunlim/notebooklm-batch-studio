@@ -242,13 +242,25 @@ $('#btnHelp').addEventListener('click', () => openUsageModal());
  * @param {boolean} on True to enter
  */
 function setFocus(on) {
-  $('#app').classList.toggle('focus', on);
+  const app = $('#app');
+  app.classList.toggle('focus', on);
+  if (!on) app.classList.remove('dock-peek');
   if (on && document.fullscreenElement == null && root.requestFullscreen) root.requestFullscreen().catch(() => {});
   if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
   requestAnimationFrame(refreshThumbs);
 }
 $('#btnFocus').addEventListener('click', () => setFocus(true));
 $('#focusExit').addEventListener('click', () => setFocus(false));
+document.addEventListener('mousemove', e => {
+  const app = $('#app');
+  if (!app || !app.classList.contains('focus')) return;
+  if (e.clientX <= 18) { app.classList.add('dock-peek'); return; }
+  if (app.classList.contains('dock-peek') && !e.target.closest('.dock')) {
+    const dock = $('.dock');
+    const limit = dock ? dock.getBoundingClientRect().right + 20 : 120;
+    if (e.clientX > limit) app.classList.remove('dock-peek');
+  }
+});
 // leaving full screen with Esc also leaves focus mode
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && $('#app').classList.contains('focus')) setFocus(false); });
 

@@ -444,6 +444,7 @@ function syncStudyLectureSwitcher() {
   });
   select.innerHTML = opts.join('');
   select.value = activeStudyLectureNo === null ? 'all' : String(activeStudyLectureNo);
+  if (typeof renderLecturePopover === 'function') renderLecturePopover();
 }
 
 /**
