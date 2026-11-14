@@ -113,6 +113,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): restore global wheel scrolling across all pages and bidirectional study page scroll (by `@antigravity`)
 - fix(ui): unlock outer page upward scroll with subpixel top threshold on PDF reader (by `@antigravity`)
 - fix(ui): keep keypoint header 1-or-2 balanced lines and use 100dvh for fullscreen sticky height (by `@antigravity`)
+- fix(ui): hide courses col-resizer inside right-column sideCatalogHost (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
