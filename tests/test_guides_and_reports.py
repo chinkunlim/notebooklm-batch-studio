@@ -18,7 +18,7 @@ from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, Cou
 from notebooklm_batch_studio.domain.naming import NAMING_BY_TYPE
 from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
-from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
+from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner, JobTarget
 from notebooklm_batch_studio.services.converters.report_converter import report_to_html
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.worker_pool import generate_jobs_for_course
@@ -92,7 +92,7 @@ class ReportTest(unittest.IsolatedAsyncioTestCase):
             job = ArtifactJob(
                 id="r", course_code="BIO101", lecture_no=1, artifact_type=ArtifactType.REPORTS_CONCEPT
             )
-            path = await runner.process_job(job, make_course(tmp), "nb", ["s1"], out)
+            path = await runner.process_job(job, make_course(tmp), JobTarget("nb", ["s1"], out))
             self.assertEqual(client.called("generate_report")[0]["report_format"], "concept_explanation")
             self.assertTrue(path.endswith("BIO101_L1_concept_explanation.md"))
             self.assertTrue((out / "BIO101_L1_concept_explanation_interactive.html").exists())

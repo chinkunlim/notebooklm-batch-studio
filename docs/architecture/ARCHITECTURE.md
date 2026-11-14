@@ -125,8 +125,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 - `entrypoints/static/`：前端使用者介面（純原生 JS，無編譯負擔）：
   - `index.html`：v05 介面（SPEC-009、ADR-008）：側欄四頁（研讀總覽、研讀工作室、弱點複習、批次排程）、側欄底部工具（使用方法、專注模式、設計與自訂）與對話框。
   - `studio-theme.css`（配色 tokens）、`studio.css`（版面與元件）、`studio-learning.css`（閱讀器、記憶卡、家教）。
-  - 功能層：`studio-core.js`（對話框、斷線提示、選項洗牌）、`studio-app.js`（研讀課程與講次、測驗、錯題、學習卡、報告檢視）、`studio-batch.js`（批次排程與工作清單）、`studio-settings.js`（課程設定、產出內容、Prompt、加入課程精靈）、`studio.js`（研讀總覽、交卷回饋、解釋、間隔複習、音檔續播）、`studio-learning.js`（記憶強度、信心評分、混合複習、番茄鐘、家教）、`studio-reader.js`（講義 PDF 閱讀器與重點畫線）。
-  - 外殼層：`studio-shell.js`（偏好、側欄、頁面切換）、`studio-player.js`（播放真實語音摘要的唱盤與四種視覺）、`studio-bench.js`（工作台、三種版面、本講重點、今日學習卡）、`studio-start.js`（設計與自訂、欄寬、鍵盤與觸控、啟動）。
+  - 功能層：`studio-core.js`（對話框、斷線提示、選項洗牌、`StudioBus`/`StudioStore`）、`studio-app.js` & `studio-study-panels.js`（研讀課程與講次、測驗、錯題、學習卡、報告檢視）、`studio-batch.js` & `studio-queue.js`（批次排程、工作清單與佇列控制）、`studio-settings.js` & `studio-wizard.js`（課程設定、產出內容、Prompt、加入課程精靈）、`studio.js` & `studio-study-extras.js`（研讀總覽、交卷回饋、解釋、間隔複習、模擬考計時、音檔續播）、`studio-learning.js`（記憶強度、信心評分、混合複習、家教）、`studio-reader.js`（講義 PDF 閱讀器與重點畫線）。
+  - 外殼層：`studio-shell.js` & `studio-nav.js`（偏好、側欄、頁面切換與黑膠飛行動畫）、`studio-player.js`（播放真實語音摘要的唱盤與四種視覺）、`studio-bench.js`（工作台、三種版面、本講重點、今日學習卡）、`studio-start.js`（設計與自訂、欄寬、鍵盤與觸控、啟動）。
   - `studio-fonts.js`：設計與自訂的字型選擇與 Google Fonts 下載。
   - `studio-focus.js`：番茄鐘（專注、短休息、長休息），計時收進側欄，習慣存在偏好。
   - 側欄是 `position: fixed` 貼齊視窗上下緣（ISSUE-031）；換頁是腳本控制的淡出 / 浮上（ISSUE-032）。
@@ -134,11 +134,13 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `vendor/lucide/`、`vendor/fonts/`：內建圖示字型與 Noto Sans / Serif TC，離線也能顯示（ADR-009）。
 - 線上示範頁：`scripts/build_demo.py` 把上述靜態檔內嵌成單一的 `docs/demo/index.html`，搭配 `scripts/demo/` 的虛構課程與在瀏覽器裡回應 API 的模擬層（GitHub Pages 用，不連後端）。
 - `mcp_server.py` 與 MCP 集群：
-  - `mcp_server.py`：核心 MCP 工具（狀態、佇列控制、筆記本操作）。
-  - `mcp_course_settings.py`：課程選項與產出設定工具。
+  - `mcp_server.py`：核心 MCP 工具（狀態、佇列控制、筆記本操作與重試）與伺服器組裝。
+  - `mcp_studio_tools.py`：研讀歷史、錯題複習、導引文件、課程設定選項與版本化重新生成工具。
+  - `mcp_course_settings.py`：課程選項複製、開關與暫停管理工具。
   - `mcp_job_prompts.py`：提示詞查詢與改寫工具。
   - `mcp_learning.py`：重點查詢、閱讀狀態與家教對話工具。
   - `mcp_study_plan.py`：研讀計畫與間隔複習工具。
+  - `mcp_preferences.py` & `mcp_fonts.py`：網頁偏好讀寫重設與 Google Fonts 離線安裝工具。
 - `port_check.py`：啟動前檢查埠號；被佔用時列出佔用程式並停止（與 uvicorn 一樣使用 `SO_REUSEADDR`，ISSUE-027）。全機埠號總表在 `00 init_dev_env/PORTS.md`。
 - `/static` 以 `NoCacheStaticFiles` 掛載（`Cache-Control: no-cache`），更新後瀏覽器不會沿用舊的 CSS／JS（ISSUE-028）。
 - 一鍵桌面啟動：
@@ -148,32 +150,38 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 ### 2.2 適配器層 (`adapters`)
 負責與外部系統、持久化儲存與第三方函式庫互動：
 - `adapters/notebooklm/`：
-  - `client.py`：核心客戶端，提供筆記本操作、單一來源上傳與來源選取、例外捕捉轉換。
+  - `client.py` & `client_artifacts.py`：核心客戶端與產出物操作，提供筆記本操作、單一來源上傳與來源選取、例外捕捉轉換。
+  - `errors.py`：Gemini Notebook 錯誤正規化與配額例外判別輔助。
   - `generation.py`：精確傳遞繁體中文語系代碼 (`zh_Hant`)、客製提示詞，並精確取得遠端生成物回傳之 `artifact_id`。
   - `downloads.py`：依照 `artifact_id` 精確下載遠端產出，處理語音 `.m4a` 與心智圖改名。
   - `quota.py`：查詢 Gemini Notebook 即時配額表與估算消耗。
 - `adapters/db/`：
-  - `repository.py` (`SQLiteJobRepository`)：使用 SQLAlchemy 管理課程、講次、工作佇列、客製產出選項 (`course_artifact_selections`) 與版本記錄 (`job_versions`)。
+  - `repository.py` (`CourseRepository`) & `queue_repository.py` (`QueueRepository`)：使用 SQLAlchemy 管理課程、講次、工作佇列、客製產出選項 (`course_artifact_selections`) 與版本記錄 (`job_versions`)。
   - `study_repository.py` (`StudyRepository`)：管理學生測驗作答紀錄 (`quiz_attempts`) 與個人錯題本 (`quiz_mistakes`)。
   - `learning_repository.py` (`LearningRepository`)：管理講義 PDF 重點標註萃取 (`key_points`) 與蘇格拉底家教對話紀錄 (`tutor_messages`)。
   - `review_repository.py` (`ReviewRepository`)：管理研讀步驟進度 (`study_progress`)、艾賓浩斯間隔複習卡片 (`review_items`) 與 AI 題目詳解 (`explanations`)。
+  - `preferences_repository.py` (`PreferencesRepository`)：持久化網頁介面偏好設定 (`ui_preferences`)。
+- `adapters/fonts/google_fonts.py` & `adapters/ollama/client.py`：Google Fonts 下載適配器與本機 Ollama 模型提示詞潤飾客戶端。
 - 檔案系統操作：資料夾監看與 PDF 寫入完成度偵測在 `services/watcher.py`，課程目錄掃描在 `services/course_parser.py`，下載路由與 PDF 閱讀器的路徑檢核在 `entrypoints/http/artifacts.py` 與 `learning.py`。
 
 ### 2.3 業務服務層 (`services`)
 系統核心邏輯與工作流排程：
-- `orchestrator.py` (`BatchStudioService`)：主管課程註冊、來源同步、任務生成、工作排程與產出持久化。
-- `artifact_runner.py`：細緻化產出管線，負責針對各講次各類型產出物調用 Adapter、等待生成完成、依 `artifact_id` 下載改名並處理版本演進（`v2`, `v3`）。
+- `orchestrator.py` (`BatchStudioService`) & `course_onboarding.py` (`CourseOnboardingMixin`)：主管課程註冊、預覽估算、來源同步、工作排程、狀態摘要與產出持久化。
+- `artifact_runner.py` & `quiz_runner.py`：細緻化產出管線，負責針對各講次各類型產出物調用 Adapter、30 題測驗多批收集、等待生成完成、依 `artifact_id` 下載改名並處理版本演進（`v2`, `v3`）。
+- `sync_service.py`：雙向同步 Gemini Notebook 遠端產出並匯入既有檔案。
 - `learning_service.py` (`LearningService`)：提供講義 PDF 安全讀取串流、一次性萃取並儲存 Gemini Notebook 講義核心重點、管理蘇格拉底式引導家教的對話推進。
 - `study_plan_service.py` (`StudyPlanService`)：計算學生每日「Today」研讀進度、維護艾賓浩斯間隔複習排程、呼叫 Gemini Notebook 取得答案詳解並永久保存。
 - `study_service.py` (`StudyTrackerService`)：管理學生線上測驗作答驗證、錯題自動入庫、掌握度更新，以及生成 Anki 匯入用牌組。
-- `quiz_reader.py`：解析各講次測驗 Markdown 檔案，結構化為作答題目與選項陣列。
-- `course_settings.py` (`CourseSettingsService`)：管理每門課程的產出類型開關與風格設定，持久化至資料庫與 `course.toml`。
+- `quiz_reader.py`：解析各講次測驗 Markdown / JSON 檔案，結構化為作答題目與選項陣列。
+- `course_settings.py` (`CourseSettingsService`) & `course_options.py`：管理每門課程的產出類型開關、跨課程複製與三層繼承風格設定，持久化至資料庫與 `course.toml`。
+- `font_service.py` (`FontService`) & `preferences_service.py` (`PreferencesService`)：管理離線字型安裝清單與跨頁面偏好存取。
 - `folder_browser.py` (`FolderBrowserService`)：提供本機安全目錄層級導航與 PDF 講義資料夾選取。
 - `course_parser.py`：依檔名結構排序並剖析課程目錄下的講義 PDF 與中繼資料。
-- `worker_pool.py`：控管平行任務排程、依組合展開講次任務，並處理速率限制指數退避重試。
+- `job_planner.py` & `job_views.py`：依課程 Profile 與自訂勾選規劃任務矩陣，並建置狀態視圖投影。
+- `worker_pool.py`：控管平行非同步任務排程、額度封鎖恢復同步，並處理速率限制指數退避重試。
 - `quota_planner.py`：讀取 Gemini Notebook 即時配額，於工作執行前進行嚴格預檢（額度不足自動轉入 `QUOTA_WAIT` 狀態，避免浪費重試次數），並支援 5 小時額度窗與每週額度評估。
 - `converters/`：
-  - `quiz_converter.py`：整併 3 次 10 題測驗，去重並驗證題目數（達 30 題通過，不足則隔離至 `needs_review/`），並打散正確選項位置避免偏誤。
+  - `quiz_converter.py` & `quiz_formatter.py`：整併 3 次 10 題測驗，去重、格式化並驗證題目數（達 30 題通過，不足則隔離至 `needs_review/`），並打散正確選項位置避免偏誤。
   - `flashcard_converter.py`：將階梯式閃卡轉換為標準 Markdown 與 CSV 格式。
   - `mindmap_converter.py`：轉換階層結構為標準 Markdown 縮排清單與 Mermaid 語法。
   - `pdf_renderer.py`：使用 ReportLab 將 Markdown 測驗卷與答案卷轉換為高畫質列印用 PDF。
@@ -185,7 +193,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ### 2.4 領域模型層 (`domain`)
 純 Python 商業物件，無任何外部第三方相依：
-- 實體與值物件：`Course`, `Lecture`, `Job`, `Artifact`, `Quiz`, `Question`, `Flashcard`, `MindMapNode`, `QuizAttempt`, `QuizMistake`, `JobVersion`。
+- 實體與值物件：`models.py` (`Course`, `Lecture`, `ArtifactJob`, `Artifact`, `Quiz`, `Question`, `Flashcard`, `MindMapNode`, `QuizAttempt`, `QuizMistake`, `JobVersion`)、`generation_options.py`（三層繼承選項規格與驗證）、`repositories.py`（儲存庫介面協定）。
 - 學習與研讀模型：`memory_model.py`（艾賓浩斯記憶強度、半衰期衰減與掌握度等級計算）、`study_plan.py`（今日任務清單、考前倒數天數、間隔複習卡片）、`notebooklm_protocol.py`（定義 Gemini Notebook 通訊協定與資料介面）。
 - 輔助邏輯：`naming.py`（集中控管 Gemini Notebook 遠端標題與本機檔案命名法、版本號尾綴）、`usage_guide.py`（提供課程學習順序、複習規劃與配額解說）。
 - 業務列舉：`JobStatus`, `JobType`, `ArtifactType`, `DifficultyLevel`, `CourseProfile`。

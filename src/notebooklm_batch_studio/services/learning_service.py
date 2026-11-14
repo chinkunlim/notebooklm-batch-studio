@@ -73,17 +73,14 @@ class LearningStoreProtocol(Protocol):
         """
         ...
 
-    def add_tutor_message(
-        self, course_code: str, lecture_no: int | None, role: str, text: str, conversation_id: str | None
-    ) -> None:
+    def add_tutor_message(self, course_code: str, role: str, text: str, **meta: Any) -> None:
         """Append a tutor message.
 
         Args:
             course_code: Course code.
-            lecture_no: Lecture number or None.
             role: 'student' or 'tutor'.
             text: Message text.
-            conversation_id: Conversation id or None.
+            **meta: Optional `lecture_no` and `conversation_id`.
         """
         ...
 
@@ -143,6 +140,32 @@ def strip_citations(text: str) -> str:
     return _CITATION.sub("", text)
 
 
+def _parse_single_key_point(item: Any, seen: set[str]) -> dict[str, Any] | None:
+    """Validate and normalize one parsed key-point object, returning None if duplicate or invalid.
+
+    Args:
+        item: Parsed JSON element candidate.
+        seen: Mutable set of previously accepted quote strings for deduplication.
+
+    Returns:
+        Normalized key-point dictionary, or None when skipped.
+    """
+    if not isinstance(item, dict):
+        return None
+    quote = " ".join(str(item.get("quote", "")).split()).strip(" \"'「」…")
+    if len(quote) < 4 or quote in seen:
+        return None
+    seen.add(quote)
+    page = item.get("page")
+    importance = item.get("importance", 2)
+    return {
+        "quote": quote,
+        "page": page if isinstance(page, int) and page > 0 else None,
+        "importance": min(3, max(1, importance)) if isinstance(importance, int) else 2,
+        "note": str(item.get("note", "")).strip(),
+    }
+
+
 def parse_key_points(text: str) -> list[dict[str, Any]]:
     """Read the key-point JSON out of a Gemini Notebook answer and clean it.
 
@@ -166,25 +189,12 @@ def parse_key_points(text: str) -> list[dict[str, Any]]:
         raise ValueError(f"Key points are not valid JSON: {err}") from err
     if not isinstance(items, list):
         raise ValueError("Key points must be a JSON array")
-    points: list[dict[str, Any]] = []
     seen: set[str] = set()
+    points: list[dict[str, Any]] = []
     for item in items:
-        if not isinstance(item, dict):
-            continue
-        quote = " ".join(str(item.get("quote", "")).split()).strip(" \"'「」…")
-        if len(quote) < 4 or quote in seen:
-            continue
-        seen.add(quote)
-        page = item.get("page")
-        importance = item.get("importance", 2)
-        points.append(
-            {
-                "quote": quote,
-                "page": page if isinstance(page, int) and page > 0 else None,
-                "importance": min(3, max(1, importance)) if isinstance(importance, int) else 2,
-                "note": str(item.get("note", "")).strip(),
-            }
-        )
+        parsed = _parse_single_key_point(item, seen)
+        if parsed is not None:
+            points.append(parsed)
     return points
 
 
@@ -344,20 +354,22 @@ class LearningService:
             for m in self.learning_repo.tutor_messages(code, lecture_no)
         ]
 
-    async def ask_tutor(self, code: str, lecture_no: int | None, message: str) -> dict[str, Any]:
-        """Send the student's message to the Socratic tutor and save both sides.
+    def _tutor_request_context(
+        self, code: str, lecture_no: int | None, message: str
+    ) -> tuple[str, list[str] | None, str | None]:
+        """Validate course and message state and resolve Gemini Notebook tutor context.
 
         Args:
             code: Course code.
-            lecture_no: Lecture number, or None for the whole course.
-            message: The student's message.
+            lecture_no: Target lecture number or None for course-wide scope.
+            message: Raw student question text.
 
         Returns:
-            The tutor's reply: {"text", "html"}.
+            Tuple of `(notebook_id, source_ids_or_none, previous_conversation_id)`.
 
         Raises:
             CourseNotFoundError: Unknown course.
-            ValueError: Empty message, or the course is not uploaded yet.
+            ValueError: Empty message or course lacks a notebook_id.
         """
         course = self.course_repo.get_course(code)
         if course is None:
@@ -373,12 +385,35 @@ class LearningService:
         ]
         history = self.learning_repo.tutor_messages(code, lecture_no)
         conversation = next((m["conversation_id"] for m in reversed(history) if m["conversation_id"]), None)
+        return course.notebook_id, sources or None, conversation
+
+    async def ask_tutor(self, code: str, lecture_no: int | None, message: str) -> dict[str, Any]:
+        """Send the student's message to the Socratic tutor and save both sides.
+
+        Args:
+            code: Course code.
+            lecture_no: Lecture number, or None for the whole course.
+            message: The student's message.
+
+        Returns:
+            The tutor's reply: {"text", "html"}.
+
+        Raises:
+            CourseNotFoundError: Unknown course.
+            ValueError: Empty message, or the course is not uploaded yet.
+        """
+        notebook_id, sources, conversation = self._tutor_request_context(code, lecture_no, message)
+        cleaned_message = message.strip()
         reply, new_conversation = await self.notebooklm_client.ask_in_conversation(
-            course.notebook_id, TUTOR_PROMPT.format(message=message.strip()), sources or None, conversation
+            notebook_id, TUTOR_PROMPT.format(message=cleaned_message), sources, conversation
         )
         reply = strip_citations(reply)
-        self.learning_repo.add_tutor_message(code, lecture_no, "student", message.strip(), new_conversation)
-        self.learning_repo.add_tutor_message(code, lecture_no, "tutor", reply, new_conversation)
+        self.learning_repo.add_tutor_message(
+            code, "student", cleaned_message, lecture_no=lecture_no, conversation_id=new_conversation
+        )
+        self.learning_repo.add_tutor_message(
+            code, "tutor", reply, lecture_no=lecture_no, conversation_id=new_conversation
+        )
         logger.info("Tutor replied for %s L%s (conversation %s)", code, lecture_no, new_conversation)
         return {"text": reply, "html": markdown_fragment(reply)}
 

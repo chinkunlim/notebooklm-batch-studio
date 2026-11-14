@@ -14,7 +14,7 @@
 - 🧠 **學習心理學輔助**（SPEC-008）：內建離線 PDF.js 講義閱讀器並色彩對應核心重點、艾賓浩斯遺忘曲線記憶強度評估、連續天數熱圖、作答信心比對（sure-but-wrong 盲點警示）、跨講混合複習、蘇格拉底式引導家教與 25 分鐘番茄鐘。
 - 📅 **學生研讀計畫**（SPEC-007）：動態規劃今日研讀「Today」清單、考前倒數天數、AI 詳解自動快取與間隔複習排程。
 - ⚙️ **產出細部自訂**（SPEC-006）：支援個別產出覆寫題目數、難度、語言、圖表風格與投影片格式（PDF/PPTX），三層設定自動繼承。
-- 🎨 **研讀工作室與外觀自訂**（SPEC-009，**規劃中、尚未實作**；原型在 `docs/design/`）：奢華黑膠擬態唱盤（非均向性光澤、機械唱臂落針動態、270° 環形進度弧線軌道）、9 大產出物全景平鋪九宮格矩陣（免分頁切換）、頂部第 4 主分頁自訂設計、全設備雙軌 RWD 根治與個人頭像自訂。
+- 🎨 **研讀工作室與外觀自訂**（SPEC-009 / ADR-008 / ADR-009）：黑膠擬態與多視覺唱盤（支持迷你浮動與曲線飛行動畫）、工作台統一檢視 9 大產出物、側欄四頁與獨立「設計與自訂」分頁、雙軌 RWD 及資料庫持久化介面偏好與離線字型。
 - 🌐 **三大操作入口**：完整 CLI 指令集、FastAPI 本機儀表板（`127.0.0.1:8768`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器集群與 OpenAPI 路由。
 
 ## 快速開始
@@ -188,8 +188,8 @@ uv run python -m unittest discover -s tests -v
 - [`.agents/handoff/LATEST.md`](.agents/handoff/LATEST.md) — 即時交接看板與歷史記錄
 - [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) — 系統架構圖、五層依賴與核心流程
 - [`docs/architecture/PROJECT_TREE.md`](docs/architecture/PROJECT_TREE.md) — 完整目錄樹與檔案標記
-- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-008）
-- [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-006）
-- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-024）
+- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-010）
+- [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-009）
+- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-037）
 - [`docs/standards/PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) — 本專案特有規則（領域名詞、埠號 8768、安全禁忌）
 - [`alembic/DB.md`](alembic/DB.md) — 資料庫模型遷移與 11 張實體資料表綱要指南 (SQLite / SQLAlchemy)

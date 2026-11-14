@@ -11,6 +11,7 @@ const MODAL_CLOSERS = {
   usageModal: () => closeUsageModal(),
   namingModal: () => closeNamingModal(),
   promptModal: () => closePromptModal(),
+  copyOptionsModal: () => closeCopyOptionsModal(),
 };
 
 /**
@@ -150,5 +151,54 @@ function shuffleQuestion(q, rand = Math.random) {
   }
   return { ...q, choices: order.map(i => choices[i]), answer_index: order.indexOf(q.answer_index) };
 }
+
+/* ---------- Shared frontend event bus and UI state store (TASK-018) ---------- */
+/** Lightweight pub/sub bus so decoupled static modules communicate without tight globals. */
+window.StudioBus = (() => {
+  const listeners = new Map();
+  return {
+    /**
+     * Subscribe to an event name.
+     * @param {string} event Event identifier
+     * @param {Function} fn Callback
+     */
+    on(event, fn) {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event).add(fn);
+    },
+    /**
+     * Unsubscribe a handler from an event name.
+     * @param {string} event Event identifier
+     * @param {Function} fn Callback
+     */
+    off(event, fn) {
+      if (listeners.has(event)) listeners.get(event).delete(fn);
+    },
+    /**
+     * Broadcast an event to all subscribers.
+     * @param {string} event Event identifier
+     * @param {*} payload Event payload
+     */
+    emit(event, payload) {
+      if (!listeners.has(event)) return;
+      listeners.get(event).forEach(fn => {
+        try { fn(payload); } catch (e) { console.error('StudioBus error:', e); }
+      });
+    },
+  };
+})();
+
+/** Centralized shallow UI state store synchronized via StudioBus. */
+window.StudioStore = {
+  state: { activeCourseCode: null, activeStudyCourse: null, courseFilter: 'all', queueDigest: '' },
+  /**
+   * Merge fields into store state and notify listeners.
+   * @param {object} next Partial state updates
+   */
+  patch(next) {
+    Object.assign(this.state, next || {});
+    window.StudioBus.emit('store:changed', this.state);
+  },
+};
 
 document.addEventListener('DOMContentLoaded', initModals);

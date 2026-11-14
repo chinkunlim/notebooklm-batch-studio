@@ -11,6 +11,7 @@ from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
 from notebooklm_batch_studio.entrypoints.schemas import (
     ArtifactSelectionRequest,
+    CopyOptionsRequest,
     RegenerateRequest,
     UpdateOptionsRequest,
 )
@@ -96,6 +97,32 @@ def set_course_options(code: str, req: UpdateOptionsRequest, request: Request) -
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@settings_router.post(
+    "/api/courses/{code}/options/copy", tags=["Settings"], operation_id="copy_course_options"
+)
+def copy_course_options(code: str, req: CopyOptionsRequest, request: Request) -> dict[str, Any]:
+    """Copy a course's generation options, language, and mock exam size to target courses.
+
+    Args:
+        code: Source course code.
+        req: Target course codes to copy settings onto.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Summary of source code, updated targets, and copied settings.
+
+    Raises:
+        HTTPException: 404 for unknown source/target course, 400 when targets are invalid.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return service.course_settings.copy_options(code, req.targets)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @settings_router.post(

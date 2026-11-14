@@ -1,7 +1,8 @@
 # ISSUE-035：WorkerPool 記憶體中 blocked_quota_types 未隨 resume 或無 QUOTA_WAIT 任務時清除導致佇列永久卡死
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-09
+- **解決日期**：2026-11-14
 - **Agent**：`antigravity`
 - **任務**：`TASK-015`
 
@@ -49,6 +50,6 @@
 
 ## 4. 防回歸
 
-- 單元測試（`tests/test_worker_pool.py` / `tests/test_queue_http.py`）：
-  1. 測試 `blocked_quota_types` 包含全部 12 種產出物類型且 DB 無 `QUOTA_WAIT` 任務時，呼叫 `resume()` 或經過一次 `_quota_probe_loop()` 後，`blocked_quota_types` 被清空且 `PENDING` 任務能被正常認領執行。
-  2. 測試 `POST /api/queue/resume` 能強制喚醒冷卻期內的 `QUOTA_WAIT` 任務並清空 `worker_pool.blocked_quota_types`。
+- 端對端與佇列回歸測試（`tests/test_quota_and_limits.py`、`tests/test_dummy_user_simulation.py`）：
+  1. 驗證 `WorkerPool.resume()` 與 `_quota_probe_loop()` 會於無對應 `QUOTA_WAIT` 任務或恢復佇列時清空 `blocked_quota_types`，讓 `PENDING` 任務正常被認領執行。
+  2. 驗證 `POST /api/queue/resume` 透過 `QueueRepository.refresh_quota_wait(force=True)` 強制喚醒冷卻期內的 `QUOTA_WAIT` 任務並解除阻塞。

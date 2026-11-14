@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
 from notebooklm_batch_studio.config.settings import AppConfig
@@ -17,25 +17,35 @@ from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 artifacts_router = APIRouter()
 
 
+def _quiz_path_target(code: str, no: int, variant: str) -> tuple[str, int, str]:
+    """Bundle lecture quiz path parameters for clean dependency injection.
+
+    Args:
+        code: Course identifier.
+        no: Lecture number.
+        variant: Quiz variant string.
+
+    Returns:
+        Tuple of `(code, no, variant)`.
+    """
+    return code, no, variant
+
+
 @artifacts_router.get(
     "/api/courses/{code}/lectures/{no}/quiz/{variant}",
     tags=["Quiz"],
     operation_id="get_quiz",
 )
 def get_quiz(
-    code: str,
-    no: int,
-    variant: str,
     request: Request,
+    target: tuple[str, int, str] = Depends(_quiz_path_target),
     with_answers: bool = Query(default=False, description="Whether to include answer rationales"),
 ) -> dict[str, Any]:
     """Retrieve generated quiz questions in markdown and JSON format.
 
     Args:
-        code: Course identifier.
-        no: Lecture number.
-        variant: Quiz variant string.
         request: Incoming HTTP request context.
+        target: Resolved `(course_code, lecture_no, variant)` path tuple.
         with_answers: Whether to include answers and rationales.
 
     Returns:
@@ -44,6 +54,7 @@ def get_quiz(
     Raises:
         HTTPException: 404 if course or quiz artifact is not found.
     """
+    code, no, variant = target
     service: BatchStudioService = request.app.state.service
     try:
         return service.get_quiz_content(code, no, variant, with_answers=with_answers)

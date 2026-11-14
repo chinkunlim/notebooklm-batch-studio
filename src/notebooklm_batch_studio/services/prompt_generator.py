@@ -7,6 +7,7 @@ leveraging local Ollama (gemma4) via domain protocol with offline rule-based fal
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from notebooklm_batch_studio.domain.models import ArtifactType
 from notebooklm_batch_studio.domain.repositories import OllamaClientProtocol
@@ -65,6 +66,87 @@ def _get_quiz_prompts(base_rules: str) -> dict[str, str]:
     }
 
 
+_CHAPTER_REPORT_SUFFIXES: dict[str, str] = {
+    ArtifactType.SLIDE_DECK.value: (
+        "請生成結構嚴謹的【專題報告投影片大綱 (Slide Deck)】。"
+        "依序包含：研究背景動機、核心概念架構、研究方法設計、實證分析與學術批判。"
+    ),
+    ArtifactType.INFOGRAPHIC.value: (
+        "請輸出適合轉化為資訊圖表 (Infographic) 的結構化視覺文本摘要。"
+        "包含研究流程圖步驟、核心數據指標、概念對比圖表與關鍵警示提醒。"
+    ),
+    ArtifactType.DATA_TABLE.value: (
+        "請生成全方位【概念與方法比較分析資料表 (Data Table)】。"
+        "使用 Markdown 格式呈現各研究方法之適用情境、優點、局限性與典型範例。"
+    ),
+    ArtifactType.VIDEO.value: (
+        "請撰寫適合劇院影音或學術 Podcast 導讀之劇本講稿 (Video Script)。"
+        "以專業學者對談口吻，生動引導閱聽者掌握本章研究方法之精髓與爭議點。"
+    ),
+    ArtifactType.REPORTS_BRIEFING.value: (
+        "請根據本講義撰寫【高階研究摘要報告 (Briefing Doc)】。"
+        "包含 Executive Summary（執行摘要）、核心學術發現、重要論點引述、實證結論分析與關鍵洞察。"
+    ),
+    ArtifactType.REPORTS_STUDY_GUIDE.value: (
+        "請根據本講義撰寫【綜合研讀指南 (Synthesis Study Guide)】。"
+        "包含核心知識點總覽、十題簡答檢驗題與解答、五項深度研討思考題，以及專有名詞辭典。"
+    ),
+    ArtifactType.REPORTS_BLOG_POST.value: (
+        "請根據本講義撰寫【學術知識精華文章 (Blog Post)】。"
+        "以清晰流暢風格萃取本講義最具突破性之核心觀念，使用小標題與重點引言整理成高品質知識長文。"
+    ),
+    ArtifactType.REPORTS_CONCEPT.value: (
+        "請根據本講義撰寫【概念解說 (Concept Explanation)】。"
+        "逐一解釋本講最重要的概念：白話定義、為什麼重要、具體例子、常見誤解，以及概念之間的關係。"
+    ),
+}
+
+_COURSE_SYNTHESIS_TEMPLATES: dict[str, str] = {
+    ArtifactType.COURSE_MIND_MAP.value: (
+        "本課程為【{name}】。{lang}請繪製貫穿全部講義之【全課程總架構心智圖】。"
+        "展示從科學研究本質、假說建立、研究設計、變項測量至效度與倫理之知識地圖。"
+    ),
+    ArtifactType.COURSE_STUDY_GUIDE.value: (
+        "本課程為【{name}】。{lang}請彙編【全課程總結讀書指南】。"
+        "整合各章核心關聯、全書方法學對照比較與期末核心考點精華整理。"
+    ),
+    ArtifactType.COURSE_AUDIO.value: (
+        "本課程為【{name}】。{lang}請產出全課程總回顧語音導讀腳本。"
+        "貫穿全學期的知識體系，串聯各章關鍵概念與核心思維。"
+    ),
+    ArtifactType.COURSE_REPORTS_BRIEFING.value: (
+        "本課程為【{name}】全範圍學術總結報告。{lang}"
+        "請撰寫全課程高階研究摘要報告 (Briefing Doc)。"
+        "整合全學期核心理論體系、關鍵實證發現與研究方法學總體評析。"
+    ),
+    ArtifactType.COURSE_REPORTS_STUDY_GUIDE.value: (
+        "本課程為【{name}】全範圍期末總複習指南。{lang}"
+        "請撰寫綜合研讀指南 (Synthesis Study Guide)。"
+        "包含全書概念架構、跨章節檢驗題、綜合討論題與全課程專有名詞辭典。"
+    ),
+    ArtifactType.COURSE_REPORTS_BLOG_POST.value: (
+        "本課程為【{name}】。{lang}請撰寫全課程知識精華文章 (Blog Post)。"
+        "以引人入勝的文章風格統整本門課最有啟發性的十項核心研究原則與思維精要。"
+    ),
+    ArtifactType.COURSE_REPORTS_CONCEPT.value: (
+        "本課程為【{name}】。{lang}請撰寫全課程概念解說 (Concept Explanation)。"
+        "整理跨章節最核心的概念：白話定義、例子、常見誤解，並說明概念如何串連成整門課的知識架構。"
+    ),
+}
+
+
+def _get_chapter_report_prompts(base_rules: str) -> dict[str, str]:
+    """Build blueprint prompts for chapter-level decks, reports, and multimedia.
+
+    Args:
+        base_rules: Common academic instructions prefix.
+
+    Returns:
+        Mapping from chapter artifact type value to prompt text.
+    """
+    return {art_type: f"{base_rules}{suffix}" for art_type, suffix in _CHAPTER_REPORT_SUFFIXES.items()}
+
+
 def _get_chapter_prompts(base_rules: str) -> dict[str, str]:
     """Build blueprint prompts for lecture-level artifacts.
 
@@ -89,52 +171,21 @@ def _get_chapter_prompts(base_rules: str) -> dict[str, str]:
                 f"{base_rules}請撰寫本章【精讀讀書指南 (Study Guide)】。"
                 "包含章節學習目標、核心概念精要、方法學優缺點比較矩陣與 3 個延伸研討思考題。"
             ),
-            ArtifactType.SLIDE_DECK.value: (
-                f"{base_rules}請生成結構嚴謹的【專題報告投影片大綱 (Slide Deck)】。"
-                "依序包含：研究背景動機、核心概念架構、研究方法設計、實證分析與學術批判。"
-            ),
-            ArtifactType.INFOGRAPHIC.value: (
-                f"{base_rules}請輸出適合轉化為資訊圖表 (Infographic) 的結構化視覺文本摘要。"
-                "包含研究流程圖步驟、核心數據指標、概念對比圖表與關鍵警示提醒。"
-            ),
-            ArtifactType.DATA_TABLE.value: (
-                f"{base_rules}請生成全方位【概念與方法比較分析資料表 (Data Table)】。"
-                "使用 Markdown 格式呈現各研究方法之適用情境、優點、局限性與典型範例。"
-            ),
-            ArtifactType.VIDEO.value: (
-                f"{base_rules}請撰寫適合劇院影音或學術 Podcast 導讀之劇本講稿 (Video Script)。"
-                "以專業學者對談口吻，生動引導閱聽者掌握本章研究方法之精髓與爭議點。"
-            ),
-            ArtifactType.REPORTS_BRIEFING.value: (
-                f"{base_rules}請根據本講義撰寫【高階研究摘要報告 (Briefing Doc)】。"
-                "包含 Executive Summary（執行摘要）、核心學術發現、重要論點引述、實證結論分析與關鍵洞察。"
-            ),
-            ArtifactType.REPORTS_STUDY_GUIDE.value: (
-                f"{base_rules}請根據本講義撰寫【綜合研讀指南 (Synthesis Study Guide)】。"
-                "包含核心知識點總覽、十題簡答檢驗題與解答、五項深度研討思考題，以及專有名詞辭典。"
-            ),
-            ArtifactType.REPORTS_BLOG_POST.value: (
-                f"{base_rules}請根據本講義撰寫【學術知識精華文章 (Blog Post)】。"
-                "以清晰流暢風格萃取本講義最具突破性之核心觀念，使用小標題與重點引言整理成高品質知識長文。"
-            ),
-            ArtifactType.REPORTS_CONCEPT.value: (
-                f"{base_rules}請根據本講義撰寫【概念解說 (Concept Explanation)】。"
-                "逐一解釋本講最重要的概念：白話定義、為什麼重要、具體例子、常見誤解，以及概念之間的關係。"
-            ),
         }
     )
+    prompts.update(_get_chapter_report_prompts(base_rules))
     return prompts
 
 
-def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, str]:
-    """Build blueprint prompts for course-wide aggregated artifacts.
+def _get_course_quiz_prompts(course_name: str, lang_instruction: str) -> dict[str, str]:
+    """Build blueprint prompts for course-wide comprehensive quiz types.
 
     Args:
         course_name: Course title.
         lang_instruction: Language constraint clause.
 
     Returns:
-        Mapping from course artifact type value to prompt text.
+        Mapping from course quiz artifact type value to prompt text.
     """
     return {
         ArtifactType.COURSE_MOCK_EXAM.value: (
@@ -152,37 +203,27 @@ def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, st
             f"{lang_instruction}請生成 50 題跨章節核心觀念刷題單選題，快速檢驗各章定義、機制與關鍵考點。"
             "題幹精準簡潔，附重點診斷解析。每題題幹開頭標註出處講次，格式為【Ch03】。"
         ),
-        ArtifactType.COURSE_MIND_MAP.value: (
-            f"本課程為【{course_name}】。{lang_instruction}請繪製貫穿全部講義之【全課程總架構心智圖】。"
-            "展示從科學研究本質、假說建立、研究設計、變項測量至效度與倫理之知識地圖。"
-        ),
-        ArtifactType.COURSE_STUDY_GUIDE.value: (
-            f"本課程為【{course_name}】。{lang_instruction}請彙編【全課程總結讀書指南】。"
-            "整合各章核心關聯、全書方法學對照比較與期末核心考點精華整理。"
-        ),
-        ArtifactType.COURSE_AUDIO.value: (
-            f"本課程為【{course_name}】。{lang_instruction}請產出全課程總回顧語音導讀腳本。"
-            "貫穿全學期的知識體系，串聯各章關鍵概念與核心思維。"
-        ),
-        ArtifactType.COURSE_REPORTS_BRIEFING.value: (
-            f"本課程為【{course_name}】全範圍學術總結報告。{lang_instruction}"
-            "請撰寫全課程高階研究摘要報告 (Briefing Doc)。"
-            "整合全學期核心理論體系、關鍵實證發現與研究方法學總體評析。"
-        ),
-        ArtifactType.COURSE_REPORTS_STUDY_GUIDE.value: (
-            f"本課程為【{course_name}】全範圍期末總複習指南。{lang_instruction}"
-            "請撰寫綜合研讀指南 (Synthesis Study Guide)。"
-            "包含全書概念架構、跨章節檢驗題、綜合討論題與全課程專有名詞辭典。"
-        ),
-        ArtifactType.COURSE_REPORTS_BLOG_POST.value: (
-            f"本課程為【{course_name}】。{lang_instruction}請撰寫全課程知識精華文章 (Blog Post)。"
-            "以引人入勝的文章風格統整本門課最有啟發性的十項核心研究原則與思維精要。"
-        ),
-        ArtifactType.COURSE_REPORTS_CONCEPT.value: (
-            f"本課程為【{course_name}】。{lang_instruction}請撰寫全課程概念解說 (Concept Explanation)。"
-            "整理跨章節最核心的概念：白話定義、例子、常見誤解，並說明概念如何串連成整門課的知識架構。"
-        ),
     }
+
+
+def _get_course_prompts(course_name: str, lang_instruction: str) -> dict[str, str]:
+    """Build blueprint prompts for course-wide aggregated artifacts.
+
+    Args:
+        course_name: Course title.
+        lang_instruction: Language constraint clause.
+
+    Returns:
+        Mapping from course artifact type value to prompt text.
+    """
+    prompts = _get_course_quiz_prompts(course_name, lang_instruction)
+    prompts.update(
+        {
+            key: tpl.format(name=course_name, lang=lang_instruction)
+            for key, tpl in _COURSE_SYNTHESIS_TEMPLATES.items()
+        }
+    )
+    return prompts
 
 
 class PromptGenerator:
@@ -233,8 +274,7 @@ class PromptGenerator:
         artifact_type: ArtifactType | str,
         topic: str,
         course_name: str,
-        language: str = "zh-TW",
-        use_ollama: bool = True,
+        **options: Any,
     ) -> str:
         """Generate customized prompt using Ollama gemma4 with blueprint fallback.
 
@@ -242,12 +282,13 @@ class PromptGenerator:
             artifact_type: Artifact type enum or string.
             topic: Chapter topic or scope.
             course_name: Course title.
-            language: Target output language.
-            use_ollama: Whether to attempt Ollama enhancement.
+            **options: Optional `language` (default 'zh-TW') and `use_ollama` (default True).
 
         Returns:
             Refined prompt string.
         """
+        language = str(options.get("language", "zh-TW"))
+        use_ollama = bool(options.get("use_ollama", True))
         base_prompt = self.get_base_blueprint_prompt(artifact_type, topic, course_name, language)
         if not use_ollama or self.ollama is None:
             return base_prompt

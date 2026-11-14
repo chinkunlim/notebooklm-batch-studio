@@ -225,7 +225,17 @@
         <!-- 課程目錄: courses on the left, the chosen course's lectures on the right -->
         <div class="resizable" data-col-key="courses" id="paneCourses" hidden>
           <div class="card">
-            <div class="card-head"><h2 class="h2">我的課程</h2><span class="eyebrow" id="courseCount"></span></div>
+            <div class="card-head">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <h2 class="h2">我的課程</h2>
+                <span class="eyebrow" id="courseCount"></span>
+              </div>
+              <div class="seg" id="courseFilter" data-seg="courseFilter" role="tablist" aria-label="課程進度篩選">
+                <button type="button" class="on" data-value="all">全部</button>
+                <button type="button" data-value="in_progress">進行中</button>
+                <button type="button" data-value="finished">已完成</button>
+              </div>
+            </div>
             <div class="course-list" id="courseList"></div>
           </div>
           <div class="card">
@@ -690,6 +700,19 @@
   </div>
 </div>
 
+<!-- Copy course options to other courses -->
+<div id="copyOptionsModal" class="modal-overlay">
+  <div class="modal narrow">
+    <h3>套用到其他課程</h3>
+    <p class="desc" id="copyOptionsDesc"></p>
+    <div id="copyOptionsTargets" class="check-group"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" onclick="closeCopyOptionsModal()">取消</button>
+      <button type="button" class="btn btn-primary" id="btnSubmitCopyOptions" onclick="submitCopyOptions()">套用設定</button>
+    </div>
+  </div>
+</div>
+
 <!-- Usage guide -->
 <div id="usageModal" class="modal-overlay">
   <div class="modal narrow">
@@ -751,11 +774,16 @@
 
 <script src="/static/studio-core.js"></script>
 <script src="/static/studio-app.js"></script>
+<script src="/static/studio-study-panels.js"></script>
 <script src="/static/studio-batch.js"></script>
+<script src="/static/studio-queue.js"></script>
 <script src="/static/studio-settings.js"></script>
+<script src="/static/studio-wizard.js"></script>
 <script src="/static/studio.js"></script>
+<script src="/static/studio-study-extras.js"></script>
 <script src="/static/studio-learning.js"></script>
 <script src="/static/studio-shell.js"></script>
+<script src="/static/studio-nav.js"></script>
 <script src="/static/studio-player.js"></script>
 <script src="/static/studio-bench.js"></script>
 <script src="/static/studio-fonts.js"></script>

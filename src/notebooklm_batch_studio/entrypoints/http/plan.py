@@ -155,7 +155,13 @@ def record_review(code: str, req: ReviewIn, request: Request) -> dict[str, Any]:
     """
     try:
         return _plan(request).record_review(
-            code, req.kind, req.key, req.remembered, req.lecture_no, req.front, req.back
+            code,
+            req.kind,
+            req.key,
+            remembered=req.remembered,
+            lecture_no=req.lecture_no,
+            front=req.front,
+            back=req.back,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -178,7 +184,12 @@ async def explain_question(code: str, req: ExplainIn, request: Request) -> dict[
     """
     try:
         return await _plan(request).explain(
-            code, req.lecture_no, req.question, req.choices, req.answer_index, req.force
+            code,
+            req.lecture_no,
+            req.question,
+            choices=req.choices,
+            answer_index=req.answer_index,
+            force=req.force,
         )
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

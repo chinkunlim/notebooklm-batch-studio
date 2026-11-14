@@ -197,10 +197,13 @@ class LearningServiceTest(unittest.TestCase):
         study.record_quiz_attempt(
             "BIO101",
             1,
-            "quiz_1",
-            8,
-            10,
-            [{**mistake, "confidence": "sure"}, {**mistake, "question_text": "Q2", "confidence": "maybe"}],
+            quiz_variant="quiz_1",
+            score=8,
+            total_questions=10,
+            mistakes_data=[
+                {**mistake, "confidence": "sure"},
+                {**mistake, "question_text": "Q2", "confidence": "maybe"},
+            ],
             confidence_summary={"sure_wrong": 1, "guess_right": 2},
         )
         saved = sorted(study.get_weaknesses("BIO101"), key=lambda m: m.question_text)

@@ -131,8 +131,7 @@ class NotebookLMClientProtocol(Protocol):
         notebook_id: str,
         source_ids: list[str],
         prompt: str | None = None,
-        difficulty: str | None = None,
-        options: GenerationOptions | None = None,
+        **kwargs: Any,
     ) -> str:
         """Generate a quiz from selected sources and wait for completion.
 
@@ -140,8 +139,7 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional instructional prompt for the quiz generation.
-            difficulty: 'easy', 'medium', 'hard', or None for the default.
-            options: Course generation options (None = defaults).
+            **kwargs: Optional `difficulty` ('easy'/'medium'/'hard') and `options` (`GenerationOptions`).
 
         Returns:
             The completed quiz artifact id.
@@ -223,8 +221,7 @@ class NotebookLMClientProtocol(Protocol):
         notebook_id: str,
         source_ids: list[str],
         prompt: str | None = None,
-        language: str = "zh-TW",
-        options: GenerationOptions | None = None,
+        **kwargs: Any,
     ) -> str:
         """Generate a Deep Dive audio overview and wait for completion.
 
@@ -232,8 +229,7 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             source_ids: List of source identifiers to generate from.
             prompt: Optional customization prompt for audio discussion.
-            language: Course language ('zh-TW', 'en', 'bilingual').
-            options: Course generation options (None = defaults).
+            **kwargs: Optional `language` ('zh-TW', 'en', 'bilingual') and `options` (`GenerationOptions`).
 
         Returns:
             The completed audio artifact id.
@@ -277,8 +273,7 @@ class NotebookLMClientProtocol(Protocol):
         notebook_id: str,
         source_ids: list[str],
         prompt: str | None = None,
-        language: str = "zh-TW",
-        report_format: str = "briefing_doc",
+        **kwargs: Any,
     ) -> str:
         """Request generation of a study guide or briefing report.
 
@@ -286,8 +281,7 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language ('zh-TW', 'en', 'bilingual').
-            report_format: Format key (briefing_doc, study_guide, blog_post).
+            **kwargs: Optional `language` and `report_format`.
 
         Returns:
             Task or artifact identifier.
@@ -311,8 +305,7 @@ class NotebookLMClientProtocol(Protocol):
         notebook_id: str,
         source_ids: list[str],
         prompt: str | None = None,
-        language: str = "zh-TW",
-        options: GenerationOptions | None = None,
+        **kwargs: Any,
     ) -> str:
         """Request generation of slide deck presentation outline.
 
@@ -320,8 +313,7 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language.
-            options: Course generation options (None = defaults).
+            **kwargs: Optional `language` and `options` (`GenerationOptions`).
 
         Returns:
             Task or artifact identifier.
@@ -346,8 +338,7 @@ class NotebookLMClientProtocol(Protocol):
         notebook_id: str,
         source_ids: list[str],
         prompt: str | None = None,
-        language: str = "zh-TW",
-        options: GenerationOptions | None = None,
+        **kwargs: Any,
     ) -> str:
         """Request generation of an infographic.
 
@@ -355,8 +346,7 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language.
-            options: Course generation options (None = defaults).
+            **kwargs: Optional `language` and `options` (`GenerationOptions`).
 
         Returns:
             Task or artifact identifier.
@@ -408,8 +398,7 @@ class NotebookLMClientProtocol(Protocol):
         notebook_id: str,
         source_ids: list[str],
         prompt: str | None = None,
-        language: str = "zh-TW",
-        options: GenerationOptions | None = None,
+        **kwargs: Any,
     ) -> str:
         """Request generation of cinematic video overview.
 
@@ -417,8 +406,7 @@ class NotebookLMClientProtocol(Protocol):
             notebook_id: The notebook identifier.
             source_ids: Selected source identifiers.
             prompt: Optional custom instructions.
-            language: Target language.
-            options: Course generation options (None = defaults).
+            **kwargs: Optional `language` and `options` (`GenerationOptions`).
 
         Returns:
             Task or artifact identifier.

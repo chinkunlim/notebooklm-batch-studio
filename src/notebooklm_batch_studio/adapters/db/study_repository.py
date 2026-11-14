@@ -74,6 +74,31 @@ def _to_domain_attempt(record: QuizAttemptRecord, mistakes: list[QuizMistake] | 
     )
 
 
+def _build_mistake_record(attempt_id: str, mistake: QuizMistake) -> QuizMistakeRecord:
+    """Convert one domain QuizMistake to an unsaved ORM QuizMistakeRecord.
+
+    Args:
+        attempt_id: Parent attempt identifier.
+        mistake: Domain mistake entity.
+
+    Returns:
+        Unsaved QuizMistakeRecord instance.
+    """
+    return QuizMistakeRecord(
+        id=mistake.id,
+        attempt_id=attempt_id,
+        course_code=mistake.course_code,
+        lecture_no=mistake.lecture_no,
+        question_text=mistake.question_text,
+        choices_json=json.dumps(mistake.choices, ensure_ascii=False),
+        correct_index=mistake.correct_index,
+        selected_index=mistake.selected_index,
+        explanation=mistake.explanation,
+        is_resolved=mistake.is_resolved,
+        confidence=mistake.confidence,
+    )
+
+
 class StudyRepository:
     """Database access for student quiz attempts and mistake records."""
 
@@ -105,20 +130,7 @@ class StudyRepository:
         self.session.add(attempt_rec)
 
         for m in attempt.mistakes:
-            mistake_rec = QuizMistakeRecord(
-                id=m.id,
-                attempt_id=attempt.id,
-                course_code=attempt.course_code,
-                lecture_no=attempt.lecture_no,
-                question_text=m.question_text,
-                choices_json=json.dumps(m.choices, ensure_ascii=False),
-                correct_index=m.correct_index,
-                selected_index=m.selected_index,
-                explanation=m.explanation,
-                is_resolved=m.is_resolved,
-                confidence=m.confidence,
-            )
-            self.session.add(mistake_rec)
+            self.session.add(_build_mistake_record(attempt.id, m))
         self.session.commit()
         logger.info(
             "Persisted quiz attempt %s for course %s (score=%d/%d)",

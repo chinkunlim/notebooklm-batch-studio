@@ -18,7 +18,7 @@ from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import NeedsReviewError, QuotaExceededError
 from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, Course, JobStatus, Lecture
 from notebooklm_batch_studio.entrypoints.api import create_app
-from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
+from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner, JobTarget
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.quota_planner import (
     action_kind_for,
@@ -202,7 +202,7 @@ class MockExamQuarantineTest(unittest.IsolatedAsyncioTestCase):
             )
             out_dir = tmp / "out"
             with self.assertRaises(NeedsReviewError) as ctx:
-                await runner.process_job(job, course, "nb", ["s1"], out_dir)
+                await runner.process_job(job, course, JobTarget("nb", ["s1"], out_dir))
             review = Path(ctx.exception.output_file)
             self.assertTrue(review.is_file())
             self.assertTrue(review.is_relative_to(cfg.needs_review_dir))

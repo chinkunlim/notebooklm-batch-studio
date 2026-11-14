@@ -30,7 +30,12 @@ from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.converters.quiz_converter import parse_notebooklm_quiz
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
-from notebooklm_batch_studio.services.study_plan_service import StudyPlanService, card_key, days_until
+from notebooklm_batch_studio.services.study_plan_service import (
+    StudyPlanDeps,
+    StudyPlanService,
+    card_key,
+    days_until,
+)
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 NOW = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
@@ -104,7 +109,13 @@ class PlanFixture(unittest.TestCase):
         self.client = mock.MagicMock()
         self.client.ask = mock.AsyncMock(return_value="因為……")
         self.plan = StudyPlanService(
-            self.course_repo, self.queue_repo, self.study_repo, ReviewRepository(self.session), self.client
+            StudyPlanDeps(
+                self.course_repo,
+                self.queue_repo,
+                self.study_repo,
+                ReviewRepository(self.session),
+                self.client,
+            )
         )
 
     def tearDown(self) -> None:
@@ -145,39 +156,50 @@ class PlanTest(PlanFixture):
     def test_review_schedule_and_due(self) -> None:
         """A reviewed card is due again after its interval; forgotten cards come back soon."""
         key = card_key("什麼是假設？")
-        self.plan.record_review("C1", "flashcard", key, True, 1, "什麼是假設？", "可檢驗的預測", now=NOW)
+        self.plan.record_review(
+            "C1",
+            "flashcard",
+            key,
+            remembered=True,
+            lecture_no=1,
+            front="什麼是假設？",
+            back="可檢驗的預測",
+            now=NOW,
+        )
         self.assertEqual(self.plan.due_reviews("C1", now=NOW), [])
         due = self.plan.due_reviews("C1", now=NOW + timedelta(days=1, minutes=1))
         self.assertEqual(due[0]["front"], "什麼是假設？")
-        self.plan.record_review("C1", "flashcard", key, False, now=NOW + timedelta(days=1))
+        self.plan.record_review("C1", "flashcard", key, remembered=False, now=NOW + timedelta(days=1))
         self.assertEqual(self.plan.due_reviews("C1", now=NOW + timedelta(days=1, minutes=11))[0]["stage"], 0)
         self.assertTrue(self.plan.get_plan("C1", now=NOW)["lectures"][0]["steps"][-1]["done"])
         with self.assertRaises(ValueError):
-            self.plan.record_review("C1", "nope", key, True)
+            self.plan.record_review("C1", "nope", key, remembered=True)
 
     def test_explain_uses_lecture_sources(self) -> None:
         """The explanation asks Gemini Notebook with only that lecture's source and the correct letter."""
-        out = asyncio.run(self.plan.explain("C1", 2, "哪個對？", ["甲", "乙"], 1))
+        out = asyncio.run(self.plan.explain("C1", 2, "哪個對？", choices=["甲", "乙"], answer_index=1))
         self.assertEqual(out["answer"], "因為……")
         args = self.client.ask.await_args.args
         self.assertEqual((args[0], args[2]), ("nb", ["s2"]))
         self.assertIn("正確答案是 B", args[1])
         with self.assertRaises(ValueError):
-            asyncio.run(self.plan.explain("C1", 2, "q", ["a"], 3))
+            asyncio.run(self.plan.explain("C1", 2, "q", choices=["a"], answer_index=3))
         # Markdown from Gemini Notebook is rendered with raw HTML escaped.
         self.client.ask = mock.AsyncMock(return_value="**重點** <script>x</script>")
-        html = asyncio.run(self.plan.explain("C1", 2, "q", ["a", "b"], 0))["html"]
+        html = asyncio.run(self.plan.explain("C1", 2, "q", choices=["a", "b"], answer_index=0))["html"]
         self.assertIn("<strong>重點</strong>", html)
         self.assertNotIn("<script>", html)
 
     def test_explanations_are_saved_and_reused(self) -> None:
         """The second request for the same question uses the saved answer; force asks again."""
-        first = asyncio.run(self.plan.explain("C1", 1, "什麼是假設？", ["a", "b"], 0))
-        second = asyncio.run(self.plan.explain("C1", 1, "什麼是假設？", ["a", "b"], 0))
+        first = asyncio.run(self.plan.explain("C1", 1, "什麼是假設？", choices=["a", "b"], answer_index=0))
+        second = asyncio.run(self.plan.explain("C1", 1, "什麼是假設？", choices=["a", "b"], answer_index=0))
         self.assertFalse(first["from_cache"])
         self.assertTrue(second["from_cache"])
         self.assertEqual(self.client.ask.await_count, 1)
-        asyncio.run(self.plan.explain("C1", 1, "什麼是假設？", ["a", "b"], 0, force=True))
+        asyncio.run(
+            self.plan.explain("C1", 1, "什麼是假設？", choices=["a", "b"], answer_index=0, force=True)
+        )
         self.assertEqual(self.client.ask.await_count, 2)
         saved = self.plan.list_explanations("C1", 1)
         self.assertEqual(len(saved), 1)
@@ -192,8 +214,10 @@ class PlanTest(PlanFixture):
         with self.assertRaises(ValueError):
             service.course_settings.set_options("C1", {"exam_date": "next week"})
         self.plan.mark_step("C1", 1, "audio")
-        self.plan.record_review("C1", "flashcard", "k", True, 1, "f", "b", now=NOW)
-        asyncio.run(self.plan.explain("C1", 1, "q?", ["a"], 0))
+        self.plan.record_review(
+            "C1", "flashcard", "k", remembered=True, lecture_no=1, front="f", back="b", now=NOW
+        )
+        asyncio.run(self.plan.explain("C1", 1, "q?", choices=["a"], answer_index=0))
         service.course_settings.delete_course("C1")
         self.assertEqual(ReviewRepository(self.session).list_steps("C1"), set())
         self.assertEqual(ReviewRepository(self.session).list_explanations("C1"), [])
@@ -235,9 +259,13 @@ class EntrypointTest(PlanFixture):
         mcp = build_mcp_server(service=service, study_service=study, config=self.config, study_plan=self.plan)
         tools = mcp._tool_manager._tools  # type: ignore[attr-defined]
         self.assertIn("next", json.loads(tools["get_study_plan"].fn("C1")))
-        self.assertFalse(json.loads(tools["mark_study_step"].fn("C1", "guide", 1))["confirmed"])
         self.assertFalse(
-            json.loads(asyncio.run(tools["explain_question"].fn("C1", "q", ["a"], 0)))["confirmed"]
+            json.loads(tools["mark_study_step"].fn("C1", "guide", {"lecture_no": 1}))["confirmed"]
+        )
+        self.assertFalse(
+            json.loads(
+                asyncio.run(tools["explain_question"].fn("C1", "q", {"choices": ["a"], "answer_index": 0}))
+            )["confirmed"]
         )
 
 

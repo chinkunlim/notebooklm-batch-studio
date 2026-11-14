@@ -1,7 +1,8 @@
 # ISSUE-036：單項產出顯示完成但課程整體產出進度不更新且分母未排除 skipped
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-09
+- **解決日期**：2026-11-14
 - **Agent**：`antigravity`
 - **任務**：`TASK-016`
 
@@ -44,5 +45,5 @@
 
 ## 4. 防回歸
 
-- 後端單元測試（`tests/test_course_settings.py`）：驗證含有 `SKIPPED` 任務的課程在其餘任務皆 `DONE` 時，`list_courses_summary` 與 `get_course_detail` 的 `progress_percent` 為 `100.0`。
-- 前端驗證：在任務完成後不手動重整頁面，確認批次排程課程卡片、頂部課程選單、課程目錄與研讀工作室的產出進度皆自動推進。
+- 後端與端對端回歸測試（`tests/test_dummy_user_simulation.py`、`tests/test_selection_and_folders.py`）：驗證含有 `SKIPPED` 任務的課程在其餘任務皆 `DONE` 時，`list_courses_summary` 與 `get_course_detail` 的 `progress_percent` 為 `100.0`。
+- 前端輪詢與結構回歸檢查（`tests/test_dummy_user_simulation.py::UiAndStaticRegressionTest`）：驗證 `studio-batch.js`（`renderStatusBar`、`syncLiveCourseProgress`）排除 `skipped` 並於進度變動時刷新課程與研讀視圖。

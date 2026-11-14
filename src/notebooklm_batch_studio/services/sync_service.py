@@ -126,7 +126,7 @@ def extract_synced_art_ids(jobs: list[ArtifactJob]) -> set[str]:
 
 
 def resolve_artifact_destination(
-    course: Any, course_out: Path, title: str, art_id: str, kind: str
+    course: Any, course_out: Path, title: str, **meta: Any
 ) -> tuple[int | None, ArtifactType, Path]:
     """Determine lecture number, artifact type, and local destination file path.
 
@@ -134,12 +134,13 @@ def resolve_artifact_destination(
         course: Course entity.
         course_out: Base course output directory.
         title: Artifact title string.
-        art_id: Remote artifact identifier.
-        kind: Artifact kind string.
+        **meta: Metadata keyword arguments (`art_id`, `kind`).
 
     Returns:
         Tuple of (inferred lecture sequence number or None, ArtifactType, destination Path).
     """
+    art_id = str(meta["art_id"])
+    kind = str(meta["kind"])
     lec_no = infer_lecture_no_from_title(title, len(course.lectures))
     art_type = map_remote_kind_to_artifact_type(kind)
 
@@ -152,8 +153,7 @@ def resolve_artifact_destination(
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     safe_title = re.sub(r"[^\w\s\-\[\]]", "_", title).strip() or art_id
-    ext = get_extension_for_kind(kind)
-    output_file = dest_dir / f"{safe_title}{ext}"
+    output_file = dest_dir / f"{safe_title}{get_extension_for_kind(kind)}"
     return lec_no, art_type, output_file
 
 
@@ -180,6 +180,70 @@ class RemoteSyncService:
         self.queue_repo = queue_repo
         self.output_base_dir = output_base_dir
 
+    async def _download_and_enqueue(
+        self, course: Any, art: dict[str, Any], dest: tuple[int | None, Any, Path]
+    ) -> dict[str, Any] | None:
+        """Download a single remote artifact and record a synthetic DONE job row.
+
+        Args:
+            course: Domain Course entity with linked notebook_id.
+            art: Remote artifact summary dictionary.
+            dest: Tuple of `(lecture_no, ArtifactType, output_file)`.
+
+        Returns:
+            Synced metadata dictionary or None on download error.
+        """
+        lec_no, art_type, output_file = dest
+        art_id, title, kind = art["id"], art["title"], art["kind"]
+        try:
+            downloaded_path = await self.client.download_artifact_by_kind(
+                notebook_id=course.notebook_id, artifact_id=art_id, kind=kind, output_path=str(output_file)
+            )
+            job = ArtifactJob(
+                id=str(uuid.uuid4()),
+                course_code=course.code,
+                lecture_no=lec_no,
+                artifact_type=art_type,
+                status=JobStatus.DONE,
+                output_file=downloaded_path,
+                source_origin="remote_sync",
+                custom_prompt=f"Synced from Gemini Notebook [{art_id}]: {title}",
+            )
+            self.queue_repo.enqueue_jobs([job])
+            logger.info("Synced remote artifact '%s' to %s", title, downloaded_path)
+            return {"id": art_id, "title": title, "path": downloaded_path}
+        except Exception as err:
+            logger.warning("Failed to sync remote artifact %s (%s): %s", art_id, title, err)
+            return None
+
+    async def _sync_single_artifact(
+        self, course: Any, art: dict[str, Any], seen: tuple[set[str], set[str]]
+    ) -> dict[str, Any] | None:
+        """Download and record one remote artifact if not already present locally.
+
+        Args:
+            course: Domain Course entity with linked notebook_id.
+            art: Remote artifact summary dictionary.
+            seen: Tuple of (existing_art_ids, existing_output_files).
+
+        Returns:
+            Synced item metadata dictionary, or None when skipped or failed.
+        """
+        existing_art_ids, existing_output_files = seen
+        art_id, title, kind = art["id"], art["title"], art["kind"]
+        if art_id in existing_art_ids:
+            logger.info("Skipping already synchronized remote artifact %s (%s)", art_id, title)
+            return None
+
+        course_out = self.output_base_dir / "courses" / course.code
+        lec_no, art_type, output_file = resolve_artifact_destination(
+            course, course_out, title, art_id=art_id, kind=kind
+        )
+        if str(output_file) in existing_output_files or output_file.exists():
+            logger.info("Artifact file already exists at %s, skipping download", output_file)
+            return None
+        return await self._download_and_enqueue(course, art, (lec_no, art_type, output_file))
+
     async def sync_course(self, course_code: str) -> dict[str, Any]:
         """Fetch remote artifacts for a course and sync new ones locally.
 
@@ -195,61 +259,16 @@ class RemoteSyncService:
         if not course.notebook_id:
             raise ValueError(f"Course {course_code} has no linked Gemini Notebook notebook")
 
-        nb_id = course.notebook_id
-        logger.info("Syncing remote artifacts for course %s (notebook: %s)", course_code, nb_id)
-        remote_artifacts = await self.client.list_artifacts(nb_id)
-
-        synced_items: list[dict[str, Any]] = []
-        course_out = self.output_base_dir / "courses" / course_code
-
+        logger.info("Syncing remote artifacts for course %s (notebook: %s)", course_code, course.notebook_id)
+        remote_artifacts = await self.client.list_artifacts(course.notebook_id)
         existing_jobs = self.queue_repo.list_jobs(course_code=course_code)
-        existing_output_files = {j.output_file for j in existing_jobs if j.output_file}
-        existing_art_ids = extract_synced_art_ids(existing_jobs)
-
+        seen = (
+            extract_synced_art_ids(existing_jobs),
+            {j.output_file for j in existing_jobs if j.output_file},
+        )
+        synced_items: list[dict[str, Any]] = []
         for art in remote_artifacts:
-            art_id = art["id"]
-            title = art["title"]
-            kind = art["kind"]
-
-            if art_id in existing_art_ids:
-                logger.info("Skipping already synchronized remote artifact %s (%s)", art_id, title)
-                continue
-
-            lec_no, art_type, output_file = resolve_artifact_destination(
-                course, course_out, title, art_id, kind
-            )
-
-            # Check if this artifact is already downloaded or tracked
-            if str(output_file) in existing_output_files or output_file.exists():
-                logger.info("Artifact file already exists at %s, skipping download", output_file)
-                continue
-
-            try:
-                downloaded_path = await self.client.download_artifact_by_kind(
-                    notebook_id=nb_id,
-                    artifact_id=art_id,
-                    kind=kind,
-                    output_path=str(output_file),
-                )
-
-                job = ArtifactJob(
-                    id=str(uuid.uuid4()),
-                    course_code=course_code,
-                    lecture_no=lec_no,
-                    artifact_type=art_type,
-                    status=JobStatus.DONE,
-                    output_file=downloaded_path,
-                    source_origin="remote_sync",
-                    custom_prompt=f"Synced from Gemini Notebook [{art_id}]: {title}",
-                )
-                self.queue_repo.enqueue_jobs([job])
-                synced_items.append({"id": art_id, "title": title, "path": downloaded_path})
-                logger.info("Synced remote artifact '%s' to %s", title, downloaded_path)
-            except Exception as err:
-                logger.warning("Failed to sync remote artifact %s (%s): %s", art_id, title, err)
-
-        return {
-            "course_code": course_code,
-            "synced_count": len(synced_items),
-            "items": synced_items,
-        }
+            item = await self._sync_single_artifact(course, art, seen)
+            if item is not None:
+                synced_items.append(item)
+        return {"course_code": course_code, "synced_count": len(synced_items), "items": synced_items}

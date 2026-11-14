@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any
 
 # (step key, label, artifact types that make the step available, how the step is completed)
 STUDY_STEPS: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
@@ -73,3 +74,102 @@ def next_schedule(stage: int, remembered: bool, now: datetime) -> tuple[int, dat
         return 0, now + timedelta(minutes=RELEARN_MINUTES)
     new_stage = min(stage + 1, len(REVIEW_INTERVAL_DAYS))
     return new_stage, now + timedelta(days=REVIEW_INTERVAL_DAYS[new_stage - 1])
+
+
+def _is_step_done(
+    lec_no: int,
+    key: str,
+    how: str,
+    activity: tuple[set[tuple[int | None, str]], set[tuple[int | None, str]], set[int | None]],
+) -> bool:
+    """Check whether one lecture study step is completed based on activity sets.
+
+    Args:
+        lec_no: Lecture sequence number.
+        key: Step identifier key.
+        how: Completion mode ('mark', 'quiz', or 'review').
+        activity: Tuple of (marks, attempted_quizzes, reviewed_lectures).
+
+    Returns:
+        True if completed, False otherwise.
+    """
+    marks, attempted, reviewed = activity
+    if how == "mark":
+        return (lec_no, key) in marks
+    if how == "quiz":
+        return any(no == lec_no and variant.startswith(key) for no, variant in attempted)
+    return lec_no in reviewed
+
+
+def compute_course_study_state(
+    lecture_nos: list[int],
+    done_types: set[tuple[int | None, str]],
+    activity: tuple[set[tuple[int | None, str]], set[tuple[int | None, str]], set[int | None]],
+) -> str:
+    """Classify a course's study state as 'not_started', 'in_progress', or 'finished'.
+
+    Args:
+        lecture_nos: Ordered lecture sequence numbers in the course.
+        done_types: Completed (lecture_no, artifact_type) pairs.
+        activity: Tuple of (marks, attempted_quizzes, reviewed_lectures).
+
+    Returns:
+        'finished' when every available study step is completed, 'in_progress' when any
+        study activity exists, or 'not_started' otherwise.
+    """
+    marks, attempted, reviewed = activity
+    total_avail = 0
+    total_done = 0
+    for lec_no in lecture_nos:
+        for key, _, types, how in STUDY_STEPS:
+            if not any((lec_no, t) in done_types for t in types):
+                continue
+            total_avail += 1
+            if _is_step_done(lec_no, key, how, activity):
+                total_done += 1
+    if lecture_nos and total_avail > 0 and total_done == total_avail:
+        return "finished"
+    if total_done > 0 or bool(marks or attempted or reviewed):
+        return "in_progress"
+    return "not_started"
+
+
+@dataclass(frozen=True)
+class StepStatusContext:
+    """Pre-fetched course completion lookup sets used to evaluate per-lecture step state.
+
+    Attributes:
+        done_types: Completed (lecture_no, artifact_type) pairs.
+        marks: Manually marked (lecture_no, step) pairs.
+        attempted: Attempted (lecture_no, quiz_variant) pairs.
+        reviewed: Lecture numbers with at least one reviewed flashcard.
+    """
+
+    done_types: set[tuple[int | None, str]]
+    marks: set[tuple[int | None, str]]
+    attempted: set[tuple[int | None, str]]
+    reviewed: set[int | None]
+
+
+def build_lecture_steps(
+    lecture_no: int, ctx: StepStatusContext
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Compute step availability and completion flags for one lecture.
+
+    Args:
+        lecture_no: Target lecture sequence number.
+        ctx: Pre-fetched completion sets across queue, manual marks, quizzes, and reviews.
+
+    Returns:
+        Tuple of (step dicts list, first unfinished available step dict or None).
+    """
+    steps: list[dict[str, Any]] = []
+    first_todo: dict[str, Any] | None = None
+    activity = (ctx.marks, ctx.attempted, ctx.reviewed)
+    for key, label, types, how in STUDY_STEPS:
+        available = any((lecture_no, t) in ctx.done_types for t in types)
+        done = _is_step_done(lecture_no, key, how, activity)
+        steps.append({"step": key, "label": label, "available": available, "done": done})
+        if available and not done and first_todo is None:
+            first_todo = {"step": key, "label": label}
+    return steps, first_todo

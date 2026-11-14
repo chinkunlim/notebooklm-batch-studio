@@ -247,6 +247,87 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
             assert refreshed_job is not None
             self.assertEqual(refreshed_job.status, JobStatus.PENDING)
 
+    async def test_quota_block_cleared_on_resume_and_manual_wake(self) -> None:
+        """Resume, manual wake, retry, and quota probe clear/prune stale quota blocks."""
+        import tempfile
+        from unittest import mock
+
+        from notebooklm_batch_studio.config.settings import AppConfig
+        from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+
+        with self.session_factory() as session:
+            repo = QueueRepository(session)
+            repo.enqueue_jobs(
+                [
+                    ArtifactJob(
+                        id="j-wake", course_code="BIO101", lecture_no=1, artifact_type=ArtifactType.AUDIO
+                    ),
+                    ArtifactJob(
+                        id="j-retry", course_code="BIO101", lecture_no=2, artifact_type=ArtifactType.QUIZ_1
+                    ),
+                ]
+            )
+            repo.block_job_quota("j-wake", ArtifactType.AUDIO, cooldown_seconds=7200)
+            repo.block_job_quota("j-retry", ArtifactType.QUIZ_1, cooldown_seconds=7200)
+            session.commit()
+
+        @contextmanager
+        def provider() -> Generator[QueueRepositoryProtocol, None, None]:
+            with self.session_factory() as session:
+                yield QueueRepository(session)
+
+        async def noop_exec(_job: ArtifactJob) -> str | None:
+            return None
+
+        pool = WorkerPool(
+            queue_provider=provider, executor=noop_exec, concurrency=1, probe_interval_seconds=0.01
+        )
+
+        # 1. WorkerPool.resume() clears blocked_quota_types.
+        pool.blocked_quota_types.update({ArtifactType.AUDIO, ArtifactType.QUIZ_1})
+        pool.resume()
+        self.assertEqual(pool.blocked_quota_types, set())
+
+        # 2. refresh_quota_wait(force=False) respects future cooldown; force=True wakes it.
+        with self.session_factory() as session:
+            repo = QueueRepository(session)
+            self.assertEqual(repo.refresh_quota_wait(force=False), 0)
+
+        # 3. _quota_probe_loop prunes stale types that no longer have QUOTA_WAIT jobs in DB.
+        pool.blocked_quota_types.update({ArtifactType.INFOGRAPHIC, ArtifactType.AUDIO})
+        pool._running = True
+        probe = asyncio.create_task(pool._quota_probe_loop())
+        await asyncio.sleep(0.05)
+        pool._running = False
+        probe.cancel()
+        try:
+            await probe
+        except asyncio.CancelledError:
+            pass
+        self.assertNotIn(ArtifactType.INFOGRAPHIC, pool.blocked_quota_types)
+        self.assertIn(ArtifactType.AUDIO, pool.blocked_quota_types)
+
+        # 4. BatchStudioService.retry_job and resume_quota_wait sync blocked_quota_types and wake force=True.
+        with tempfile.TemporaryDirectory() as tmpdir, self.session_factory() as session:
+            config = AppConfig(data_dir=Path(tmpdir), log_to_file=False)
+            svc = BatchStudioService(
+                CourseRepository(session),
+                QueueRepository(session),
+                mock.MagicMock(),
+                config,
+                queue_provider=provider,
+            )
+            svc.worker_pool = pool
+            pool.blocked_quota_types.update({ArtifactType.AUDIO, ArtifactType.QUIZ_1})
+
+            self.assertTrue(svc.retry_job("j-retry"))
+            self.assertNotIn(ArtifactType.QUIZ_1, pool.blocked_quota_types)
+            self.assertIn(ArtifactType.AUDIO, pool.blocked_quota_types)
+
+            awakened = svc.resume_quota_wait()
+            self.assertEqual(awakened, 1)
+            self.assertEqual(pool.blocked_quota_types, set())
+
     async def test_worker_pool_parallel_processing(self) -> None:
         """WorkerPool executes jobs concurrently across workers and isolates quota limit."""
         with self.session_factory() as session:
@@ -644,7 +725,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
         import tempfile
         from unittest.mock import AsyncMock, MagicMock
 
-        from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
+        from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner, JobTarget
 
         mock_client = MagicMock()
         mock_client.generate_quiz = AsyncMock(return_value="task-quiz-1")
@@ -704,7 +785,8 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
                 artifact_type=ArtifactType.QUIZ_ACADEMIC,
                 custom_prompt="Custom Academic Blueprint Prompt 123",
             )
-            res_acad = await runner.process_job(job_acad, course, "nb-1", ["src-1"], out_dir)
+            target = JobTarget("nb-1", ["src-1"], out_dir)
+            res_acad = await runner.process_job(job_acad, course, target)
 
             # Check prompt was passed to generate_quiz
             mock_client.generate_quiz.assert_called_with(
@@ -723,7 +805,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
                 artifact_type=ArtifactType.QUIZ_CONCEPT,
                 custom_prompt="Custom Concept Drill Prompt 456",
             )
-            res_conc = await runner.process_job(job_conc, course, "nb-1", ["src-1"], out_dir)
+            res_conc = await runner.process_job(job_conc, course, target)
 
             # Check prompt was passed to generate_quiz
             mock_client.generate_quiz.assert_called_with(
@@ -747,7 +829,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
                 artifact_type=ArtifactType.AUDIO,
                 custom_prompt="Custom Audio Prompt 789",
             )
-            await runner.process_job(job_audio, course, "nb-1", ["src-1"], out_dir)
+            await runner.process_job(job_audio, course, target)
             mock_client.generate_audio.assert_called_with(
                 "nb-1",
                 ["src-1"],
@@ -763,7 +845,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
                 artifact_type=ArtifactType.FLASHCARDS,
                 custom_prompt="Custom Flashcards Prompt 999",
             )
-            await runner.process_job(job_fc, course, "nb-1", ["src-1"], out_dir)
+            await runner.process_job(job_fc, course, target)
             mock_client.generate_flashcards.assert_called_with(
                 "nb-1", ["src-1"], prompt="Custom Flashcards Prompt 999", options=GenerationOptions()
             )
@@ -775,7 +857,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
                 artifact_type=ArtifactType.MIND_MAP,
                 custom_prompt="Custom MindMap Prompt 888",
             )
-            await runner.process_job(job_mm, course, "nb-1", ["src-1"], out_dir)
+            await runner.process_job(job_mm, course, target)
             mock_client.generate_mind_map.assert_called_with(
                 "nb-1", ["src-1"], prompt="Custom MindMap Prompt 888", language="zh-TW"
             )

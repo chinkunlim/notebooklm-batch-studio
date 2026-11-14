@@ -1,7 +1,8 @@
 # ISSUE-034：刪除課程後資料庫與前端畫面殘留舊課程狀態
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-09
+- **解決日期**：2026-11-14
 - **Agent**：`antigravity`
 - **任務**：`TASK-014`
 
@@ -41,5 +42,5 @@
 
 ## 4. 防回歸
 
-- 後端單元測試（`tests/test_course_settings.py`）：驗證 `delete_course` 後，`key_points`、`tutor_messages` 與該課程的 `ui_preferences` 紀錄皆為空，且產出檔案仍移至 `DATA_DIR/deleted/`。
-- 前端驗證：刪除唯一課程及刪除多門課中的當前課程後，檢查頂部課程選單、研讀總覽、研讀工作室、弱點複習與批次排程皆無殘留名稱或畫面。
+- 後端與整合回歸測試（`tests/test_course_admin.py`、`tests/test_dummy_user_simulation.py`）：驗證 `delete_course` 後，`key_points`、`tutor_messages` 與該課程的 `ui_preferences` 紀錄皆為空，全域偏好保留，且產出檔案移至 `DATA_DIR/deleted/`。
+- 前端結構與行為回歸檢查（`tests/test_dummy_user_simulation.py::UiAndStaticRegressionTest`）：驗證 `studio-batch.js` 具 `clearCoursePreferences(code)`，並透過 `StudioStore` 與 `initStudyPortal()` 重置全域與面板狀態。

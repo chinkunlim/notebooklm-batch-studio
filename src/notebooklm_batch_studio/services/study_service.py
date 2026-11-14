@@ -20,6 +20,57 @@ logger = logging.getLogger(__name__)
 CONFIDENCE_LEVELS = ("sure", "unsure", "guess")
 
 
+def _build_quiz_mistake(
+    attempt_id: str, course_code: str, lecture_no: int | None, item: dict[str, Any]
+) -> QuizMistake:
+    """Convert a raw frontend mistake dictionary into a validated QuizMistake domain entity.
+
+    Args:
+        attempt_id: Parent QuizAttempt identifier.
+        course_code: Course code.
+        lecture_no: Lecture sequence number or None.
+        item: Raw mistake dictionary supplied by caller.
+
+    Returns:
+        Constructed QuizMistake entity.
+    """
+    raw_conf = item.get("confidence")
+    return QuizMistake(
+        id=str(uuid.uuid4()),
+        attempt_id=attempt_id,
+        course_code=course_code,
+        lecture_no=lecture_no,
+        question_text=str(item.get("question_text", "")).strip(),
+        choices=list(item.get("choices", [])),
+        correct_index=int(item.get("correct_index", 0)),
+        selected_index=int(item.get("selected_index", 0)),
+        explanation=str(item.get("explanation", "")).strip(),
+        is_resolved=False,
+        confidence=raw_conf if raw_conf in CONFIDENCE_LEVELS else None,
+    )
+
+
+def _format_anki_row(m: QuizMistake, tag: str) -> list[str]:
+    """Render one unresolved QuizMistake into `[front_html, back_html, tag]` for Anki CSV.
+
+    Args:
+        m: Domain QuizMistake entity.
+        tag: Deck tag string for the CSV column.
+
+    Returns:
+        Three-element CSV row `[front_html, back_html, tag]`.
+    """
+    front_lines = [f"<strong>{m.question_text}</strong>", "<ol type='A'>"]
+    front_lines.extend(f"<li>{choice}</li>" for choice in m.choices)
+    front_lines.append("</ol>")
+    correct_letter = chr(65 + m.correct_index) if 0 <= m.correct_index < 26 else "?"
+    back_html = (
+        f"<p style='color:#16a34a;'><strong>正確解答：選項 {correct_letter}</strong></p>"
+        f"<div style='border-left: 3px solid #3b82f6; padding-left: 8px;'>{m.explanation}</div>"
+    )
+    return ["".join(front_lines), back_html, tag]
+
+
 class StudyTrackerService:
     """Core domain service for tracking student attempts, weakness notebook, and Anki exports."""
 
@@ -37,58 +88,30 @@ class StudyTrackerService:
         self.study_repo = study_repo
         self.config = config
 
-    def record_quiz_attempt(
-        self,
-        course_code: str,
-        lecture_no: int | None,
-        quiz_variant: str,
-        score: int,
-        total_questions: int,
-        mistakes_data: list[dict[str, Any]],
-        confidence_summary: dict[str, int] | None = None,
-    ) -> QuizAttempt:
+    def record_quiz_attempt(self, course_code: str, lecture_no: int | None, **payload: Any) -> QuizAttempt:
         """Record a completed quiz attempt and individual mistakes.
 
         Args:
             course_code: Course code.
             lecture_no: Lecture sequence number or None for course-wide.
-            quiz_variant: Variant of quiz (e.g. academic, concept).
-            score: Student score.
-            total_questions: Total number of questions.
-            mistakes_data: List of raw mistake dictionaries from frontend (may carry `confidence`).
-            confidence_summary: Counts from the confidence ratings, or None when none were given.
+            **payload: Attempt details (`quiz_variant`, `score`, `total_questions`,
+                `mistakes_data`, `confidence_summary`).
 
         Returns:
             Saved domain QuizAttempt entity.
         """
         attempt_id = str(uuid.uuid4())
-        mistakes: list[QuizMistake] = []
-        for m in mistakes_data:
-            mistakes.append(
-                QuizMistake(
-                    id=str(uuid.uuid4()),
-                    attempt_id=attempt_id,
-                    course_code=course_code,
-                    lecture_no=lecture_no,
-                    question_text=str(m.get("question_text", "")).strip(),
-                    choices=list(m.get("choices", [])),
-                    correct_index=int(m.get("correct_index", 0)),
-                    selected_index=int(m.get("selected_index", 0)),
-                    explanation=str(m.get("explanation", "")).strip(),
-                    is_resolved=False,
-                    confidence=m.get("confidence") if m.get("confidence") in CONFIDENCE_LEVELS else None,
-                )
-            )
-
+        mistakes_data = list(payload.get("mistakes_data", ()))
+        mistakes = [_build_quiz_mistake(attempt_id, course_code, lecture_no, m) for m in mistakes_data]
         attempt = QuizAttempt(
             id=attempt_id,
             course_code=course_code,
             lecture_no=lecture_no,
-            quiz_variant=quiz_variant,
-            score=score,
-            total_questions=total_questions,
+            quiz_variant=str(payload["quiz_variant"]),
+            score=int(payload["score"]),
+            total_questions=int(payload["total_questions"]),
             mistakes=mistakes,
-            confidence_summary=confidence_summary,
+            confidence_summary=payload.get("confidence_summary"),
         )
         self.study_repo.record_attempt(attempt)
         logger.info(
@@ -164,22 +187,7 @@ class StudyTrackerService:
             tag += f" L{lecture_no:02d}"
 
         for m in mistakes:
-            # Build Front: question + numbered choices
-            front_lines = [f"<strong>{m.question_text}</strong>", "<ol type='A'>"]
-            for choice in m.choices:
-                front_lines.append(f"<li>{choice}</li>")
-            front_lines.append("</ol>")
-            front_html = "".join(front_lines)
-
-            # Build Back: correct answer + explanation
-            correct_letter = chr(65 + m.correct_index) if 0 <= m.correct_index < 26 else "?"
-            back_lines = [
-                f"<p style='color:#16a34a;'><strong>正確解答：選項 {correct_letter}</strong></p>",
-                f"<div style='border-left: 3px solid #3b82f6; padding-left: 8px;'>{m.explanation}</div>",
-            ]
-            back_html = "".join(back_lines)
-
-            writer.writerow([front_html, back_html, tag])
+            writer.writerow(_format_anki_row(m, tag))
 
         logger.info("Exported %d weakness questions to Anki CSV for %s", len(mistakes), course_code)
         return output.getvalue()

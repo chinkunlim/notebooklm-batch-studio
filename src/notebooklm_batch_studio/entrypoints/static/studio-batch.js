@@ -5,6 +5,28 @@
 
 /* ================= 批次排程 (admin) ================= */
 
+let lastQueueDigest = null;
+
+/**
+ * Refresh course summaries and active views whenever queue progress changes (ISSUE-036).
+ * @param {string} digest Compact queue state summary
+ * @returns {Promise<void>}
+ */
+async function syncLiveCourseProgress(digest) {
+  const changed = lastQueueDigest !== null && lastQueueDigest !== digest;
+  lastQueueDigest = digest;
+  if (window.StudioStore) window.StudioStore.patch({ queueDigest: digest });
+  if (!changed) return;
+  if (window.StudioBus) window.StudioBus.emit('queue:changed', digest);
+  await fetchCourses();
+  if (activeCourseCode && document.getElementById('courseDetailSection').style.display !== 'none') {
+    await viewCourseDetail(activeCourseCode, true);
+  }
+  if (currentStudyCourse && typeof loadStudyCourseData === 'function') {
+    await loadStudyCourseData(currentStudyCourse.code, true);
+  }
+}
+
 /**
  * Read login, queue and course counts; update the top bar and the queue buttons.
  * @returns {Promise<void>}
@@ -43,6 +65,8 @@ async function fetchStatus() {
       queue.textContent = `佇列閒置（已完成 ${counts.done || 0} 項）`;
       show(true, false, false);
     }
+    const digest = `${!!data.queue_running}:${counts.done || 0}:${counts.running || 0}:${counts.pending || 0}:${counts.quota_wait || 0}:${counts.failed || 0}`;
+    await syncLiveCourseProgress(digest);
   } catch (e) {
     console.error('Status fetch failed:', e);
   }
@@ -93,137 +117,7 @@ async function fetchQuota() {
   }
 }
 
-/** Start the generation queue. */
-async function startQueue() {
-  try {
-    await fetch('/api/queue/start', { method: 'POST' });
-    await fetchStatus();
-    await fetchCourses();
-  } catch (e) {
-    showToast('啟動佇列失敗：' + e.message, 'error');
-  }
-}
-
-/** Pause the queue after the running job finishes. */
-async function pauseQueue() {
-  try {
-    await fetch('/api/queue/pause', { method: 'POST' });
-    await fetchStatus();
-    await fetchCourses();
-  } catch (e) {
-    showToast('暫停佇列失敗：' + e.message, 'error');
-  }
-}
-
-/** Resume the paused queue. */
-async function resumeQueue() {
-  try {
-    await fetch('/api/queue/resume', { method: 'POST' });
-    await fetchStatus();
-    await fetchCourses();
-  } catch (e) {
-    showToast('繼續執行失敗：' + e.message, 'error');
-  }
-}
-
-/**
- * Create the course's notebook on Gemini Notebook and upload its PDFs.
- * @param {string} code Course code
- * @param {Event} [event] Click event (kept from bubbling to the row)
- * @returns {Promise<void>}
- */
-async function setupCourse(code, event) {
-  if (event) event.stopPropagation();
-  try {
-    showToast(`正在為 ${code} 建立筆記本並上傳講義 PDF，約需 1–2 分鐘…`, 'info', 8000);
-    const res = await fetch(`/api/courses/${code}/setup`, { method: 'POST' });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || '建立筆記本失敗');
-    }
-    const data = await res.json();
-    showToast(`筆記本建立成功（${data.notebook_id}）`, 'success');
-    fetchCourses();
-    if (activeCourseCode === code) viewCourseDetail(code);
-  } catch (e) {
-    showToast('建立筆記本失敗：' + e.message, 'error');
-  }
-}
-
-/**
- * Upload one lecture PDF again after a failed upload.
- * @param {string} code Course code
- * @param {number} lectureNo Lecture number
- * @returns {Promise<void>}
- */
-async function retryUpload(code, lectureNo) {
-  try {
-    showToast(`重新上傳第 ${lectureNo} 講…`, 'info');
-    const res = await fetch(`/api/courses/${code}/lectures/${lectureNo}/retry_upload`, { method: 'POST' });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || '重試上傳失敗');
-    }
-    const data = await res.json();
-    showToast(`講義上傳狀態：${data.upload_status}`, 'info');
-    viewCourseDetail(code);
-  } catch (e) {
-    showToast('重試上傳失敗：' + e.message, 'error');
-  }
-}
-
-/**
- * Polish every job prompt of a course with the local model.
- * @param {string} code Course code
- * @returns {Promise<void>}
- */
-async function refinePrompts(code) {
-  try {
-    showToast(`正在用本機模型潤飾 ${code} 的所有 Prompt…`, 'info', 8000);
-    const res = await fetch(`/api/courses/${code}/refine_prompts`, { method: 'POST' });
-    if (!res.ok) throw new Error('潤飾失敗');
-    const data = await res.json();
-    showToast(`已潤飾 ${data.updated_jobs_count} 項 Prompt`, 'success');
-    viewCourseDetail(code);
-  } catch (e) {
-    showToast('Prompt 潤飾失敗：' + e.message, 'error');
-  }
-}
-
-/**
- * Download outputs that were made on the Gemini Notebook website.
- * @param {string} code Course code
- * @returns {Promise<void>}
- */
-async function syncFromNotebookLM(code) {
-  try {
-    showToast(`正在查詢 ${code} 在 Gemini Notebook 上的產出並下載…`, 'info', 8000);
-    const res = await fetch(`/api/courses/${code}/sync`, { method: 'POST' });
-    if (!res.ok) throw new Error('同步失敗');
-    const data = await res.json();
-    showToast(`同步完成：遠端共 ${data.remote_artifacts_found} 項，下載了 ${data.synced_count} 個新檔案`, 'success');
-    viewCourseDetail(code);
-  } catch (e) {
-    showToast('同步失敗：' + e.message, 'error');
-  }
-}
-
-/**
- * Wake the jobs waiting for quota and resume the queue.
- * @returns {Promise<void>}
- */
-async function resumeQuota() {
-  try {
-    // One existing route does both: wake the quota-waiting jobs and resume the queue.
-    const res = await fetch('/api/queue/resume', { method: 'POST' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    showToast(`已喚醒 ${data.data} 個等待額度的工作，佇列繼續執行。`, 'success');
-    await fetchStatus();
-  } catch (e) {
-    showToast('喚醒失敗：' + e.message, 'error');
-  }
-}
+/* Queue control, upload retry, prompt refine, and remote sync live in studio-queue.js. */
 
 /**
  * Load the registered courses and draw the list on the batch page (and the 課程目錄).
@@ -297,15 +191,16 @@ function formatResume(iso) {
  * @returns {string} HTML
  */
 function renderStatusBar(jobs, paused) {
+  const activeJobs = jobs.filter(j => j.status !== 'skipped');
   const counts = {};
-  jobs.forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; });
+  activeJobs.forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; });
   const order = ['done', 'running', 'pending', 'quota_wait', 'needs_review', 'failed'];
   const chips = order.filter(k => counts[k]).map(k => `<span class="badge ${STATUS_LABELS[k].cls}">${STATUS_LABELS[k].text} ${counts[k]}</span>`).join('');
-  const waits = jobs.filter(j => j.status === 'quota_wait' && j.cooldown_until).map(j => j.cooldown_until).sort();
+  const waits = activeJobs.filter(j => j.status === 'quota_wait' && j.cooldown_until).map(j => j.cooldown_until).sort();
   const resume = paused
     ? '<div class="status-note">這門課暫停中，按上方「開始生成」才會繼續。</div>'
     : (waits.length ? `<div class="status-note">額度用完的工作會等額度重置，${formatResume(waits[0])}。網頁服務開著就會自己接著跑。</div>` : '');
-  return `<div class="status-chips"><strong class="small">共 ${jobs.length} 項</strong>${chips}</div>${resume}`;
+  return `<div class="status-chips"><strong class="small">共 ${activeJobs.length} 項</strong>${chips}</div>${resume}`;
 }
 
 /**
@@ -381,7 +276,7 @@ function jobRowHtml(j, code, versionsBySlot) {
   else if ((j.status === 'needs_review' || j.status === 'failed') && j.error_message) statusExtra = `<div class="job-sub">${escHtml(j.error_message.slice(0, 80))}</div>`;
   const lecArg = j.lecture_no === null ? 'null' : j.lecture_no;
   const regenBtn = (j.status === 'done' || j.status === 'needs_review') && j.version === total
-    ? `<button class="btn btn-soft btn-sm" onclick="regenerateArtifact('${code}', ${lecArg}, '${j.artifact_type}', '${escHtml(j.label || j.artifact_type)}', ${total + 1})">重新生成</button>` : '';
+    ? `<button class="btn btn-soft btn-sm" onclick="regenerateArtifact('${code}', ${lecArg}, '${j.artifact_type}', { label: '${escHtml(j.label || j.artifact_type)}', nextVersion: ${total + 1} })">重新生成</button>` : '';
   return `<tr><td><strong>${escHtml(j.label || j.artifact_type)}</strong><div class="job-sub"><code>${j.artifact_type}</code>　${scope}</div></td><td>${ver}</td>
     <td><span class="badge ${st.cls}">${st.text}</span>${statusExtra}</td>
     <td><button class="btn btn-ghost btn-sm" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">Prompt</button><button class="btn btn-ghost btn-sm" onclick="openJobOptions('${j.id}')" title="只調整這一份產出的設定">設定${hasOwn}</button></td>
@@ -491,6 +386,29 @@ async function setCoursePaused(code, paused) {
 }
 
 /**
+ * Forget every browser/server UI preference scoped to a deleted course (ISSUE-034).
+ * @param {string} code Deleted course code
+ */
+function clearCoursePreferences(code) {
+  if (typeof forget !== 'function') return;
+  forget('place:' + code);
+  forget('examNotice:' + code);
+  const prefix = `audio:${code}:`;
+  if (typeof mem === 'object' && mem) {
+    Object.keys(mem).filter(k => k.startsWith(prefix)).forEach(k => forget(k));
+  }
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('v05.' + prefix))
+      .forEach(k => forget(k.slice(4)));
+  } catch (e) { /* cache unavailable */ }
+  if (prefLoad('course', '') === code || (currentStudyCourse && currentStudyCourse.code === code)) {
+    forget('course');
+    currentStudyCourse = null;
+  }
+}
+
+/**
  * Delete a course's local records after confirmation (files move to DATA_DIR/deleted/).
  * @param {string} code Course code
  * @returns {Promise<void>}
@@ -501,9 +419,12 @@ async function deleteCourse(code) {
     const res = await fetch(`/api/courses/${code}`, { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || res.statusText);
+    clearCoursePreferences(code);
     showToast(`已刪除 ${code}（${data.removed_jobs} 項工作）` + (data.moved_to ? `\n產出已移到：${data.moved_to}` : ''), 'success', 7000);
     closeDetail();
     activeCourseCode = null;
+    if (window.StudioStore) window.StudioStore.patch({ activeCourseCode: null });
+    await fetchStatus();
     await fetchCourses();
     await initStudyPortal();
   } catch (e) {
@@ -516,11 +437,11 @@ async function deleteCourse(code) {
  * @param {string} code Course code
  * @param {number|null} lectureNo Lecture number (null = whole course)
  * @param {string} artifactType Artifact type
- * @param {string} label Output name
- * @param {number} nextVersion Version that will be made
- * @returns {Promise<void>}
+ * @param {{label: string, nextVersion: number}} opts Display label and next version number
+ * @returns {Promise<void>} Resolves when queued
  */
-async function regenerateArtifact(code, lectureNo, artifactType, label, nextVersion) {
+async function regenerateArtifact(code, lectureNo, artifactType, opts) {
+  const { label, nextVersion } = opts;
   const scope = lectureNo === null ? '全課程' : `L${pad2(lectureNo)}`;
   if (!(await askConfirm(`重新生成 ${scope}「${label}」為 v${nextVersion}？\n舊版本會保留，這會使用 Gemini Notebook 額度。`, { okLabel: '重新生成' }))) return;
   try {
@@ -530,6 +451,7 @@ async function regenerateArtifact(code, lectureNo, artifactType, label, nextVers
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || res.statusText);
+    await fetchCourses();
     await viewCourseDetail(code, true);
   } catch (e) {
     showToast('重新生成失敗：' + e.message, 'error');

@@ -55,6 +55,24 @@ def resolve_chinese_font() -> str:
     return _CHINESE_FONT_NAME
 
 
+def _make_style(name: str, font_name: str, font_size: int, **attrs: Any) -> ParagraphStyle:
+    """Create a configured ReportLab ParagraphStyle from base typography and extra options.
+
+    Args:
+        name: Unique style identifier.
+        font_name: Registered font name.
+        font_size: Font size in points.
+        **attrs: Additional ParagraphStyle keyword overrides (leading, color hex, etc.).
+
+    Returns:
+        Configured ParagraphStyle instance.
+    """
+    color_hex = attrs.pop("color", "#2D3748")
+    return ParagraphStyle(
+        name, fontName=font_name, fontSize=font_size, textColor=HexColor(color_hex), **attrs
+    )
+
+
 def _build_pdf_styles(font_name: str) -> dict[str, ParagraphStyle]:
     """Build typography and styling rules for Quiz PDF generation.
 
@@ -65,60 +83,28 @@ def _build_pdf_styles(font_name: str) -> dict[str, ParagraphStyle]:
         Dictionary mapping style names to ParagraphStyle objects.
     """
     return {
-        "title": ParagraphStyle(
-            "DocTitle",
-            fontName=font_name,
-            fontSize=18,
-            leading=24,
-            textColor=HexColor("#1A202C"),
-            alignment=1,
-            spaceAfter=10,
+        "title": _make_style(
+            "DocTitle", font_name, 18, color="#1A202C", leading=24, alignment=1, spaceAfter=10
         ),
-        "meta": ParagraphStyle(
-            "DocMeta",
-            fontName=font_name,
-            fontSize=9,
-            leading=14,
-            textColor=HexColor("#718096"),
-            alignment=1,
-            spaceAfter=15,
+        "meta": _make_style("DocMeta", font_name, 9, color="#718096", leading=14, alignment=1, spaceAfter=15),
+        "stem": _make_style(
+            "QuestionStem", font_name, 11, color="#2D3748", leading=16, spaceBefore=8, spaceAfter=6
         ),
-        "stem": ParagraphStyle(
-            "QuestionStem",
-            fontName=font_name,
-            fontSize=11,
-            leading=16,
-            textColor=HexColor("#2D3748"),
-            spaceBefore=8,
-            spaceAfter=6,
+        "opt": _make_style(
+            "OptionText", font_name, 10, color="#4A5568", leading=14, leftIndent=15, spaceAfter=3
         ),
-        "opt": ParagraphStyle(
-            "OptionText",
-            fontName=font_name,
-            fontSize=10,
-            leading=14,
-            textColor=HexColor("#4A5568"),
-            leftIndent=15,
-            spaceAfter=3,
-        ),
-        "ans": ParagraphStyle(
+        "ans": _make_style(
             "AnswerKey",
-            fontName=font_name,
-            fontSize=10,
+            font_name,
+            10,
+            color="#2B6CB0",
             leading=14,
-            textColor=HexColor("#2B6CB0"),
             leftIndent=10,
             spaceBefore=4,
             spaceAfter=3,
         ),
-        "rationale": ParagraphStyle(
-            "RationaleText",
-            fontName=font_name,
-            fontSize=9,
-            leading=13,
-            textColor=HexColor("#4A5568"),
-            leftIndent=20,
-            spaceAfter=2,
+        "rationale": _make_style(
+            "RationaleText", font_name, 9, color="#4A5568", leading=13, leftIndent=20, spaceAfter=2
         ),
     }
 
@@ -181,35 +167,25 @@ def render_quiz_pdf(
     Returns:
         Path of the generated PDF file.
     """
-    font_name = resolve_chinese_font()
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
-
     doc = SimpleDocTemplate(
-        str(out),
-        pagesize=A4,
-        leftMargin=40,
-        rightMargin=40,
-        topMargin=40,
-        bottomMargin=40,
+        str(out), pagesize=A4, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40
     )
-
-    styles = _build_pdf_styles(font_name)
+    styles = _build_pdf_styles(resolve_chinese_font())
     doc_title = title or (f"{quiz.title} (答案與詳解卷)" if is_answer_key else f"{quiz.title} (測驗卷)")
     meta_text = (
         f"課程：{quiz.course_code} | 講次：第 {quiz.lecture_no:02d} 講 | "
         f"版本：{quiz.variant} | 題數：{len(quiz.questions)} 題 | 來源：{quiz.source_pdf}"
     )
-
     story: list[Any] = [
         Paragraph(doc_title, styles["title"]),
         Paragraph(meta_text, styles["meta"]),
         HRFlowable(width="100%", thickness=1, color=HexColor("#E2E8F0"), spaceAfter=15),
     ]
-
-    for idx, q in enumerate(quiz.questions, start=1):
-        story.append(_build_question_flowables(idx, q, styles, is_answer_key))
-
+    story.extend(
+        _build_question_flowables(idx, q, styles, is_answer_key) for idx, q in enumerate(quiz.questions, 1)
+    )
     doc.build(story)
     logger.info("Generated PDF (%s) at %s", "Answer" if is_answer_key else "Exam", out)
     return out

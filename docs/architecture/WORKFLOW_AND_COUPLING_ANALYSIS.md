@@ -7,19 +7,18 @@
 ## 1. Graphify 知識圖譜解析
 
 ### 1.1 圖譜拓撲概況
-- **規模統計**：9,270 個節點、18,667 條邊、392 個社群。
+- **規模統計（已套用 `.graphifyignore` 排除第三方雜訊，commit `c9305b1e`）**：**4,671** 個節點、**9,409** 條邊、**283** 個社群（311 個檔案 · ~304,918 字；`agentctl graph` AST 依賴圖為 139 個模組、417 條依賴邊）。
 - **循環依賴（Import Cycles）**：**0（無）**。後端 Python 嚴格遵守了 `entrypoints ➔ adapters ➔ services ➔ domain ➔ config` 的單向分層架構。
 - **噪聲過濾（Vendor Noise）**：
-  - 前端內建之 PDF.js 核心與 worker（如 `pdf.worker.min.mjs`）佔用超過 3,000 個節點與邊。
-  - 圖譜排名前列的 God Nodes 大多為 PDF.js 的底層解析類別（如 `XFAObject` 217 邊、`AnnotationEditor` 135 邊、`AnnotationEditorUIManager` 115 邊、`CanvasGraphics` 等）。
-  - **解讀結論**：底層 PDF 閱讀器屬於自包含的第三方靜態工具，不影響後端業務邏輯；需聚焦於本專案自研的領域核心與前端黏合代碼。
+  - 過濾前原圖譜達 9,270 個節點、18,667 條邊、392 個社群；透過 `.graphifyignore` 排除 `entrypoints/static/vendor/`（PDF.js、Lucide、字型等第三方靜態檔案）後，成功剔除 **4,762** 個第三方無關節點（如 `XFAObject`、`AnnotationEditor`、`CanvasGraphics` 等）。
+  - **解讀結論**：底層 PDF 閱讀器屬於自包含的第三方靜態工具，排除後已清晰浮現本專案自研的領域核心與前端黏合代碼。
 
 ### 1.2 核心業務 God Nodes（超高連接度中樞）
-排除第三方函式庫後，專案真實的核心樞紐為：
-1. **`BatchStudioService` (136 邊)**：位於 `services/orchestrator.py`，是全系統最大的中心外觀（Facade），幾乎所有業務流均需穿透此類別。
-2. **`Course` (104 邊)**：位於 `domain/models.py`，核心領域實體，貫穿所有資料庫儲存、設定解析、任務排程與前端展示。
-3. **`AppConfig` (112 邊)**：位於 `config/settings.py`，集中式設定，注入所有服務層。
-4. **`WorkerPool` / `ArtifactRunner`**：非同步任務執行中樞。
+排除第三方函式庫後，`graphify-out/GRAPH_REPORT.md` 顯示專案真實的核心樞紐（前 10 大 God Nodes）為：
+1. **`BatchStudioService` (142 邊)**：位於 `services/orchestrator.py`，是全系統最大的中心外觀（Facade），幾乎所有業務流均需穿透此類別。
+2. **`AppConfig` (113 邊)**：位於 `config/settings.py`，集中式設定，注入所有服務層。
+3. **`Course` (108 邊)**：位於 `domain/models.py`，核心領域實體，貫穿所有資料庫儲存、設定解析、任務排程與前端展示。
+4. **`ArtifactJob` (96 邊)**、`QueueRepository` (81 邊)、`ArtifactType` (77 邊)、`CourseRepository` (76 邊)、`Lecture` (62 邊)、`GenerationOptions` (56 邊)、`CourseNotFoundError` (53 邊)：構成批次排程與領域模型的骨幹。
 5. **前端中樞 `studio-app.js` 與 `studio-batch.js`**：控制整體介面切換、狀態輪詢與研讀台聯動。
 
 ---
@@ -85,13 +84,13 @@
 | 階段 | 規格書要求 | 程式碼實際狀態 | 符合度判定 | 落差與問題說明 |
 |---|---|---|:---:|---|
 | **階段 1：首頁與環境準備** | 綁定 `127.0.0.1:8768`，支援 Tailscale 遠端存取與主機健康度檢查 | `api.py` 透過 `HostValidationMiddleware` 支援設定檔之 `HTTP_ALLOWED_HOSTS` 與 `HTTP_ALLOWED_ORIGINS` | ✅ **完全符合** | 通過 Tailscale 驗證。 |
-| **階段 2：建立/匯入課程與檔案** | 本機檔案夾掃描、PDF 數量計算、課程名稱與講次解析、防呆檔名提示 | `folder_browser.py` 實作安全目錄瀏覽；`course_parser.py` 正確解析講次與課名 | ✅ **完全符合** | 支援自動建立 TOML 與 PDF 去重。 |
+| **階段 2：建立/匯入課程與檔案** | 本機檔案夾掃描、PDF 數量計算、課程名稱與講次解析、防呆檔名與防撞碼提示 | `folder_browser.py` 實作安全目錄瀏覽；`course_parser.py` 與 `CourseRepository.save_course` 已於 `TASK-020` 修正學期前綴撞碼與誤繼承 `notebook_id`（`ISSUE-037`） | ✅ **完全符合** | 支援自動建立 TOML、PDF 去重與學期前綴資料夾防撞碼。 |
 | **階段 3：產出參數與自訂偏好** | 支援三層階層式繼承（系統預設 ➔ 課程自訂 ➔ 12 項產出個別設定），Prompt 覆寫 | `course_settings.py` 實作階層合併邏輯，支援每項產出獨立參數 | ✅ **完全符合** | 測試案例完整覆蓋。 |
-| **階段 4：排程生成與狀態輪詢** | 1. 併發 2~3 Worker<br>2. 額度冷卻退避與自動/手動立即喚醒<br>3. 即時推進整門課與講次進度條<br>4. 分母排除 skipped 任務 | 1. `WorkerPool` 實作 3 Worker<br>2. `ISSUE-035`：手動喚醒無法清空記憶體 blocked 集合<br>3. `ISSUE-036`：定時輪詢未觸發 `fetchCourses()`<br>4. `ISSUE-036`：分母包含 skipped 任務 | ⚠️ **存在落差** | **核心缺失**：進度條不推進、額度卡死無法手動復原。需實作 `TASK-015` 與 `TASK-016`。 |
-| **階段 5：研讀工作室** | 課程目錄切換、音檔播放、PDF 雙欄標註、AI 家教對話、課程刪除後乾淨歸零 | 1. 播放器、PDF 標註與學習總覽正常運作<br>2. `ISSUE-034`：刪除課程後研讀台殘留舊資料，未重置為空狀態 | ⚠️ **存在落差** | **核心缺失**：刪除課程未 100% 清理研讀工作室畫面。需實作 `TASK-014`。 |
-| **階段 6：自主學習與評量** | 30 題隨堂測驗、3D 卡牌、錯題本收錄、間隔重複演算法 | `learning_service.py` 與 `study_service.py` 完整實作 SM-2 演算法與錯題累計 | ✅ **完全符合** | 交卷回饋、記憶曲線計算皆已落地。 |
-| **階段 7：匯出與下載** | 支援 Markdown、HTML、Quiz 題庫、SVG 心智圖、Anki (.apkg) 匯出 | `ArtifactDownloadsMixin` 支援單檔及整門課批次下載轉檔 | ✅ **完全符合** | 測試皆通過。 |
-| **階段 8：例外處理與維護管理** | 1. 刪除課程 100% 清理關聯 DB 表與 UI 偏好，產出移至 `deleted/` 備份<br>2. 離線小白使用者混沌測試防呆 | 1. `ISSUE-034`：漏刪重點標示、家教對話與 UI 偏好<br>2. 尚未建立全功能離線混沌測試套件 | ⚠️ **存在落差** | **核心缺失**：刪除不完全；缺乏小白防呆混沌測試。需實作 `TASK-014` 與 `TASK-017`。 |
+| **階段 4：排程生成與狀態輪詢** | 1. 併發 2~3 Worker<br>2. 額度冷卻退避與自動/手動立即喚醒<br>3. 即時推進整門課與講次進度條<br>4. 分母排除 skipped 任務 | 1. `WorkerPool` 實作並發處理<br>2. `ISSUE-035`：`WorkerPool.resume()` 與 probe loop 清空封鎖集合且 `force=True` 喚醒<br>3. `ISSUE-036`：`syncLiveCourseProgress` 連動更新 `fetchCourses()` 與 `currentStudyCourse`<br>4. `ISSUE-036`：`orchestrator` 與前端皆排除 `skipped` | ✅ **完全符合** | 已解決並納入 `tests/test_quota_and_limits.py` 與 `tests/test_dummy_user_simulation.py` 回歸保護。 |
+| **階段 5：研讀工作室** | 課程目錄切換、音檔播放、PDF 雙欄標註、AI 家教對話、課程刪除後乾淨歸零 | 1. 播放器、PDF 標註與學習總覽正常運作<br>2. `ISSUE-034`：刪除課程時後端清除關聯表，前端透過 `clearCoursePreferences(code)` 與 `initStudyPortal()` 乾淨歸零 | ✅ **完全符合** | 已解決並納入 `tests/test_course_admin.py` 與 `tests/test_dummy_user_simulation.py`。 |
+| **階段 6：自主學習與評量** | 30 題隨堂測驗、3D 卡牌、錯題本收錄、間隔重複演算法 | `learning_service.py` 與 `study_service.py` 完整實作記憶衰減模型與錯題累計 | ✅ **完全符合** | 測試案例完整覆蓋。 |
+| **階段 7：匯出與下載** | 支援 Markdown、HTML、Quiz 題庫、SVG/Mermaid 心智圖、Anki CSV 匯出 | 下載路由與轉檔服務完整支援單檔與 Anki CSV 匯出 | ✅ **完全符合** | 測試皆通過。 |
+| **階段 8：例外處理與維護管理** | 1. 刪除課程 100% 清理關聯 DB 表與 UI 偏好，產出移至 `deleted/` 備份<br>2. 離線小白使用者混沌測試防呆 | 1. `ISSUE-034`：完整清除 `key_points`、`tutor_messages` 與 `ui_preferences`<br>2. `TASK-017`：`tests/test_dummy_user_simulation.py` 完整驗證全流程防呆與靜態不變量 | ✅ **完全符合** | `193` 項測試（含全流程模擬與 UI 結構回歸）全部通過。 |
 
 ---
 
@@ -160,10 +159,15 @@ window.StudioStore = {
 
 本報告診斷出之落差與梳理項目，均已建立對應的任務卡，推薦後續依序落地實作：
 
-| 改善項目 | 涉及糾纏點 / 落差 | 對應任務卡 | 預期成效 |
+| 改善項目 | 涉及糾纏點 / 落差 | 對應任務卡 | 狀態與預期成效 |
 |---|---|---|---|
-| **修復課程刪除殘留** | 糾纏點 2、階段 8 落差 (`ISSUE-034`) | `TASK-014` | 後端刪除 3 張關聯表記錄，前端清空全域狀態與研讀台 DOM |
-| **修復 WorkerPool 額度卡死** | 糾纏點 4、階段 4 落差 (`ISSUE-035`) | `TASK-015` | 手動喚醒與無任務時安全解除額度封鎖，恢復自癒能力 |
-| **修復總進度即時推進** | 糾纏點 2、階段 4 落差 (`ISSUE-036`) | `TASK-016` | 輪詢補齊課程刷新，排除 skipped 任務，進度條正確抵達 100% |
-| **愚蠢使用者全流程混沌測試** | 階段 8 維護防呆驗證 | `TASK-017` | 離線 Dummy 模式模擬小白使用者暴力點擊與邊界操作，驗證零崩潰 |
-| **前端狀態與後端協調器解耦** | 糾纏點 1、2、3（架構優化） | `TASK-018` | 導入 StudioBus 與狀態中心，完成模組與任務規劃拆分 |
+| **防學期前綴撞碼覆寫舊筆記本** | 階段 2 資料夾解析與 DB 覆寫風險 (`ISSUE-037`) | `TASK-020` | ✅ **已完成**：純數字/學期前綴保留完整資料夾名為 `code`，且不同 `name` + `source_dir` 碰撞時不繼承舊 `notebook_id` |
+| **課程目錄研讀進度篩選器** | v05 介面遷移功能缺口 | `TASK-012` | ✅ **已完成**：實作「全部 / 進行中 / 已完成」篩選與偏好記憶 |
+| **套用課程設定至其他課程** | v05 介面遷移功能缺口 | `TASK-013` | ✅ **已完成**：實作批次複製 `GenerationOptions`、語言與模擬考題數之 Service、API、MCP (`confirm`) 與對話框 |
+| **修復課程刪除殘留** | 糾纏點 2、階段 5/8 落差 (`ISSUE-034`) | `TASK-014` | ✅ **已完成**：後端補刪 3 張關聯表記錄，前端清空全域狀態、偏好快取與研讀台 DOM |
+| **修復 WorkerPool 額度卡死** | 糾纏點 4、階段 4 落差 (`ISSUE-035`) | `TASK-015` | ✅ **已完成**：`resume()` 與 probe loop 同步解除額度封鎖，`force=True` 支援手動喚醒 |
+| **修復總進度即時推進** | 糾纏點 2、階段 4 落差 (`ISSUE-036`) | `TASK-016` | ✅ **已完成**：輪詢補齊課程刷新並排除 skipped 任務，進度條正確抵達 100% |
+| **愚蠢使用者全流程混沌測試** | 階段 8 維護防呆與既有 UI 問題實證補測 | `TASK-017` | ✅ **已完成**：`tests/test_dummy_user_simulation.py` 覆蓋離線全流程操作與靜態不變量檢查 |
+| **前端狀態與後端協調器解耦** | 糾纏點 1、2、3（架構優化） | `TASK-018` | ✅ **已完成**：導入 `StudioBus`/`StudioStore`，拆分 `course_onboarding.py`、`job_planner.py`、`quiz_runner.py`、`sync_service.py`、`mcp_studio_tools.py` 及 5 個前端輔助模組 |
+| **全量 Resolved 問題實證覆核** | 假性/無自動化測試保護之歷史問題清查 | `TASK-019` | ✅ **已完成**：剔除第三方圖譜噪聲、解決 `ISSUE-034~036` 並納入自動化測試驗收 |
+| **Code Review Guard 既有債清理** | 核心鐵律 15（零忽視即時修復） | 全庫重構 | ✅ **已清零**：所有 `.py`/`.js` 符合檔案/函式長度、參數與巢狀限制，執行 `review_guard.py` 達 `0` CRITICAL、`0` IMPORTANT |

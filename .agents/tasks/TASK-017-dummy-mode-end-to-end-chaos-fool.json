@@ -1,8 +1,8 @@
 {
   "id": "TASK-017",
   "title": "Dummy-mode end-to-end chaos & foolproof test suite (simulate naive user exploring all features with mock files)",
-  "status": "open",
-  "agent": "",
+  "status": "done",
+  "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [
@@ -10,16 +10,23 @@
     "src/notebooklm_batch_studio/entrypoints/static/",
     "tests/fixtures/"
   ],
-  "done_items": "",
-  "todo_items": "Simulate a naive / chaos user exploring and stress-testing ALL studio features offline with dummy files (no real NotebookLM needed). (1) Fixtures: prepare dummy files for all 12 artifact types (PDF, MP3, Quiz JSON, Markdown guides/reports, OPML/JSON mind maps, PNG infographics, CSV tables, mock video). (2) Chaos user journeys: (a) Empty & zero states: click every button/tab/picker in overview, study studio, review, batch before adding courses, and after deleting the only course; (b) Batch operations: add empty/invalid folders, toggling artifact picks, rapid start/pause/resume/wake, delete course while busy, prompt editing with extremes; (c) Study studio: test all 4 workbench arrangements, drag reordering, unpinning all items, layout switching (stage/split/stack), turntable player with missing audio, pdf reader with missing pdf, quiz with 0 answers / all wrong / all right, flashcard rating, tutor spamming; (d) Review & Overview: clear all mistakes, Leitner box transitions, exam countdown with extreme/past dates; (e) Settings & Customization: rapid palette/font switching, extreme custom palette, dark mode toggling. (3) Deliverable: automated dummy-mode simulation test suite in tests/ (e.g. tests/test_dummy_user_simulation.py) verifying zero crashes and 100% graceful degradation.",
+  "done_items": "Resolved and verified with unit/integration tests and zero review_guard violations",
+  "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-10 02:56 UTC",
-  "updated_at": "2026-11-10 02:56 UTC",
+  "updated_at": "2026-11-14 04:36 UTC",
   "history": [
     {
       "timestamp": "2026-11-10 02:56 UTC",
       "action": "created",
       "agent": "system"
+    },
+    {
+      "timestamp": "2026-11-14 04:36 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Resolved and verified with unit/integration tests and zero review_guard violations"
     }
-  ]
+  ],
+  "summary": "Resolved and verified with unit/integration tests and zero review_guard violations"
 }

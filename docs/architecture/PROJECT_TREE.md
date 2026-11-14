@@ -250,6 +250,7 @@ notebooklm-batch-studio/
 │       │   │   ├── mappers.py
 │       │   │   ├── models.py
 │       │   │   ├── preferences_repository.py
+│       │   │   ├── queue_repository.py
 │       │   │   ├── repository.py
 │       │   │   ├── review_repository.py
 │       │   │   ├── session.py
@@ -260,7 +261,9 @@ notebooklm-batch-studio/
 │       │   ├── notebooklm/
 │       │   │   ├── __init__.py
 │       │   │   ├── client.py
+│       │   │   ├── client_artifacts.py
 │       │   │   ├── downloads.py
+│       │   │   ├── errors.py
 │       │   │   ├── generation.py
 │       │   │   └── quota.py
 │       │   ├── ollama/
@@ -274,6 +277,7 @@ notebooklm-batch-studio/
 │       ├── domain/
 │       │   ├── __init__.py
 │       │   ├── exceptions.py
+│       │   ├── generation_options.py
 │       │   ├── memory_model.py
 │       │   ├── models.py
 │       │   ├── naming.py
@@ -545,12 +549,17 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-fonts.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js
+│       │   │   ├── studio-nav.js
 │       │   │   ├── studio-player.js
+│       │   │   ├── studio-queue.js
 │       │   │   ├── studio-reader.js
 │       │   │   ├── studio-settings.js
 │       │   │   ├── studio-shell.js
 │       │   │   ├── studio-start.js
+│       │   │   ├── studio-study-extras.js
+│       │   │   ├── studio-study-panels.js
 │       │   │   ├── studio-theme.css
+│       │   │   ├── studio-wizard.js
 │       │   │   ├── studio.css
 │       │   │   └── studio.js
 │       │   ├── __init__.py
@@ -562,6 +571,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_learning.py
 │       │   ├── mcp_preferences.py
 │       │   ├── mcp_server.py
+│       │   ├── mcp_studio_tools.py
 │       │   ├── mcp_study_plan.py
 │       │   ├── port_check.py
 │       │   ├── schemas.py
@@ -574,19 +584,24 @@ notebooklm-batch-studio/
 │       │   │   ├── mindmap_converter.py
 │       │   │   ├── pdf_renderer.py
 │       │   │   ├── quiz_converter.py
+│       │   │   ├── quiz_formatter.py
 │       │   │   └── report_converter.py
 │       │   ├── __init__.py
 │       │   ├── artifact_runner.py
+│       │   ├── course_onboarding.py
+│       │   ├── course_options.py
 │       │   ├── course_parser.py
 │       │   ├── course_settings.py
 │       │   ├── folder_browser.py
 │       │   ├── font_service.py
+│       │   ├── job_planner.py
 │       │   ├── job_views.py
 │       │   ├── learning_service.py
 │       │   ├── orchestrator.py
 │       │   ├── preferences_service.py
 │       │   ├── prompt_generator.py
 │       │   ├── quiz_reader.py
+│       │   ├── quiz_runner.py
 │       │   ├── quota_planner.py
 │       │   ├── reporter.py
 │       │   ├── study_plan_service.py
@@ -601,6 +616,7 @@ notebooklm-batch-studio/
 │   │   ├── sample_mindmap.json
 │   │   └── sample_quiz.json
 │   ├── __init__.py
+│   ├── dummy_client.py
 │   ├── test_api_and_mcp.py
 │   ├── test_button_routes.py
 │   ├── test_converters.py
@@ -609,6 +625,7 @@ notebooklm-batch-studio/
 │   ├── test_course_reregistration.py
 │   ├── test_db.py
 │   ├── test_domain_and_queue.py
+│   ├── test_dummy_user_simulation.py
 │   ├── test_fonts.py
 │   ├── test_guides_and_reports.py
 │   ├── test_job_settings.py

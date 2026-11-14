@@ -1,8 +1,8 @@
 {
   "id": "TASK-013",
   "title": "Apply one course's settings to other courses",
-  "status": "open",
-  "agent": "",
+  "status": "done",
+  "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [
@@ -11,16 +11,23 @@
     "src/notebooklm_batch_studio/entrypoints/mcp_course_settings.py",
     "src/notebooklm_batch_studio/entrypoints/static/studio-settings.js"
   ],
-  "done_items": "",
-  "todo_items": "v05 showed 「套用到其他課程」 in the course settings. Removed at migration: no endpoint copies settings between courses. To do: service method in course_settings.py that copies GenerationOptions + language / mock exam count (not the exam date) to chosen courses; POST /api/courses/{code}/options/copy {targets: [...]}; MCP tool copy_course_options(code, targets, confirm); a dialog in studio-settings.js to pick target courses; tests for the copy and the confirm guard.",
+  "done_items": "Resolved and verified with unit/integration tests and zero review_guard violations",
+  "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-02 07:31 UTC",
-  "updated_at": "2026-11-02 07:31 UTC",
+  "updated_at": "2026-11-14 04:36 UTC",
   "history": [
     {
       "timestamp": "2026-11-02 07:31 UTC",
       "action": "created",
       "agent": "system"
+    },
+    {
+      "timestamp": "2026-11-14 04:36 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Resolved and verified with unit/integration tests and zero review_guard violations"
     }
-  ]
+  ],
+  "summary": "Resolved and verified with unit/integration tests and zero review_guard violations"
 }

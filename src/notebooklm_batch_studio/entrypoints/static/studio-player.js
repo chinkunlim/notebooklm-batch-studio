@@ -260,65 +260,80 @@ function drawViz(now) {
   drawHorizon(t, amp, dpr);
 }
 /**
+ * Paint the glowing multi-wave sine skin on the disc canvas.
+ * @param {object} ctx Shared canvas geometry and timing state
+ */
+function paintSineSkin(ctx) {
+  const { g, w, h, cx, cy, R, dpr, t, amp } = ctx;
+  g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = dpr;
+  [0.38, 0.64, 0.9].forEach(k => { g.beginPath(); g.arc(cx, cy, R * k, 0, Math.PI * 2); g.stroke(); });
+  g.save(); g.shadowColor = C.accent; g.shadowBlur = 8 * dpr; g.lineCap = 'round';
+  for (let k = 0; k < 3; k++) {
+    g.beginPath(); g.lineWidth = (2 - k * 0.5) * dpr; g.strokeStyle = C.accent; g.globalAlpha = 1 - k * 0.32;
+    const x0 = w * 0.1, x1 = w * 0.9;
+    for (let x = x0; x <= x1; x += dpr) {
+      const u = (x - x0) / (x1 - x0), env = Math.pow(Math.sin(Math.PI * u), 1.6);
+      const y = cy + env * amp * h * (0.19 - k * 0.045) * Math.sin(u * (4 + k * 1.5) * Math.PI + t * 0.0022 * (1 + k * 0.35) + k * 1.3);
+      if (x === x0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  g.restore();
+}
+/**
+ * Paint the radiating record-label ring skin on the disc canvas.
+ * @param {object} ctx Shared canvas geometry and timing state
+ */
+function paintRingSkin(ctx) {
+  const { g, cx, cy, R, dpr, t } = ctx, r0 = R * 0.42, n = 72;
+  g.save(); g.lineCap = 'round'; g.lineWidth = 2 * dpr;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2 - Math.PI / 2, e = player.playing ? energy(i, t) : 0.16 + 0.04 * Math.sin(i);
+    const len = R * 0.42 * e;
+    g.strokeStyle = C.accent; g.globalAlpha = 0.35 + 0.65 * e;
+    g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len)); g.stroke();
+  }
+  g.restore();
+  g.fillStyle = '#1b211d'; g.beginPath(); g.arc(cx, cy, R * 0.36, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = dpr; g.beginPath(); g.arc(cx, cy, R * 0.36, 0, Math.PI * 2); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,.1)'; g.beginPath(); g.arc(cx, cy, R * 0.26, 0, Math.PI * 2); g.stroke();
+  const sp = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.07);
+  sp.addColorStop(0, '#e2c08d'); sp.addColorStop(0.7, '#a4783c'); sp.addColorStop(1, '#523b18');
+  g.fillStyle = sp; g.beginPath(); g.arc(cx, cy, R * 0.07, 0, Math.PI * 2); g.fill();
+}
+/**
+ * Paint the circular LED dot-matrix equalizer skin on the disc canvas.
+ * @param {object} ctx Shared canvas geometry and timing state
+ */
+function paintLedSkin(ctx) {
+  const { g, cx, cy, R, dpr, t } = ctx;
+  const step = 7.5 * dpr, rDot = 2.1 * dpr, inner = R - 9 * dpr, cols = Math.floor((inner * 2) / step);
+  const startX = cx - (cols - 1) * step / 2;
+  for (let i = 0; i < cols; i++) {
+    const x = startX + i * step, half = Math.sqrt(Math.max(0, inner * inner - (x - cx) ** 2));
+    const top = cy - half, bottom = cy + half, e = player.playing ? energy(i * 2.3, t) : 0.2 + 0.05 * Math.sin(i * 1.7);
+    const litTop = bottom - (bottom - top) * e;
+    for (let y = bottom - step / 2; y >= top + step / 2 - 0.5; y -= step) {
+      if (y >= litTop) { g.fillStyle = C.accent; g.globalAlpha = 0.22; g.beginPath(); g.arc(x, y, rDot * 1.9, 0, Math.PI * 2); g.fill(); g.globalAlpha = 0.6 + 0.4 * ((bottom - y) / (bottom - top)); }
+      else { g.fillStyle = '#ffffff'; g.globalAlpha = 0.07; }
+      g.beginPath(); g.arc(x, y, rDot, 0, Math.PI * 2); g.fill();
+    }
+  }
+  g.globalAlpha = 1;
+}
+/**
  * Paint one visual on a canvas; sizes scale with the canvas (k = 1 at the 144px player disc), so every size is the same picture.
  * @param {HTMLCanvasElement} c Canvas
  * @param {number} t Time in milliseconds (0 when paused)
  * @param {number} amp Amplitude (1 playing, 0.28 paused)
  */
 function paintSkin(c, t, amp) {
-  {
-    const g = c.getContext('2d'), w = c.width, h = c.height, cx = w / 2, cy = h / 2, R = w / 2, dpr = w / 144;
-    g.clearRect(0, 0, w, h);
-    if (skin === 'sine') {
-      // faint guide rings, then three glowing waves that taper at the edges of the disc
-      g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = dpr;
-      [0.38, 0.64, 0.9].forEach(k => { g.beginPath(); g.arc(cx, cy, R * k, 0, Math.PI * 2); g.stroke(); });
-      g.save(); g.shadowColor = C.accent; g.shadowBlur = 8 * dpr; g.lineCap = 'round';
-      for (let k = 0; k < 3; k++) {
-        g.beginPath(); g.lineWidth = (2 - k * 0.5) * dpr; g.strokeStyle = C.accent; g.globalAlpha = 1 - k * 0.32;
-        const x0 = w * 0.1, x1 = w * 0.9;
-        for (let x = x0; x <= x1; x += dpr) {
-          const u = (x - x0) / (x1 - x0), env = Math.pow(Math.sin(Math.PI * u), 1.6);
-          const y = cy + env * amp * h * (0.19 - k * 0.045) * Math.sin(u * (4 + k * 1.5) * Math.PI + t * 0.0022 * (1 + k * 0.35) + k * 1.3);
-          if (x === x0) g.moveTo(x, y); else g.lineTo(x, y);
-        }
-        g.stroke();
-      }
-      g.restore();
-    } else if (skin === 'ring') {
-      // a record-style label in the centre, fine bars radiating from it
-      const r0 = R * 0.42, n = 72;
-      g.save(); g.lineCap = 'round'; g.lineWidth = 2 * dpr;
-      for (let i = 0; i < n; i++) {
-        const a = i / n * Math.PI * 2 - Math.PI / 2, e = player.playing ? energy(i, t) : 0.16 + 0.04 * Math.sin(i);
-        const len = R * 0.42 * e;
-        g.strokeStyle = C.accent; g.globalAlpha = 0.35 + 0.65 * e;
-        g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len)); g.stroke();
-      }
-      g.restore();
-      g.fillStyle = '#1b211d'; g.beginPath(); g.arc(cx, cy, R * 0.36, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = dpr; g.beginPath(); g.arc(cx, cy, R * 0.36, 0, Math.PI * 2); g.stroke();
-      g.strokeStyle = 'rgba(255,255,255,.1)'; g.beginPath(); g.arc(cx, cy, R * 0.26, 0, Math.PI * 2); g.stroke();
-      const sp = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.07); sp.addColorStop(0, '#e2c08d'); sp.addColorStop(0.7, '#a4783c'); sp.addColorStop(1, '#523b18');
-      g.fillStyle = sp; g.beginPath(); g.arc(cx, cy, R * 0.07, 0, Math.PI * 2); g.fill();
-    } else if (skin === 'led') {
-      // a round dot-matrix meter: columns light up from the bottom, unlit dots stay as a faint grid
-      const step = 7.5 * dpr, rDot = 2.1 * dpr, inner = R - 9 * dpr, cols = Math.floor((inner * 2) / step);
-      const startX = cx - (cols - 1) * step / 2;
-      for (let i = 0; i < cols; i++) {
-        const x = startX + i * step, half = Math.sqrt(Math.max(0, inner * inner - (x - cx) ** 2));
-        const top = cy - half, bottom = cy + half, e = player.playing ? energy(i * 2.3, t) : 0.2 + 0.05 * Math.sin(i * 1.7);
-        const litTop = bottom - (bottom - top) * e;
-        for (let y = bottom - step / 2; y >= top + step / 2 - 0.5; y -= step) {
-          const lit = y >= litTop;
-          if (lit) { g.fillStyle = C.accent; g.globalAlpha = 0.22; g.beginPath(); g.arc(x, y, rDot * 1.9, 0, Math.PI * 2); g.fill(); g.globalAlpha = 0.6 + 0.4 * ((bottom - y) / (bottom - top)); }
-          else { g.fillStyle = '#ffffff'; g.globalAlpha = 0.07; }
-          g.beginPath(); g.arc(x, y, rDot, 0, Math.PI * 2); g.fill();
-        }
-      }
-      g.globalAlpha = 1;
-    }
-  }
+  const g = c.getContext('2d'), w = c.width, h = c.height;
+  g.clearRect(0, 0, w, h);
+  const ctx = { g, w, h, cx: w / 2, cy: h / 2, R: w / 2, dpr: w / 144, t, amp };
+  if (skin === 'sine') paintSineSkin(ctx);
+  else if (skin === 'ring') paintRingSkin(ctx);
+  else if (skin === 'led') paintLedSkin(ctx);
 }
 /**
  * Draw the optional ambient wave under the vinyl.

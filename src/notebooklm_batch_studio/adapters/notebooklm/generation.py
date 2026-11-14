@@ -182,8 +182,7 @@ async def finish_generation(
     client: Any,
     notebook_id: str,
     status: GenerationStatus,
-    label: str,
-    timeout: float = DEFAULT_GENERATION_TIMEOUT,
+    **opts: Any,
 ) -> str:
     """Check a submitted generation, wait until it completes, and return its artifact id.
 
@@ -191,8 +190,7 @@ async def finish_generation(
         client: Open `NotebookLMClient` instance.
         notebook_id: Notebook identifier.
         status: Status returned by the `generate_*` call.
-        label: Human-readable artifact label for logs and errors.
-        timeout: Maximum seconds to wait for completion.
+        **opts: Optional `label` (artifact name) and `timeout` (seconds to wait).
 
     Returns:
         The artifact id (equal to the generation task id).
@@ -201,6 +199,8 @@ async def finish_generation(
         QuotaExceededError: When the request or the task was rejected for quota.
         StudioError: When the task failed.
     """
+    label = str(opts.get("label", "artifact"))
+    timeout = float(opts.get("timeout", DEFAULT_GENERATION_TIMEOUT))
     _raise_for_status(status, label)
     logger.info("%s task %s submitted, waiting for completion", label, status.task_id)
     final = await client.artifacts.wait_for_completion(notebook_id, status.task_id, timeout=timeout)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -187,7 +188,7 @@ class ReviewRepository:
         return {kind: int(n) for kind, n in self.session.execute(stmt)}
 
     def save_explanation(
-        self, course_code: str, lecture_no: int | None, question_key: str, question: str, answer_md: str
+        self, course_code: str, lecture_no: int | None, question_key: str, **content: Any
     ) -> None:
         """Save (or replace) Gemini Notebook's explanation of one question.
 
@@ -195,9 +196,10 @@ class ReviewRepository:
             course_code: Course code.
             lecture_no: Lecture number, or None.
             question_key: Hash of the question text.
-            question: Question text.
-            answer_md: Answer in Markdown.
+            **content: Must supply `question` (str) and `answer_md` (str).
         """
+        question = str(content.get("question", ""))
+        answer_md = str(content.get("answer_md", ""))
         item_id = f"{course_code}:{question_key}"
         record = self.session.get(ExplanationRecord, item_id)
         if record is None:

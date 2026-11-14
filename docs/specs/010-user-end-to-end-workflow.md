@@ -1,8 +1,8 @@
 # SPEC-010：端到端使用者完整工作流程規格書 (End-to-End User Workflow & Journey)
 
 - **狀態**：Approved
-- **日期**：2026-11-10
-- **相關任務 / ADR**：TASK-001 ~ TASK-017 / ADR-001 ~ ADR-009
+- **日期**：2026-11-10（2026-11-14 更新）
+- **相關任務 / ADR**：TASK-001 ~ TASK-020 / ADR-001 ~ ADR-009 / ISSUE-034 ~ ISSUE-037
 
 ---
 
@@ -76,8 +76,11 @@ flowchart TD
      - **模擬考試題數測定**：滑桿或數值輸入 10 ~ 100 題（預設 50 題）。
    - **Step 4：目錄選擇與即時驗證 (Folder Selection & Live Preview)**
      - 點選本機資料夾，系統非同步呼叫 `POST /api/courses/preview`。
+     - **課程代碼解析與防碰撞機制（`ISSUE-037` / `TASK-020`）**：
+       - 若資料夾前綴包含英文字母（如 `BIO101`、`CS-50`），`parse_course_folder_name` 解析該前綴作為課程代碼（大寫）。
+       - 若前綴為純數字或學期格式（如 `115-1 心理學研究法`、`115-1 生涯諮商`），直接保留完整資料夾名稱作為 `code` 與 `name`，避免同一個學期的不同課程因撞碼覆寫。
      - **即時回饋**：
-       - 辨識之課程代碼（如 `BIO101`）與名稱。
+       - 辨識之課程代碼（如 `BIO101` 或 `115-1 生涯諮商`）與名稱。
        - 偵測到的講義 PDF 清單與數量。
        - 依勾選項目換算之排程任務總數（如 50 項）。
        - 根據當前 Gemini Notebook 配額預估所需時間與重置窗口。
@@ -87,13 +90,14 @@ flowchart TD
        - `[x] 加入後立即開始佇列 (Auto-start Queue)`：確認後自動解除佇列暫停。
    - **點擊「確認加入」**：
      - 呼叫 `POST /api/courses`，寫入資料庫 `courses`、`lectures`，並展開 `artifact_jobs` 矩陣。
+     - `CourseRepository.save_course` 在既有同 `code` 紀錄之 `name` 與 `source_dir` 皆不相符時，拒絕靜默繼承舊課程的 `notebook_id`（重置為新值並記錄警告），防止講義上傳錯置。
 
 ---
 
 ### 階段三：雲端筆記本建立與上傳 (Setup Notebook & PDF Ingestion)
 
 1. **建立專屬 Notebook**
-   - 課程卡片顯示「建立筆記本並上傳」，點擊後非同步透過 Playwright/API 在 Gemini Notebook 建立同名筆記本。
+   - 課程卡片顯示「建立筆記本並上傳」，點擊後非同步透過 Playwright/API 在 Gemini Notebook 建立筆記本（`_ensure_notebook_id` 若 `course.code` 已等於或包含於 `course.name` 則直接使用 `course.name` 作為標題，否則為 `[<code>] <name>`）。
 2. **上傳 PDF 檔案**
    - 逐講將 PDF 上傳至該 Notebook，資料庫記錄每份的 `source_id` 與 `sha256`。
    - 若特定 PDF 上傳逾時或失敗，卡片提供「重試上傳」按鈕。

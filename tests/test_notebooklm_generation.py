@@ -24,7 +24,7 @@ from notebooklm_batch_studio.adapters.notebooklm.quota import retry_after_from_u
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import QuotaExceededError, StudioError
 from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, Course, Lecture
-from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
+from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner, JobTarget
 
 CLIENT_PATH = "notebooklm_batch_studio.adapters.notebooklm.client.NotebookLMClient"
 
@@ -381,7 +381,7 @@ class RunnerTargetingTest(unittest.IsolatedAsyncioTestCase):
             art_type: Artifact type to process.
         """
         job = ArtifactJob(id="j", course_code="BIO101", lecture_no=1, artifact_type=art_type)
-        await self.runner.process_job(job, self.course, "nb", ["s1"], self.out)
+        await self.runner.process_job(job, self.course, JobTarget("nb", ["s1"], self.out))
 
     async def test_audio_download_and_rename_target_generated_artifact(self) -> None:
         """Audio download and rename use the id returned by generate_audio, never 'latest'."""

@@ -101,6 +101,84 @@ def quota_retry_after(quota: dict[str, Any], art_type: ArtifactType, now: dateti
     return max(MIN_RETRY_SECONDS, math.ceil((max(resets) - now).total_seconds()))
 
 
+def _empty_quota_plan() -> dict[str, Any]:
+    """Return an empty quota plan payload for when live usage metrics are unavailable.
+
+    Returns:
+        Quota plan dictionary with None numeric fields and available flag False.
+    """
+    return {
+        "quota_estimate_available": False,
+        "estimated_quota_percent": None,
+        "five_hour_remaining_percent": None,
+        "estimated_windows": None,
+        "estimated_wait_hours": None,
+        "estimated_days": None,
+        "weekly_remaining_percent": None,
+        "weekly_warning": None,
+    }
+
+
+def _workload_cost_percent(types: list[ArtifactType], quota: dict[str, Any]) -> float:
+    """Sum estimated 5-hour quota cost percentages across all planned jobs.
+
+    Args:
+        types: Planned artifact types.
+        quota: Live Gemini Notebook quota dictionary.
+
+    Returns:
+        Total estimated percentage points required.
+    """
+    total = 0.0
+    for art_type in types:
+        kind = action_kind_for(art_type)
+        action = _find_action(quota, kind) if kind else None
+        cost = float(action.get("estimated_cost_percent") or 0.0) if action else 0.0
+        total += cost * GENERATIONS_PER_JOB.get(art_type, 1)
+    return total
+
+
+def _estimate_wait_hours(five_hour: dict[str, Any] | None, extra_windows: int, now: datetime | None) -> float:
+    """Compute estimated wait duration in hours given reset timing and extra windows.
+
+    Args:
+        five_hour: Five-hour window payload if present.
+        extra_windows: Additional 5-hour quota windows needed beyond remaining quota.
+        now: Current UTC timestamp.
+
+    Returns:
+        Estimated wait time in hours rounded to 0.1h.
+    """
+    if not extra_windows:
+        return 0.0
+    # The first wait lasts only until the current window resets; each further window adds 5 hours.
+    first_wait = float(FIVE_HOUR_WINDOW_HOURS)
+    if five_hour and five_hour.get("resets_at"):
+        until_reset = datetime.fromisoformat(five_hour["resets_at"]) - (now or datetime.now(UTC))
+        first_wait = max(0.0, until_reset.total_seconds() / 3600)
+    return round(first_wait + (extra_windows - 1) * FIVE_HOUR_WINDOW_HOURS, 1)
+
+
+def _weekly_quota_status(windows: list[dict[str, Any]]) -> tuple[float | None, str | None]:
+    """Compute weekly remaining quota percentage and optional exhaustion warning.
+
+    Args:
+        windows: List of quota window payloads from the usage meter.
+
+    Returns:
+        Tuple of (weekly_remaining_percent, warning_message).
+    """
+    weekly = next((w for w in windows if w.get("kind") == "weekly"), None)
+    weekly_left = round(float(weekly["remaining_percent"]), 1) if weekly else None
+    # The meter prices actions only against the 5-hour window, so the weekly cap is shown as-is.
+    warning = (
+        f"本週額度只剩 {weekly_left}%，可能在 {weekly['resets_at'][:10]} 重置前用完"
+        if weekly and weekly_left is not None and weekly_left < WEEKLY_WARNING_PERCENT
+        else None
+    )
+    return weekly_left, warning
+
+
 def estimate_quota_plan(
     types: list[ArtifactType], quota: dict[str, Any] | None, now: datetime | None = None
 ) -> dict[str, Any]:
@@ -116,48 +194,21 @@ def estimate_quota_plan(
         `five_hour_remaining_percent`, `estimated_windows`, `estimated_wait_hours`, and
         `estimated_days`; the numeric fields are None when the meter is unavailable.
     """
-    empty: dict[str, Any] = {
-        "quota_estimate_available": False,
-        "estimated_quota_percent": None,
-        "five_hour_remaining_percent": None,
-        "estimated_windows": None,
-        "estimated_wait_hours": None,
-        "estimated_days": None,
-        "weekly_remaining_percent": None,
-        "weekly_warning": None,
-    }
     if not quota or quota.get("status") != "ready":
-        return empty
-    total = 0.0
-    for art_type in types:
-        kind = action_kind_for(art_type)
-        action = _find_action(quota, kind) if kind else None
-        cost = float(action.get("estimated_cost_percent") or 0.0) if action else 0.0
-        total += cost * GENERATIONS_PER_JOB.get(art_type, 1)
-    five_hour = next((w for w in quota.get("windows", []) if w.get("kind") == "five_hour"), None)
+        return _empty_quota_plan()
+    total = _workload_cost_percent(types, quota)
+    windows = quota.get("windows", [])
+    five_hour = next((w for w in windows if w.get("kind") == "five_hour"), None)
     remaining = float(five_hour["remaining_percent"]) if five_hour else 100.0
-    extra_windows = math.ceil((total - remaining) / 100.0) if total > remaining else 0
-    # The first wait lasts only until the current window resets; each further window adds 5 hours.
-    first_wait = float(FIVE_HOUR_WINDOW_HOURS)
-    if five_hour and five_hour.get("resets_at"):
-        until_reset = datetime.fromisoformat(five_hour["resets_at"]) - (now or datetime.now(UTC))
-        first_wait = max(0.0, until_reset.total_seconds() / 3600)
-    wait_hours = round(first_wait + (extra_windows - 1) * FIVE_HOUR_WINDOW_HOURS, 1) if extra_windows else 0
-    weekly = next((w for w in quota.get("windows", []) if w.get("kind") == "weekly"), None)
-    weekly_left = round(float(weekly["remaining_percent"]), 1) if weekly else None
-    # The meter prices actions only against the 5-hour window, so the weekly cap is shown as-is
-    # and flagged when it is nearly used up rather than converted into a guessed job count.
-    warning = (
-        f"本週額度只剩 {weekly_left}%，可能在 {weekly['resets_at'][:10]} 重置前用完"
-        if weekly and weekly_left is not None and weekly_left < WEEKLY_WARNING_PERCENT
-        else None
-    )
+    extra = math.ceil((total - remaining) / 100.0) if total > remaining else 0
+    wait_hours = _estimate_wait_hours(five_hour, extra, now)
+    weekly_left, warning = _weekly_quota_status(windows)
     return {
         "quota_estimate_available": True,
         "estimated_quota_percent": round(total, 1),
         "five_hour_remaining_percent": round(remaining, 1),
-        "estimated_windows": extra_windows + 1,
-        "estimated_wait_hours": wait_hours,
+        "estimated_windows": extra + 1,
+        "estimated_wait_hours": 0 if not extra else wait_hours,
         "estimated_days": max(1, math.ceil(wait_hours / 24)),
         "weekly_remaining_percent": weekly_left,
         "weekly_warning": warning,

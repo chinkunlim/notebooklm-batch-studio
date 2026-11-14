@@ -134,6 +134,42 @@ class ArtifactSelectionTest(Fixture):
         with self.assertRaises(ValueError):
             settings.set_artifact_selection("BIO101", ["course_audio"], [])
 
+    def test_course_progress_excludes_skipped_jobs(self) -> None:
+        """Course progress percentage counts only active (non-skipped) jobs in the denominator."""
+        done_jobs = [
+            ArtifactJob(
+                id=f"d-{i}",
+                course_code="BIO101",
+                lecture_no=1,
+                artifact_type=ArtifactType.AUDIO,
+                version=i,
+            )
+            for i in range(1, 5)
+        ]
+        skip_jobs = [
+            ArtifactJob(
+                id=f"s-{i}",
+                course_code="BIO101",
+                lecture_no=2,
+                artifact_type=ArtifactType.INFOGRAPHIC,
+                version=i,
+            )
+            for i in range(1, 7)
+        ]
+        self.queue_repo.enqueue_jobs(done_jobs + skip_jobs)
+        for i, job in enumerate(done_jobs, start=1):
+            self.queue_repo.complete_job(job.id, output_file=f"/tmp/out_{i}.m4a")
+        self.queue_repo.set_types_status(
+            "BIO101", [ArtifactType.INFOGRAPHIC.value], [JobStatus.PENDING], JobStatus.SKIPPED
+        )
+        self.session.commit()
+
+        summaries = self.service.get_courses_summary()
+        bio_summary = next(c for c in summaries if c["code"] == "BIO101")
+        detail = self.service.get_course_detail("BIO101")
+        self.assertEqual(bio_summary["progress_percent"], 100.0)
+        self.assertEqual(detail["progress_percent"], 100.0)
+
     def test_http_and_mcp(self) -> None:
         """GET/PUT /api/courses/{code}/artifact-types and the MCP tool need confirm to change."""
         http = TestClient(

@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
@@ -162,11 +162,12 @@ class QueueRepositoryProtocol(Protocol):
         """
         ...
 
-    def refresh_quota_wait(self, artifact_type: ArtifactType | None = None) -> int:
-        """Wake quota-waiting jobs whose cooldown has elapsed.
+    def refresh_quota_wait(self, artifact_type: ArtifactType | None = None, force: bool = False) -> int:
+        """Wake quota-waiting jobs whose cooldown has elapsed (or all when forced).
 
         Args:
             artifact_type: Specific artifact type to reset, or None for all eligible.
+            force: When True, wake matching quota-waiting jobs regardless of cooldown.
 
         Returns:
             Number of jobs awakened back to PENDING.
@@ -316,6 +317,19 @@ class CourseRepositoryProtocol(Protocol):
         """
         ...
 
+    def get_study_activity(
+        self, code: str
+    ) -> tuple[set[tuple[int | None, str]], set[tuple[int | None, str]], set[int | None]]:
+        """Summarize student progress marks, quiz attempts, and flashcard reviews for a course.
+
+        Args:
+            code: Course code.
+
+        Returns:
+            Tuple of (study_marks, attempted_quizzes, reviewed_flashcard_lectures).
+        """
+        ...
+
     def update_notebook_id(self, code: str, notebook_id: str) -> None:
         """Update linked Gemini Notebook notebook ID.
 
@@ -349,8 +363,7 @@ class CourseRepositoryProtocol(Protocol):
         code: str,
         lecture_no: int,
         status: str,
-        source_id: str | None = None,
-        error_message: str | None = None,
+        **details: Any,
     ) -> None:
         """Update upload state, source ID, and error message for a lecture PDF.
 
@@ -358,8 +371,7 @@ class CourseRepositoryProtocol(Protocol):
             code: Course code.
             lecture_no: Sequence number of the lecture.
             status: Status string (pending, uploading, parsing, ready, failed).
-            source_id: Optional Gemini Notebook source ID when ready.
-            error_message: Optional failure explanation.
+            **details: Optional `source_id` (`str | None`) and `error_message` (`str | None`).
         """
         ...
 

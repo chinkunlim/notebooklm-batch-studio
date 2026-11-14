@@ -10,7 +10,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-import re
 import shutil
 import uuid
 from datetime import date, datetime
@@ -19,139 +18,38 @@ from typing import Any
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.models import (
-    GENERATION_OPTION_CHOICES,
-    NUMBER_OPTION_RANGES,
-    TEXT_OPTION_LIMITS,
     ArtifactJob,
     ArtifactType,
     Course,
-    GenerationOptions,
     JobStatus,
     effective_options,
     merge_generation_options,
-    parse_chapter_range,
 )
 from notebooklm_batch_studio.domain.naming import label_for
 from notebooklm_batch_studio.domain.repositories import CourseRepositoryProtocol, QueueRepositoryProtocol
+from notebooklm_batch_studio.services.course_options import (
+    apply_job_settings as apply_job_settings,
+)
+from notebooklm_batch_studio.services.course_options import (
+    default_options as default_options,
+)
+from notebooklm_batch_studio.services.course_options import (
+    fields_for_type as fields_for_type,
+)
+from notebooklm_batch_studio.services.course_options import (
+    job_overrides as job_overrides,
+)
+from notebooklm_batch_studio.services.course_options import (
+    option_choices as option_choices,
+)
+from notebooklm_batch_studio.services.job_planner import generate_jobs_for_course
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
-from notebooklm_batch_studio.services.worker_pool import generate_jobs_for_course
 
 CHAPTER_TYPES = [t.value for t in ArtifactType if not t.value.startswith("course_")]
 COURSE_TYPES = [t.value for t in ArtifactType if t.value.startswith("course_")]
 UNSTARTED = [JobStatus.PENDING, JobStatus.QUOTA_WAIT, JobStatus.FAILED]
 LANGUAGES = ("zh-TW", "en", "bilingual")
 MOCK_EXAM_RANGE = (10, 100)
-
-# Which options matter for each kind of output (by artifact-type prefix after "course_").
-_FIELDS_BY_PREFIX = (
-    ("quiz", ["quiz_questions", "quiz_difficulty"]),
-    ("mock_exam", ["quiz_difficulty"]),
-    ("flashcards", ["flashcards_quantity", "flashcards_difficulty"]),
-    ("audio", ["audio_format", "audio_length"]),
-    ("infographic", ["infographic_orientation", "infographic_detail", "infographic_style", "device_exports"]),
-    ("slide_deck", ["slide_format", "slide_length", "slide_download"]),
-    ("video", ["video_format", "video_style", "video_style_prompt"]),
-)
-
-
-def fields_for_type(artifact_type: str) -> list[str]:
-    """List the options a given output type uses (every type also takes extra instructions).
-
-    Args:
-        artifact_type: Artifact type value.
-
-    Returns:
-        Option names relevant to that type.
-    """
-    value = artifact_type.removeprefix("course_")
-    scope = ["chapter_range"] if artifact_type.startswith("course_") else []
-    for prefix, fields in _FIELDS_BY_PREFIX:
-        if value.startswith(prefix):
-            return [*fields, *scope, "extra_instructions"]
-    return [*scope, "extra_instructions"]
-
-
-def option_choices() -> dict[str, Any]:
-    """Allowed values for every option: a list, None for on/off, "text", or a {min, max} range.
-
-    Returns:
-        Option name to its allowed values.
-    """
-    choices: dict[str, Any] = {k: list(v) if v else None for k, v in GENERATION_OPTION_CHOICES.items()}
-    choices.update({k: "text" for k in TEXT_OPTION_LIMITS})
-    choices["chapter_range"] = "text"
-    choices.update({k: {"min": low, "max": high} for k, (low, high) in NUMBER_OPTION_RANGES.items()})
-    return choices
-
-
-def default_options() -> dict[str, Any]:
-    """The project defaults a course starts with (what applies when nothing is changed).
-
-    Returns:
-        Option name to default value, including the course-level language and mock exam size.
-    """
-    defaults = dataclasses.asdict(GenerationOptions())
-    defaults.update(language="zh-TW", mock_exam_questions=50, exam_date="")
-    return defaults
-
-
-def job_overrides(job: ArtifactJob) -> dict[str, Any]:
-    """Read one job's own option overrides (stored as JSON in `style_options`).
-
-    Args:
-        job: Artifact job.
-
-    Returns:
-        The overrides, or an empty dict when none are set or the stored value is unreadable.
-    """
-    if not job.style_options:
-        return {}
-    try:
-        data = json.loads(job.style_options)
-    except ValueError:
-        logger.warning("Ignoring unreadable style_options on job %s", job.id)
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def apply_job_settings(job: ArtifactJob, course: Course) -> tuple[ArtifactJob, Course]:
-    """Resolve the settings one job runs with: course options, its own overrides, extra instructions.
-
-    Args:
-        job: Job about to run.
-        course: Its course.
-
-    Returns:
-        The job with extra instructions appended to its prompt, and the course carrying the
-        effective options for this job (SPEC-006).
-    """
-    try:
-        options = effective_options(course.generation_options, job_overrides(job))
-    except ValueError as err:
-        logger.warning("Ignoring invalid overrides on job %s: %s", job.id, err)
-        options = course.generation_options
-    prompt = job.custom_prompt or ""
-    # The question count in the prompt follows the settings (quiz: quiz_questions, mock exam:
-    # the course's mock_exam_questions), so changing a count changes what Gemini Notebook is asked.
-    value = job.artifact_type.value.removeprefix("course_")
-    if value.startswith("quiz"):
-        count = course.mock_exam_questions if job.lecture_no is None else options.quiz_questions
-        prompt = re.sub(r"生成 \d+ 題", f"生成 {count} 題", prompt)
-    elif value.startswith("mock_exam"):
-        prompt = re.sub(r"生成 \d+ 題", f"生成 {course.mock_exam_questions} 題", prompt)
-    lectures = course.lectures
-    wanted = parse_chapter_range(options.chapter_range) if options.chapter_range else None
-    if job.lecture_no is None and wanted:
-        # A course-wide output limited to some chapters (e.g. a midterm on Ch01-Ch03) uses only
-        # those sources, and its Gemini Notebook title prefix shows that range.
-        lectures = [lec for lec in course.lectures if lec.no in wanted] or course.lectures
-        prompt = f"{prompt}\n\n範圍：只涵蓋第 {options.chapter_range} 講的內容。".strip()
-    if options.extra_instructions:
-        prompt = f"{prompt}\n\n補充要求：{options.extra_instructions}".strip()
-    return (
-        dataclasses.replace(job, custom_prompt=prompt or None),
-        dataclasses.replace(course, generation_options=options, lectures=lectures),
-    )
 
 
 logger = logging.getLogger(__name__)
@@ -259,6 +157,79 @@ class CourseSettingsService:
         logger.info("Updated generation options for %s: %s", code, sorted(changes))
         return self.get_options(code)
 
+    def copy_options(self, code: str, targets: list[str]) -> dict[str, Any]:
+        """Copy one course's options, language, and mock exam count to other courses.
+
+        Each target course keeps its own exam date.
+
+        Args:
+            code: Source course code.
+            targets: List of target course codes.
+
+        Returns:
+            Dictionary naming the source, updated targets, and copied values.
+
+        Raises:
+            CourseNotFoundError: If source or any target course does not exist.
+            ValueError: If no valid target courses are specified.
+        """
+        source = self._course(code)
+        clean_targets = list(dict.fromkeys(t.strip() for t in targets if t.strip() and t.strip() != code))
+        if not clean_targets:
+            raise ValueError("targets must contain at least one other course code")
+        target_courses = [self._course(t) for t in clean_targets]
+        for target in target_courses:
+            self.course_repo.update_generation_options(target.code, source.generation_options)
+            self.course_repo.update_course_basics(
+                target.code, source.language, source.mock_exam_questions, target.exam_date
+            )
+        logger.info("Copied options from %s to %s", code, clean_targets)
+        return {
+            "source": code,
+            "copied_to": clean_targets,
+            "options": dataclasses.asdict(source.generation_options),
+            "language": source.language,
+            "mock_exam_questions": source.mock_exam_questions,
+        }
+
+    def _build_regenerated_job(
+        self, course: Course, lecture_no: int | None, art_type: ArtifactType
+    ) -> ArtifactJob:
+        """Construct the next versioned ArtifactJob inheriting slot style overrides.
+
+        Args:
+            course: Domain Course entity.
+            lecture_no: Target lecture number or None for course-wide scope.
+            art_type: Target ArtifactType enum value.
+
+        Returns:
+            Newly created pending ArtifactJob ready for enqueueing.
+        """
+        lecture = next((lec for lec in course.lectures if lec.no == lecture_no), None)
+        if lecture_no is not None and lecture is None:
+            raise ValueError(f"Lecture {lecture_no} not found in course {course.code}")
+        version = self.queue_repo.max_version(course.code, lecture_no, art_type) + 1
+        slot = [
+            j
+            for j in self.queue_repo.list_jobs(course_code=course.code)
+            if j.lecture_no == lecture_no and j.artifact_type == art_type
+        ]
+        latest = max(slot, key=lambda j: j.version) if slot else None
+        # Always start from the current blueprint: an older version's stored prompt may predate
+        # prompt fixes (e.g. the 10-question quizzes, ISSUE-017). Edit the queued job to customize.
+        topic = lecture.topic if lecture else f"{course.code} 全範圍整合"
+        prompt = PromptGenerator().get_base_blueprint_prompt(art_type, topic, course.name, course.language)
+        return ArtifactJob(
+            id=str(uuid.uuid4()),
+            course_code=course.code,
+            lecture_no=lecture_no,
+            artifact_type=art_type,
+            custom_prompt=prompt,
+            version=version,
+            # The output's own settings carry over to the new version (SPEC-006).
+            style_options=latest.style_options if latest else None,
+        )
+
     def regenerate(self, code: str, lecture_no: int | None, artifact_type: str) -> dict[str, Any]:
         """Enqueue the next version of one artifact slot, keeping every older version.
 
@@ -275,34 +246,15 @@ class CourseSettingsService:
         """
         course = self._course(code)
         art_type = ArtifactType(artifact_type)
-        lecture = next((lec for lec in course.lectures if lec.no == lecture_no), None)
-        if lecture_no is not None and lecture is None:
-            raise ValueError(f"Lecture {lecture_no} not found in course {code}")
-
-        version = self.queue_repo.max_version(code, lecture_no, art_type) + 1
-        slot = [
-            j
-            for j in self.queue_repo.list_jobs(course_code=code)
-            if j.lecture_no == lecture_no and j.artifact_type == art_type
-        ]
-        latest = max(slot, key=lambda j: j.version) if slot else None
-        # Always start from the current blueprint: an older version's stored prompt may predate
-        # prompt fixes (e.g. the 10-question quizzes, ISSUE-017). Edit the queued job to customize.
-        topic = lecture.topic if lecture else f"{course.code} 全範圍整合"
-        prompt = PromptGenerator().get_base_blueprint_prompt(art_type, topic, course.name, course.language)
-        job = ArtifactJob(
-            id=str(uuid.uuid4()),
-            course_code=code,
-            lecture_no=lecture_no,
-            artifact_type=art_type,
-            custom_prompt=prompt,
-            version=version,
-            # The output's own settings carry over to the new version (SPEC-006).
-            style_options=latest.style_options if latest else None,
-        )
+        job = self._build_regenerated_job(course, lecture_no, art_type)
         self.queue_repo.enqueue_jobs([job])
-        logger.info("Enqueued %s v%d for %s L%s", art_type.value, version, code, lecture_no)
-        return {"job_id": job.id, "version": version, "label": label_for(art_type), "lecture_no": lecture_no}
+        logger.info("Enqueued %s v%d for %s L%s", art_type.value, job.version, code, lecture_no)
+        return {
+            "job_id": job.id,
+            "version": job.version,
+            "label": label_for(art_type),
+            "lecture_no": lecture_no,
+        }
 
     def get_artifact_selection(self, code: str) -> dict[str, Any]:
         """Return which artifact types a course generates, with labels for every choice.

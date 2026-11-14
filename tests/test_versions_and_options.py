@@ -32,7 +32,7 @@ from notebooklm_batch_studio.domain.models import (
 from notebooklm_batch_studio.domain.naming import label_for, naming_guide, versioned_name, versioned_title
 from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
-from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner
+from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner, JobTarget
 from notebooklm_batch_studio.services.converters.image_fitter import export_device_versions, fit_on_canvas
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.worker_pool import WorkerPool
@@ -174,7 +174,9 @@ class RunnerVersionTest(unittest.IsolatedAsyncioTestCase):
             Primary output path.
         """
         job = ArtifactJob(id="j", course_code="BIO101", lecture_no=1, artifact_type=art_type, version=version)
-        return await self.runner.process_job(job, make_course(self.tmp, options), "nb", ["s1"], self.out)
+        return await self.runner.process_job(
+            job, make_course(self.tmp, options), JobTarget("nb", ["s1"], self.out)
+        )
 
     async def test_mind_map_is_renamed_through_mind_map_api(self) -> None:
         """Mind maps use rename_mind_map with their note id. Refs: ISSUE-011"""

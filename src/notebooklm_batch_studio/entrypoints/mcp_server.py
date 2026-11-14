@@ -25,27 +25,116 @@ from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
-from notebooklm_batch_studio.domain.naming import naming_guide
-from notebooklm_batch_studio.domain.usage_guide import usage_guide
 from notebooklm_batch_studio.entrypoints.mcp_course_settings import register_course_settings_tools
 from notebooklm_batch_studio.entrypoints.mcp_fonts import register_font_tools
 from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
 from notebooklm_batch_studio.entrypoints.mcp_learning import register_learning_tools
 from notebooklm_batch_studio.entrypoints.mcp_preferences import register_preferences_tools
+from notebooklm_batch_studio.entrypoints.mcp_studio_tools import register_settings_and_study_tools
 from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
-from notebooklm_batch_studio.services.folder_browser import browse_folders
 from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.preferences_service import PreferencesService
-from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
+from notebooklm_batch_studio.services.study_plan_service import StudyPlanDeps, StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 logger = logging.getLogger(__name__)
 
 
-def _register_course_query_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register course querying tools.
+async def _add_courses_payload(
+    active_service: BatchStudioService, folders: list[str], profile: str, confirm: bool
+) -> str:
+    """Preview or register course folders depending on confirmation flag.
+
+    Args:
+        active_service: Orchestrator service.
+        folders: List of candidate folder paths.
+        profile: Selected generation profile string.
+        confirm: Explicit confirmation flag.
+
+    Returns:
+        JSON string response.
+    """
+    if not confirm:
+        preview = await active_service.preview_course_folders(folders)
+        return json.dumps(
+            {
+                "confirmed": False,
+                "warning": "Action not confirmed. Set confirm=True to persist and enqueue.",
+                "preview": preview,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    registered = active_service.add_course_folders(folders, profile=profile)
+    return json.dumps(
+        {
+            "confirmed": True,
+            "message": f"Successfully registered {len(registered)} courses.",
+            "courses": registered,
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+
+async def _sync_remote_payload(active_service: BatchStudioService, course_code: str, confirm: bool) -> str:
+    """Synchronize remote Gemini Notebook artifacts when confirmed.
+
+    Args:
+        active_service: Orchestrator service.
+        course_code: Course identifier.
+        confirm: Explicit confirmation flag.
+
+    Returns:
+        Status string or JSON response.
+    """
+    if not confirm:
+        return (
+            f"Action not confirmed. Pass confirm=True to sync remote Gemini Notebook "
+            f"artifacts for course '{course_code}'."
+        )
+    try:
+        res = await active_service.sync_course_artifacts(course_code)
+        return json.dumps(res, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+def _refine_prompts_payload(active_service: BatchStudioService, course_code: str, confirm: bool) -> str:
+    """Refine pending job prompts with Ollama when confirmed.
+
+    Args:
+        active_service: Orchestrator service.
+        course_code: Course identifier.
+        confirm: Explicit confirmation flag.
+
+    Returns:
+        Status string or JSON response.
+    """
+    if not confirm:
+        return (
+            f"Action not confirmed. Pass confirm=True to refine prompts using "
+            f"Ollama for course '{course_code}'."
+        )
+    try:
+        count = active_service.refine_course_prompts_with_ollama(course_code)
+        return json.dumps(
+            {
+                "course_code": course_code,
+                "refined_count": count,
+                "message": f"Successfully refined {count} prompts using Ollama.",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    except Exception as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+def _register_course_list_and_quota_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register list_courses and get_notebooklm_quota tools.
 
     Args:
         mcp: MCPServer instance.
@@ -59,8 +148,28 @@ def _register_course_query_tools(mcp: MCPServer, active_service: BatchStudioServ
         Returns:
             JSON string containing course summaries.
         """
-        summaries = active_service.get_courses_summary()
-        return json.dumps(summaries, ensure_ascii=False, indent=2)
+        return json.dumps(active_service.get_courses_summary(), ensure_ascii=False, indent=2)
+
+    @mcp.tool()
+    async def get_notebooklm_quota() -> str:
+        """Read the live Gemini Notebook usage meter and account limits (read-only).
+
+        Returns:
+            JSON string with 5-hour/weekly window usage and account limits.
+        """
+        try:
+            return json.dumps(await active_service.get_notebooklm_quota(), ensure_ascii=False, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+def _register_course_status_tool(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register get_course_status tool.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
 
     @mcp.tool()
     def get_course_status(course_code: str) -> str:
@@ -73,27 +182,13 @@ def _register_course_query_tools(mcp: MCPServer, active_service: BatchStudioServ
             JSON string containing course details and job records.
         """
         try:
-            detail = active_service.get_course_detail(course_code)
-            return json.dumps(detail, ensure_ascii=False, indent=2)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-    @mcp.tool()
-    async def get_notebooklm_quota() -> str:
-        """Read the live Gemini Notebook usage meter and account limits (read-only).
-
-        Returns:
-            JSON string with 5-hour/weekly window usage and reset times, per-action
-            availability, notebook limit, and per-notebook source limit.
-        """
-        try:
-            return json.dumps(await active_service.get_notebooklm_quota(), ensure_ascii=False, indent=2)
+            return json.dumps(active_service.get_course_detail(course_code), ensure_ascii=False, indent=2)
         except Exception as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
 
-def _register_artifact_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register artifact and quiz querying tools.
+def _register_quiz_read_tool(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register get_quiz read tool.
 
     Args:
         mcp: MCPServer instance.
@@ -102,10 +197,7 @@ def _register_artifact_tools(mcp: MCPServer, active_service: BatchStudioService)
 
     @mcp.tool()
     def get_quiz(
-        course_code: str,
-        lecture_no: int,
-        variant: str = "1-基礎",
-        with_answers: bool = False,
+        course_code: str, lecture_no: int, variant: str = "1-基礎", with_answers: bool = False
     ) -> str:
         """Retrieve generated quiz questions for a lecture.
 
@@ -119,12 +211,19 @@ def _register_artifact_tools(mcp: MCPServer, active_service: BatchStudioService)
             Markdown text of the quiz.
         """
         try:
-            result = active_service.get_quiz_content(
-                course_code, lecture_no, variant, with_answers=with_answers
-            )
-            return str(result["markdown"])
+            res = active_service.get_quiz_content(course_code, lecture_no, variant, with_answers=with_answers)
+            return str(res["markdown"])
         except Exception as exc:
             return f"Error retrieving quiz: {exc}"
+
+
+def _register_artifact_list_tool(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register get_artifact_files read tool.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
 
     @mcp.tool()
     def get_artifact_files(course_code: str, lecture_no: int | None = None) -> str:
@@ -174,32 +273,11 @@ def _register_import_tools(mcp: MCPServer, active_service: BatchStudioService) -
         Returns:
             Result summary or confirmation preview message.
         """
-        if not confirm:
-            preview = await active_service.preview_course_folders(folders)
-            return json.dumps(
-                {
-                    "confirmed": False,
-                    "warning": "Action not confirmed. Set confirm=True to persist and enqueue.",
-                    "preview": preview,
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-
-        registered = active_service.add_course_folders(folders, profile=profile)
-        return json.dumps(
-            {
-                "confirmed": True,
-                "message": f"Successfully registered {len(registered)} courses.",
-                "courses": registered,
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
+        return await _add_courses_payload(active_service, folders, profile, confirm)
 
 
 def _register_queue_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register queue control tools.
+    """Register queue start and pause control tools.
 
     Args:
         mcp: MCPServer instance.
@@ -237,8 +315,8 @@ def _register_queue_tools(mcp: MCPServer, active_service: BatchStudioService) ->
         return "Worker queue paused successfully."
 
 
-def _register_maintenance_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register retry and profile mutation tools.
+def _register_retry_tool(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register the retry_item MCP tool.
 
     Args:
         mcp: MCPServer instance.
@@ -258,37 +336,13 @@ def _register_maintenance_tools(mcp: MCPServer, active_service: BatchStudioServi
         """
         if not confirm:
             return f"Action not confirmed. Pass confirm=True to retry job {job_id}."
-        success = active_service.retry_job(job_id)
-        if success:
+        if active_service.retry_job(job_id):
             return f"Job {job_id} successfully reset to pending."
         return f"Job {job_id} not found."
 
-    @mcp.tool()
-    def set_course_profile(course_code: str, profile: str, confirm: bool = False) -> str:
-        """Update active profile for a course (requires confirm=True).
-
-        Args:
-            course_code: Course code identifier.
-            profile: Target profile ('full', 'quiz-only', 'exam-prep').
-            confirm: Must be set to True to commit the profile update.
-
-        Returns:
-            Result JSON or confirmation prompt.
-        """
-        if not confirm:
-            return (
-                f"Action not confirmed. Pass confirm=True to update course {course_code} "
-                f"profile to '{profile}'."
-            )
-        try:
-            res = active_service.set_course_profile(course_code, profile)
-            return json.dumps(res, ensure_ascii=False, indent=2)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
 
 def _register_sync_and_prompt_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register remote sync and prompt optimization tools.
+    """Register remote sync and Ollama prompt refinement tools.
 
     Args:
         mcp: MCPServer instance.
@@ -306,16 +360,7 @@ def _register_sync_and_prompt_tools(mcp: MCPServer, active_service: BatchStudioS
         Returns:
             JSON string describing synchronized items and count.
         """
-        if not confirm:
-            return (
-                f"Action not confirmed. Pass confirm=True to sync remote Gemini Notebook "
-                f"artifacts for course '{course_code}'."
-            )
-        try:
-            res = await active_service.sync_course_artifacts(course_code)
-            return json.dumps(res, ensure_ascii=False, indent=2)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        return await _sync_remote_payload(active_service, course_code, confirm)
 
     @mcp.tool()
     def refine_prompts_with_ollama(course_code: str, confirm: bool = False) -> str:
@@ -323,385 +368,52 @@ def _register_sync_and_prompt_tools(mcp: MCPServer, active_service: BatchStudioS
 
         Args:
             course_code: Course identifier (e.g. 'BIO101').
-            confirm: Must be set to True to execute Ollama prompt refinement.
+            confirm: Must be True to execute Ollama prompt refinement.
 
         Returns:
             JSON string with updated job count.
         """
-        if not confirm:
-            return (
-                f"Action not confirmed. Pass confirm=True to refine prompts using "
-                f"Ollama for course '{course_code}'."
-            )
-        try:
-            count = active_service.refine_course_prompts_with_ollama(course_code)
-            return json.dumps(
-                {
-                    "course_code": course_code,
-                    "refined_count": count,
-                    "message": f"Successfully refined {count} prompts using Ollama.",
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        return _refine_prompts_payload(active_service, course_code, confirm)
 
 
-def _register_study_history_tools(mcp: MCPServer, active_study: StudyTrackerService) -> None:
-    """Register student quiz attempt history tools.
-
-    Args:
-        mcp: MCPServer instance.
-        active_study: Study tracker service.
-    """
-
-    @mcp.tool()
-    def get_study_history(course_code: str, lecture_no: int | None = None) -> str:
-        """Retrieve student quiz attempt history for a course or specific lecture.
-
-        Args:
-            course_code: Course identifier (e.g. 'BIO101').
-            lecture_no: Optional sequence number to filter attempts by lecture.
-
-        Returns:
-            JSON string containing list of quiz attempts and scores.
-        """
-        attempts = active_study.get_study_history(course_code, lecture_no=lecture_no)
-        res = [
-            {
-                "id": a.id,
-                "course_code": a.course_code,
-                "lecture_no": a.lecture_no,
-                "quiz_variant": a.quiz_variant,
-                "score": a.score,
-                "total_questions": a.total_questions,
-                "created_at": a.created_at.isoformat() if a.created_at else None,
-            }
-            for a in attempts
-        ]
-        return json.dumps(res, ensure_ascii=False, indent=2)
-
-
-def _register_study_weakness_tools(mcp: MCPServer, active_study: StudyTrackerService) -> None:
-    """Register student weakness notebook and mistake resolution tools.
-
-    Args:
-        mcp: MCPServer instance.
-        active_study: Study tracker service.
-    """
-
-    @mcp.tool()
-    def get_weaknesses(
-        course_code: str,
-        lecture_no: int | None = None,
-        only_unresolved: bool = True,
-    ) -> str:
-        """Retrieve student mistake questions from the weakness notebook.
-
-        Args:
-            course_code: Course identifier (e.g. 'BIO101').
-            lecture_no: Optional sequence number filter.
-            only_unresolved: If True, only returns mistakes not yet mastered.
-
-        Returns:
-            JSON string containing wrong questions, answers, and academic rationales.
-        """
-        mistakes = active_study.get_weaknesses(
-            course_code, lecture_no=lecture_no, only_unresolved=only_unresolved
-        )
-        res = [
-            {
-                "id": m.id,
-                "course_code": m.course_code,
-                "lecture_no": m.lecture_no,
-                "question_text": m.question_text,
-                "choices": m.choices,
-                "correct_index": m.correct_index,
-                "selected_index": m.selected_index,
-                "explanation": m.explanation,
-                "is_resolved": m.is_resolved,
-                "created_at": m.created_at.isoformat() if m.created_at else None,
-            }
-            for m in mistakes
-        ]
-        return json.dumps(res, ensure_ascii=False, indent=2)
-
-    @mcp.tool()
-    def resolve_weakness_mistake(mistake_id: str, confirm: bool = False) -> str:
-        """Mark a weakness mistake question as resolved/mastered (requires confirm=True).
-
-        Args:
-            mistake_id: Mistake record UUID.
-            confirm: Must be explicitly set to True to resolve the mistake.
-
-        Returns:
-            Status message.
-        """
-        if not confirm:
-            return f"Action not confirmed. Pass confirm=True to mark mistake {mistake_id} as resolved."
-        ok = active_study.resolve_weakness(mistake_id)
-        if ok:
-            return f"Mistake {mistake_id} successfully marked as resolved."
-        return f"Mistake {mistake_id} not found."
-
-
-def _register_settings_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register naming-guide and generation-option tools.
-
-    Args:
-        mcp: MCPServer instance.
-        active_service: Orchestrator service.
-    """
-
-    @mcp.tool()
-    def get_naming_guide() -> str:
-        """Explain how artifacts are named on Gemini Notebook and locally (read-only).
-
-        Returns:
-            JSON string with naming rules and one row per artifact type.
-        """
-        return json.dumps(naming_guide(), ensure_ascii=False, indent=2)
-
-    @mcp.tool()
-    def get_usage_guide() -> str:
-        """Explain how to use the studio and an effective study routine (read-only).
-
-        Returns:
-            JSON string with sections of headings and steps.
-        """
-        return json.dumps(usage_guide(), ensure_ascii=False, indent=2)
-
-    @mcp.tool()
-    def get_course_options(code: str) -> str:
-        """Read a course's Gemini Notebook generation options and allowed values (read-only).
-
-        Args:
-            code: Course code.
-
-        Returns:
-            JSON string with current options and choices.
-        """
-        try:
-            return json.dumps(active_service.course_settings.get_options(code), ensure_ascii=False, indent=2)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-    @mcp.tool()
-    def set_course_options(code: str, options: dict[str, Any], confirm: bool = False) -> str:
-        """Change a course's generation options (requires confirm=True).
-
-        Args:
-            code: Course code.
-            options: Option name to new value, e.g. {"infographic_orientation": "portrait"}.
-            confirm: Must be True to save the change.
-
-        Returns:
-            JSON string with the updated options, or a confirmation warning.
-        """
-        if not confirm:
-            return json.dumps(
-                {
-                    "confirmed": False,
-                    "warning": "Set confirm=True to save these options.",
-                    "options": options,
-                },
-                ensure_ascii=False,
-            )
-        try:
-            return json.dumps(active_service.course_settings.set_options(code, options), ensure_ascii=False)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-
-def _register_regenerate_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register the versioned regeneration tool.
-
-    Args:
-        mcp: MCPServer instance.
-        active_service: Orchestrator service.
-    """
-
-    @mcp.tool()
-    def regenerate_artifact(
-        code: str, artifact_type: str, lecture_no: int | None = None, confirm: bool = False
-    ) -> str:
-        """Enqueue a new version (v2, v3, ...) of one artifact; older versions are kept (requires confirm).
-
-        Args:
-            code: Course code.
-            artifact_type: Artifact type value, e.g. 'infographic'.
-            lecture_no: Lecture number, or None for a course-wide artifact.
-            confirm: Must be True to enqueue (this spends Gemini Notebook quota).
-
-        Returns:
-            JSON string with the new job id and version, or a confirmation warning.
-        """
-        if not confirm:
-            return json.dumps(
-                {
-                    "confirmed": False,
-                    "warning": "Set confirm=True to enqueue; this spends Gemini Notebook quota.",
-                },
-                ensure_ascii=False,
-            )
-        try:
-            result = active_service.course_settings.regenerate(code, lecture_no, artifact_type)
-            return json.dumps(result, ensure_ascii=False)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-
-def _register_selection_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register tools that read or change which artifact types a course generates.
-
-    Args:
-        mcp: MCPServer instance.
-        active_service: Orchestrator service.
-    """
-
-    @mcp.tool()
-    def list_folders(path: str = "") -> str:
-        """List sub-folders and their PDF counts, to find course folders (read-only).
-
-        Args:
-            path: Absolute folder inside the home directory; empty for the starting shortcuts.
-
-        Returns:
-            JSON string with the folder, its parent and sub-folders.
-        """
-        try:
-            config = active_service.config
-            return json.dumps(
-                browse_folders(path or None, config.courses_input_dir), ensure_ascii=False, indent=2
-            )
-        except ValueError as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-    @mcp.tool()
-    def get_course_artifact_types(code: str) -> str:
-        """Read which artifact types a course generates (read-only).
-
-        Args:
-            code: Course code.
-
-        Returns:
-            JSON string with selected chapter / course types and the choices.
-        """
-        try:
-            result = active_service.course_settings.get_artifact_selection(code)
-            return json.dumps(result, ensure_ascii=False, indent=2)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-    @mcp.tool()
-    def set_course_artifact_types(
-        code: str, chapter: list[str], course: list[str], confirm: bool = False
-    ) -> str:
-        """Change which artifact types a course generates (requires confirm=True).
-
-        Added types are queued (spending Gemini Notebook quota); removed types have unstarted jobs skipped.
-
-        Args:
-            code: Course code.
-            chapter: Per-lecture artifact type values.
-            course: Course-wide artifact type values.
-            confirm: Must be True to apply.
-
-        Returns:
-            JSON string with queued / revived / skipped counts, or a confirmation warning.
-        """
-        if not confirm:
-            return json.dumps(
-                {"confirmed": False, "warning": "Set confirm=True to apply; added types spend quota."},
-                ensure_ascii=False,
-            )
-        try:
-            result = active_service.course_settings.set_artifact_selection(code, chapter, course)
-            return json.dumps(result, ensure_ascii=False)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-
-def build_mcp_server(
-    service: BatchStudioService | None = None,
-    study_service: StudyTrackerService | None = None,
-    config: AppConfig | None = None,
-    study_plan: StudyPlanService | None = None,
-    learning: LearningService | None = None,
-    preferences: PreferencesService | None = None,
-    fonts: FontService | None = None,
-) -> MCPServer:
-    """Build and configure the MCPServer instance with all batch studio tools.
+def _resolve_mcp_services(
+    service: BatchStudioService | None, cfg: AppConfig, overrides: dict[str, Any]
+) -> dict[str, Any]:
+    """Resolve explicit or database-backed service instances for MCP tool registration.
 
     Args:
         service: Optional pre-configured BatchStudioService instance.
-        study_service: Optional pre-configured StudyTrackerService instance.
-        config: Application configuration.
-        study_plan: Optional study-plan service (built from the database when omitted and the
-            other services are built here too).
-        learning: Optional learning service (reader, memory, tutor); built like study_plan.
-        preferences: Optional web-preferences service (ADR-009); built like study_plan.
-        fonts: Optional font service for downloaded Google Fonts (ADR-009); built from config when omitted.
+        cfg: Resolved AppConfig instance.
+        overrides: Optional injected services (`study_service`, `study_plan`, `learning`, `preferences`,
+            and `fonts`).
 
     Returns:
-        Configured MCPServer with registered tool handlers.
+        Dictionary with `service`, `study_service`, `study_plan`, `learning`, `preferences`, and `fonts`.
     """
-    cfg = config or load_config()
+    study_service = overrides.get("study_service")
+    if service is not None and study_service is not None:
+        return {"service": service, "study_service": study_service, **overrides}
 
-    if service is None or study_service is None:
-        engine = create_db_engine(cfg.database_url)
-        with session_scope(engine) as session:
-            course_repo = CourseRepository(session)
-            queue_repo = QueueRepository(session)
-            study_repo = StudyRepository(session)
-            adapter = NotebookLMAdapter(cfg)
-            if service is None:
-                active_service = BatchStudioService(
-                    course_repo=course_repo,
-                    queue_repo=queue_repo,
-                    notebooklm_client=adapter,
-                    config=cfg,
-                    ollama_client=OllamaClient(config=cfg),
-                )
-            else:
-                active_service = service
-
-            if study_service is None:
-                active_study = StudyTrackerService(study_repo=study_repo, config=cfg)
-            else:
-                active_study = study_service
-            if study_plan is None:
-                study_plan = StudyPlanService(
-                    course_repo, queue_repo, study_repo, ReviewRepository(session), adapter
-                )
-            if learning is None:
-                learning = LearningService(course_repo, LearningRepository(session), adapter)
-            if preferences is None:
-                preferences = PreferencesService(PreferencesRepository(session))
-    else:
-        active_service = service
-        active_study = study_service
-
-    mcp = MCPServer("notebooklm-batch-studio")
-    _register_course_query_tools(mcp, active_service)
-    _register_artifact_tools(mcp, active_service)
-    _register_import_tools(mcp, active_service)
-    _register_queue_tools(mcp, active_service)
-    _register_maintenance_tools(mcp, active_service)
-    _register_sync_and_prompt_tools(mcp, active_service)
-    _register_study_history_tools(mcp, active_study)
-    _register_study_weakness_tools(mcp, active_study)
-    _register_settings_tools(mcp, active_service)
-    _register_regenerate_tools(mcp, active_service)
-    _register_selection_tools(mcp, active_service)
-    register_course_settings_tools(mcp, active_service)
-    register_job_prompt_tools(mcp, active_service)
-    _register_study_aid_tools(mcp, study_plan, learning)
-    if preferences is not None:
-        register_preferences_tools(mcp, preferences)
-    register_font_tools(mcp, fonts or FontService(cfg.fonts_dir, GoogleFontsClient()))
-    return mcp
+    engine = create_db_engine(cfg.database_url)
+    with session_scope(engine) as session:
+        c_repo, q_repo, s_repo = CourseRepository(session), QueueRepository(session), StudyRepository(session)
+        adapter = NotebookLMAdapter(cfg)
+        ollama = OllamaClient(config=cfg)
+        active_service = service or BatchStudioService(c_repo, q_repo, adapter, cfg, ollama_client=ollama)
+        active_study = study_service or StudyTrackerService(study_repo=s_repo, config=cfg)
+        plan = overrides.get("study_plan") or StudyPlanService(
+            StudyPlanDeps(c_repo, q_repo, s_repo, ReviewRepository(session), adapter)
+        )
+        learn = overrides.get("learning") or LearningService(c_repo, LearningRepository(session), adapter)
+        prefs = overrides.get("preferences") or PreferencesService(PreferencesRepository(session))
+    return {
+        "service": active_service,
+        "study_service": active_study,
+        "study_plan": plan,
+        "learning": learn,
+        "preferences": prefs,
+        "fonts": overrides.get("fonts"),
+    }
 
 
 def _register_study_aid_tools(
@@ -718,6 +430,40 @@ def _register_study_aid_tools(
         register_study_plan_tools(mcp, study_plan)
     if learning is not None:
         register_learning_tools(mcp, learning)
+
+
+def build_mcp_server(service: BatchStudioService | None = None, **services: Any) -> MCPServer:
+    """Build and configure the MCPServer instance with all batch studio tools.
+
+    Args:
+        service: Optional pre-configured BatchStudioService instance.
+        **services: Optional `study_service`, `config`, `study_plan`, `learning`, `preferences`, `fonts`.
+
+    Returns:
+        Configured MCPServer with registered tool handlers.
+    """
+    cfg: AppConfig = services.get("config") or load_config()
+    resolved = _resolve_mcp_services(service, cfg, services)
+    active_service: BatchStudioService = resolved["service"]
+    active_study: StudyTrackerService = resolved["study_service"]
+
+    mcp = MCPServer("notebooklm-batch-studio")
+    _register_course_list_and_quota_tools(mcp, active_service)
+    _register_course_status_tool(mcp, active_service)
+    _register_quiz_read_tool(mcp, active_service)
+    _register_artifact_list_tool(mcp, active_service)
+    _register_import_tools(mcp, active_service)
+    _register_queue_tools(mcp, active_service)
+    _register_retry_tool(mcp, active_service)
+    _register_sync_and_prompt_tools(mcp, active_service)
+    register_settings_and_study_tools(mcp, active_service, active_study)
+    register_course_settings_tools(mcp, active_service)
+    register_job_prompt_tools(mcp, active_service)
+    _register_study_aid_tools(mcp, resolved.get("study_plan"), resolved.get("learning"))
+    if resolved.get("preferences") is not None:
+        register_preferences_tools(mcp, resolved["preferences"])
+    register_font_tools(mcp, resolved.get("fonts") or FontService(cfg.fonts_dir, GoogleFontsClient()))
+    return mcp
 
 
 def main() -> None:

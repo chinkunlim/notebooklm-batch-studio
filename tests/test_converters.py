@@ -80,8 +80,8 @@ class TestQuizConverter(unittest.TestCase):
 
     def test_merge_and_deduplicate_quizzes(self) -> None:
         """Verify merging multiple batches and filtering out duplicate questions."""
-        quiz1 = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, "1-基礎", "03.pdf")
-        quiz2 = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, "1-基礎", "03.pdf")
+        quiz1 = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, variant="1-基礎", source_pdf="03.pdf")
+        quiz2 = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, variant="1-基礎", source_pdf="03.pdf")
 
         # Merging identical quizzes should result in only 10 unique questions
         merged, is_complete = merge_and_deduplicate_quizzes([quiz1, quiz2], target_count=30)
@@ -94,7 +94,9 @@ class TestQuizConverter(unittest.TestCase):
             modified_raw = json.loads(json.dumps(self.raw_quiz_data))
             for q_idx, q in enumerate(modified_raw["questions"]):
                 q["question"] = f"[Batch {batch_i} Q{q_idx}] {q['question']}"
-            synthesized_batches.append(parse_notebooklm_quiz(modified_raw, "BIO101", 3, "1-基礎", "03.pdf"))
+            synthesized_batches.append(
+                parse_notebooklm_quiz(modified_raw, "BIO101", 3, variant="1-基礎", source_pdf="03.pdf")
+            )
 
         merged_30, is_complete_30 = merge_and_deduplicate_quizzes(synthesized_batches, target_count=30)
         self.assertEqual(len(merged_30.questions), 30)
@@ -105,7 +107,7 @@ class TestQuizConverter(unittest.TestCase):
 
     def test_exam_markdown_has_no_answers(self) -> None:
         """題目卷.md must strictly contain NO answers, rationales, or correctness indicators."""
-        quiz = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, "1-基礎", "03.pdf")
+        quiz = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, variant="1-基礎", source_pdf="03.pdf")
         md = to_exam_markdown(quiz)
 
         self.assertIn("# 細胞膜 測驗 — 題目卷", md)
@@ -121,7 +123,7 @@ class TestQuizConverter(unittest.TestCase):
 
     def test_answer_markdown_contains_full_pedagogical_details(self) -> None:
         """答案卷.md must contain answers, rationales for all choices, hints, and marks."""
-        quiz = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, "1-基礎", "03.pdf")
+        quiz = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, variant="1-基礎", source_pdf="03.pdf")
         md = to_answer_markdown(quiz)
 
         self.assertIn("# 細胞膜 測驗 — 答案與詳解卷", md)
@@ -132,7 +134,7 @@ class TestQuizConverter(unittest.TestCase):
 
     def test_quiz_json_serialization(self) -> None:
         """Verify serialization into uniform JSON schema."""
-        quiz = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, "1-基礎", "03.pdf")
+        quiz = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, variant="1-基礎", source_pdf="03.pdf")
         json_str = quiz_to_json(quiz)
         loaded = json.loads(json_str)
 
@@ -142,7 +144,7 @@ class TestQuizConverter(unittest.TestCase):
 
     def test_pdf_generation(self) -> None:
         """Verify PDF output generation using ReportLab."""
-        quiz = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, "1-基礎", "03.pdf")
+        quiz = parse_notebooklm_quiz(self.raw_quiz_data, "BIO101", 3, variant="1-基礎", source_pdf="03.pdf")
         with tempfile.TemporaryDirectory() as tmpdir:
             exam_pdf = Path(tmpdir) / "exam.pdf"
             answer_pdf = Path(tmpdir) / "answer.pdf"

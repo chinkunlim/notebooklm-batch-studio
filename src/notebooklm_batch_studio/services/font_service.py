@@ -68,6 +68,26 @@ class FontService:
                 logger.warning("Skipping unreadable font metadata %s", meta)
         return sorted(fonts, key=lambda f: str(f.get("family", "")).lower())
 
+    def _normalize_target(self, family: str) -> tuple[str, str, Path]:
+        """Validate family name and compute font slug and destination path.
+
+        Args:
+            family: Raw font family name string.
+
+        Returns:
+            Tuple of normalized family name, filesystem slug, and target folder Path.
+
+        Raises:
+            ValueError: If `family` does not match plain Google Font naming rules.
+        """
+        cleaned = " ".join(family.split())
+        if not FAMILY_PATTERN.match(cleaned):
+            raise ValueError(
+                "font family name: 1-60 English letters, digits and spaces (as on fonts.google.com)"
+            )
+        slug = cleaned.lower().replace(" ", "-")
+        return cleaned, slug, self.fonts_dir / slug
+
     def install(self, family: str) -> dict[str, Any]:
         """Download a Google Fonts family (or return it when it is already downloaded).
 
@@ -81,25 +101,19 @@ class FontService:
             ValueError: The name is not a plain font family name.
             FontDownloadError: The download failed (nothing is left behind).
         """
-        family = " ".join(family.split())
-        if not FAMILY_PATTERN.match(family):
-            raise ValueError(
-                "font family name: 1-60 English letters, digits and spaces (as on fonts.google.com)"
-            )
-        slug = family.lower().replace(" ", "-")
-        target = self.fonts_dir / slug
+        cleaned, slug, target = self._normalize_target(family)
         if (target / "meta.json").exists():
             return dict(json.loads((target / "meta.json").read_text(encoding="utf-8")))
         tmp = self.fonts_dir / f".{slug}.part"
         shutil.rmtree(tmp, ignore_errors=True)
         try:
-            stats = self.downloader.download(family, tmp)
+            stats = self.downloader.download(cleaned, tmp)
         except FontDownloadError:
             shutil.rmtree(tmp, ignore_errors=True)
-            logger.warning("Font download failed: %s", family)
+            logger.warning("Font download failed: %s", cleaned)
             raise
         meta = {
-            "family": family,
+            "family": cleaned,
             "slug": slug,
             "css": f"/api/fonts/{slug}/font.css",
             "downloaded_at": datetime.now(UTC).isoformat(),
@@ -107,7 +121,7 @@ class FontService:
         }
         (tmp / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.rename(target)
-        logger.info("Installed font %s (%s)", family, slug)
+        logger.info("Installed font %s (%s)", cleaned, slug)
         return meta
 
     def file_path(self, slug: str, name: str) -> Path:

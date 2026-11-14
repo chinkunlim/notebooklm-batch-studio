@@ -125,6 +125,7 @@ class CourseSummaryResponse(BaseModel):
     progress_percent: float
     counts: dict[str, int]
     paused: bool = False
+    study_state: str = "not_started"
 
 
 class GenericActionResponse(BaseModel):
@@ -149,6 +150,16 @@ class UpdateOptionsRequest(BaseModel):
     """
 
     options: dict[str, Any] = Field(..., description="Option name to new value")
+
+
+class CopyOptionsRequest(BaseModel):
+    """Payload copying a course's options to other courses (preserving each target's exam date).
+
+    Attributes:
+        targets: Target course codes to update.
+    """
+
+    targets: list[str] = Field(..., description="Target course codes to update")
 
 
 class RegenerateRequest(BaseModel):

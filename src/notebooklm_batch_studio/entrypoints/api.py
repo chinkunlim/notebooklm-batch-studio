@@ -49,7 +49,7 @@ from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.preferences_service import PreferencesService
-from notebooklm_batch_studio.services.study_plan_service import StudyPlanService
+from notebooklm_batch_studio.services.study_plan_service import StudyPlanDeps, StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
 logger = logging.getLogger(__name__)
@@ -133,6 +133,20 @@ class HostValidationMiddleware(BaseHTTPMiddleware):
         return cast(Response, res)
 
 
+@contextmanager
+def _session_queue_provider(eng: Engine) -> Iterator[QueueRepositoryProtocol]:
+    """Yield a scoped QueueRepository for background worker tasks.
+
+    Args:
+        eng: SQLAlchemy database engine.
+
+    Yields:
+        QueueRepository bound to an active transaction.
+    """
+    with session_scope(eng) as s:
+        yield QueueRepository(s)
+
+
 def _resolve_service(
     service: BatchStudioService | None,
     cfg: AppConfig,
@@ -153,26 +167,12 @@ def _resolve_service(
 
     eng = engine or create_db_engine(cfg.database_url)
     session = _request_scoped(sessionmaker(bind=eng, expire_on_commit=False))
-    course_repo = CourseRepository(cast(Session, session))
-    queue_repo = QueueRepository(cast(Session, session))
-    adapter = NotebookLMAdapter(cfg)
-
-    @contextmanager
-    def queue_provider() -> Iterator[QueueRepositoryProtocol]:
-        """Provide a scoped QueueRepository for background workers.
-
-        Yields:
-            QueueRepository bound to an active transaction.
-        """
-        with session_scope(eng) as s:
-            yield QueueRepository(s)
-
     return BatchStudioService(
-        course_repo=course_repo,
-        queue_repo=queue_repo,
-        notebooklm_client=adapter,
+        course_repo=CourseRepository(cast(Session, session)),
+        queue_repo=QueueRepository(cast(Session, session)),
+        notebooklm_client=NotebookLMAdapter(cfg),
         config=cfg,
-        queue_provider=queue_provider,
+        queue_provider=lambda: _session_queue_provider(eng),
         ollama_client=OllamaClient(config=cfg),
     )
 
@@ -253,11 +253,13 @@ def _build_study_plan(
         sessionmaker(bind=engine or create_db_engine(cfg.database_url), expire_on_commit=False)
     )
     return StudyPlanService(
-        course_repo=service.course_repo,
-        queue_repo=service.queue_repo,
-        study_repo=study.study_repo,
-        review_repo=ReviewRepository(cast(Session, session)),
-        notebooklm_client=service.notebooklm_client,
+        StudyPlanDeps(
+            course_repo=service.course_repo,
+            queue_repo=service.queue_repo,
+            study_repo=study.study_repo,
+            review_repo=ReviewRepository(cast(Session, session)),
+            notebooklm_client=service.notebooklm_client,
+        )
     )
 
 
@@ -319,6 +321,72 @@ def _build_preferences(cfg: AppConfig, engine: Engine | None) -> PreferencesServ
     return PreferencesService(PreferencesRepository(cast(Session, session)))
 
 
+def _configure_app_state(
+    app: FastAPI,
+    cfg: AppConfig,
+    services: tuple[BatchStudioService, StudyTrackerService, StudyPlanService | None],
+    shared_engine: Engine | None,
+) -> None:
+    """Attach core and optional studio services onto `app.state`.
+
+    Args:
+        app: FastAPI application instance.
+        cfg: Application configuration.
+        services: Tuple of `(batch_service, study_service, optional_study_plan)`.
+        shared_engine: Optional shared database engine.
+    """
+    active_service, active_study, study_plan = services
+    app.state.service = active_service
+    app.state.study_service = active_study
+    app.state.study_plan = study_plan or _build_study_plan(active_service, active_study, cfg, shared_engine)
+    app.state.learning = _build_learning(active_service, cfg, shared_engine)
+    app.state.preferences = _build_preferences(cfg, shared_engine)
+    app.state.fonts = FontService(cfg.fonts_dir, GoogleFontsClient())
+    app.state.config = cfg
+
+
+def _register_routes_and_middlewares(app: FastAPI, cfg: AppConfig) -> None:
+    """Attach middlewares, MCP mount, static directory, and HTTP API routers.
+
+    Args:
+        app: Configured FastAPI application instance.
+        cfg: Application configuration.
+    """
+    app.add_middleware(HostValidationMiddleware, allowed_hosts=cfg.http_allowed_hosts)
+    app.add_middleware(DbSessionScopeMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(cfg.http_allowed_origins),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    mcp_server = build_mcp_server(
+        service=app.state.service,
+        study_service=app.state.study_service,
+        config=cfg,
+        study_plan=app.state.study_plan,
+        learning=app.state.learning,
+        preferences=app.state.preferences,
+        fonts=app.state.fonts,
+    )
+    app.mount("/mcp", mcp_server.streamable_http_app())
+    app.mount("/static", NoCacheStaticFiles(directory=Path(__file__).parent / "static"), name="static")
+    for router in (
+        system_router,
+        courses_router,
+        artifacts_router,
+        queue_router,
+        study_router,
+        settings_router,
+        plan_router,
+        learning_router,
+        preferences_router,
+        fonts_router,
+    ):
+        app.include_router(router)
+
+
 def create_app(
     config: AppConfig | None = None,
     service: BatchStudioService | None = None,
@@ -337,13 +405,9 @@ def create_app(
         Configured FastAPI instance ready for serving or TestClient testing.
     """
     cfg = config or load_config()
-    shared_engine = None
-    if service is None or study_service is None:
-        shared_engine = create_db_engine(cfg.database_url)
-
+    shared_engine = create_db_engine(cfg.database_url) if (service is None or study_service is None) else None
     active_service = _resolve_service(service, cfg, engine=shared_engine)
     active_study = _resolve_study_service(study_service, cfg, engine=shared_engine)
-
     app = FastAPI(
         title="Gemini Notebook 學習工作室",
         description="Batch upload PDFs to Gemini Notebook, generate quizzes, mind maps, and audio.",
@@ -352,48 +416,8 @@ def create_app(
         openapi_url="/openapi.json",
         lifespan=_build_lifespan(active_service, cfg),
     )
-
-    app.state.service = active_service
-    app.state.study_service = active_study
-    app.state.study_plan = study_plan or _build_study_plan(active_service, active_study, cfg, shared_engine)
-    app.state.learning = _build_learning(active_service, cfg, shared_engine)
-    app.state.preferences = _build_preferences(cfg, shared_engine)
-    app.state.fonts = FontService(cfg.fonts_dir, GoogleFontsClient())
-    app.state.config = cfg
-
-    app.add_middleware(HostValidationMiddleware, allowed_hosts=cfg.http_allowed_hosts)
-    app.add_middleware(DbSessionScopeMiddleware)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=list(cfg.http_allowed_origins),
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    mcp_server = build_mcp_server(
-        service=active_service,
-        study_service=active_study,
-        config=cfg,
-        study_plan=app.state.study_plan,
-        learning=app.state.learning,
-        preferences=app.state.preferences,
-        fonts=app.state.fonts,
-    )
-    app.mount("/mcp", mcp_server.streamable_http_app())
-    app.mount("/static", NoCacheStaticFiles(directory=Path(__file__).parent / "static"), name="static")
-
-    app.include_router(system_router)
-    app.include_router(courses_router)
-    app.include_router(artifacts_router)
-    app.include_router(queue_router)
-    app.include_router(study_router)
-    app.include_router(settings_router)
-    app.include_router(plan_router)
-    app.include_router(learning_router)
-    app.include_router(preferences_router)
-    app.include_router(fonts_router)
-
+    _configure_app_state(app, cfg, (active_service, active_study, study_plan), shared_engine)
+    _register_routes_and_middlewares(app, cfg)
     return app
 
 

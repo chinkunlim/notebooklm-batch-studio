@@ -140,6 +140,49 @@ class DeleteCourseTest(Fixture):
         self.assertTrue((Path(result["moved_to"]) / "BIO101" / "01_t1" / "quiz.json").exists())
         self.assertEqual(len(list(self.folder.glob("*.pdf"))), 4)
 
+    def test_delete_cleans_keypoints_tutor_and_preferences(self) -> None:
+        """Deleting a course removes its keypoints, tutor messages, and course-scoped prefs."""
+        from notebooklm_batch_studio.adapters.db.models import (
+            KeyPointsRecord,
+            TutorMessageRecord,
+            UiPreferenceRecord,
+        )
+
+        self.service.add_course_folders([str(self.folder)], paused=True)
+        self.course_repo.save_course(Course(code="CHEM110", name="化學", source_dir=str(self.tmp / "chem")))
+        self.session.add_all(
+            [
+                KeyPointsRecord(id="BIO101:1", course_code="BIO101", lecture_no=1, points_json="[]"),
+                KeyPointsRecord(id="CHEM110:1", course_code="CHEM110", lecture_no=1, points_json="[]"),
+                TutorMessageRecord(
+                    id="tm-bio", course_code="BIO101", lecture_no=1, role="student", text="q1"
+                ),
+                TutorMessageRecord(
+                    id="tm-chem", course_code="CHEM110", lecture_no=1, role="student", text="q2"
+                ),
+                UiPreferenceRecord(key="course", value="BIO101"),
+                UiPreferenceRecord(key="place:BIO101", value='{"step":"s-read"}'),
+                UiPreferenceRecord(key="examNotice:BIO101", value="2026-12-01"),
+                UiPreferenceRecord(key="audio:BIO101:1", value="42"),
+                UiPreferenceRecord(key="place:CHEM110", value='{"step":"s-quiz"}'),
+                UiPreferenceRecord(key="palette", value="ink"),
+            ]
+        )
+        self.session.commit()
+
+        self.service.course_settings.delete_course("BIO101")
+
+        self.assertIsNone(self.session.get(KeyPointsRecord, "BIO101:1"))
+        self.assertIsNotNone(self.session.get(KeyPointsRecord, "CHEM110:1"))
+        self.assertIsNone(self.session.get(TutorMessageRecord, "tm-bio"))
+        self.assertIsNotNone(self.session.get(TutorMessageRecord, "tm-chem"))
+        self.assertIsNone(self.session.get(UiPreferenceRecord, "course"))
+        self.assertIsNone(self.session.get(UiPreferenceRecord, "place:BIO101"))
+        self.assertIsNone(self.session.get(UiPreferenceRecord, "examNotice:BIO101"))
+        self.assertIsNone(self.session.get(UiPreferenceRecord, "audio:BIO101:1"))
+        self.assertIsNotNone(self.session.get(UiPreferenceRecord, "place:CHEM110"))
+        self.assertIsNotNone(self.session.get(UiPreferenceRecord, "palette"))
+
 
 class ReuseNotebookTest(Fixture):
     """Re-adding a course reuses the same-titled notebook and its uploaded PDFs."""
@@ -191,6 +234,88 @@ class EntrypointTest(Fixture):
         self.assertFalse(json.loads(tools["delete_course"].fn("BIO101"))["confirmed"])
         self.assertIsNotNone(self.course_repo.get_course("BIO101"))
         self.assertFalse(json.loads(tools["set_course_paused"].fn("BIO101", False))["confirmed"])
+
+
+class StudyStateAndCopyOptionsTest(Fixture):
+    """TASK-012 study_state summary & TASK-013 copy_options across service/HTTP/MCP."""
+
+    def test_course_summary_study_state(self) -> None:
+        """Courses report not_started -> in_progress -> finished based on available study steps."""
+        from notebooklm_batch_studio.adapters.db.models import StudyProgressRecord
+
+        self.service.add_course_folders([str(self.folder)], paused=True)
+        bio = next(c for c in self.service.get_courses_summary() if c["code"] == "BIO101")
+        self.assertEqual(bio["study_state"], "not_started")
+
+        jobs = self.queue_repo.list_jobs(course_code="BIO101")
+        audio_job = next(j for j in jobs if j.lecture_no == 1 and j.artifact_type == ArtifactType.AUDIO)
+        guide_job = next(j for j in jobs if j.lecture_no == 1 and j.artifact_type == ArtifactType.STUDY_GUIDE)
+        self.queue_repo.complete_job(audio_job.id, output_file="/tmp/audio1.m4a")
+        self.queue_repo.complete_job(guide_job.id, output_file="/tmp/guide1.md")
+
+        self.session.add(StudyProgressRecord(course_code="BIO101", lecture_no=1, step="audio"))
+        self.session.commit()
+        bio = next(c for c in self.service.get_courses_summary() if c["code"] == "BIO101")
+        self.assertEqual(bio["study_state"], "in_progress")
+
+        self.session.add(StudyProgressRecord(course_code="BIO101", lecture_no=1, step="guide"))
+        self.session.commit()
+        bio = next(c for c in self.service.get_courses_summary() if c["code"] == "BIO101")
+        self.assertEqual(bio["study_state"], "finished")
+
+    def test_copy_course_options_service_http_and_mcp(self) -> None:
+        """Copying course options updates options/language/mock_exam_questions while preserving exam_date."""
+        chem_dir = self.tmp / "CHEM110 基礎化學"
+        chem_dir.mkdir()
+        (chem_dir / "Ch01-atoms.pdf").write_bytes(b"%PDF atoms")
+
+        self.service.add_course_folders([str(self.folder), str(chem_dir)], paused=True)
+        self.service.course_settings.set_options(
+            "BIO101",
+            {
+                "quiz_questions": 20,
+                "language": "en",
+                "mock_exam_questions": 60,
+                "exam_date": "2026-12-01",
+            },
+        )
+        self.service.course_settings.set_options("CHEM110", {"exam_date": "2027-01-15"})
+
+        res = self.service.course_settings.copy_options("BIO101", ["CHEM110"])
+        self.assertEqual(res["copied_to"], ["CHEM110"])
+        chem_opts = self.service.course_settings.get_options("CHEM110")["options"]
+        self.assertEqual(chem_opts["quiz_questions"], 20)
+        self.assertEqual(chem_opts["language"], "en")
+        self.assertEqual(chem_opts["mock_exam_questions"], 60)
+        self.assertEqual(chem_opts["exam_date"], "2027-01-15")
+
+        # Reset and verify HTTP POST /api/courses/{code}/options/copy
+        self.service.course_settings.set_options("CHEM110", {"quiz_questions": 15, "language": "zh-TW"})
+        http = TestClient(
+            create_app(config=self.config, service=self.service, study_service=mock.MagicMock())
+        )
+        resp = http.post("/api/courses/BIO101/options/copy", json={"targets": ["CHEM110"]})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["copied_to"], ["CHEM110"])
+        chem_opts = self.service.course_settings.get_options("CHEM110")["options"]
+        self.assertEqual(chem_opts["quiz_questions"], 20)
+        self.assertEqual(chem_opts["exam_date"], "2027-01-15")
+        self.assertEqual(http.post("/api/courses/BIO101/options/copy", json={"targets": []}).status_code, 400)
+
+        # Reset and verify MCP confirm guard
+        self.service.course_settings.set_options("CHEM110", {"quiz_questions": 10})
+        mcp = build_mcp_server(service=self.service, study_service=mock.MagicMock(), config=self.config)
+        tools = mcp._tool_manager._tools  # type: ignore[attr-defined]
+        denied = json.loads(tools["copy_course_options"].fn("BIO101", ["CHEM110"], False))
+        self.assertFalse(denied["confirmed"])
+        self.assertEqual(self.service.course_settings.get_options("CHEM110")["options"]["quiz_questions"], 10)
+        approved = json.loads(tools["copy_course_options"].fn("BIO101", ["CHEM110"], True))
+        self.assertTrue(approved["confirmed"])
+        self.assertEqual(self.service.course_settings.get_options("CHEM110")["options"]["quiz_questions"], 20)
+        self.assertEqual(
+            self.service.course_settings.get_options("CHEM110")["options"]["exam_date"],
+            "2027-01-15",
+        )
 
 
 if __name__ == "__main__":

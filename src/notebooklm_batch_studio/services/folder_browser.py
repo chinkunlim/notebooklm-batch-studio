@@ -44,6 +44,25 @@ def _entry(folder: Path, label: str | None = None) -> dict[str, Any]:
     return {"name": label or folder.name, "path": str(folder), "pdf_count": _pdf_count(folder)}
 
 
+def _shortcut_response(courses_input_dir: Path, root: Path) -> dict[str, Any]:
+    """Return top-level folder picker shortcuts.
+
+    Args:
+        courses_input_dir: Configured course input directory.
+        root: Allowed home root directory.
+
+    Returns:
+        Shortcut listing dictionary.
+    """
+    shortcuts = (
+        [_entry(courses_input_dir.resolve(), "課程資料夾 (input/courses)")]
+        if courses_input_dir.is_dir()
+        else []
+    )
+    shortcuts += [_entry(root / name) for name in SHORTCUT_NAMES if (root / name).is_dir()]
+    return {"path": None, "parent": None, "pdf_count": 0, "folders": shortcuts}
+
+
 def browse_folders(path: str | None, courses_input_dir: Path, home: Path | None = None) -> dict[str, Any]:
     """List the sub-folders of a folder, or the starting shortcuts when no path is given.
 
@@ -61,13 +80,7 @@ def browse_folders(path: str | None, courses_input_dir: Path, home: Path | None 
     """
     root = (home or Path.home()).resolve()
     if not path:
-        shortcuts = (
-            [_entry(courses_input_dir.resolve(), "課程資料夾 (input/courses)")]
-            if courses_input_dir.is_dir()
-            else []
-        )
-        shortcuts += [_entry(root / name) for name in SHORTCUT_NAMES if (root / name).is_dir()]
-        return {"path": None, "parent": None, "pdf_count": 0, "folders": shortcuts}
+        return _shortcut_response(courses_input_dir, root)
 
     folder = Path(path).expanduser().resolve()
     if not folder.is_relative_to(root) or not folder.is_dir():

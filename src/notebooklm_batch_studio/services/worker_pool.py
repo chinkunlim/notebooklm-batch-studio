@@ -5,152 +5,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-import uuid
 from typing import Awaitable, Callable, ContextManager
 
 from notebooklm_batch_studio.domain.exceptions import NeedsReviewError, QuotaExceededError
-from notebooklm_batch_studio.domain.models import (
-    ArtifactJob,
-    ArtifactType,
-    Course,
-    JobStatus,
-    ProfileName,
-)
+from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, JobStatus
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
-from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
+from notebooklm_batch_studio.services.job_planner import (
+    generate_jobs_for_course as generate_jobs_for_course,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def _get_types_for_profile(profile: ProfileName) -> list[ArtifactType]:
-    """Return the list of artifact types required for a single lecture under the given profile.
-
-    Args:
-        profile: Selected generation profile.
-
-    Returns:
-        List of ArtifactType enum values.
-    """
-    if profile == ProfileName.FULL:
-        return [
-            ArtifactType.AUDIO,
-            ArtifactType.QUIZ_1,
-            ArtifactType.QUIZ_2,
-            ArtifactType.QUIZ_3,
-            ArtifactType.INFOGRAPHIC,
-            ArtifactType.MIND_MAP,
-            ArtifactType.FLASHCARDS,
-            ArtifactType.STUDY_GUIDE,
-        ]
-    if profile == ProfileName.QUIZ_ONLY:
-        return [
-            ArtifactType.QUIZ_1,
-            ArtifactType.QUIZ_2,
-            ArtifactType.QUIZ_3,
-            ArtifactType.FLASHCARDS,
-        ]
-    if profile == ProfileName.EXAM_PREP:
-        return [
-            ArtifactType.QUIZ_3,
-            ArtifactType.STUDY_GUIDE,
-        ]
-    return []
-
-
-def _make_job(
-    course_code: str,
-    lecture_no: int | None,
-    art_type: ArtifactType,
-    custom_prompt: str | None = None,
-) -> ArtifactJob:
-    """Create a new pending ArtifactJob with a fresh UUID.
-
-    Args:
-        course_code: Course code.
-        lecture_no: Sequence number or None for course-level.
-        art_type: Artifact type.
-        custom_prompt: Optional tailored prompt.
-
-    Returns:
-        ArtifactJob domain object.
-    """
-    return ArtifactJob(
-        id=str(uuid.uuid4()),
-        course_code=course_code,
-        lecture_no=lecture_no,
-        artifact_type=art_type,
-        status=JobStatus.PENDING,
-        custom_prompt=custom_prompt,
-    )
-
-
-def generate_jobs_for_course(course: Course) -> list[ArtifactJob]:
-    """Create the matrix of scheduled ArtifactJob entities for a course based on settings.
-
-    Supports custom granular selections (selected_chapter_artifacts, selected_course_artifacts)
-    or falls back to legacy predefined profiles.
-
-    Args:
-        course: The Course domain entity containing lectures and selected settings.
-
-    Returns:
-        List of ready-to-enqueue ArtifactJob objects with unique identifiers.
-    """
-    jobs: list[ArtifactJob] = []
-
-    prompt_gen = PromptGenerator()
-    # If granular custom selection is provided
-    if course.selected_chapter_artifacts or course.selected_course_artifacts:
-        chapter_types: list[ArtifactType] = []
-        for name in course.selected_chapter_artifacts:
-            try:
-                chapter_types.append(ArtifactType(name))
-            except ValueError:
-                logger.warning("Unknown chapter artifact type: %s", name)
-
-        course_types: list[ArtifactType] = []
-        for name in course.selected_course_artifacts:
-            try:
-                course_types.append(ArtifactType(name))
-            except ValueError:
-                logger.warning("Unknown course artifact type: %s", name)
-
-        for lec in course.lectures:
-            for art_type in chapter_types:
-                p = prompt_gen.get_base_blueprint_prompt(art_type, lec.topic, course.name, course.language)
-                jobs.append(_make_job(course.code, lec.no, art_type, custom_prompt=p))
-
-        course_scope = f"{course.code} 全範圍整合"
-        for course_art in course_types:
-            p = prompt_gen.get_base_blueprint_prompt(course_art, course_scope, course.name, course.language)
-            jobs.append(_make_job(course.code, None, course_art, custom_prompt=p))
-
-        logger.info(
-            "Generated %d granular jobs for course %s (chapter_types=%d, course_types=%d)",
-            len(jobs),
-            course.code,
-            len(chapter_types),
-            len(course_types),
-        )
-        return jobs
-
-    # Fallback to predefined profile
-    types_for_lecture = _get_types_for_profile(course.profile)
-    for lec in course.lectures:
-        for art_type in types_for_lecture:
-            p = prompt_gen.get_base_blueprint_prompt(art_type, lec.topic, course.name, course.language)
-            jobs.append(_make_job(course.code, lec.no, art_type, custom_prompt=p))
-
-    if course.profile in (ProfileName.FULL, ProfileName.EXAM_PREP):
-        for course_art in (ArtifactType.COURSE_MOCK_EXAM, ArtifactType.COURSE_MIND_MAP):
-            p = prompt_gen.get_base_blueprint_prompt(
-                course_art, f"{course.code} 全範圍整合", course.name, course.language
-            )
-            jobs.append(_make_job(course.code, None, course_art, custom_prompt=p))
-
-    logger.info("Generated %d jobs for course %s (profile=%s)", len(jobs), course.code, course.profile.value)
-    return jobs
-
 
 # Type alias for the job executor callback function
 JobExecutor = Callable[[ArtifactJob], Awaitable[str]]
@@ -191,8 +55,9 @@ class WorkerPool:
         logger.info("WorkerPool paused gracefully.")
 
     def resume(self) -> None:
-        """Resume claiming pending jobs from queue."""
+        """Resume claiming pending jobs from queue and clear stale quota blocks."""
         self._paused = False
+        self.blocked_quota_types.clear()
         logger.info("WorkerPool resumed.")
 
     @property
@@ -320,13 +185,16 @@ class WorkerPool:
         while self._running:
             try:
                 await asyncio.sleep(self.probe_interval_seconds)
-                awakened = 0
                 with self.queue_provider() as repo:
                     awakened = repo.refresh_quota_wait()
+                    active_types = {job.artifact_type for job in repo.list_jobs(status=JobStatus.QUOTA_WAIT)}
 
                 if awakened > 0:
                     logger.info("Quota probe awakened %d tasks back to PENDING", awakened)
-                    self.blocked_quota_types.clear()
+                stale = self.blocked_quota_types - active_types
+                if stale:
+                    self.blocked_quota_types.intersection_update(active_types)
+                    logger.info("Quota probe pruned cleared quota blocks: %s", sorted(t.value for t in stale))
             except asyncio.CancelledError:
                 break
             except Exception as e:

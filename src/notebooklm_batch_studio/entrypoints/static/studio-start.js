@@ -372,7 +372,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(fetchStatus, 5000);
   setInterval(fetchQuota, 60000);
   setInterval(() => {
-    if (currentView === 'queue' && activeCourseCode && $('#courseDetailSection').style.display !== 'none') viewCourseDetail(activeCourseCode, true);
+    fetchCourses();
+    if (activeCourseCode && $('#courseDetailSection').style.display !== 'none') viewCourseDetail(activeCourseCode, true);
   }, 15000);
   try {
     if (await syncPreferences()) applyAllPreferences();

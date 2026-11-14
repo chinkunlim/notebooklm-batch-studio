@@ -314,6 +314,10 @@ function demoCourseRoute(code, rest, method, body, q) {
     if (method === 'PUT') demoNote('儲存課程設定');
     return demoJson({ options: { ...defaults, exam_date: demoCourseJson(c).exam_date || '' }, choices, defaults });
   }
+  if (rest === 'options/copy' && method === 'POST') {
+    demoNote('套用課程設定');
+    return demoJson({ source: code, copied_to: (body && body.targets) || [] });
+  }
   if (rest === 'artifact-types') {
     const pick = name => [...document.querySelectorAll(`input[name="${name}"]`)].map(i => ({ value: i.value, label: i.parentElement.textContent.trim() }));
     if (method === 'PUT') { demoNote('變更產出內容'); return demoJson({ queued: 0, revived: 0, skipped: 0 }); }
@@ -346,7 +350,16 @@ function demoRoute(url, method, body) {
     return demoJson(DEMO_COURSES.map(c => {
       const jobs = demoJobs(c), counts = {};
       jobs.forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; });
-      return { code: c.code, name: c.name, lecture_count: c.lectures.length, total_jobs: jobs.length, counts, notebook_id: `demo-${c.code}`, paused: false };
+      return {
+        code: c.code,
+        name: c.name,
+        lecture_count: c.lectures.length,
+        total_jobs: jobs.length,
+        counts,
+        notebook_id: `demo-${c.code}`,
+        paused: false,
+        study_state: c.code === 'BIO101' ? 'in_progress' : 'not_started',
+      };
     }));
   }
   if (path === '/api/courses/preview') return demoJson([{ is_valid: true, course_code: 'DEMO200', course_name: '示範課程', lecture_count: 8, estimated_jobs: 96, quota_estimate_available: false }]);

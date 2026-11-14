@@ -81,18 +81,17 @@ class LearningRepository:
             "created_at": (_aware(record.created_at) or utc_now()).isoformat(),
         }
 
-    def add_tutor_message(
-        self, course_code: str, lecture_no: int | None, role: str, text: str, conversation_id: str | None
-    ) -> None:
+    def add_tutor_message(self, course_code: str, role: str, text: str, **meta: Any) -> None:
         """Append one message to a tutor conversation.
 
         Args:
             course_code: Course code.
-            lecture_no: Lecture number, or None for the whole course.
             role: 'student' or 'tutor'.
             text: Message text.
-            conversation_id: Gemini Notebook conversation id, if known.
+            **meta: Optional `lecture_no` (`int | None`) and `conversation_id` (`str | None`).
         """
+        lecture_no = meta.get("lecture_no")
+        conversation_id = meta.get("conversation_id")
         self.session.add(
             TutorMessageRecord(
                 id=str(uuid.uuid4()),

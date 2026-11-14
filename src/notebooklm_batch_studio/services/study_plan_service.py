@@ -8,6 +8,7 @@ question, grounded in the course's own sources.
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import logging
 from datetime import UTC, date, datetime
@@ -21,7 +22,13 @@ from notebooklm_batch_studio.domain.repositories import (
     QueueRepositoryProtocol,
     StudyRepositoryProtocol,
 )
-from notebooklm_batch_studio.domain.study_plan import MARKABLE_STEPS, STUDY_STEPS, ReviewItem, next_schedule
+from notebooklm_batch_studio.domain.study_plan import (
+    MARKABLE_STEPS,
+    ReviewItem,
+    StepStatusContext,
+    build_lecture_steps,
+    next_schedule,
+)
 from notebooklm_batch_studio.services.converters.report_converter import markdown_fragment
 from notebooklm_batch_studio.services.learning_service import strip_citations
 
@@ -112,7 +119,7 @@ class ReviewStoreProtocol(Protocol):
         ...
 
     def save_explanation(
-        self, course_code: str, lecture_no: int | None, question_key: str, question: str, answer_md: str
+        self, course_code: str, lecture_no: int | None, question_key: str, **content: Any
     ) -> None:
         """Save an explanation.
 
@@ -120,8 +127,7 @@ class ReviewStoreProtocol(Protocol):
             course_code: Course code.
             lecture_no: Lecture number or None.
             question_key: Hash of the question.
-            question: Question text.
-            answer_md: Answer Markdown.
+            **content: Must supply `question` and `answer_md`.
         """
         ...
 
@@ -168,31 +174,31 @@ def days_until(exam_date: str | None, today: date) -> int | None:
         return None
 
 
+@dataclasses.dataclass(frozen=True)
+class StudyPlanDeps:
+    """Repository and client dependencies required by `StudyPlanService`."""
+
+    course_repo: CourseRepositoryProtocol
+    queue_repo: QueueRepositoryProtocol
+    study_repo: StudyRepositoryProtocol
+    review_repo: ReviewStoreProtocol
+    notebooklm_client: NotebookLMClientProtocol
+
+
 class StudyPlanService:
     """Builds the student's plan and runs spaced review and explanations."""
 
-    def __init__(
-        self,
-        course_repo: CourseRepositoryProtocol,
-        queue_repo: QueueRepositoryProtocol,
-        study_repo: StudyRepositoryProtocol,
-        review_repo: ReviewStoreProtocol,
-        notebooklm_client: NotebookLMClientProtocol,
-    ) -> None:
+    def __init__(self, deps: StudyPlanDeps) -> None:
         """Bind the service to its stores and the Gemini Notebook client.
 
         Args:
-            course_repo: Courses and lectures.
-            queue_repo: Generated artifact jobs.
-            study_repo: Quiz attempts and mistakes.
-            review_repo: Progress marks and review items.
-            notebooklm_client: Gemini Notebook client (for explanations).
+            deps: Bundled repositories and Gemini Notebook client dependencies.
         """
-        self.course_repo = course_repo
-        self.queue_repo = queue_repo
-        self.study_repo = study_repo
-        self.review_repo = review_repo
-        self.notebooklm_client = notebooklm_client
+        self.course_repo = deps.course_repo
+        self.queue_repo = deps.queue_repo
+        self.study_repo = deps.study_repo
+        self.review_repo = deps.review_repo
+        self.notebooklm_client = deps.notebooklm_client
 
     def _course(self, code: str) -> Course:
         """Load a course or raise.
@@ -211,6 +217,27 @@ class StudyPlanService:
             raise CourseNotFoundError(f"Course not found: {code}")
         return course
 
+    def _step_context(self, code: str) -> StepStatusContext:
+        """Assemble completion lookup sets across queue, review, and study repositories.
+
+        Args:
+            code: Course code.
+
+        Returns:
+            Pre-fetched StepStatusContext for evaluating per-lecture steps.
+        """
+        done_types = {
+            (j.lecture_no, j.artifact_type.value)
+            for j in self.queue_repo.list_jobs(course_code=code)
+            if j.status == JobStatus.DONE
+        }
+        return StepStatusContext(
+            done_types=done_types,
+            marks=self.review_repo.list_steps(code),
+            attempted={(a.lecture_no, a.quiz_variant) for a in self.study_repo.list_attempts(code)},
+            reviewed=self.review_repo.reviewed_lectures(code, "flashcard"),
+        )
+
     def get_plan(self, code: str, now: datetime | None = None) -> dict[str, Any]:
         """Build today's plan: per-lecture steps, the next step, progress, exam countdown, reviews due.
 
@@ -224,34 +251,15 @@ class StudyPlanService:
         """
         now = now or datetime.now(UTC)
         course = self._course(code)
-        done_types = {
-            (j.lecture_no, j.artifact_type.value)
-            for j in self.queue_repo.list_jobs(course_code=code)
-            if j.status == JobStatus.DONE
-        }
-        marks = self.review_repo.list_steps(code)
-        attempted = {(a.lecture_no, a.quiz_variant) for a in self.study_repo.list_attempts(code)}
-        reviewed = self.review_repo.reviewed_lectures(code, "flashcard")
-
-        lectures = []
-        next_step: dict[str, Any] | None = None
+        ctx = self._step_context(code)
+        lectures, next_step = [], None
         for lec in course.lectures:
-            steps = []
-            for key, label, types, how in STUDY_STEPS:
-                available = any((lec.no, t) in done_types for t in types)
-                if how == "mark":
-                    done = (lec.no, key) in marks
-                elif how == "quiz":
-                    done = any(no == lec.no and variant.startswith(key) for no, variant in attempted)
-                else:
-                    done = lec.no in reviewed
-                steps.append({"step": key, "label": label, "available": available, "done": done})
-                if available and not done and next_step is None:
-                    next_step = {"lecture_no": lec.no, "topic": lec.topic, "step": key, "label": label}
+            steps, first_todo = build_lecture_steps(lec.no, ctx)
+            if first_todo is not None and next_step is None:
+                next_step = {"lecture_no": lec.no, "topic": lec.topic, **first_todo}
             usable = [s for s in steps if s["available"]]
-            percent = round(100 * sum(1 for s in usable if s["done"]) / len(usable)) if usable else 0
-            lectures.append({"lecture_no": lec.no, "topic": lec.topic, "steps": steps, "percent": percent})
-
+            pct = round(100 * sum(1 for s in usable if s["done"]) / len(usable)) if usable else 0
+            lectures.append({"lecture_no": lec.no, "topic": lec.topic, "steps": steps, "percent": pct})
         unresolved = len(self.study_repo.list_mistakes(code, only_unresolved=True))
         due = self.review_repo.count_due(code, now)
         return {
@@ -285,28 +293,14 @@ class StudyPlanService:
         self.review_repo.mark_step(code, lecture_no, step, done)
         return self.get_plan(code)
 
-    def record_review(
-        self,
-        code: str,
-        kind: str,
-        item_key: str,
-        remembered: bool,
-        lecture_no: int | None = None,
-        front: str = "",
-        back: str = "",
-        now: datetime | None = None,
-    ) -> dict[str, Any]:
+    def record_review(self, code: str, kind: str, item_key: str, **details: Any) -> dict[str, Any]:
         """Record one review and schedule the next (1, 3, 7, 14, 30 days; forgotten = 10 minutes).
 
         Args:
             code: Course code.
             kind: 'flashcard' or 'mistake'.
             item_key: Stable item key (for a flashcard, use `card_key(front)`).
-            remembered: Whether the student recalled it.
-            lecture_no: Lecture number.
-            front: Prompt side (stored so due items can be shown later).
-            back: Answer side.
-            now: Review time.
+            **details: Review options (`remembered`, `lecture_no`, `front`, `back`, `now`).
 
         Returns:
             The item's new stage and due time.
@@ -316,18 +310,19 @@ class StudyPlanService:
         """
         if kind not in REVIEW_KINDS:
             raise ValueError(f"kind must be one of {', '.join(REVIEW_KINDS)}")
-        now = now or datetime.now(UTC)
+        remembered = bool(details["remembered"])
+        now: datetime = details.get("now") or datetime.now(UTC)
         item_id = f"{kind}:{code}:{item_key}"
         current = self.review_repo.get_item(item_id)
         stage, due_at = next_schedule(current.stage if current else 0, remembered, now)
         item = ReviewItem(
             id=item_id,
             course_code=code,
-            lecture_no=lecture_no if current is None else current.lecture_no,
+            lecture_no=details.get("lecture_no") if current is None else current.lecture_no,
             kind=kind,
             item_key=item_key,
-            front=front or (current.front if current else ""),
-            back=back or (current.back if current else ""),
+            front=str(details.get("front", "")) or (current.front if current else ""),
+            back=str(details.get("back", "")) or (current.back if current else ""),
             stage=stage,
             due_at=due_at,
             last_reviewed_at=now,
@@ -361,14 +356,67 @@ class StudyPlanService:
             for i in items
         ]
 
+    @staticmethod
+    def _build_explanation_prompt(question: str, choices: list[str], answer_index: int) -> str:
+        """Validate choices and build the Traditional Chinese tutor explanation prompt.
+
+        Args:
+            question: Question stem text.
+            choices: Options in display order.
+            answer_index: Zero-based index of the correct choice.
+
+        Returns:
+            Formatted tutor prompt string.
+        """
+        if not 0 <= answer_index < len(choices):
+            raise ValueError("answer_index is out of range")
+        letters = "ABCDEFGH"
+        options = "\n".join(f"{letters[i]}. {c}" for i, c in enumerate(choices))
+        return (
+            "請只根據來源內容，用繁體中文、像老師對學生一樣說明：\n"
+            f"題目：{question}\n選項：\n{options}\n"
+            f"為什麼正確答案是 {letters[answer_index]}？請先用一兩句白話說明關鍵概念，"
+            "再逐一說明其他選項錯在哪裡，最後給一個幫助記憶的小提示。"
+        )
+
+    async def _ask_and_save_explanation(
+        self, course: Course, lecture_no: int | None, question: str, **opts: Any
+    ) -> dict[str, Any]:
+        """Query Gemini Notebook for a question explanation and persist it locally.
+
+        Args:
+            course: Domain Course entity.
+            lecture_no: Lecture number or None for course-wide scope.
+            question: Question stem text.
+            **opts: Required `choices` (list[str]), `answer_index` (int), and `key` (str).
+
+        Returns:
+            Explanation payload with `answer`, `html`, `saved_at`, and `from_cache=False`.
+        """
+        if not course.notebook_id:
+            raise ValueError("This course has no Gemini Notebook notebook yet")
+        key = str(opts["key"])
+        prompt = self._build_explanation_prompt(question, list(opts["choices"]), int(opts["answer_index"]))
+        sources = [
+            lec.source_id
+            for lec in course.lectures
+            if lec.source_id and (lecture_no is None or lec.no == lecture_no)
+        ]
+        answer = strip_citations(
+            await self.notebooklm_client.ask(course.notebook_id, prompt, sources or None)
+        )
+        self.review_repo.save_explanation(course.code, lecture_no, key, question=question, answer_md=answer)
+        logger.info("Explained and saved a quiz question for %s L%s", course.code, lecture_no)
+        saved = self.review_repo.get_explanation(course.code, key) or {}
+        return {
+            "answer": answer,
+            "html": markdown_fragment(answer),
+            "saved_at": saved.get("created_at"),
+            "from_cache": False,
+        }
+
     async def explain(
-        self,
-        code: str,
-        lecture_no: int | None,
-        question: str,
-        choices: list[str],
-        answer_index: int,
-        force: bool = False,
+        self, code: str, lecture_no: int | None, question: str, **details: Any
     ) -> dict[str, Any]:
         """Explain why an answer is correct: the saved explanation, or ask Gemini Notebook and save it.
 
@@ -379,9 +427,7 @@ class StudyPlanService:
             code: Course code.
             lecture_no: Lecture number, or None for course-wide questions.
             question: Question text.
-            choices: Answer options in display order.
-            answer_index: Index of the correct option.
-            force: Ask Gemini Notebook again even if an explanation is saved.
+            **details: Must include `choices` and `answer_index`; optional `force` (bool).
 
         Returns:
             Dictionary with `answer` (Markdown), `html`, `saved_at` and `from_cache`.
@@ -391,6 +437,7 @@ class StudyPlanService:
         """
         course = self._course(code)
         key = card_key(question)
+        force = bool(details.get("force", False))
         cached = None if force else self.review_repo.get_explanation(code, key)
         if cached:
             answer_md = str(cached["answer_md"])
@@ -400,35 +447,14 @@ class StudyPlanService:
                 "saved_at": cached["created_at"],
                 "from_cache": True,
             }
-        if not course.notebook_id:
-            raise ValueError("This course has no Gemini Notebook notebook yet")
-        if not 0 <= answer_index < len(choices):
-            raise ValueError("answer_index is out of range")
-        letters = "ABCDEFGH"
-        options = "\n".join(f"{letters[i]}. {c}" for i, c in enumerate(choices))
-        prompt = (
-            "請只根據來源內容，用繁體中文、像老師對學生一樣說明：\n"
-            f"題目：{question}\n選項：\n{options}\n"
-            f"為什麼正確答案是 {letters[answer_index]}？請先用一兩句白話說明關鍵概念，"
-            "再逐一說明其他選項錯在哪裡，最後給一個幫助記憶的小提示。"
+        return await self._ask_and_save_explanation(
+            course,
+            lecture_no,
+            question,
+            choices=details["choices"],
+            answer_index=details["answer_index"],
+            key=key,
         )
-        sources = [
-            lec.source_id
-            for lec in course.lectures
-            if lec.source_id and (lecture_no is None or lec.no == lecture_no)
-        ]
-        answer = strip_citations(
-            await self.notebooklm_client.ask(course.notebook_id, prompt, sources or None)
-        )
-        self.review_repo.save_explanation(code, lecture_no, key, question, answer)
-        logger.info("Explained and saved a quiz question for %s L%s", code, lecture_no)
-        saved = self.review_repo.get_explanation(code, key) or {}
-        return {
-            "answer": answer,
-            "html": markdown_fragment(answer),
-            "saved_at": saved.get("created_at"),
-            "from_cache": False,
-        }
 
     def list_explanations(self, code: str, lecture_no: int | None = None) -> list[dict[str, Any]]:
         """Saved Gemini Notebook explanations for a course (or one lecture), newest first, with HTML.

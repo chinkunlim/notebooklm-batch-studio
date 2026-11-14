@@ -35,15 +35,13 @@ const COURSE_FIELD_LABELS = {
 /**
  * HTML for one settings field.
  * @param {string} key Option key
- * @param {string} label Label
- * @param {object|string|null} names Choice names, a field kind ('number' | 'text' | 'textarea' | 'date') or null for yes/no
- * @param {*} value Current value
- * @param {object} choices Allowed values per key
- * @param {string} [inherit] Inherited value (shown as the "use course setting" option)
- * @param {object} [defaults] Default values per key
+ * @param {Array} meta Pair of [label, names] where names is choice map, field kind, or null for boolean
+ * @param {{value: *, choices: object, inherit?: *, defaults?: object}} ctx Field value, choices, optional inherit display and defaults
  * @returns {string} HTML
  */
-function renderOptionField(key, label, names, value, choices, inherit, defaults) {
+function renderOptionField(key, meta, ctx) {
+  const [label, names] = meta;
+  const { value, choices, inherit, defaults } = ctx;
   const dflt = defaults ? defaults[key] : undefined;
   const mark = v => (dflt !== undefined && v === dflt ? '（預設）' : '');
   const inheritOpt = inherit !== undefined ? `<option value="">沿用課程設定（${escHtml(String(inherit))}）</option>` : '';
@@ -101,9 +99,9 @@ async function loadCourseOptions(code) {
     if (!res.ok) throw new Error(data.detail || res.statusText);
     const all = { ...COURSE_FIELD_LABELS, ...OPTION_LABELS };
     box.innerHTML = `<div class="settings-grid">
-        ${Object.keys(all).map(key => renderOptionField(key, all[key][0], all[key][1], data.options[key], data.choices, undefined, data.defaults)).join('')}
+        ${Object.keys(all).map(key => renderOptionField(key, all[key], { value: data.options[key], choices: data.choices, defaults: data.defaults })).join('')}
       </div>
-      <div class="sec-foot"><button type="button" class="btn btn-ghost" onclick="resetCourseOptions('${code}')">全部恢復預設值</button><button class="btn btn-primary" onclick="saveCourseOptions('${code}')">儲存課程設定</button></div>`;
+      <div class="sec-foot"><button type="button" class="btn btn-ghost" onclick="openCopyOptionsModal('${code}')">套用到其他課程</button><button type="button" class="btn btn-ghost" onclick="resetCourseOptions('${code}')">全部恢復預設值</button><button class="btn btn-primary" onclick="saveCourseOptions('${code}')">儲存課程設定</button></div>`;
   } catch (e) {
     box.innerHTML = `<p style="color:var(--danger)">設定載入失敗：${escHtml(e.message)}</p>`;
   }
@@ -234,9 +232,8 @@ async function openJobOptions(jobId) {
     };
     box.innerHTML = `<div class="settings-grid">
         ${data.fields.map(key => {
-          const [label, names] = OPTION_LABELS[key];
           const inherit = key === 'extra_instructions' ? '' : describe(key, data.effective[key]);
-          return renderOptionField(key, label, names, data.overrides[key], data.choices, inherit, data.defaults);
+          return renderOptionField(key, OPTION_LABELS[key], { value: data.overrides[key], choices: data.choices, inherit, defaults: data.defaults });
         }).join('')}
       </div>
       ${data.unsupported.map(u => `<p class="hint" style="margin-top:10px">${escHtml(u)}</p>`).join('')}`;
@@ -377,180 +374,54 @@ function getSelectedArtifacts() {
 }
 
 /** Open the add-course wizard at step 1. */
-function openAddModal() {
-  document.getElementById('addModal').style.display = 'flex';
-  browseFolder(null);
-  loadAddOptions();
-  wizardGo(1);
-}
+/* Add-course wizard (folder picker, preview estimates, defaults, and submission) lives in studio-wizard.js. */
 
-let currentBrowsePath = null;
-let currentBrowseParent = null;
-let pickedFolders = [];
+let copyOptionsSourceCode = null;
 
 /**
- * Show the sub-folders of a folder (the start location when path is null).
- * @param {string|null} path Folder path
- * @returns {Promise<void>}
+ * Open the modal to copy a course's options to other courses (TASK-013).
+ * @param {string} code Source course code
  */
-async function browseFolder(path) {
-  const list = document.getElementById('folderList');
-  try {
-    const res = await fetch('/api/folders' + (path ? `?path=${encodeURIComponent(path)}` : ''));
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || res.statusText);
-    currentBrowsePath = data.path;
-    currentBrowseParent = data.parent;
-    document.getElementById('folderCurrent').textContent = data.path ? `${data.path}（${data.pdf_count} 個 PDF）` : '從這裡開始找課程資料夾';
-    document.getElementById('btnFolderUp').disabled = !data.parent;
-    document.getElementById('btnPickFolder').disabled = !data.path || data.pdf_count === 0;
-    list.innerHTML = data.folders.length ? data.folders.map((f, i) => `
-      <div class="folder-item">
-        <button type="button" data-idx="${i}" class="folder-open"><i class="icon-folder"></i>${escHtml(f.name)} ${f.pdf_count ? `<span class="badge badge-success">${f.pdf_count} 個 PDF</span>` : ''}</button>
-        ${f.pdf_count ? `<button type="button" data-idx="${i}" class="folder-pick btn btn-soft btn-sm">選</button>` : ''}
-      </div>`).join('') : '<p class="small muted">（這裡沒有子資料夾）</p>';
-    list.querySelectorAll('.folder-open').forEach(b => { b.onclick = () => browseFolder(data.folders[b.dataset.idx].path); });
-    list.querySelectorAll('.folder-pick').forEach(b => { b.onclick = () => addPickedFolder(data.folders[b.dataset.idx].path); });
-  } catch (e) {
-    list.innerHTML = `<p style="color:var(--danger)">無法開啟：${escHtml(e.message)}</p>`;
-  }
-}
-
-/** Pick the folder being shown. */
-function pickCurrentFolder() {
-  if (currentBrowsePath) addPickedFolder(currentBrowsePath);
-}
-
-/**
- * Add a course folder to the picks.
- * @param {string} path Folder path
- */
-function addPickedFolder(path) {
-  if (!pickedFolders.includes(path)) pickedFolders.push(path);
-  renderPickedFolders();
-}
-
-/**
- * Remove one picked folder.
- * @param {number} idx Index in the picks
- */
-function removePickedFolder(idx) {
-  pickedFolders.splice(idx, 1);
-  renderPickedFolders();
-}
-
-/** Draw the picked folders. */
-function renderPickedFolders() {
-  document.getElementById('folderPaths').value = pickedFolders.join('\n');
-  document.getElementById('btnConfirmAdd').disabled = true;
-  document.getElementById('pickedFolders').innerHTML = pickedFolders.length ? pickedFolders.map((p, i) =>
-    `<span class="badge">${escHtml(p.split('/').pop())}<button type="button" onclick="removePickedFolder(${i})" aria-label="移除">✕</button></span>`).join('')
-    : '<span class="muted small">（還沒選）</span>';
-}
-
-/** Close the wizard and forget the picks. */
-function closeAddModal() {
-  document.getElementById('addModal').style.display = 'none';
-  document.getElementById('previewResults').style.display = 'none';
-  pickedFolders = [];
-  renderPickedFolders();
-}
-
-/**
- * Estimate lectures, jobs and quota for the picked folders.
- * @returns {Promise<void>}
- */
-async function previewFolders() {
-  const folders = document.getElementById('folderPaths').value.split('\n').map(s => s.trim()).filter(Boolean);
-  if (folders.length === 0) {
-    showToast('請先點選至少一個課程資料夾', 'warning');
+function openCopyOptionsModal(code) {
+  const others = (currentCoursesList || []).filter(c => c.code !== code);
+  if (others.length === 0) {
+    showToast('目前沒有其他課程可以套用。', 'info');
     return;
   }
-  const { chapterArts, courseArts } = getSelectedArtifacts();
-  try {
-    const res = await fetch('/api/courses/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ folders, chapter_artifacts: chapterArts, course_artifacts: courseArts }),
-    });
-    const results = await res.json();
-    const box = document.getElementById('previewResults');
-    box.style.display = 'block';
-    box.innerHTML = results.map(r => `
-      <div style="margin-bottom:8px">
-        <strong>${r.is_valid ? escHtml(r.course_code + '（' + r.course_name + '）') : '無效資料夾'}</strong>
-        <div>${r.is_valid ? '掃描到 ' + r.lecture_count + ' 講，依目前勾選預估 ' + r.estimated_jobs + ' 項工作' + (r.quota_estimate_available ? '，約用 ' + r.estimated_quota_percent + '% 的 5 小時額度（目前剩 ' + r.five_hour_remaining_percent + '%）' + (r.estimated_wait_hours > 0 ? '，需等額度重置約 ' + r.estimated_wait_hours + ' 小時' : '，目前額度足夠') + (r.weekly_remaining_percent !== null ? '；本週額度剩 ' + r.weekly_remaining_percent + '%' : '') + (r.weekly_warning ? '<br>' + escHtml(r.weekly_warning) : '') : '（無法讀取額度，未估算時間）') : escHtml(r.error)}</div>
-      </div>`).join('');
-    document.getElementById('btnConfirmAdd').disabled = !results.some(r => r.is_valid);
-  } catch (e) {
-    showToast('預覽失敗：' + e.message, 'error');
-  }
+  copyOptionsSourceCode = code;
+  document.getElementById('copyOptionsDesc').textContent = `將 ${code} 的生成設定、語言與模擬考題數套用到勾選的課程（目標課程的考試日期會保留）。`;
+  document.getElementById('copyOptionsTargets').innerHTML = `<div class="checks">
+    ${others.map(c => `<label class="cbox"><input type="checkbox" value="${escHtml(c.code)}"><span>${escHtml(c.code)}　${escHtml(c.name)}</span></label>`).join('')}
+  </div>`;
+  document.getElementById('copyOptionsModal').style.display = 'flex';
 }
 
-let addDefaults = null;
+/** Hide the copy-course-options modal. */
+function closeCopyOptionsModal() {
+  copyOptionsSourceCode = null;
+  document.getElementById('copyOptionsModal').style.display = 'none';
+}
 
 /**
- * Draw the advanced settings of the wizard (project defaults).
+ * Submit selected target courses to POST /api/courses/{code}/options/copy.
  * @returns {Promise<void>}
  */
-async function loadAddOptions() {
-  const box = document.getElementById('addOptions');
-  try {
-    const data = await (await fetch('/api/generation-options')).json();
-    addDefaults = data.defaults;
-    const all = { mock_exam_questions: COURSE_FIELD_LABELS.mock_exam_questions, ...OPTION_LABELS };
-    box.innerHTML = `<div class="settings-grid">
-      ${Object.keys(all).map(key => renderOptionField(key, all[key][0], all[key][1], data.defaults[key], data.choices, undefined, data.defaults)).join('')}
-    </div>`;
-  } catch (e) {
-    box.innerHTML = `<p style="color:var(--danger)">載入失敗：${escHtml(e.message)}</p>`;
+async function submitCopyOptions() {
+  if (!copyOptionsSourceCode) return;
+  const targets = [...document.querySelectorAll('#copyOptionsTargets input:checked')].map(el => el.value);
+  if (targets.length === 0) {
+    showToast('請至少勾選一門目標課程。', 'warning');
+    return;
   }
-}
-
-/**
- * Only the wizard settings that differ from the defaults (untouched ones stay on the project defaults).
- * @returns {object|null} Changed options or null
- */
-function changedAddOptions() {
-  if (!addDefaults || !document.getElementById('addOptions').querySelector('[data-opt]')) return null;
-  const picked = collectOptions('#addOptions');
-  const changed = Object.fromEntries(Object.entries(picked).filter(([k, v]) => v !== addDefaults[k]));
-  return Object.keys(changed).length ? changed : null;
-}
-
-/**
- * Register the picked folders as courses (and start the queue when asked).
- * @returns {Promise<void>}
- */
-async function confirmAddFolders() {
-  const folders = document.getElementById('folderPaths').value.split('\n').map(s => s.trim()).filter(Boolean);
-  const { chapterArts, courseArts, language } = getSelectedArtifacts();
-  const autoStart = document.getElementById('autoStartQueue').checked;
-  const reuseNotebook = document.getElementById('reuseNotebook').checked;
   try {
-    const res = await fetch('/api/courses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        folders,
-        profile: 'full',
-        chapter_artifacts: chapterArts,
-        course_artifacts: courseArts,
-        language,
-        paused: !autoStart,
-        reuse_notebook: reuseNotebook,
-        options: changedAddOptions(),
-      }),
+    const res = await fetch(`/api/courses/${encodeURIComponent(copyOptionsSourceCode)}/options/copy`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targets }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || res.statusText);
-    if (autoStart) await fetch('/api/queue/start', { method: 'POST' });
-    showToast(autoStart ? '已加入課程，開始自動生成。' : '已加入課程並暫停。確認設定後按「開始生成」。', 'success');
-    closeAddModal();
-    await fetchStatus();
-    await fetchCourses();
-    await initStudyPortal();
+    showToast(`已將設定套用到 ${(data.copied_to || targets).join('、')}`, 'success');
+    closeCopyOptionsModal();
   } catch (e) {
-    showToast('加入失敗：' + e.message, 'error');
+    showToast('套用設定失敗：' + e.message, 'error');
   }
 }

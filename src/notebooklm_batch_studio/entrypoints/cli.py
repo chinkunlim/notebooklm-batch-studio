@@ -15,6 +15,7 @@ import sys
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -128,10 +129,31 @@ def _handle_resume(config: AppConfig) -> int:
     return 0
 
 
+@dataclass(frozen=True)
+class _BatchEnv:
+    """Runtime dependencies bundled for CLI batch execution and directory watching."""
+
+    engine: Any
+    adapter: NotebookLMAdapter
+    config: AppConfig
+
+
+@contextmanager
+def _queue_session_provider(engine: Any) -> Iterator[QueueRepositoryProtocol]:
+    """Provide an isolated queue repository session for worker tasks.
+
+    Args:
+        engine: Database engine.
+
+    Yields:
+        QueueRepository bound to an active transaction.
+    """
+    with session_scope(engine) as session:
+        yield QueueRepository(session)
+
+
 async def _execute_batch_pipeline(
-    engine: Any,
-    adapter: NotebookLMAdapter,
-    config: AppConfig,
+    env: _BatchEnv,
     courses_to_run: list[str],
     workers: int,
     wait_quota: bool = False,
@@ -139,99 +161,69 @@ async def _execute_batch_pipeline(
     """Run batch initialization, parallel worker pool execution, and reporting.
 
     Args:
-        engine: Database engine.
-        adapter: Gemini Notebook adapter instance.
-        config: Application configuration.
+        env: Bundled engine, Gemini Notebook adapter, and config.
         courses_to_run: List of course codes to execute.
         workers: Concurrency worker count.
         wait_quota: Keep running until quota-blocked jobs have resumed and finished.
     """
-
-    @contextmanager
-    def q_provider() -> Iterator[QueueRepositoryProtocol]:
-        """Provide an isolated queue repository session for worker tasks.
-
-        Yields:
-            QueueRepository bound to an active transaction.
-        """
-        with session_scope(engine) as s:
-            yield QueueRepository(s)
-
-    with session_scope(engine) as session:
-        c_repo = CourseRepository(session)
-        q_repo = QueueRepository(session)
-        srv = BatchStudioService(c_repo, q_repo, adapter, config, queue_provider=q_provider)
+    with session_scope(env.engine) as session:
+        c_repo, q_repo = CourseRepository(session), QueueRepository(session)
+        srv = BatchStudioService(
+            c_repo,
+            q_repo,
+            env.adapter,
+            env.config,
+            queue_provider=lambda: _queue_session_provider(env.engine),
+        )
         for code in courses_to_run:
             print(f"🚀 初始化 Gemini Notebook 筆記本與講義來源: {code}...")
             await srv.setup_notebook_and_sources(code)
 
-    pool = WorkerPool(q_provider, srv.execute_job, concurrency=workers)
+    pool = WorkerPool(lambda: _queue_session_provider(env.engine), srv.execute_job, concurrency=workers)
     if wait_quota:
         print("⏸ 額度用完時會等待重置，時間到自動繼續，全部完成才結束。")
     await pool.run_until_empty(wait_for_quota=wait_quota)
 
-    with session_scope(engine) as session:
-        c_repo = CourseRepository(session)
-        q_repo = QueueRepository(session)
-        srv = BatchStudioService(c_repo, q_repo, adapter, config)
+    with session_scope(env.engine) as session:
+        srv = BatchStudioService(CourseRepository(session), QueueRepository(session), env.adapter, env.config)
         for code in courses_to_run:
             md_path, html_path = srv.generate_summary(code)
             print(f"📄 已產出課程總覽: {md_path.name}, {html_path.name}")
 
 
-def _handle_batch(
-    config: AppConfig, paths: list[str], workers: int, profile: str = "full", wait_quota: bool = False
-) -> int:
+def _handle_batch(config: AppConfig, args: argparse.Namespace) -> int:
     """Process one or more course folders end-to-end.
 
     Args:
         config: Application configuration.
-        paths: List of course directory paths.
-        workers: Number of parallel worker threads.
-        profile: Output profile ('full', 'quiz-only', 'exam-prep').
-        wait_quota: Wait for quota resets instead of exiting with jobs in QUOTA_WAIT.
+        args: Parsed CLI namespace containing `paths`, `workers`, `profile`, `wait_quota`.
 
     Returns:
         Exit code (0 on success).
     """
-    engine = create_db_engine(config.database_url)
-    adapter = NotebookLMAdapter(config)
-
-    with session_scope(engine) as session:
-        course_repo = CourseRepository(session)
-        queue_repo = QueueRepository(session)
-        service = BatchStudioService(course_repo, queue_repo, adapter, config)
-
-        registered = service.add_course_folders(paths, profile=profile)
+    env = _BatchEnv(create_db_engine(config.database_url), NotebookLMAdapter(config), config)
+    with session_scope(env.engine) as session:
+        service = BatchStudioService(CourseRepository(session), QueueRepository(session), env.adapter, config)
+        registered = service.add_course_folders(args.paths, profile=args.profile)
         courses_to_run = [item["code"] for item in registered]
 
-    print(f"✅ 已排入 {len(courses_to_run)} 門課程至工作佇列。啟動 {workers} 個 Worker...")
-    asyncio.run(_execute_batch_pipeline(engine, adapter, config, courses_to_run, workers, wait_quota))
+    print(f"✅ 已排入 {len(courses_to_run)} 門課程至工作佇列。啟動 {args.workers} 個 Worker...")
+    asyncio.run(_execute_batch_pipeline(env, courses_to_run, args.workers, args.wait_quota))
     print("🎉 批次處理完畢！")
     return 0
 
 
-def _on_pdf_detected(
-    course_dir: Path,
-    pdf_path: Path,
-    engine: Any,
-    adapter: NotebookLMAdapter,
-    config: AppConfig,
-) -> None:
+def _on_pdf_detected(course_dir: Path, pdf_path: Path, env: _BatchEnv) -> None:
     """Handle arrival of new lecture PDF file by registering and queuing.
 
     Args:
         course_dir: Course input directory path.
         pdf_path: Newly stabilized PDF path.
-        engine: Database engine.
-        adapter: Gemini Notebook adapter.
-        config: Application configuration.
+        env: Bundled engine, Gemini Notebook adapter, and config.
     """
     print(f"\n🔔 偵測到新講義檔案：{pdf_path.name}，開始自動註冊並排程...")
-    with session_scope(engine) as session:
-        c_repo = CourseRepository(session)
-        q_repo = QueueRepository(session)
-        srv = BatchStudioService(c_repo, q_repo, adapter, config)
+    with session_scope(env.engine) as session:
+        srv = BatchStudioService(CourseRepository(session), QueueRepository(session), env.adapter, env.config)
         course = srv.register_course_folder(course_dir)
         added = srv.enqueue_course_artifacts(course.code)
         print(f"✅ 已新增 {added} 個產出任務至佇列。")
@@ -247,8 +239,7 @@ def _handle_watch(config: AppConfig) -> int:
         Exit code (0 on interrupt).
     """
     watch_root = config.courses_input_dir
-    engine = create_db_engine(config.database_url)
-    adapter = NotebookLMAdapter(config)
+    env = _BatchEnv(create_db_engine(config.database_url), NotebookLMAdapter(config), config)
 
     def callback(c_dir: Path, p_path: Path) -> None:
         """Forward detected lecture PDF to detection handler.
@@ -257,7 +248,7 @@ def _handle_watch(config: AppConfig) -> int:
             c_dir: Course input directory.
             p_path: New PDF file path.
         """
-        _on_pdf_detected(c_dir, p_path, engine, adapter, config)
+        _on_pdf_detected(c_dir, p_path, env)
 
     watcher = CourseWatcher(watch_root, callback)
     watcher.start()
@@ -290,7 +281,7 @@ def _dispatch_command(args: argparse.Namespace, config: AppConfig) -> int:
     if args.command == "resume":
         return _handle_resume(config)
     if args.command == "batch":
-        return _handle_batch(config, args.paths, args.workers, args.profile, args.wait_quota)
+        return _handle_batch(config, args)
     if args.command == "watch":
         return _handle_watch(config)
     if args.command == "web":
@@ -330,31 +321,24 @@ def _handle_mcp(config: AppConfig) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Parse command line arguments and execute requested studio operation.
-
-    Args:
-        argv: Command line arguments; defaults to sys.argv[1:].
+def _build_cli_parser() -> argparse.ArgumentParser:
+    """Build argument parser with all notebooklm-batch-studio CLI subcommands.
 
     Returns:
-        Exit code integer.
+        Configured argparse.ArgumentParser instance.
     """
     parser = argparse.ArgumentParser(
         prog="notebooklm-batch-studio",
         description="Gemini Notebook 學習工作室 — 批次課程筆記本自動化生成系統",
     )
-
     subparsers = parser.add_subparsers(dest="command", help="子命令")
     login_parser = subparsers.add_parser(
         "login", help="檢查 Gemini Notebook 登入憑證（加 --browser 開瀏覽器登入）"
     )
     login_parser.add_argument("--browser", action="store_true", help="開啟瀏覽器，由你親自登入 Google")
-
     status_parser = subparsers.add_parser("status", help="檢視課程與工作佇列狀態")
     status_parser.add_argument("--course", default=None, help="過濾特定課程代碼")
-
     subparsers.add_parser("resume", help="手動喚醒配額等待 (quota_wait) 任務")
-
     batch_parser = subparsers.add_parser("batch", help="批次掃描課程並執行生成")
     batch_parser.add_argument("paths", nargs="+", help="課程資料夾路徑")
     batch_parser.add_argument("--workers", type=int, default=2, help="平行 Worker 數量")
@@ -365,22 +349,29 @@ def main(argv: list[str] | None = None) -> int:
         help="產出組合：full / quiz-only / exam-prep",
     )
     batch_parser.add_argument(
-        "--wait-quota",
-        action="store_true",
-        help="額度用完時等待重置並自動繼續，全部完成才結束",
+        "--wait-quota", action="store_true", help="額度用完時等待重置並自動繼續，全部完成才結束"
     )
-
     subparsers.add_parser("watch", help="啟動資料夾監控守護")
     subparsers.add_parser("web", help="啟動本機網頁管理伺服器 (127.0.0.1:8768)")
     subparsers.add_parser("mcp", help="啟動 MCP stdio 伺服器")
+    return parser
 
+
+def main(argv: list[str] | None = None) -> int:
+    """Parse command line arguments and execute requested studio operation.
+
+    Args:
+        argv: Command line arguments; defaults to sys.argv[1:].
+
+    Returns:
+        Exit code integer.
+    """
+    parser = _build_cli_parser()
     args = parser.parse_args(argv)
     config = load_config()
     setup_logging(config.log_level, config.logs_dir if config.log_to_file else None)
-
     if args.command:
         return _dispatch_command(args, config)
-
     parser.print_help()
     return 0
 

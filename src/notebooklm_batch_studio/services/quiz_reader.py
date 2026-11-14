@@ -9,8 +9,45 @@ from typing import Any
 from notebooklm_batch_studio.domain.models import Course
 
 
+def _resolve_quiz_dir(courses_output_dir: Path, course: Course, lecture_no: int) -> Path:
+    """Resolve the output directory containing quizzes for a lecture or course scope.
+
+    Args:
+        courses_output_dir: Root of all course output folders.
+        course: Course domain entity.
+        lecture_no: Lecture sequence number, or 0 for course-wide quizzes.
+
+    Returns:
+        Target directory Path for quiz lookup.
+    """
+    if lecture_no == 0:
+        return courses_output_dir / course.code / "_course_synthesis"
+    lec = next((item for item in course.lectures if item.no == lecture_no), None)
+    lec_topic = lec.topic if lec else "lecture"
+    return courses_output_dir / course.code / f"{lecture_no:02d}_{lec_topic}"
+
+
+def _find_variant_file(quiz_dir: Path, variant: str, suffix: str, fallback: str) -> Path:
+    """Find the first matching quiz variant artifact file inside `quiz_dir`.
+
+    Args:
+        quiz_dir: Directory containing quiz outputs.
+        variant: Quiz variant identifier or filename prefix.
+        suffix: Filename suffix pattern including extension.
+        fallback: Fallback relative filename when no prefix variant exists.
+
+    Returns:
+        First matching Path if found, else `quiz_dir / fallback`.
+    """
+    for candidate in (variant, f"quiz_{variant}", variant.replace("quiz_", "")):
+        path = quiz_dir / f"{candidate}_{suffix}"
+        if path.exists():
+            return path
+    return quiz_dir / fallback
+
+
 def read_quiz_content(
-    courses_output_dir: Path, course: Course, lecture_no: int, variant: str, with_answers: bool
+    courses_output_dir: Path, course: Course, lecture_no: int, **options: Any
 ) -> dict[str, Any]:
     """Locate and read one quiz's question or answer sheet and its JSON.
 
@@ -18,8 +55,7 @@ def read_quiz_content(
         courses_output_dir: Root of all course output folders.
         course: The course.
         lecture_no: Lecture number, or 0 for course-wide quizzes.
-        variant: File prefix such as 'quiz_1', 'quiz_1_v2' or 'course_mock_exam'.
-        with_answers: Return the answer sheet instead of the question sheet.
+        **options: Optional `variant` (default 'quiz_1') and `with_answers` (bool).
 
     Returns:
         Dictionary with the Markdown sheet and the parsed quiz JSON.
@@ -27,30 +63,12 @@ def read_quiz_content(
     Raises:
         FileNotFoundError: If the quiz files have not been produced yet.
     """
-    if lecture_no == 0:
-        quiz_dir = courses_output_dir / course.code / "_course_synthesis"
-    else:
-        lec = next((item for item in course.lectures if item.no == lecture_no), None)
-        lec_topic = lec.topic if lec else "lecture"
-        lec_dir_name = f"{lecture_no:02d}_{lec_topic}"
-        quiz_dir = courses_output_dir / course.code / lec_dir_name
-
+    variant = str(options.get("variant", "quiz_1"))
+    with_answers = bool(options.get("with_answers", False))
+    quiz_dir = _resolve_quiz_dir(courses_output_dir, course, lecture_no)
     suffix = "答案卷.md" if with_answers else "題目卷.md"
-    candidates = [variant, f"quiz_{variant}", variant.replace("quiz_", "")]
-    md_file = quiz_dir / suffix
-    for c in candidates:
-        v_md = quiz_dir / f"{c}_{suffix}"
-        if v_md.exists():
-            md_file = v_md
-            break
-
-    json_file = quiz_dir / "quiz.json"
-    for c in candidates:
-        v_json = quiz_dir / f"{c}_quiz.json"
-        if v_json.exists():
-            json_file = v_json
-            break
-
+    md_file = _find_variant_file(quiz_dir, variant, suffix, suffix)
+    json_file = _find_variant_file(quiz_dir, variant, "quiz.json", "quiz.json")
     if not md_file.exists():
         raise FileNotFoundError(f"Quiz artifact not found for {course.code} L{lecture_no} ({variant})")
 
