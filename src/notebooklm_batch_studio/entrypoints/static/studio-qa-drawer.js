@@ -5,7 +5,43 @@ const qaState = {
   conversationId: null,
   messages: [],
   busy: false,
+  loadedCode: null,
 };
+
+/**
+ * Persist the current course's Q&A drawer history to localStorage.
+ * @returns {void}
+ */
+function saveQaHistory() {
+  const code = typeof currentStudyCourse !== 'undefined' && currentStudyCourse?.code;
+  if (!code) return;
+  try {
+    localStorage.setItem(`nb_qa_chat_${code}`, JSON.stringify({
+      conversationId: qaState.conversationId,
+      messages: qaState.messages.slice(-40),
+    }));
+  } catch {}
+}
+
+/**
+ * Restore the current course's Q&A drawer history from localStorage when switching courses or reloading.
+ * @returns {void}
+ */
+function loadQaHistory() {
+  const code = typeof currentStudyCourse !== 'undefined' && currentStudyCourse?.code;
+  if (!code || qaState.loadedCode === code) return;
+  qaState.loadedCode = code;
+  try {
+    const raw = localStorage.getItem(`nb_qa_chat_${code}`);
+    const saved = raw ? JSON.parse(raw) : null;
+    qaState.conversationId = saved?.conversationId || null;
+    qaState.messages = Array.isArray(saved?.messages) ? saved.messages : [];
+  } catch {
+    qaState.conversationId = null;
+    qaState.messages = [];
+  }
+  renderQaMessages();
+}
 
 /**
  * Toggle the floating Q&A drawer open or closed and sync lecture scope options.
@@ -19,6 +55,7 @@ function toggleQaDrawer(forceOpen = null) {
   drawer.classList.toggle('open', shouldOpen);
   drawer.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
   if (shouldOpen) {
+    loadQaHistory();
     syncQaScopeOptions();
     document.getElementById('qaQuestionInput')?.focus();
   }
@@ -118,6 +155,7 @@ function selectedQaLectureNo() {
 function resetQaConversation() {
   qaState.conversationId = null;
   qaState.messages = [];
+  saveQaHistory();
   renderQaMessages();
   showToast('已開啟新話題', 'info', 1800);
 }
@@ -135,6 +173,7 @@ async function sendQaQuestion() {
   qaState.busy = true;
   if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '等待中…'; }
   qaState.messages.push({ role: 'user', text: question, references: [] });
+  saveQaHistory();
   input.value = '';
   renderQaMessages();
   try {
@@ -161,6 +200,7 @@ async function sendQaQuestion() {
   } finally {
     qaState.busy = false;
     if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = '發問'; }
+    saveQaHistory();
     renderQaMessages();
   }
 }

@@ -134,6 +134,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): unify QA drawer styling, fix lecture scope select, and wire expandQaToStudioTab (by `@antigravity`)
 - fix(ui): support stack-layout player collapse, #bench sticky scroll lock, and .reader-bar flex-shrink (by `@antigravity`)
 - fix(ui): stick stack-layout at .bench-stage (lecture) and remove .reader-bar overflow scroll (by `@antigravity`)
+- fix(ui): make .reader-bar transparent, enlarge typing dots, and persist QA chat history in localStorage (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

@@ -1247,8 +1247,8 @@ img, iframe, video, audio { max-width: 100%; }
 .qa-msg.user { align-self: flex-end; background: var(--primary); color: var(--primary-ink); }
 .qa-msg.ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); width: 100%; }
 .qa-typing { display: inline-flex; align-items: center; gap: 10px; width: auto; color: var(--muted); font-size: 13px; }
-.qa-typing-dots { display: inline-flex; align-items: center; gap: 4px; }
-.qa-typing-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); opacity: .35; animation: qaBounce 1.2s infinite ease-in-out; }
+.qa-typing-dots { display: inline-flex; align-items: center; gap: 5px; height: 18px; }
+.qa-typing-dots i { display: block; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); opacity: .35; animation: qaBounce 1.2s infinite ease-in-out; }
 .qa-typing-dots i:nth-child(2) { animation-delay: .18s; }
 .qa-typing-dots i:nth-child(3) { animation-delay: .36s; }
 @keyframes qaBounce { 0%, 80%, 100% { transform: translateY(0); opacity: .35; } 40% { transform: translateY(-4px); opacity: 1; } }
@@ -1422,7 +1422,7 @@ img, iframe, video, audio { max-width: 100%; }
 /* Reader header & bar alignment */
 #readerCard { position: relative; scroll-margin-top: 24px; }
 #readerContent > .card-head { min-height: 32px; display: flex; align-items: center; padding: 0 44px 0 0; margin-bottom: var(--s3); }
-.reader-bar { flex: none; overflow: visible; background: var(--surface); padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
+.reader-bar { flex: none; overflow: visible; background: transparent; padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
 
 /* Layout Debug Guides (Cmd+Shift+G / 參考線按鈕) */
 .app.layout-guides .topbar { outline: 2px dashed #e11d48; outline-offset: -2px; }
