@@ -18,7 +18,7 @@ const groups = ['輸入理解', '結構提煉', '主動提取'];
 let currentTool = 'notes';
 const readerContent = $('#readerContent');
 
-$('#benchTiles').innerHTML = BENCH.map(t => `<div class="tile" role="button" tabindex="0" data-tool="${t.id}" style="--hue:var(${t.hue})"><span class="tile-name">${t.name}</span><span class="tile-meta" data-meta="${t.id}"></span><button class="pin-btn" data-pin="${t.id}" aria-label="釘選${t.name}"><i class="icon-pin"></i></button></div>`).join('') + '<p class="pin-empty">還沒有釘選的項目。切到「全景矩陣」，點卡片右上角的圖釘即可釘選。</p>';
+$('#benchTiles').innerHTML = BENCH.map(t => `<div class="tile" role="button" tabindex="0" data-tool="${t.id}" style="--hue:var(${t.hue})"><span class="tile-name">${t.name}</span><span class="tile-meta" data-meta="${t.id}"></span></div>`).join('') + '<p class="pin-empty">還沒有釘選的項目。請到「設計與自訂 → 學習產出物排列」勾選常用項目。</p>';
 $('#benchTiles').insertAdjacentHTML('afterend', '<p class="hint order-hint">拖曳卡片可以調整順序（鍵盤：Alt + 方向鍵），所有排列方式都會跟著這個順序。</p>');
 /* Order: users drag tiles to reorder; every arrangement follows the same order */
 const DEFAULT_ORDER = BENCH.map(t => t.id);
@@ -74,16 +74,14 @@ function renderPins() {
   $$('#benchTiles .tile').forEach(t => {
     const on = pinnedIds.includes(t.dataset.tool);
     t.classList.toggle('pinned', on);
-    $('.pin-btn', t).setAttribute('aria-label', (on ? '取消釘選' : '釘選') + $('.tile-name', t).textContent);
   });
   const rest = order.map(id => BENCH.find(t => t.id === id)).filter(t => !pinnedIds.includes(t.id));
-  $('#moreRow').innerHTML = rest.length ? `<span class="small muted">未釘選　點卡片右上角的圖釘可以增減常用項目</span>` + rest.map(t => `<button class="chip${t.id === currentTool ? ' on' : ''}" data-tool="${t.id}" data-status="${toolStatusKind(t.id)}" style="--hue:var(${t.hue})">${t.name}</button>`).join('') : '';
-  $('#bench').classList.toggle('no-pins', !BENCH.some(t => pinnedIds.includes(t.id) && !($('#paneStudy').dataset.layout === 'split' && t.id === 'notes')));
+  $('#moreRow').innerHTML = rest.length ? `<span class="small muted">未釘選　可在「設計與自訂」調整常用項目</span>` + rest.map(t => `<button class="chip${t.id === currentTool ? ' on' : ''}" data-tool="${t.id}" data-status="${toolStatusKind(t.id)}" style="--hue:var(${t.hue})">${t.name}</button>`).join('') : '';
+  $('#bench').classList.toggle('no-pins', !BENCH.some(t => pinnedIds.includes(t.id)));
+  if (typeof renderCustomPinChips === 'function') renderCustomPinChips();
   save('pins', JSON.stringify(pinnedIds));
 }
 $('#bench').addEventListener('click', e => {
-  const pin = e.target.closest('[data-pin]');
-  if (pin) { const id = pin.dataset.pin; pinnedIds = pinnedIds.includes(id) ? pinnedIds.filter(x => x !== id) : [...pinnedIds, id]; renderPins(); return; }
   const b = e.target.closest('[data-tool]'); if (b) selectTool(b.dataset.tool);
 });
 $('#benchTiles').addEventListener('keydown', e => { const t = e.target.closest('.tile'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selectTool(t.dataset.tool); } });

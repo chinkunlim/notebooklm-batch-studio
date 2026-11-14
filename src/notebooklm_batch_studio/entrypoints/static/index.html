@@ -374,9 +374,6 @@
           <article class="card bench blk" id="bench" data-arr="matrix"><button class="blk-grip" draggable="true" aria-label="拖曳移動這個區塊"><i class="icon-grip-horizontal"></i></button>
             <div class="card-head">
               <h2 class="h2" id="benchTitle">講義與學習產出物</h2>
-              <div class="seg" data-seg="arr">
-                <button data-value="matrix" class="on">全景矩陣</button><button data-value="vertical">垂直羅盤</button><button data-value="pinned">常用釘選</button><button data-value="triad">認知三階</button>
-              </div>
             </div>
             <div class="bench-body">
               <div>
@@ -603,9 +600,12 @@
             <div class="opt-cards" data-opt="arr">
               <button class="opt-card on" data-value="matrix"><b>全景矩陣</b><span>全部一次看完，點選直接展開</span></button>
               <button class="opt-card" data-value="vertical"><b>垂直羅盤</b><span>左側清單，右側內容</span></button>
-              <button class="opt-card" data-value="pinned"><b>常用釘選</b><span>只顯示你釘選的項目，點卡片右上角的圖釘即可增減</span></button>
+              <button class="opt-card" data-value="pinned"><b>常用釘選</b><span>只顯示你在下方勾選的常用項目</span></button>
               <button class="opt-card" data-value="triad"><b>認知三階</b><span>輸入、結構、提取三段</span></button>
             </div>
+            <div class="divider"></div>
+            <div class="field-label" style="margin-bottom:8px">常用釘選項目</div>
+            <div class="custom-pin-chips" id="customPinChips"></div>
           </article>
 
           <article class="card">

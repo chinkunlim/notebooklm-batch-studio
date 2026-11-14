@@ -149,3 +149,23 @@ document.addEventListener('click', e => {
     }
   });
 });
+
+/** Render the pin toggle chips inside User Settings (#view-custom). */
+function renderCustomPinChips() {
+  const host = document.getElementById('customPinChips');
+  if (!host || typeof order === 'undefined' || typeof BENCH === 'undefined') return;
+  host.innerHTML = order.map(id => {
+    const t = BENCH.find(x => x.id === id);
+    if (!t) return '';
+    const on = pinnedIds.includes(id);
+    return `<button type="button" class="custom-pin-chip${on ? ' on' : ''}" data-pin-opt="${id}" aria-pressed="${on}"><i class="icon-pin"></i><span>${t.name}</span></button>`;
+  }).join('');
+}
+
+document.addEventListener('click', e => {
+  const opt = e.target.closest('[data-pin-opt]');
+  if (!opt || typeof pinnedIds === 'undefined') return;
+  const id = opt.dataset.pinOpt;
+  pinnedIds = pinnedIds.includes(id) ? pinnedIds.filter(x => x !== id) : [...pinnedIds, id];
+  if (typeof renderPins === 'function') renderPins();
+});

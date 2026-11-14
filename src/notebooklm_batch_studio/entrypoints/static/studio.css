@@ -423,7 +423,7 @@ div.opt-card { cursor: pointer; }
 .study-side { position: sticky; top: var(--s4); }
 /* No inner scrollbars: a column only sticks while it fits the window */
 .no-stick { position: static !important; }
-.study[data-layout="stage"] #keypoints, .study[data-layout="split"] [data-tool="notes"] { display: none !important; }
+.study[data-layout="stage"] #keypoints { display: none !important; }
 
 /* Player (v4 turntable rebuilt); stacks vertically when narrow, side by side when wide */
 .player-wrap { container: player / inline-size; display: flex; flex-direction: column; gap: var(--s4); }
@@ -580,12 +580,12 @@ html[data-mode="light"] .well { background: #fff; box-shadow: 0 1px 2px rgba(0,0
   .bench[data-arr="vertical"] .bench-body { grid-template-columns: minmax(0, 1fr); }
   .bench[data-arr="vertical"] .bench-tiles { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--s2); }
 }
-/* Pins: every tile can be pinned; 常用釘選 shows only pinned tiles */
-.pin-btn { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--faint); opacity: 0; transition: opacity var(--dur-hover) var(--ease), color var(--dur-hover) var(--ease), background var(--dur-hover) var(--ease); }
-.pin-btn [class^="icon-"] { font-size: 14px; }
-.pin-btn:hover { background: var(--track); color: var(--ink); }
-.tile:hover .pin-btn, .tile:focus-within .pin-btn, .tile.pinned .pin-btn, .bench[data-arr="pinned"] .pin-btn { opacity: 1; }
-.tile.pinned .pin-btn { color: var(--primary); }
+/* Pins: configured in User Settings (#view-custom); 常用釘選 shows only pinned tiles */
+.pin-btn { display: none; }
+.custom-pin-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.custom-pin-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font-size: 13px; cursor: pointer; transition: background var(--dur-hover) var(--ease), color var(--dur-hover) var(--ease), border-color var(--dur-hover) var(--ease); }
+.custom-pin-chip:hover { color: var(--ink); border-color: var(--accent); }
+.custom-pin-chip.on { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
 .tile { cursor: pointer; }
 .tile-name { padding-right: 24px; }
 .more-row { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line); }
