@@ -77,7 +77,7 @@ function renderPins() {
     $('.pin-btn', t).setAttribute('aria-label', (on ? '取消釘選' : '釘選') + $('.tile-name', t).textContent);
   });
   const rest = order.map(id => BENCH.find(t => t.id === id)).filter(t => !pinnedIds.includes(t.id));
-  $('#moreRow').innerHTML = rest.length ? `<span class="small muted">未釘選　點卡片右上角的圖釘可以增減常用項目</span>` + rest.map(t => `<button class="chip${t.id === currentTool ? ' on' : ''}" data-tool="${t.id}" style="--hue:var(${t.hue})">${t.name}</button>`).join('') : '';
+  $('#moreRow').innerHTML = rest.length ? `<span class="small muted">未釘選　點卡片右上角的圖釘可以增減常用項目</span>` + rest.map(t => `<button class="chip${t.id === currentTool ? ' on' : ''}" data-tool="${t.id}" data-status="${toolStatusKind(t.id)}" style="--hue:var(${t.hue})">${t.name}</button>`).join('') : '';
   $('#bench').classList.toggle('no-pins', !BENCH.some(t => pinnedIds.includes(t.id) && !($('#paneStudy').dataset.layout === 'split' && t.id === 'notes')));
   save('pins', JSON.stringify(pinnedIds));
 }
@@ -148,9 +148,28 @@ function selectTool(id) {
   renderPins();
   requestAnimationFrame(refreshThumbs);
 }
-/** Write each item's status (generated, queued, missing) under its name. */
+/**
+ * Return status kind ('done' | 'running' | 'queued' | 'missing') for a workbench item.
+ * @param {string} id Workbench item id
+ * @returns {string} Status kind
+ */
+function toolStatusKind(id) {
+  if (typeof currentStudyCourse === 'undefined' || !currentStudyCourse) return 'done';
+  if (id === 'notes') return activeStudyLectureNo === null ? 'missing' : 'done';
+  if (id === 'tutor' || id === 'qa_notes') return 'done';
+  const lec = activeStudyLectureNo;
+  const wanted = (TOOL_TYPES[id] || []).map(t => (lec === null ? `course_${t}` : t));
+  const jobs = (currentStudyCourse.jobs || []).filter(j => wanted.includes(j.artifact_type) && (lec === null ? j.lecture_no === null : j.lecture_no === lec));
+  if (jobs.some(j => ['done', 'needs_review'].includes(j.status))) return 'done';
+  if (jobs.some(j => j.status === 'running')) return 'running';
+  if (jobs.some(j => ['pending', 'quota_wait'].includes(j.status))) return 'queued';
+  return 'missing';
+}
+
+/** Write each item's status (generated, queued, missing) under its name and update gray-out state. */
 function updateToolMeta() {
   $$('[data-meta]').forEach(el => { el.textContent = toolMeta(el.dataset.meta); });
+  $$('#bench [data-tool]').forEach(el => { el.setAttribute('data-status', toolStatusKind(el.dataset.tool)); });
 }
 
 /**
@@ -162,6 +181,7 @@ function onLectureChanged() {
   $('#crumbs').innerHTML = course
     ? `課程　/　${escHtml(course.code)} ${escHtml(course.name)}　/　<b>${lectureName(no)}${no !== null ? '　' + escHtml(lectureTopic(no)) : ''}</b>`
     : '課程';
+  if (typeof syncStudyLectureSwitcher === 'function') syncStudyLectureSwitcher();
   $('#readerEyebrow').textContent = `${lectureName(no)}　講義`;
   updateToolMeta();
   loadSideKeypoints();

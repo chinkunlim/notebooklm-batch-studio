@@ -415,6 +415,18 @@ class ArtifactOperationsMixin:
         return [_serialize_artifact(artifact) for artifact in artifacts]
 
     @_translate_errors
+    async def delete_artifact(self, notebook_id: str, artifact_id: str) -> None:
+        """Delete a remote artifact from Gemini Notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            artifact_id: Remote artifact identifier.
+        """
+        async with self._client() as client:
+            logger.info("Deleting remote artifact %s in notebook %s", artifact_id, notebook_id)
+            await client.artifacts.delete(notebook_id, artifact_id)
+
+    @_translate_errors
     async def download_artifact_by_kind(
         self, notebook_id: str, artifact_id: str, kind: str, output_path: str
     ) -> str:

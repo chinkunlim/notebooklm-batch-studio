@@ -568,6 +568,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-qa-drawer.js
 │       │   │   ├── studio-queue.js
 │       │   │   ├── studio-reader.js
+│       │   │   ├── studio-remote-artifacts.js
 │       │   │   ├── studio-settings.js
 │       │   │   ├── studio-shell.js
 │       │   │   ├── studio-start.js
@@ -661,6 +662,7 @@ notebooklm-batch-studio/
 │   ├── test_qa_notes_service.py
 │   ├── test_quota_and_limits.py
 │   ├── test_remaining_fixes.py
+│   ├── test_remote_artifacts.py
 │   ├── test_rename.py
 │   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py

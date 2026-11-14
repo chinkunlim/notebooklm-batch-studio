@@ -9,9 +9,10 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 from notebooklm_batch_studio.domain.models import GenerationOptions
+from notebooklm_batch_studio.domain.qa_notes import NotebookLMRemoteAdminProtocol
 
 
-class NotebookLMClientProtocol(Protocol):
+class NotebookLMClientProtocol(NotebookLMRemoteAdminProtocol, Protocol):
     """Abstract interface for Google Gemini Notebook operations and artifact generation.
 
     Every `generate_*` waits for completion and returns the artifact id; callers pass that id

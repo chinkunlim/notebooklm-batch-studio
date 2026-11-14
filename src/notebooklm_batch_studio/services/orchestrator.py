@@ -445,6 +445,15 @@ class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
         logger.info("Refined %d/%d prompts with Ollama for course %s", updated_count, len(jobs), course_code)
         return updated_count
 
+    def _sync_service(self) -> RemoteSyncService:
+        """Build a RemoteSyncService bound to current repos and output dir."""
+        return RemoteSyncService(
+            notebooklm_client=self.notebooklm_client,
+            course_repo=self.course_repo,
+            queue_repo=self.queue_repo,
+            output_base_dir=self.config.output_dir,
+        )
+
     async def sync_course_artifacts(self, course_code: str) -> dict[str, Any]:
         """Synchronize remote Gemini Notebook artifacts back to local storage and database.
 
@@ -454,10 +463,32 @@ class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
         Returns:
             Dictionary summary with count and synced item metadata.
         """
-        sync_service = RemoteSyncService(
-            notebooklm_client=self.notebooklm_client,
-            course_repo=self.course_repo,
-            queue_repo=self.queue_repo,
-            output_base_dir=self.config.output_dir,
+        return await self._sync_service().sync_course(course_code)
+
+    async def list_remote_artifacts(self, course_code: str) -> dict[str, Any]:
+        """List remote Gemini Notebook artifacts annotated with active local version info.
+
+        Args:
+            course_code: Course identifier.
+
+        Returns:
+            Dictionary with course metadata and annotated remote artifacts.
+        """
+        return await self._sync_service().list_remote_artifacts(course_code)
+
+    async def delete_remote_artifact(
+        self, course_code: str, artifact_id: str, delete_local: bool = False
+    ) -> dict[str, Any]:
+        """Delete a remote Gemini Notebook artifact and unlink/clean local job state.
+
+        Args:
+            course_code: Course identifier.
+            artifact_id: Remote artifact identifier.
+            delete_local: Whether to also delete the downloaded local file.
+
+        Returns:
+            Deletion summary dictionary.
+        """
+        return await self._sync_service().delete_remote_artifact(
+            course_code, artifact_id, delete_local=delete_local
         )
-        return await sync_service.sync_course(course_code)

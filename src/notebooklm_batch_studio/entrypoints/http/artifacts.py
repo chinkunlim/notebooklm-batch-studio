@@ -187,3 +187,64 @@ def view_artifact(code: str, file_path: str, request: Request) -> str:
     if target_path.suffix.lower() != ".md" or not target_path.is_file():
         raise HTTPException(status_code=415, detail="Only Markdown reports and mind maps can be viewed")
     return report_to_html(target_path.stem, target_path.read_text(encoding="utf-8"))
+
+
+@artifacts_router.get(
+    "/api/courses/{code}/remote-artifacts",
+    tags=["Artifacts"],
+    operation_id="list_remote_artifacts",
+)
+async def list_remote_artifacts_endpoint(code: str, request: Request) -> dict[str, Any]:
+    """List remote Gemini Notebook artifacts annotated with active local version info.
+
+    Args:
+        code: Course identifier.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Dictionary with course code, notebook_id, and annotated remote artifacts.
+
+    Raises:
+        HTTPException: 404 if course not found, 502 if remote query fails.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return await service.list_remote_artifacts(code)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Remote artifact listing failed: {exc}") from exc
+
+
+@artifacts_router.delete(
+    "/api/courses/{code}/remote-artifacts/{artifact_id}",
+    tags=["Artifacts"],
+    operation_id="delete_remote_artifact",
+)
+async def delete_remote_artifact_endpoint(
+    code: str,
+    artifact_id: str,
+    request: Request,
+    delete_local: bool = Query(default=False),
+) -> dict[str, Any]:
+    """Delete a remote Gemini Notebook artifact and optionally remove local output.
+
+    Args:
+        code: Course identifier.
+        artifact_id: Remote Gemini Notebook artifact identifier.
+        request: Incoming HTTP request context.
+        delete_local: Whether to also delete downloaded local files and mark job skipped.
+
+    Returns:
+        Deletion summary dictionary.
+
+    Raises:
+        HTTPException: 404 if course not found, 502 on remote deletion failure.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return await service.delete_remote_artifact(code, artifact_id, delete_local=delete_local)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Remote artifact deletion failed: {exc}") from exc

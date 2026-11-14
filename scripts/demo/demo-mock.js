@@ -340,6 +340,19 @@ function demoCourseRoute(code, rest, method, body, q) {
     demoNote('刪除來源');
     return demoJson({ code, deleted_source_id: decodeURIComponent(rest.slice(8)), unlinked_lectures: [] });
   }
+  if (rest === 'remote-artifacts') {
+    return demoJson({
+      code, course_code: code, notebook_id: `demo-${code}`,
+      artifacts: [
+        { id: 'art-demo-1', title: '[L01] Quiz 1 - Fundamentals', kind: 'quiz', in_use: true, is_latest_active: true, local_version: 2, lecture_no: 1, artifact_type: 'quiz_1' },
+        { id: 'art-demo-2', title: '[L01] Quiz 1 - Fundamentals (v1)', kind: 'quiz', in_use: true, is_latest_active: false, local_version: 1, lecture_no: 1, artifact_type: 'quiz_1' },
+      ],
+    });
+  }
+  if (rest.startsWith('remote-artifacts/') && method === 'DELETE') {
+    demoNote('刪除雲端產出物');
+    return demoJson({ course_code: code, deleted_artifact_id: decodeURIComponent(rest.slice(17)), affected_jobs: [] });
+  }
   if (method === 'POST') { demoNote('這個動作'); return demoJson({ ok: true, notebook_id: 'demo', upload_status: 'ready', updated_jobs_count: 0, remote_artifacts_found: 0, synced_count: 0 }); }
   return demoJson({ detail: 'not in demo' }, 404);
 }

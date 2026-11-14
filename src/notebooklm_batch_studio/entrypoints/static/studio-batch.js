@@ -333,6 +333,7 @@ async function viewCourseDetail(code, silent = false) {
     loadCourseOptions(code);
     loadArtifactSelection(code);
     if (typeof loadCourseSources === 'function') loadCourseSources(code);
+    if (typeof loadCourseRemoteArtifacts === 'function') loadCourseRemoteArtifacts(code);
   }
   try {
     const res = await fetch(`/api/courses/${code}`);
@@ -347,6 +348,7 @@ async function viewCourseDetail(code, silent = false) {
         if (openState.has(key)) d.open = openState.get(key);
       });
       if (typeof loadCourseSources === 'function') loadCourseSources(code);
+      if (typeof loadCourseRemoteArtifacts === 'function') loadCourseRemoteArtifacts(code);
     }
     document.getElementById('detailCourseActions').innerHTML = courseActionsHtml(code, data.paused);
     renderActiveJobs(data.jobs || [], code);

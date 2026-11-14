@@ -31,7 +31,10 @@ from notebooklm_batch_studio.entrypoints.mcp_fonts import register_font_tools
 from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
 from notebooklm_batch_studio.entrypoints.mcp_learning import register_learning_tools
 from notebooklm_batch_studio.entrypoints.mcp_preferences import register_preferences_tools
-from notebooklm_batch_studio.entrypoints.mcp_qa_notes import register_qa_notes_tools
+from notebooklm_batch_studio.entrypoints.mcp_qa_notes import (
+    register_qa_notes_tools,
+    register_remote_artifact_tools,
+)
 from notebooklm_batch_studio.entrypoints.mcp_studio_tools import register_settings_and_study_tools
 from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
 from notebooklm_batch_studio.services.font_service import FontService
@@ -469,6 +472,7 @@ def build_mcp_server(service: BatchStudioService | None = None, **services: Any)
         register_preferences_tools(mcp, resolved["preferences"])
     if resolved.get("qa_notes") is not None:
         register_qa_notes_tools(mcp, resolved["qa_notes"])
+    register_remote_artifact_tools(mcp, active_service)
     register_font_tools(mcp, resolved.get("fonts") or FontService(cfg.fonts_dir, GoogleFontsClient()))
     return mcp
 

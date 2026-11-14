@@ -387,6 +387,10 @@ class DummyStudioClient(NotebookLMClientProtocol):
         """Return empty remote artifact list for sync calls."""
         return []
 
+    async def delete_artifact(self, notebook_id: str, artifact_id: str) -> None:
+        """Record remote artifact deletion for offline tests."""
+        self.calls.append(f"delete_artifact:{notebook_id}:{artifact_id}")
+
     async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
         """Return dummy artifact id fallback."""
         return "art-latest-1"

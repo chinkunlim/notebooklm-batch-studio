@@ -272,3 +272,161 @@ class RemoteSyncService:
             if item is not None:
                 synced_items.append(item)
         return {"course_code": course_code, "synced_count": len(synced_items), "items": synced_items}
+
+    async def list_remote_artifacts(self, course_code: str) -> dict[str, Any]:
+        """List remote artifacts for a course and annotate which local versions are in use.
+
+        Args:
+            course_code: Course identifier.
+
+        Returns:
+            Dictionary with course metadata and annotated remote artifacts.
+        """
+        course = self.course_repo.get_course(course_code)
+        if not course:
+            raise ValueError(f"Course not found: {course_code}")
+        if not course.notebook_id:
+            return {"course_code": course_code, "notebook_id": None, "artifacts": []}
+        remote_artifacts = await self.client.list_artifacts(course.notebook_id)
+        existing_jobs = self.queue_repo.list_jobs(course_code=course_code)
+        by_remote_id, latest_ids = _index_local_artifact_jobs(existing_jobs)
+        annotated = [_annotate_remote_artifact(art, by_remote_id, latest_ids) for art in remote_artifacts]
+        return {"course_code": course_code, "notebook_id": course.notebook_id, "artifacts": annotated}
+
+    async def delete_remote_artifact(
+        self, course_code: str, artifact_id: str, delete_local: bool = False
+    ) -> dict[str, Any]:
+        """Delete a remote artifact and optionally unlink or remove its local job output.
+
+        Args:
+            course_code: Course identifier.
+            artifact_id: Remote Gemini Notebook artifact identifier.
+            delete_local: Whether to also remove the downloaded local file and mark job skipped.
+
+        Returns:
+            Deletion summary dictionary.
+        """
+        course = self.course_repo.get_course(course_code)
+        if not course:
+            raise ValueError(f"Course not found: {course_code}")
+        if not course.notebook_id:
+            raise ValueError(f"Course {course_code} has no linked Gemini Notebook notebook")
+        await self.client.delete_artifact(course.notebook_id, artifact_id)
+        affected_jobs = self._cleanup_deleted_artifact_jobs(course_code, artifact_id, delete_local)
+        logger.info(
+            "Deleted remote artifact %s for %s (affected=%s)", artifact_id, course_code, affected_jobs
+        )
+        return {
+            "course_code": course_code,
+            "deleted_artifact_id": artifact_id,
+            "affected_jobs": affected_jobs,
+        }
+
+    def _cleanup_deleted_artifact_jobs(
+        self, course_code: str, artifact_id: str, delete_local: bool
+    ) -> list[str]:
+        """Unlink local jobs pointing to a deleted remote artifact and optionally delete files.
+
+        Args:
+            course_code: Course identifier.
+            artifact_id: Deleted remote artifact id.
+            delete_local: Remove local output file and mark job failed when True.
+
+        Returns:
+            List of affected local job ids.
+        """
+        affected: list[str] = []
+        for job in self.queue_repo.list_jobs(course_code=course_code):
+            if artifact_id not in _job_remote_ids(job):
+                continue
+            remaining = [aid for aid in job.artifact_ids if aid != artifact_id]
+            self.queue_repo.record_artifact_ids(job.id, remaining)
+            if delete_local and job.output_file:
+                _remove_local_output(self.output_base_dir, course_code, job.output_file)
+                self.queue_repo.fail_job(job.id, "Deleted from remote and local", max_attempts=0)
+            affected.append(job.id)
+        return affected
+
+
+def _job_remote_ids(job: ArtifactJob) -> list[str]:
+    """Return all remote artifact IDs associated with a local job.
+
+    Args:
+        job: ArtifactJob entity.
+
+    Returns:
+        List of remote artifact ID strings.
+    """
+    ids = list(job.artifact_ids or [])
+    if job.source_origin == "remote_sync" and job.custom_prompt and "[" in job.custom_prompt:
+        try:
+            ids.append(job.custom_prompt.split("[", 1)[1].split("]", 1)[0])
+        except IndexError:
+            pass
+    return ids
+
+
+def _index_local_artifact_jobs(jobs: list[ArtifactJob]) -> tuple[dict[str, ArtifactJob], set[str]]:
+    """Index local jobs by remote artifact id and find latest active remote ids per slot.
+
+    Args:
+        jobs: All ArtifactJob rows for a course.
+
+    Returns:
+        Tuple of (remote_id -> job mapping, set of latest active remote_ids).
+    """
+    by_remote: dict[str, ArtifactJob] = {}
+    latest_by_slot: dict[tuple[int | None, str], ArtifactJob] = {}
+    active_statuses = {JobStatus.DONE, JobStatus.NEEDS_REVIEW}
+    for job in jobs:
+        r_ids = _job_remote_ids(job)
+        for rid in r_ids:
+            by_remote[rid] = job
+        if job.status in active_statuses and r_ids:
+            slot = (job.lecture_no, job.artifact_type.value)
+            prev = latest_by_slot.get(slot)
+            if prev is None or job.version > prev.version:
+                latest_by_slot[slot] = job
+    latest_ids = {rid for j in latest_by_slot.values() for rid in _job_remote_ids(j)}
+    return by_remote, latest_ids
+
+
+def _annotate_remote_artifact(
+    art: dict[str, Any], by_remote: dict[str, ArtifactJob], latest_ids: set[str]
+) -> dict[str, Any]:
+    """Attach local usage metadata to a remote artifact summary dictionary.
+
+    Args:
+        art: Remote artifact summary from client.
+        by_remote: Mapping of remote_artifact_id to local ArtifactJob.
+        latest_ids: Set of remote_artifact_ids currently active on the study page.
+
+    Returns:
+        Enriched remote artifact dictionary.
+    """
+    art_id = str(art.get("id") or "")
+    job = by_remote.get(art_id)
+    in_use = bool(job and job.status in {JobStatus.DONE, JobStatus.NEEDS_REVIEW})
+    return {
+        **art,
+        "in_use": in_use,
+        "is_latest_active": art_id in latest_ids,
+        "local_job_id": job.id if job else None,
+        "local_version": job.version if job else None,
+        "lecture_no": job.lecture_no if job else None,
+        "artifact_type": job.artifact_type.value if job else None,
+    }
+
+
+def _remove_local_output(output_base_dir: Path, course_code: str, rel_path: str) -> None:
+    """Safely remove a local artifact output file inside the course output directory.
+
+    Args:
+        output_base_dir: Base output directory containing `courses/`.
+        course_code: Course identifier.
+        rel_path: Course-relative output path.
+    """
+    course_dir = (output_base_dir / "courses" / course_code).resolve()
+    target = (course_dir / rel_path).resolve()
+    if target.is_relative_to(course_dir) and target.is_file():
+        target.unlink()

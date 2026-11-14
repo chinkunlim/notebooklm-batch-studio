@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from notebooklm_batch_studio.services.qa_notes_service import QANotesService
 
@@ -130,3 +130,44 @@ def register_qa_notes_tools(mcp: MCPServer, qa_notes: QANotesService) -> None:
     _register_qa_read_tools(mcp, qa_notes)
     _register_save_note_tool(mcp, qa_notes)
     _register_push_note_tool(mcp, qa_notes)
+
+
+def register_remote_artifact_tools(mcp: MCPServer, service: Any) -> None:
+    """Register remote Gemini Notebook artifact listing and deletion MCP tools.
+
+    Args:
+        mcp: FastMCP server instance.
+        service: BatchStudioService instance.
+    """
+
+    @mcp.tool()
+    async def list_remote_artifacts(course_code: str) -> str:
+        """List remote Gemini Notebook artifacts and mark which version is currently active locally.
+
+        Args:
+            course_code: Course identifier (e.g. 'BIO101').
+
+        Returns:
+            JSON string listing remote artifacts with `in_use` and `is_latest_active` flags.
+        """
+        return json.dumps(await service.list_remote_artifacts(course_code), ensure_ascii=False, indent=2)
+
+    @mcp.tool()
+    async def delete_remote_artifact(
+        course_code: str, artifact_id: str, delete_local: bool = False, confirm: bool = False
+    ) -> str:
+        """Delete a remote Gemini Notebook artifact (requires confirm=True).
+
+        Args:
+            course_code: Course identifier (e.g. 'BIO101').
+            artifact_id: Remote artifact identifier.
+            delete_local: Whether to also delete the local downloaded file.
+            confirm: Must be set to True to execute deletion.
+
+        Returns:
+            JSON string with deletion summary or confirmation prompt.
+        """
+        if not confirm:
+            return json.dumps({"requires_confirmation": True, "artifact_id": artifact_id}, ensure_ascii=False)
+        res = await service.delete_remote_artifact(course_code, artifact_id, delete_local=delete_local)
+        return json.dumps(res, ensure_ascii=False, indent=2)

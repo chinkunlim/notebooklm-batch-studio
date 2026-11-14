@@ -111,3 +111,16 @@ class QANoteRepositoryProtocol(Protocol):
             True if deleted, False otherwise.
         """
         ...
+
+
+class NotebookLMRemoteAdminProtocol(Protocol):
+    """Protocol extension for remote artifact administration."""
+
+    async def delete_artifact(self, notebook_id: str, artifact_id: str) -> None:
+        """Delete a remote artifact from a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            artifact_id: Remote artifact identifier.
+        """
+        ...

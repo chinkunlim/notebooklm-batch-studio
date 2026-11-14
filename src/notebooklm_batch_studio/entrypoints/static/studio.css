@@ -1208,3 +1208,7 @@ img, iframe, video, audio { max-width: 100%; }
 .qa-note-card { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
 .qa-note-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .qa-note-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-muted, #666); }
+[data-tool][data-status="missing"] { opacity: .46; filter: grayscale(.85); transition: opacity .15s ease; }
+[data-tool][data-status="missing"]:hover { opacity: .78; }
+.study-lec-switch { display: inline-flex; align-items: center; gap: 4px; }
+.study-lec-switch select { font-size: 13px; padding: 4px 8px; max-width: 240px; }

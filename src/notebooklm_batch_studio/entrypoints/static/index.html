@@ -215,7 +215,14 @@
       <!-- ============ 研讀工作室 ============ -->
       <section class="view lg" id="view-studio">
         <div class="subbar">
-          <div class="crumbs" id="crumbs">課程</div>
+          <div class="row" style="gap:10px;flex-wrap:wrap;min-width:0;flex:1">
+            <div class="crumbs" id="crumbs">課程</div>
+            <div class="study-lec-switch" id="studyLectureSwitcher">
+              <button type="button" class="btn btn-ghost btn-sm" id="studyPrevLecBtn" onclick="stepStudyLecture(-1)" title="上一講">‹</button>
+              <select id="studyLectureSelect" class="text-input" aria-label="切換研讀章節" onchange="jumpToStudyLecture(this.value)"></select>
+              <button type="button" class="btn btn-ghost btn-sm" id="studyNextLecBtn" onclick="stepStudyLecture(1)" title="下一講">›</button>
+            </div>
+          </div>
           <div class="row" style="flex-wrap:wrap">
             <button class="btn btn-ghost pomodoro" id="btnPomodoro" title="番茄鐘：開始專注，計時會收進側欄">專注 25:00</button>
             <div class="seg" data-seg="layout"><button data-value="stage" class="on">主舞台</button><button data-value="split">雙欄</button><button data-value="stack">上下</button></div>
@@ -434,6 +441,10 @@
               <details class="sec" id="detailSourcesBox" open>
                 <summary><span>筆記本來源管理</span><span class="sec-sum" id="detailSourcesSummary">查看 Gemini Notebook 來源、上載或刪除 PDF</span><i class="icon-chevron-down"></i></summary>
                 <div class="sec-body" id="detailSources"><p class="loading-line">載入中…</p></div>
+              </details>
+              <details class="sec" id="detailRemoteArtifactsBox">
+                <summary><span>雲端產出物管理</span><span class="sec-sum" id="detailRemoteArtifactsSummary">查看 Gemini Notebook 產出物、辨識目前使用版本與安全刪除</span><i class="icon-chevron-down"></i></summary>
+                <div class="sec-body" id="detailRemoteArtifacts"><p class="loading-line">載入中…</p></div>
               </details>
               <details class="sec" id="detailJobsBox" open>
                 <summary><span>生成項目</span><span class="sec-sum">依講次分組，每 15 秒自動更新</span><i class="icon-chevron-down"></i></summary>
@@ -817,6 +828,7 @@
 <script src="/static/studio-learning.js"></script>
 <script src="/static/studio-qa-drawer.js"></script>
 <script src="/static/studio-notes-tab.js"></script>
+<script src="/static/studio-remote-artifacts.js"></script>
 <script src="/static/studio-shell.js"></script>
 <script src="/static/studio-nav.js"></script>
 <script src="/static/studio-player.js"></script>

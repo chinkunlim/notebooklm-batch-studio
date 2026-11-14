@@ -427,3 +427,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadQuiz = window.loadQuizForChapter;
   window.loadQuizForChapter = variant => (variant === 'mixed_review' ? startMixedReview() : loadQuiz(variant));
 });
+
+/**
+ * Populate the inline lecture switcher dropdown in the Study view.
+ * @returns {void}
+ */
+function syncStudyLectureSwitcher() {
+  const select = document.getElementById('studyLectureSelect');
+  if (!select) return;
+  const course = typeof currentStudyCourse !== 'undefined' ? currentStudyCourse : null;
+  if (!course) { select.innerHTML = ''; return; }
+  const opts = ['<option value="all">全課程總覽</option>'];
+  (course.lectures || []).forEach(l => {
+    const label = `L${String(l.no).padStart(2, '0')} ${l.topic || l.title || ''}`.trim();
+    opts.push(`<option value="${l.no}">${escHtml(label)}</option>`);
+  });
+  select.innerHTML = opts.join('');
+  select.value = activeStudyLectureNo === null ? 'all' : String(activeStudyLectureNo);
+}
+
+/**
+ * Jump directly to a chosen lecture number or 'all' from the inline switcher.
+ * @param {string} value 'all' or numeric lecture number
+ * @returns {void}
+ */
+function jumpToStudyLecture(value) {
+  if (typeof selectStudyLecture !== 'function') return;
+  selectStudyLecture(value === 'all' ? null : Number(value));
+}
+
+/**
+ * Step to the previous or next lecture in the active course.
+ * @param {number} delta -1 for previous, +1 for next
+ * @returns {void}
+ */
+function stepStudyLecture(delta) {
+  const course = typeof currentStudyCourse !== 'undefined' ? currentStudyCourse : null;
+  if (!course || !course.lectures?.length || typeof selectStudyLecture !== 'function') return;
+  const nos = [null, ...course.lectures.map(l => l.no)];
+  const idx = nos.indexOf(activeStudyLectureNo);
+  const nextIdx = Math.max(0, Math.min(nos.length - 1, (idx === -1 ? 0 : idx) + delta));
+  selectStudyLecture(nos[nextIdx]);
+}
