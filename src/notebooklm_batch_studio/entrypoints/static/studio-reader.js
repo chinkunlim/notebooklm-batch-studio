@@ -356,9 +356,12 @@ function jumpToPoint(i) {
   const guess = p.page ? Math.max(1, Math.min(total, p.page - offset)) : 1;
   const page = document.getElementById(`readerPage-${p.foundOn || guess}`);
   if (!page) return;
-  page.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const target = page.querySelector(`[data-kp="${i}"]`);
+  (target || page).scrollIntoView({ behavior: 'smooth', block: target ? 'center' : 'start' });
   setTimeout(() => {
-    page.querySelectorAll(`[data-kp="${i}"]`).forEach(el => {
+    const els = page.querySelectorAll(`[data-kp="${i}"]`);
+    if (!target && els.length) els[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    els.forEach(el => {
       el.classList.remove('kp-flash');
       void el.offsetWidth;  // restart the animation
       el.classList.add('kp-flash');
