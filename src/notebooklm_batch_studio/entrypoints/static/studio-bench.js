@@ -282,6 +282,7 @@ function applyLayout(v) {
   else selectTool(currentTool === 'report' ? 'notes' : currentTool);
   renderPins();
   applyColumns($('#paneStudy'));
+  if (typeof switchStudySidePane === 'function') switchStudySidePane();
   updateMini();
   requestAnimationFrame(() => { sizeCanvases(); refreshThumbs(); updateSticky(); });
 }

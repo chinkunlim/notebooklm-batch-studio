@@ -468,23 +468,20 @@ function initStudyStickyWheel() {
  * @returns {void}
  */
 function switchStudySidePane(v) {
+  const mode = v || document.querySelector('[data-seg="studioPane"] .on')?.dataset.v || 'study';
   const study = document.getElementById('paneStudy'), courses = document.getElementById('paneCourses'), side = document.getElementById('studySide');
+  let host = document.getElementById('sideCatalogHost');
   if (study && side && study.dataset.layout === 'split') {
-    let host = document.getElementById('sideCatalogHost');
-    if (!host) {
-      host = document.createElement('div');
-      host.id = 'sideCatalogHost';
-      host.className = 'side-catalog-host';
-      side.appendChild(host);
-    }
+    if (!host) { host = Object.assign(document.createElement('div'), { id: 'sideCatalogHost', className: 'side-catalog-host' }); side.appendChild(host); }
     if (courses && !host.children.length) Array.from(courses.children).forEach(ch => host.appendChild(ch));
     if (courses) courses.hidden = true;
     study.hidden = false;
-    study.dataset.sideMode = v;
-    if (v === 'courses' && study.classList.contains('side-collapsed')) study.querySelector(':scope > .col-resizer .col-toggle')?.click();
+    study.dataset.sideMode = mode;
+    if (mode === 'courses' && study.classList.contains('side-collapsed')) study.querySelector(':scope > .col-resizer .col-toggle')?.click();
   } else {
-    if (courses) courses.hidden = v !== 'courses';
-    if (study) study.hidden = v !== 'study';
+    if (courses && host && host.children.length) Array.from(host.children).forEach(ch => courses.appendChild(ch));
+    if (study) { delete study.dataset.sideMode; study.hidden = mode !== 'study'; }
+    if (courses) courses.hidden = mode !== 'courses';
   }
   if (typeof updateMini === 'function') updateMini();
   if (typeof sizeCanvases === 'function') requestAnimationFrame(sizeCanvases);
