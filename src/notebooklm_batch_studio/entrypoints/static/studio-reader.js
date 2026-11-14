@@ -219,9 +219,11 @@ async function layoutPages(token) {
     });
   }, { root: pages, rootMargin: '600px 0px' });
   pages.querySelectorAll('.reader-page').forEach(el => reader.observer.observe(el));
-  if (typeof syncActivePageComments === 'function') {
+  if (typeof syncActivePageComments === 'function' && !pages._scrollHooked) {
+    pages._scrollHooked = true;
     pages.addEventListener('scroll', () => requestAnimationFrame(() => syncActivePageComments()), { passive: true });
   }
+  watchReaderResize(pages);
   if (typeof updateReaderPageTracking === 'function' && currentStudyCourse) {
     const code = currentStudyCourse.code;
     const no = activeStudyLectureNo;
@@ -231,6 +233,28 @@ async function layoutPages(token) {
     }, { root: pages, threshold: [0.35, 0.65] });
     pages.querySelectorAll('.reader-page').forEach(el => reader.pageObserver.observe(el));
   }
+}
+
+/**
+ * Re-layout PDF pages and textLayer highlights whenever #readerPages width changes (e.g. fullscreen or column resize).
+ * @param {HTMLElement} pages Scroll container element (#readerPages)
+ */
+function watchReaderResize(pages) {
+  if (pages._resizeObs || typeof ResizeObserver !== 'function') return;
+  pages._lastWidth = pages.clientWidth;
+  let timer = 0;
+  pages._resizeObs = new ResizeObserver(() => {
+    const w = pages.clientWidth;
+    if (!w || !reader.doc || Math.abs(w - (pages._lastWidth || 0)) < 6) return;
+    pages._lastWidth = w;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!reader.doc || !pages.clientWidth) return;
+      const frac = pages.scrollHeight > 0 ? pages.scrollTop / pages.scrollHeight : 0;
+      layoutPages(++reader.token).then(() => { pages.scrollTop = frac * pages.scrollHeight; });
+    }, 120);
+  });
+  pages._resizeObs.observe(pages);
 }
 
 /**
