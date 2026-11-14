@@ -40,12 +40,14 @@ async function loadCourseNotes() {
 function renderQaNotesPanel() {
   const container = document.getElementById('qaNotesContainer');
   if (!container) return;
+  const head = document.getElementById('qaNotesHead');
   const toolbar = renderNotesToolbar();
+  if (head) head.innerHTML = toolbar;
   const tagCloud = renderNotesTagCloud();
   const cards = qaNotesState.notes.length
     ? qaNotesState.notes.map(n => renderOneNoteCard(n)).join('')
     : '<div class="empty-state">目前沒有符合條件的筆記。可按 <b>⌘J</b> 提問後一鍵整理，或在測驗解析點「📥 收錄為問答筆記」。</div>';
-  container.innerHTML = `${toolbar}${tagCloud}<div id="qaNotesList">${cards}</div>`;
+  container.innerHTML = `${head ? '' : toolbar}${tagCloud}<div id="qaNotesList">${cards}</div>`;
 }
 
 /**
@@ -56,14 +58,14 @@ function renderNotesToolbar() {
   const count = qaNotesState.selectedIds.size;
   return `<div class="qa-notes-toolbar">
     <input type="text" id="qaNotesSearchInput" class="text-input" value="${escHtml(qaNotesState.tagFilter)}" placeholder="搜尋標籤或關鍵字（如 進化論、L03）" onkeydown="if(event.key==='Enter')applyNotesSearch()">
-    <button type="button" class="btn btn-soft btn-sm" onclick="applyNotesSearch()">搜尋</button>
-    <label class="row small" style="gap:4px"><input type="checkbox" ${qaNotesState.crossCourse ? 'checked' : ''} onchange="toggleNotesCrossCourse(this.checked)"> 跨課程搜尋</label>
-    <select class="text-input" style="font-size:13px;padding:4px 8px" onchange="changeNotesMasteryFilter(this.value)">
+    <button type="button" class="reader-pill-btn" onclick="applyNotesSearch()">搜尋</button>
+    <label class="qa-cross-label"><input type="checkbox" ${qaNotesState.crossCourse ? 'checked' : ''} onchange="toggleNotesCrossCourse(this.checked)"> 跨課程</label>
+    <select class="text-input" onchange="changeNotesMasteryFilter(this.value)">
       <option value="" ${qaNotesState.masteryFilter === '' ? 'selected' : ''}>全部掌握度</option>
       <option value="needs_review" ${qaNotesState.masteryFilter === 'needs_review' ? 'selected' : ''}>待加強</option>
       <option value="mastered" ${qaNotesState.masteryFilter === 'mastered' ? 'selected' : ''}>已搞懂</option>
     </select>
-    <button type="button" class="btn btn-primary btn-sm" ${count ? '' : 'disabled'} onclick="bundleSelectedNotesToSource()">📦 打包勾選 (${count}) 回灌來源</button>
+    <button type="button" class="reader-pill-btn" ${count ? '' : 'disabled'} onclick="bundleSelectedNotesToSource()">📦 打包勾選 (${count})</button>
   </div>`;
 }
 

@@ -313,13 +313,12 @@ async function loadTutor() {
   const box = document.getElementById('tutorContainer');
   if (!currentStudyCourse) return;
   const lec = activeStudyLectureNo;
+  const headNote = document.getElementById('tutorHeadNote');
+  if (headNote) headNote.textContent = `家教不直接給答案，而是用問題引導你想通（只根據這${lec === null ? '門課' : '一講'}的講義）。每則訊息會用到一次 Gemini Notebook 對話。`;
   box.innerHTML = `
-    <div class="tutor-head"><div><h3>AI 家教　·　${lecLabel(lec)}</h3>
-      <p class="muted small">家教不直接給答案，而是一步步用問題引導你想通（只根據這${lec === null ? '門課' : '一講'}的講義）。每則訊息會用到一次 Gemini Notebook 對話。</p></div>
-      <button class="btn btn-ghost btn-sm" onclick="clearTutor()">重新開始</button></div>
     <div id="tutorLog" class="tutor-log">載入中…</div>
     <div class="tutor-suggest">
-      ${['考考我這一講最核心的概念', '我不懂這一講在說什麼，請從頭引導我', '幫我找出我可能誤解的地方'].map(t => `<button type="button" class="chip" onclick="sendTutor('${t}')">${t}</button>`).join('')}
+      ${['考考我這一講最核心的概念', '我不懂這一講在說什麼，請從頭引導我', '幫我找出我可能誤解的地方'].map(t => `<button type="button" class="reader-pill-btn" onclick="sendTutor('${t}')">${t}</button>`).join('')}
     </div>
     <form class="tutor-input" onsubmit="event.preventDefault(); sendTutor();">
       <textarea id="tutorText" class="text-area" rows="2" placeholder="輸入你的想法或問題（⌘↵ 送出）" onkeydown="if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); sendTutor(); }"></textarea>

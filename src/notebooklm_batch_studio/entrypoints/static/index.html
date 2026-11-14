@@ -404,8 +404,14 @@
             <div class="panel-head"><div class="chips" id="reportKindButtons"></div><div class="report-meta-bar" id="reportMetaBar"></div></div>
             <div id="reportContentContainer"></div>
           </div>
-          <div id="panelTutor"><div id="tutorContainer"></div></div>
-          <div id="panelQaNotes"><div id="qaNotesContainer"></div></div>
+          <div id="panelTutor">
+            <div class="panel-head"><span class="panel-note" id="tutorHeadNote">家教不直接給答案，而是用問題引導你想通。</span><button type="button" class="reader-pill-btn" onclick="clearTutor()">重新開始</button></div>
+            <div id="tutorContainer"></div>
+          </div>
+          <div id="panelQaNotes">
+            <div class="panel-head" id="qaNotesHead"></div>
+            <div id="qaNotesContainer"></div>
+          </div>
         </div>
       </section>
 

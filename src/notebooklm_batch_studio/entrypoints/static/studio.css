@@ -928,7 +928,7 @@ img, iframe, video, audio { max-width: 100%; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s4); }
 .panel-note { font-size: 12.5px; color: var(--faint); }
 .report-meta { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-bottom: var(--s3); }
-.report-frame { width: 100%; height: 72vh; border: 0; border-radius: var(--radius-m); background: #fff; display: block; }
+.report-frame { width: 100%; height: 72vh; border: 0; border-radius: var(--radius-m); background: transparent; display: block; }
 .report-img { max-width: 100%; border-radius: var(--radius-m); background: #fff; display: block; }
 .report-video { width: 100%; border-radius: var(--radius-m); background: #000; display: block; }
 .pomodoro { font-variant-numeric: tabular-nums; }
@@ -1391,6 +1391,16 @@ img, iframe, video, audio { max-width: 100%; }
 .study[data-layout="split"] #splitStage .panel-head .chips,
 .study[data-layout="split"] #splitStage .panel-head .panel-note { flex-wrap: nowrap; white-space: nowrap; }
 .study[data-layout="split"] #splitStage .panel-head .panel-note { overflow: hidden; text-overflow: ellipsis; }
+.study[data-layout="split"] #splitStage .panel-head .qa-notes-toolbar {
+  display: flex; align-items: center; gap: 6px; width: 100%; flex-wrap: nowrap; margin: 0;
+}
+.study[data-layout="split"] #splitStage .panel-head .qa-notes-toolbar .text-input {
+  height: 32px; padding: 0 10px; font-size: 12px; border-radius: 999px; width: auto; min-width: 140px;
+}
+.study[data-layout="split"] #splitStage .panel-head .qa-notes-toolbar #qaNotesSearchInput { flex: 1; min-width: 160px; }
+.study[data-layout="split"] #splitStage .panel-head .qa-notes-toolbar .qa-cross-label {
+  font-size: 12px; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+}
 .report-meta-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: nowrap; flex: none; }
 .report-meta-bar a.reader-pill-btn { text-decoration: none; white-space: nowrap; }
 .study[data-layout="split"] #splitStage #reportContentContainer,
