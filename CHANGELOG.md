@@ -119,6 +119,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): scope study sticky behavior exclusively to wheel scrolling over #readerCard (by `@antigravity`)
 - fix(ui): enforce 12px sticky clamp across entire #paneStudy and scrollbar while #view-study.on (by `@antigravity`)
 - fix(ui): handle study sticky wheel across entire view and prevent non-scrollable bounce (by `@antigravity`)
+- fix(ui): style keypoint header actions as pill buttons and remove document-level non-passive wheel listener (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

@@ -440,14 +440,12 @@ function initStudyStickyWheel() {
   const pane = document.getElementById('paneStudy');
   if (!pane || pane.dataset.stickyWheelHooked) return;
   pane.dataset.stickyWheelHooked = '1';
-  document.addEventListener('wheel', e => {
-    if (!document.getElementById('view-study')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
+  pane.addEventListener('wheel', e => {
+    if (pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
     if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
     const top = pane.getBoundingClientRect().top;
-    if (e.deltaY > 0) {
-      if (top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); }
-      else if (!canInnerScroll(e.target, 1)) e.preventDefault();
-    } else if (e.deltaY < 0 && !canInnerScroll(e.target, -1) && window.scrollY > 0) {
+    if (e.deltaY > 0 && top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); return; }
+    if (e.deltaY < 0 && !canInnerScroll(e.target, -1) && window.scrollY > 0) {
       e.preventDefault(); window.scrollBy(0, e.deltaY);
     }
   }, { passive: false });
