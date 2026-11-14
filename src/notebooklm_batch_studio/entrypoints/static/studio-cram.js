@@ -209,6 +209,21 @@ function guideLabelFor(el) {
 }
 
 /**
+ * Check whether an element belongs to the active page and is visibly rendered in the viewport.
+ * @param {Element} el Candidate DOM element
+ * @returns {boolean} True when visible on the active view
+ */
+function isGuideElementVisible(el) {
+  if (el.closest('#layoutGuideHud,#layoutGuideLayer,.view:not(.on),[hidden],dialog:not([open]),.qa-drawer:not(.open),.focus-pop:not(.open),.speed-menu:not(.open)')) return false;
+  if (el.closest('.cp-pop') && !el.closest('.course-pick.open')) return false;
+  if (el.closest('.lec-pop') && !el.closest('.lec-pick.open')) return false;
+  const st = getComputedStyle(el);
+  if (st.display === 'none' || st.visibility === 'hidden' || parseFloat(st.opacity) < 0.05) return false;
+  const r = el.getBoundingClientRect();
+  return r.width > 6 && r.height > 6 && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+}
+
+/**
  * Render detailed bounding boxes and top-left element labels when Layout Guides are active.
  * @returns {void}
  */
@@ -223,11 +238,7 @@ function renderLayoutGuides() {
     app.appendChild(layer);
   }
   const sel = '.dock,.topbar,.subbar,.resizable,.col,.gutter,.card,#cramPanel,.seg,.study-lec-switch,.reader-bar,.reader-layout,#keyPointList,#readerPages,button,select,input,.tile,.dock-btn';
-  const els = [...document.querySelectorAll(sel)].filter(el => {
-    if (el.closest('#layoutGuideHud,#layoutGuideLayer')) return false;
-    const r = el.getBoundingClientRect();
-    return r.width > 6 && r.height > 6 && r.bottom > 0 && r.top < window.innerHeight;
-  });
+  const els = [...document.querySelectorAll(sel)].filter(isGuideElementVisible);
   const colors = { button: '#db2777', select: '#9333ea', input: '#9333ea', aside: '#2563eb', header: '#e11d48', article: '#0284c7' };
   const placed = [];
   layer.innerHTML = els.map(el => {

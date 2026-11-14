@@ -94,6 +94,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): highlight layout guide labels whenever pointer is anywhere inside box bounds (by `@antigravity`)
 - fix(ui,reader): resolve ISSUE-039 and ISSUE-040 focus dock, subbar, cram panel, layout collapse, and PDF reader UX (by `@antigravity`)
 - fix(ui,reader): lock menu scroll, fix non-blocking PDF load, align exit icon, split-only collapse and equal height (by `@antigravity`)
+- fix(ui): restrict layout guide tags to visibly rendered elements on active page (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
