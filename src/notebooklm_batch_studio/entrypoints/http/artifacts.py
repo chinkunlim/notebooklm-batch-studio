@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from notebooklm_batch_studio.entrypoints.schemas import (
     GenerateScopedArtifactRequest,
     ReviseSlideRequest,
 )
+from notebooklm_batch_studio.services.converters.mindmap_converter import mindmap_to_html
 from notebooklm_batch_studio.services.converters.report_converter import report_to_html
 from notebooklm_batch_studio.services.job_views import NEEDS_REVIEW_PREFIX
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
@@ -190,6 +192,11 @@ def view_artifact(code: str, file_path: str, request: Request) -> str:
     """
     target_path = _resolve_artifact_path(request.app.state.config, code, file_path)
     if target_path.suffix.lower() in {".opml", ".json"}:
+        json_path = target_path.with_suffix(".json")
+        if json_path.is_file():
+            tree_data = json.loads(json_path.read_text(encoding="utf-8"))
+            if isinstance(tree_data, dict):
+                return mindmap_to_html(json_path.stem, tree_data)
         target_path = target_path.with_suffix(".md")
     if target_path.suffix.lower() != ".md" or not target_path.is_file():
         raise HTTPException(status_code=415, detail="Only Markdown reports and mind maps can be viewed")

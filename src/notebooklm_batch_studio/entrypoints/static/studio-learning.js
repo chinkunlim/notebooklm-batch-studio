@@ -417,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
   hideChoices = prefLoad('hideChoices', '0') === '1';
   runAfter('loadTodayPanel', renderMemoryPanel);
   runAfter('loadFlashcardsViewer', addRecallBox);
+  runAfter('renderFlashcard', addRecallBox);
   runAfter('renderQuizQuestions', async () => {
     addQuizTools();
     addConfidenceButtons();

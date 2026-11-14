@@ -326,6 +326,35 @@ async function loadQuizForChapter(variant) {
   await fetchAndRenderQuizVariant(container, variant);
 }
 
+let currentQuizIndex = 0;
+let quizSubmitted = false;
+let quizAutoTimer = null;
+
+/**
+ * Show only one question card at index idx and update pager buttons.
+ * @param {number} idx Target 0-based question index
+ */
+function showQuizQuestion(idx) {
+  const cards = [...document.querySelectorAll('#quizContainer .q-card')];
+  if (!cards.length) return;
+  currentQuizIndex = Math.max(0, Math.min(cards.length - 1, idx));
+  cards.forEach((c, i) => { c.hidden = i !== currentQuizIndex; });
+  const meta = document.getElementById('quizPagerMeta');
+  if (meta) meta.textContent = `第 ${currentQuizIndex + 1} / ${cards.length} 題`;
+  const prev = document.getElementById('quizPrevBtn');
+  const next = document.getElementById('quizNextBtn');
+  if (prev) prev.disabled = currentQuizIndex === 0;
+  if (next) next.disabled = currentQuizIndex >= cards.length - 1;
+}
+
+/**
+ * Step to the previous (-1) or next (+1) question in single-question quiz mode.
+ * @param {number} delta -1 or 1
+ */
+function stepQuizQuestion(delta) {
+  showQuizQuestion(currentQuizIndex + delta);
+}
+
 /**
  * Draw every question of a quiz (choices reshuffled on every attempt).
  * @param {{questions: Array}} quiz Quiz data
@@ -335,11 +364,15 @@ function renderQuizQuestions(quiz, variant) {
   const container = document.getElementById('quizContainer');
   container.innerHTML = '';
   currentQuizAnswers = {};
+  currentQuizIndex = 0;
+  quizSubmitted = false;
+  clearTimeout(quizAutoTimer);
   // New choice order on every attempt (first try, full retake and wrong-only retake).
   quiz.questions = quiz.questions.map(q => shuffleQuestion(q));
   quiz.questions.forEach((q, qIdx) => {
     const card = document.createElement('div');
     card.className = 'q-card';
+    card.dataset.qidx = String(qIdx);
     const choices = (q.choices || []).map((c, cIdx) => {
       const choiceText = c.text !== undefined ? c.text : c;
       return `<div class="choice-btn" id="choice-${qIdx}-${cIdx}" onclick="selectChoice(${qIdx}, ${cIdx})"><b>${String.fromCharCode(65 + cIdx)}.</b>${escHtml(choiceText)}</div>`;
@@ -353,6 +386,12 @@ function renderQuizQuestions(quiz, variant) {
       </div>`;
     container.appendChild(card);
   });
+  container.insertAdjacentHTML('beforeend', `<div class="quiz-pager" id="quizPager">
+    <button type="button" class="btn btn-soft btn-sm" id="quizPrevBtn" onclick="stepQuizQuestion(-1)">← 上一題</button>
+    <span class="quiz-pager-meta" id="quizPagerMeta"></span>
+    <button type="button" class="btn btn-soft btn-sm" id="quizNextBtn" onclick="stepQuizQuestion(1)">下一題 →</button>
+  </div>`);
+  showQuizQuestion(0);
   document.getElementById('quizActionBar').style.display = 'flex';
   updateQuizProgress();
 }
@@ -370,6 +409,10 @@ function selectChoice(qIdx, cIdx) {
   }
   document.getElementById(`choice-${qIdx}-${cIdx}`)?.classList.add('selected');
   updateQuizProgress();
+  if (!quizSubmitted && (typeof load === 'function' ? load('quizAdvance', 'manual') : 'manual') === 'auto' && qIdx < questions.length - 1) {
+    clearTimeout(quizAutoTimer);
+    quizAutoTimer = setTimeout(() => showQuizQuestion(qIdx + 1), 320);
+  }
 }
 
 /**
@@ -415,6 +458,11 @@ function gradeQuizQuestionsDom(questions) {
  * @returns {Promise<void>} Resolves once attempt is posted
  */
 async function submitQuizAttempt() {
+  quizSubmitted = true;
+  clearTimeout(quizAutoTimer);
+  document.querySelectorAll('#quizContainer .q-card').forEach(c => { c.hidden = false; });
+  const pager = document.getElementById('quizPager');
+  if (pager) pager.style.display = 'none';
   const questions = (currentQuizData.quiz && currentQuizData.quiz.questions) || (currentQuizData.json_data && currentQuizData.json_data.questions);
   const total = questions.length;
   const { score, mistakes, wrongIndexes } = gradeQuizQuestionsDom(questions);

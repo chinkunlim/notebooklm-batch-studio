@@ -352,6 +352,7 @@ function applyAllPreferences() {
   setChoice('style', load('style', 'flow'), false);
   setChoice('arr', load('arr', 'matrix'), false);
   setChoice('pace', load('pace', 'relax'), false);
+  setChoice('quizAdvance', load('quizAdvance', 'manual'), false);
   setChoice('speed', load('speed', '1'), false);
   setChoice('skin', load('skin', 'vinyl'), false);
   let avatar;

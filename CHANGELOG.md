@@ -61,6 +61,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(ui): replace native QA drawer select menus with custom .qa-pick/.qa-pop popovers (by `@antigravity`)
 - feat(ui): show animated typing indicator while waiting for Gemini Notebook QA response (by `@antigravity`)
 - feat(ui): render selected learning artifact in left main stage in split layout (by `@antigravity`)
+- feat(ui): render interactive SVG mind maps, full-height stage panels, single-question quiz mode, stable flashcards, and bottom-anchored tutor input (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
