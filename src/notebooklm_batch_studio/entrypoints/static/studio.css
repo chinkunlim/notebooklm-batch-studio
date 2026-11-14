@@ -1287,6 +1287,7 @@ img, iframe, video, audio { max-width: 100%; }
 }
 .study[data-layout="split"] .study-main,
 .study[data-layout="split"] .study-side { height: 100%; min-height: 0; position: relative; top: auto; display: flex; flex-direction: column; }
+.study[data-layout="split"].side-collapsed > .study-side { display: none; }
 .study[data-layout="split"] #readerCard { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .study[data-layout="split"] #readerHome,
 .study[data-layout="split"] #readerContent,

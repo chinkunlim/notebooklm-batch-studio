@@ -100,6 +100,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui,reader): fix PDF flex-shrink scroll, dynamic viewport height, bench header collapse and seg grid, and reader header alignment (by `@antigravity`)
 - fix(ui,reader): match book-printed keypoint pages across PDF, size study pane to full viewport scroll frame, and keep playerCard compact (by `@antigravity`)
 - fix(ui): clear sticky top offset on study-side in split mode so top edges align (by `@antigravity`)
+- fix(ui): ensure collapsed study-side remains hidden in split mode (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
