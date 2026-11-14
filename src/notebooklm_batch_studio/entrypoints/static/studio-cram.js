@@ -468,7 +468,7 @@ function initStudyStickyWheel() {
  * @returns {void}
  */
 function switchStudySidePane(v) {
-  const mode = v || document.querySelector('[data-seg="studioPane"] .on')?.dataset.v || 'study';
+  const mode = v || document.querySelector('[data-seg="studioPane"] .on')?.dataset.value || 'study';
   const study = document.getElementById('paneStudy'), courses = document.getElementById('paneCourses'), side = document.getElementById('studySide');
   let host = document.getElementById('sideCatalogHost');
   if (study && side && study.dataset.layout === 'split') {
