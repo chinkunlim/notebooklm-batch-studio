@@ -12,8 +12,9 @@ import html
 import markdown
 
 _STYLE = (
+    "html{background:#0f172a;}"
     "body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Noto Sans TC','Segoe UI',sans-serif;"
-    "background:#0f172a;color:#e2e8f0;padding:32px 20px;line-height:1.8;max-width:860px;margin:0 auto;}"
+    "background:#0f172a;color:#e2e8f0;padding:32px 28px;line-height:1.8;max-width:860px;margin:0 auto;}"
     "h1,h2,h3,h4{color:#f8fafc;line-height:1.4;margin-top:1.6em;}h1{border-bottom:1px solid #334155;"
     "padding-bottom:.3em;}a{color:#38bdf8;}"
     "strong{color:#fde68a;}"

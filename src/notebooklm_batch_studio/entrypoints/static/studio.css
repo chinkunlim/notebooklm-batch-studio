@@ -1381,17 +1381,21 @@ img, iframe, video, audio { max-width: 100%; }
 .study[data-layout="split"] #splitStage > #panelQuiz,
 .study[data-layout="split"] #splitStage > #panelTutor { overflow: hidden; }
 .study[data-layout="split"] #splitStage .panel-head {
-  min-height: 40px; padding: 6px 0 10px; border-bottom: 1px solid var(--line);
+  height: 46px; min-height: 46px; padding: 6px 0 10px; border-bottom: 1px solid var(--line);
   margin-bottom: var(--s3); flex: none; display: flex; align-items: center;
-  justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  justify-content: space-between; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none;
 }
-.report-meta-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; }
-.report-meta-bar a.reader-pill-btn { text-decoration: none; }
+.study[data-layout="split"] #splitStage .panel-head::-webkit-scrollbar { display: none; }
+.study[data-layout="split"] #splitStage .panel-head .chips,
+.study[data-layout="split"] #splitStage .panel-head .panel-note { flex-wrap: nowrap; white-space: nowrap; }
+.study[data-layout="split"] #splitStage .panel-head .panel-note { overflow: hidden; text-overflow: ellipsis; }
+.report-meta-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: nowrap; flex: none; }
+.report-meta-bar a.reader-pill-btn { text-decoration: none; white-space: nowrap; }
 .study[data-layout="split"] #splitStage #reportContentContainer,
 .study[data-layout="split"] #splitStage #flashcardsViewerContainer,
 .study[data-layout="split"] #splitStage #qaNotesContainer,
 .study[data-layout="split"] #splitStage #tutorContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.study[data-layout="split"] #splitStage #reportContentContainer .report-frame { flex: 1; min-height: 0; height: 100%; }
+.study[data-layout="split"] #splitStage #reportContentContainer .report-frame { flex: 1; min-height: 0; height: 100%; width: 100%; border-radius: var(--radius-m); overflow: hidden; }
 .study[data-layout="split"] #splitStage #quizContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 .study[data-layout="split"] #splitStage #quizActionBar { flex: none; margin-top: var(--s3); }
 .study[data-layout="split"] #splitStage .empty-state {
@@ -1459,7 +1463,8 @@ img, iframe, video, audio { max-width: 100%; }
 /* Reader header & bar alignment */
 #readerCard { position: relative; scroll-margin-top: 24px; }
 #readerContent > .card-head { min-height: 32px; display: flex; align-items: center; padding: 0 44px 0 0; margin-bottom: var(--s3); }
-.reader-bar { flex: none; overflow: visible; background: transparent; padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
+.reader-bar { flex: none; height: 46px; min-height: 46px; overflow-x: auto; scrollbar-width: none; background: transparent; padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); display: flex; align-items: center; }
+.reader-bar::-webkit-scrollbar { display: none; }
 
 /* Layout Debug Guides (Cmd+Shift+G / 參考線按鈕) */
 .app.layout-guides .topbar { outline: 2px dashed #e11d48; outline-offset: -2px; }
@@ -1473,6 +1478,18 @@ img, iframe, video, audio { max-width: 100%; }
 .app.layout-guides .reader-layout { outline: 2px dashed #16a34a; outline-offset: -2px; }
 .app.layout-guides #keyPointList { outline: 2px dotted #ca8a04; outline-offset: -2px; }
 .app.layout-guides #readerPages { outline: 2px dotted #15803d; outline-offset: -2px; }
+.app.layout-guides #readerContent > .card-head,
+.app.layout-guides .split-stage-head { outline: 1.5px dashed #0d9488; outline-offset: -1px; }
+.app.layout-guides .reader-bar,
+.app.layout-guides #splitStage .panel-head { outline: 1.5px dashed #d97706; outline-offset: -1px; }
+.app.layout-guides #splitStage,
+.app.layout-guides #readerContainer { outline: 1.5px dashed #7c3aed; outline-offset: -1px; }
+.app.layout-guides #splitStage #reportContentContainer,
+.app.layout-guides #splitStage #quizContainer,
+.app.layout-guides #splitStage #flashcardsViewerContainer,
+.app.layout-guides #splitStage #tutorContainer,
+.app.layout-guides #splitStage #qaNotesContainer { outline: 1.5px dotted #e11d48; outline-offset: -2px; }
+.app.layout-guides .empty-state { outline: 1.5px dashed #0284c7; outline-offset: -2px; }
 .layout-guide-hud { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 95; background: rgba(20, 26, 23, .9); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 12px; display: none; gap: 10px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.22); pointer-events: auto; }
 .app.layout-guides .layout-guide-hud { display: inline-flex; }
 .layout-guide-layer { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; display: none; }

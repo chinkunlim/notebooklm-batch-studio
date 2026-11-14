@@ -237,7 +237,7 @@ function renderLayoutGuides() {
     layer.className = 'layout-guide-layer';
     app.appendChild(layer);
   }
-  const sel = '.dock,.topbar,.subbar,.resizable,.col,.gutter,.card,#cramPanel,.seg,.study-lec-switch,.reader-bar,.reader-layout,#keyPointList,#readerPages,button,select,input,.tile,.dock-btn';
+  const sel = '.dock,.topbar,.subbar,.resizable,.col,.gutter,.card,#cramPanel,.seg,.study-lec-switch,.reader-bar,.split-stage-head,.panel-head,.reader-layout,#keyPointList,#readerPages,#splitStage,#reportContentContainer,.report-frame,#quizContainer,#quizPager,#quizActionBar,#flashcardsViewerContainer,#tutorContainer,#qaNotesContainer,.empty-state,button,select,input,.tile,.dock-btn';
   const els = [...document.querySelectorAll(sel)].filter(isGuideElementVisible);
   const colors = { button: '#db2777', select: '#9333ea', input: '#9333ea', aside: '#2563eb', header: '#e11d48', article: '#0284c7' };
   const placed = [];
