@@ -43,6 +43,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(demo): standalone GitHub Pages demo with fictional BIO101 data (by `@claude-code`)
 - feat(ui,settings): support adding missing artifacts per lecture or course (TASK-022) (by `@antigravity`)
 - feat: add notebook source listing, upload, and deletion management (by `@antigravity`)
+- feat(db): add course_qa_notes model and alembic migration (SPEC-011) (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

@@ -86,7 +86,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-020-fix-course-code-collision-overwr.json
 │   │   ├── TASK-021-fix-failed-artifact-job-manual-r.json
 │   │   ├── TASK-022-support-adding-missing-artifacts.json
-│   │   └── TASK-023-add-notebook-source-listing-uplo.json
+│   │   ├── TASK-023-add-notebook-source-listing-uplo.json
+│   │   └── TASK-024-spec-011-gemini-notebook-explora.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -121,7 +122,8 @@ notebooklm-batch-studio/
 │   │   ├── 20261101_d0a82d2914ab_persist_course_artifact_selections.py
 │   │   ├── 20261101_d21a28b5d5a0_add_course_paused_and_reuse_notebook_.py
 │   │   ├── 20261101_d6e896ae4e2c_add_job_version_artifact_ids_and_course_.py
-│   │   └── 20261102_89158d42494d_add_ui_preferences.py
+│   │   ├── 20261102_89158d42494d_add_ui_preferences.py
+│   │   └── 20261114_393ba6cc4afd_add_course_qa_notes_table.py
 │   ├── DB.md
 │   ├── env.py
 │   └── script.py.mako
@@ -204,6 +206,7 @@ notebooklm-batch-studio/
 │   │   ├── 008-learning-aids.md
 │   │   ├── 009-study-studio-ui-redesign.md
 │   │   ├── 010-user-end-to-end-workflow.md
+│   │   ├── 011-notebook-qa-notes-and-tag-system.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -234,6 +237,9 @@ notebooklm-batch-studio/
 │   │   ├── PROJECT_RULES.md
 │   │   ├── STANDARDS.md
 │   │   └── TESTING_AND_QUALITY.md          # 測試金字塔與 DoD 驗收清單
+│   ├── superpowers/
+│   │   └── plans/
+│   │       └── 2026-11-14-notebook-qa-notes-and-tag-system.md
 │   └── TEMPLATE_FEEDBACK.md
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
 │   ├── demo/
@@ -286,6 +292,7 @@ notebooklm-batch-studio/
 │       │   ├── models.py
 │       │   ├── naming.py
 │       │   ├── notebooklm_protocol.py
+│       │   ├── qa_notes.py
 │       │   ├── repositories.py
 │       │   ├── study_plan.py
 │       │   └── usage_guide.py
@@ -641,6 +648,7 @@ notebooklm-batch-studio/
 │   ├── test_notebooklm_generation.py
 │   ├── test_port_check.py
 │   ├── test_preferences.py
+│   ├── test_qa_notes_db.py
 │   ├── test_quota_and_limits.py
 │   ├── test_remaining_fixes.py
 │   ├── test_rename.py

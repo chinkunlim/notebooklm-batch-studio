@@ -349,3 +349,43 @@ class UiPreferenceRecord(Base):
     key: Mapped[str] = mapped_column(String(120), primary_key=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class CourseQANoteRecord(Base):
+    """Persistent Gemini Notebook Q&A note with hierarchical tags and source sync state (SPEC-011).
+
+    Attributes:
+        id: Unique note identifier (primary key).
+        course_code: Course code foreign key.
+        lecture_no: Optional lecture sequence number.
+        title: Note title.
+        content_markdown: Markdown body text.
+        personal_memo: Optional user annotation appended to the note.
+        tags_json: JSON array string of hierarchical tags.
+        source_scene: Originating context (`chat_drawer`, `study_tab`, `quiz_explain`).
+        mastery_status: Learning mastery state (`needs_review` or `mastered`).
+        is_uploaded_as_source: True when pushed to Gemini Notebook sources.
+        uploaded_source_id: Remote source ID if pushed.
+        created_at: Creation timestamp (UTC).
+        updated_at: Last modification timestamp (UTC).
+    """
+
+    __tablename__ = "course_qa_notes"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    course_code: Mapped[str] = mapped_column(
+        String(50), ForeignKey("courses.code", ondelete="CASCADE"), nullable=False, index=True
+    )
+    lecture_no: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    content_markdown: Mapped[str] = mapped_column(Text, nullable=False)
+    personal_memo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tags_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    source_scene: Mapped[str] = mapped_column(String(30), nullable=False, default="chat_drawer")
+    mastery_status: Mapped[str] = mapped_column(String(20), nullable=False, default="needs_review")
+    is_uploaded_as_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    uploaded_source_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
+    )
