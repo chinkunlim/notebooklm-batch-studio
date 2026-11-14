@@ -390,16 +390,11 @@ function toggleStudySideCollapse() {
 function initSideCardCollapses() {
   ['playerCard', 'sideInfo', 'bench'].forEach(id => {
     const card = document.getElementById(id);
-    if (!card || card.dataset.collapseHooked) return;
-    const head = card.querySelector(':scope > .card-head, :scope > .player-controls, :scope > .bench-head');
+    const head = card && !card.dataset.collapseHooked && card.querySelector(':scope > .card-head, :scope > .player-controls, :scope > .bench-head');
     if (!head) return;
     card.dataset.collapseHooked = '1';
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'card-collapse-btn';
-    btn.title = '收合 / 展開此區塊';
+    const btn = Object.assign(document.createElement('button'), { type: 'button', className: 'card-collapse-btn', title: '收合 / 展開此區塊', innerHTML: '<i class="icon-chevron-up"></i>' });
     btn.setAttribute('aria-expanded', 'true');
-    btn.innerHTML = '<i class="icon-chevron-up"></i>';
     btn.addEventListener('click', () => {
       const collapsed = card.classList.toggle('is-collapsed');
       btn.setAttribute('aria-expanded', String(!collapsed));
@@ -407,14 +402,9 @@ function initSideCardCollapses() {
     });
     const title = head.querySelector(':scope > h2, :scope > .h2');
     if (id === 'bench' && title) {
-      const row = document.createElement('div');
-      row.className = 'card-title-row';
-      head.insertBefore(row, title);
-      row.appendChild(title);
-      row.appendChild(btn);
-    } else {
-      head.appendChild(btn);
-    }
+      const row = Object.assign(document.createElement('div'), { className: 'card-title-row' });
+      head.insertBefore(row, title); row.append(title, btn);
+    } else head.appendChild(btn);
   });
 }
 
@@ -430,6 +420,18 @@ function updateStudyViewportHeight() {
 }
 
 /**
+ * Return true if an inner scroller under target can scroll further in direction dir (1=down, -1=up).
+ * @param {EventTarget|null} target Wheel event target
+ * @param {number} dir Scroll direction (1 or -1)
+ * @returns {boolean}
+ */
+function canInnerScroll(target, dir) {
+  const scroller = target instanceof Element && target.closest('.kp-list.kp-all-mode, #readerPages, .bench-body, .side-catalog-host, .study-side');
+  if (!scroller || scroller.scrollHeight <= scroller.clientHeight + 1) return false;
+  return dir > 0 ? scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 : scroller.scrollTop > 1;
+}
+
+/**
  * Scroll outer page down until #paneStudy sticks at 12px top margin before scrolling inner PDF/bench.
  * Clamps #paneStudy top at 12px across reader, side-column, and scrollbar scrolling while #view-study.on.
  * @returns {void}
@@ -438,14 +440,15 @@ function initStudyStickyWheel() {
   const pane = document.getElementById('paneStudy');
   if (!pane || pane.dataset.stickyWheelHooked) return;
   pane.dataset.stickyWheelHooked = '1';
-  pane.addEventListener('wheel', e => {
-    if (pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
+  document.addEventListener('wheel', e => {
+    if (!document.getElementById('view-study')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
     if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
     const top = pane.getBoundingClientRect().top;
-    if (e.deltaY > 0 && top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); return; }
-    if (e.deltaY < 0) {
-      const scroller = e.target.closest('.kp-list.kp-all-mode, #readerPages, .bench-body, .side-catalog-host, .study-side');
-      if ((!scroller || scroller.scrollTop <= 1) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
+    if (e.deltaY > 0) {
+      if (top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); }
+      else if (!canInnerScroll(e.target, 1)) e.preventDefault();
+    } else if (e.deltaY < 0 && !canInnerScroll(e.target, -1) && window.scrollY > 0) {
+      e.preventDefault(); window.scrollBy(0, e.deltaY);
     }
   }, { passive: false });
   window.addEventListener('scroll', () => {
@@ -483,15 +486,11 @@ function switchStudySidePane(v) {
   if (typeof sizeCanvases === 'function') requestAnimationFrame(sizeCanvases);
 }
 
-initSideCardCollapses();
-initStudyStickyWheel();
-updateStudyViewportHeight();
+initSideCardCollapses(); initStudyStickyWheel(); updateStudyViewportHeight();
 window.addEventListener('load', updateStudyViewportHeight);
 window.addEventListener('resize', updateStudyViewportHeight);
 window.visualViewport?.addEventListener('resize', updateStudyViewportHeight);
-['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
-  setTimeout(updateStudyViewportHeight, 60); setTimeout(updateStudyViewportHeight, 360);
-}));
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => { setTimeout(updateStudyViewportHeight, 60); setTimeout(updateStudyViewportHeight, 360); }));
 document.addEventListener('click', () => setTimeout(updateStudyViewportHeight, 60));
 const _studyPaneObs = document.getElementById('paneStudy');
 if (_studyPaneObs && typeof MutationObserver === 'function') {
