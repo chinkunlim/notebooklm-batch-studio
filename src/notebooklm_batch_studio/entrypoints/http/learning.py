@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError, StudioError
+from notebooklm_batch_studio.services.cram_service import CramService, parse_lectures_csv
 from notebooklm_batch_studio.services.learning_service import LearningService
 
 learning_router = APIRouter(prefix="/api/courses/{code}", tags=["Learning"])
@@ -202,3 +203,32 @@ def clear_tutor(code: str, request: Request, lecture_no: int | None = Query(defa
     """
     _learning(request).clear_tutor(code, lecture_no)
     return {"cleared": True}
+
+
+@learning_router.get("/study/cram-pack", operation_id="get_cram_pack")
+def get_cram_pack(
+    code: str,
+    request: Request,
+    lectures: str = Query(default=""),
+    hours: float = Query(default=2.0, ge=0.25, le=72.0),
+) -> dict[str, Any]:
+    """Build a prioritized last-minute cram pack for selected lectures.
+
+    Args:
+        code: Course code.
+        request: Incoming request.
+        lectures: Comma-separated lecture numbers (empty = all).
+        hours: Available study budget in hours.
+
+    Returns:
+        Ranked lectures, recommended minutes, unresolved mistakes, and priority notes.
+    """
+    try:
+        cram = CramService(
+            learning=_learning(request),
+            study_service=getattr(request.app.state, "study_service", None),
+            qa_notes=getattr(request.app.state, "qa_notes", None),
+        )
+        return cram.build_cram_pack(code, lectures=parse_lectures_csv(lectures), hours=hours)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

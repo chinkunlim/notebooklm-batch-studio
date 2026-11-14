@@ -149,6 +149,37 @@ def _register_memory_and_tutor_tools(mcp: MCPServer, learning: LearningService) 
         return await _ask_tutor_payload(learning, code, message, (lecture_no, confirm))
 
 
+def _register_cram_tool(mcp: MCPServer, learning: LearningService) -> None:
+    """Register the read-only cramming pack MCP tool.
+
+    Args:
+        mcp: MCPServer instance.
+        learning: Learning service.
+    """
+
+    @mcp.tool()
+    def get_cram_pack(code: str, lectures: str = "", hours: float = 2.0) -> str:
+        """Build a prioritized cramming pack for selected lectures and time budget (read-only).
+
+        Args:
+            code: Course code.
+            lectures: Comma-separated lecture numbers (empty = all).
+            hours: Available study hours (default 2.0).
+
+        Returns:
+            JSON string with ranked lectures, pacing, mistakes, and priority notes.
+        """
+        from notebooklm_batch_studio.services.cram_service import CramService, parse_lectures_csv
+
+        try:
+            pack = CramService(learning).build_cram_pack(
+                code, lectures=parse_lectures_csv(lectures), hours=hours
+            )
+            return _dump(pack)
+        except Exception as exc:
+            return _dump({"error": str(exc)})
+
+
 def register_learning_tools(mcp: MCPServer, learning: LearningService) -> None:
     """Register learning tools (Gemini Notebook calls and deletions require confirm=True).
 
@@ -158,3 +189,4 @@ def register_learning_tools(mcp: MCPServer, learning: LearningService) -> None:
     """
     _register_key_point_tools(mcp, learning)
     _register_memory_and_tutor_tools(mcp, learning)
+    _register_cram_tool(mcp, learning)

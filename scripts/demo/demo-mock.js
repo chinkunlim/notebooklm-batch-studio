@@ -221,6 +221,7 @@ function demoNote(what) {
  */
 function demoStudy(c, rest, method, body, q) {
   const code = c.code;
+  if (rest === 'cram-pack') return demoJson({ course_code: code, days_until_exam: 3, hours_budget: 2, lectures: c.lectures.map((l, i) => ({ no: i + 1, topic: l.topic, source_id: l.source_id, percent: 45 + i * 15, level: i === 0 ? 'weak' : 'fading', mistake_count: i === 0 ? 2 : 0, recommended_minutes: 40 })), mistakes: demoState.mistakes.filter(m => m.course_code === code && !m.is_resolved), high_priority_notes: (demoState.qaNotes || []).filter(n => n.course_code === code) });
   if (rest === 'history') return demoJson(demoState.attempts.filter(a => a.course_code === code && (!q.has('lecture_no') || String(a.lecture_no) === q.get('lecture_no'))));
   if (rest === 'mistakes') return demoJson(demoState.mistakes.filter(m => m.course_code === code && !m.is_resolved && (!q.get('lecture_no') || String(m.lecture_no) === q.get('lecture_no'))));
   if (/^mistakes\/[^/]+\/resolve$/.test(rest)) { const m = demoState.mistakes.find(x => x.id === rest.split('/')[1]); if (m) m.is_resolved = true; demoStudied(); return demoJson({ resolved: true }); }

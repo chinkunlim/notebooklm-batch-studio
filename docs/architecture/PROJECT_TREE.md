@@ -559,6 +559,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-batch.js
 │       │   │   ├── studio-bench.js
 │       │   │   ├── studio-core.js
+│       │   │   ├── studio-cram.js
 │       │   │   ├── studio-focus.js
 │       │   │   ├── studio-fonts.js
 │       │   │   ├── studio-learning.css
@@ -612,6 +613,7 @@ notebooklm-batch-studio/
 │       │   ├── course_options.py
 │       │   ├── course_parser.py
 │       │   ├── course_settings.py
+│       │   ├── cram_service.py
 │       │   ├── folder_browser.py
 │       │   ├── font_service.py
 │       │   ├── job_planner.py

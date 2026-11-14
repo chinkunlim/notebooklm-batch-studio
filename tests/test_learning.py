@@ -225,6 +225,21 @@ class LearningServiceTest(unittest.TestCase):
         self.assertIn("streak", json.loads(tools["get_memory_strength"].fn("BIO101")))
         self.assertIn("generate_key_points", tools)
         self.assertIn("ask_tutor", tools)
+        self.assertIn("get_cram_pack", tools)
+        cram_mc = json.loads(tools["get_cram_pack"].fn("BIO101", lectures="1", hours=2.0))
+        self.assertEqual(cram_mc["course_code"], "BIO101")
+        self.assertEqual(len(cram_mc["lectures"]), 1)
+
+        from fastapi import FastAPI
+
+        from notebooklm_batch_studio.entrypoints.http.learning import learning_router
+
+        mini = FastAPI()
+        mini.state.learning = self.learning
+        mini.include_router(learning_router)
+        cram_http = TestClient(mini).get("/api/courses/BIO101/study/cram-pack?lectures=1&hours=1.5")
+        self.assertEqual(cram_http.status_code, 200)
+        self.assertGreaterEqual(cram_http.json()["lectures"][0]["recommended_minutes"], 5)
 
 
 if __name__ == "__main__":
