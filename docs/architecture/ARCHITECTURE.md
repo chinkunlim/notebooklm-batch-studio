@@ -113,7 +113,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 - `cli.py`：命令列工具入口，支援 `login`（檢查登入憑證；加 `--browser` 開瀏覽器由使用者親自登入）、`batch`（批次掃描建立）、`status`（即時進度總覽）、`resume`（中斷重試續跑）、`watch`（守護進程監控）與 `web`（啟動 Web 與 MCP 服務）。
 - `api.py` 與 `entrypoints/http/`：FastAPI 應用程式，切分為職責分明的子路由：
   - `courses.py`：課程列表、註冊掃描、講次清單。
-  - `queue.py`：工作佇列狀態、暫停/恢復（恢復時一併喚醒等待額度的工作）、工作重試、Prompt 檢視與編輯 (`GET/POST /api/jobs/{id}/prompt`)。
+  - `queue.py`：工作佇列狀態、暫停/恢復（恢復時一併喚醒等待額度的工作）、單筆與整門課重試 (`POST /api/jobs/{id}/retry`、`POST /api/courses/{code}/jobs/retry-failed`)、Prompt 檢視與編輯 (`GET/POST /api/jobs/{id}/prompt`)。
   - `artifacts.py`：檔案安全下載、隔離區 (`needs_review`) 檢視與直接下載、Markdown / HTML 檢視器。
   - `study.py`：研讀工作台 API，包含測驗繳卷即時評分、錯題本查詢與複習掌握標記、Anki 間隔重複 CSV 匯出。
   - `learning.py`：講義 PDF 安全串流閱讀、重點標註檢視、蘇格拉底式引導家教對話。
@@ -137,7 +137,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `mcp_server.py`：核心 MCP 工具（狀態、佇列控制、筆記本操作與重試）與伺服器組裝。
   - `mcp_studio_tools.py`：研讀歷史、錯題複習、導引文件、課程設定選項與版本化重新生成工具。
   - `mcp_course_settings.py`：課程選項複製、開關與暫停管理工具。
-  - `mcp_job_prompts.py`：提示詞查詢與改寫工具。
+  - `mcp_job_prompts.py`：提示詞查詢、改寫與失敗任務批次重試工具 (`retry_course_failed_jobs`)。
   - `mcp_learning.py`：重點查詢、閱讀狀態與家教對話工具。
   - `mcp_study_plan.py`：研讀計畫與間隔複習工具。
   - `mcp_preferences.py` & `mcp_fonts.py`：網頁偏好讀寫重設與 Google Fonts 離線安裝工具。
@@ -178,7 +178,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 - `folder_browser.py` (`FolderBrowserService`)：提供本機安全目錄層級導航與 PDF 講義資料夾選取。
 - `course_parser.py`：依檔名結構排序並剖析課程目錄下的講義 PDF 與中繼資料。
 - `job_planner.py` & `job_views.py`：依課程 Profile 與自訂勾選規劃任務矩陣，並建置狀態視圖投影。
-- `worker_pool.py`：控管平行非同步任務排程、額度封鎖恢復同步，並處理速率限制指數退避重試。
+- `worker_pool.py`：控管平行非同步任務排程、啟動時復原殘留 `RUNNING` 任務、額度封鎖恢復同步、冷卻期滿失敗任務自動恢復，並處理暫時性失敗退避重試。
 - `quota_planner.py`：讀取 Gemini Notebook 即時配額，於工作執行前進行嚴格預檢（額度不足自動轉入 `QUOTA_WAIT` 狀態，避免浪費重試次數），並支援 5 小時額度窗與每週額度評估。
 - `converters/`：
   - `quiz_converter.py` & `quiz_formatter.py`：整併 3 次 10 題測驗，去重、格式化並驗證題目數（達 30 題通過，不足則隔離至 `needs_review/`），並打散正確選項位置避免偏誤。

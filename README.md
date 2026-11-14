@@ -190,6 +190,6 @@ uv run python -m unittest discover -s tests -v
 - [`docs/architecture/PROJECT_TREE.md`](docs/architecture/PROJECT_TREE.md) — 完整目錄樹與檔案標記
 - [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-010）
 - [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-009）
-- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-037）
+- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-038）
 - [`docs/standards/PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) — 本專案特有規則（領域名詞、埠號 8768、安全禁忌）
 - [`alembic/DB.md`](alembic/DB.md) — 資料庫模型遷移與 11 張實體資料表綱要指南 (SQLite / SQLAlchemy)

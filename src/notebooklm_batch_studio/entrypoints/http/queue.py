@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.entrypoints.schemas import GenericActionResponse, QueueActionRequest
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
@@ -21,7 +23,7 @@ queue_router = APIRouter()
     tags=["Queue"],
     operation_id="start_queue",
 )
-def start_queue(request: Request, req: QueueActionRequest | None = None) -> GenericActionResponse:
+async def start_queue(request: Request, req: QueueActionRequest | None = None) -> GenericActionResponse:
     """Start parallel task worker queue.
 
     Args:
@@ -42,7 +44,7 @@ def start_queue(request: Request, req: QueueActionRequest | None = None) -> Gene
     tags=["Queue"],
     operation_id="pause_queue",
 )
-def pause_queue(request: Request, req: QueueActionRequest | None = None) -> GenericActionResponse:
+async def pause_queue(request: Request, req: QueueActionRequest | None = None) -> GenericActionResponse:
     """Pause worker queue processing.
 
     Args:
@@ -63,7 +65,7 @@ def pause_queue(request: Request, req: QueueActionRequest | None = None) -> Gene
     tags=["Queue"],
     operation_id="resume_queue",
 )
-def resume_queue(request: Request) -> GenericActionResponse:
+async def resume_queue(request: Request) -> GenericActionResponse:
     """Wake up all quota-blocked tasks back to pending state.
 
     Args:
@@ -84,7 +86,9 @@ def resume_queue(request: Request) -> GenericActionResponse:
     tags=["Queue"],
     operation_id="retry_job",
 )
-def retry_job(job_id: str, request: Request, req: QueueActionRequest | None = None) -> GenericActionResponse:
+async def retry_job(
+    job_id: str, request: Request, req: QueueActionRequest | None = None
+) -> GenericActionResponse:
     """Reset a failed or cancelled task back to pending state.
 
     Args:
@@ -103,6 +107,35 @@ def retry_job(job_id: str, request: Request, req: QueueActionRequest | None = No
     if not success:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
     return GenericActionResponse(success=True, message=f"Job {job_id} reset to pending")
+
+
+@queue_router.post(
+    "/api/courses/{code}/jobs/retry-failed",
+    tags=["Queue"],
+    operation_id="retry_course_failed_jobs",
+)
+async def retry_course_failed_jobs(
+    code: str, request: Request, include_needs_review: bool = True
+) -> dict[str, Any]:
+    """Re-queue failed (and optionally needs_review) jobs for a course and start the worker pool.
+
+    Args:
+        code: Course code.
+        request: Incoming HTTP request context.
+        include_needs_review: Whether to also retry NEEDS_REVIEW jobs.
+
+    Returns:
+        Dictionary with `course_code` and `retried_count`.
+
+    Raises:
+        HTTPException: 404 when the course does not exist.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        count = service.retry_course_failed_jobs(code, include_needs_review=include_needs_review)
+        return {"course_code": code, "retried_count": count}
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 class JobPromptRequest(BaseModel):

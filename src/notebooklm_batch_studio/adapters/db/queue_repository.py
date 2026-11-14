@@ -6,7 +6,7 @@ import json
 import logging
 from datetime import timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from notebooklm_batch_studio.adapters.db.mappers import to_domain_job
@@ -95,27 +95,29 @@ class QueueRepository:
         Returns:
             The claimed domain ArtifactJob, or None if no eligible job is waiting.
         """
+        now = utc_now()
+        paused = select(CourseRecord.code).where(CourseRecord.paused.is_(True))
         stmt = select(ArtifactJobRecord).where(
             ArtifactJobRecord.status == JobStatus.PENDING.value,
-            ArtifactJobRecord.course_code.not_in(
-                select(CourseRecord.code).where(CourseRecord.paused.is_(True))
-            ),
+            ArtifactJobRecord.course_code.not_in(paused),
+            or_(ArtifactJobRecord.cooldown_until.is_(None), ArtifactJobRecord.cooldown_until <= now),
         )
         if excluded_types:
             stmt = stmt.where(ArtifactJobRecord.artifact_type.not_in([t.value for t in excluded_types]))
-
+        # Prefer lower-attempt jobs first so retries yield to fresh work; Refs: ISSUE-038
         stmt = stmt.order_by(
+            ArtifactJobRecord.attempts.asc(),
             ArtifactJobRecord.lecture_no.asc().nulls_last(),
             ArtifactJobRecord.created_at.asc(),
         )
         record = self.session.scalars(stmt).first()
         if record is None:
             return None
-
         record.status = JobStatus.RUNNING.value
         record.worker_id = worker_id
         record.attempts += 1
-        record.updated_at = utc_now()
+        record.cooldown_until = None
+        record.updated_at = now
         self.session.flush()
         self.session.commit()
         return to_domain_job(record)
@@ -245,15 +247,21 @@ class QueueRepository:
             max_attempts: Maximum retry threshold before permanent failure.
         """
         record = self.session.get(ArtifactJobRecord, job_id)
-        if record:
-            record.error_message = error_message
-            record.worker_id = None
-            record.updated_at = utc_now()
-            record.status = (
-                JobStatus.PENDING.value if record.attempts < max_attempts else JobStatus.FAILED.value
-            )
-            self.session.flush()
-            self.session.commit()
+        if record is None:
+            return
+        now = utc_now()
+        record.error_message = error_message
+        record.worker_id = None
+        record.updated_at = now
+        round_exhausted = record.attempts > 0 and record.attempts % max(1, max_attempts) == 0
+        if round_exhausted:
+            record.status = JobStatus.FAILED.value
+            record.cooldown_until = now + timedelta(seconds=60)
+        else:
+            record.status = JobStatus.PENDING.value
+            record.cooldown_until = None
+        self.session.flush()
+        self.session.commit()
 
     def block_job_quota(self, job_id: str, artifact_type: ArtifactType, cooldown_seconds: int = 3600) -> None:
         """Mark a job as waiting for quota refresh and set cooldown timer.
@@ -362,6 +370,7 @@ class QueueRepository:
         if record is None:
             return False
         record.status = JobStatus.PENDING.value
+        record.attempts = 0
         record.cooldown_until = None
         record.worker_id = None
         record.error_message = None
@@ -369,6 +378,62 @@ class QueueRepository:
         self.session.flush()
         self.session.commit()
         return True
+
+    def retry_failed_jobs(
+        self,
+        course_code: str | None = None,
+        include_needs_review: bool = False,
+        respect_cooldown: bool = False,
+    ) -> int:
+        """Reset failed (and optionally needs_review) jobs back to PENDING.
+
+        Args:
+            course_code: Optional course filter.
+            include_needs_review: Whether to also re-queue NEEDS_REVIEW jobs.
+            respect_cooldown: When True (auto-recovery), honor cooldown and 9-attempt cap.
+
+        Returns:
+            Number of jobs transitioned back to PENDING.
+        """
+        now = utc_now()
+        extra = [JobStatus.NEEDS_REVIEW.value] if include_needs_review else []
+        stmt = select(ArtifactJobRecord).where(ArtifactJobRecord.status.in_([JobStatus.FAILED.value, *extra]))
+        if course_code:
+            stmt = stmt.where(ArtifactJobRecord.course_code == course_code)
+        if respect_cooldown:
+            paused = select(CourseRecord.code).where(CourseRecord.paused.is_(True))
+            stmt = stmt.where(
+                ArtifactJobRecord.course_code.not_in(paused),
+                ArtifactJobRecord.attempts < 9,
+                or_(ArtifactJobRecord.cooldown_until.is_(None), ArtifactJobRecord.cooldown_until <= now),
+            )
+        records = self.session.scalars(stmt).all()
+        for r in records:
+            r.status, r.cooldown_until, r.worker_id, r.updated_at = JobStatus.PENDING.value, None, None, now
+            if not respect_cooldown:
+                r.attempts, r.error_message = 0, None
+        self.session.flush()
+        self.session.commit()
+        return len(records)
+
+    def recover_running_jobs(self) -> int:
+        """Reset orphaned RUNNING jobs back to PENDING on worker pool startup.
+
+        Returns:
+            Number of jobs recovered from stale RUNNING state.
+        """
+        now = utc_now()
+        stmt = select(ArtifactJobRecord).where(ArtifactJobRecord.status == JobStatus.RUNNING.value)
+        records = self.session.scalars(stmt).all()
+        for r in records:
+            r.status = JobStatus.PENDING.value
+            r.attempts = max(0, r.attempts - 1)
+            r.worker_id = None
+            r.cooldown_until = None
+            r.updated_at = now
+        self.session.flush()
+        self.session.commit()
+        return len(records)
 
     def update_job_prompt(self, job_id: str, prompt: str) -> bool:
         """Update the custom generation prompt for a specific job.

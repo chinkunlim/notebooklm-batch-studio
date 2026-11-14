@@ -41,29 +41,16 @@ async function fetchStatus() {
     auth.innerHTML = `<i class="dot"></i>${ok ? '已連線' : '未登入 Gemini Notebook'}`;
     const queue = document.getElementById('queueBadge');
     const counts = data.queue_counts || {};
-    const btnStart = document.getElementById('btnStartQueue');
-    const btnPause = document.getElementById('btnPauseQueue');
-    const btnResume = document.getElementById('btnResumeQueue');
-    /**
-     * Show only the queue buttons that fit the current state.
-     * @param {boolean} start Show 啟動批次生成
-     * @param {boolean} pause Show 溫和暫停
-     * @param {boolean} resume Show 繼續執行
-     */
-    const show = (start, pause, resume) => {
-      btnStart.style.display = start ? '' : 'none';
-      btnPause.style.display = pause ? '' : 'none';
-      btnResume.style.display = resume ? '' : 'none';
-    };
     if (data.queue_running) {
       queue.textContent = `佇列 ${counts.running || 0} 項生成中、${counts.pending || 0} 項等待`;
-      show(false, true, false);
-    } else if (counts.pending > 0 || counts.quota_wait > 0) {
-      queue.textContent = `佇列已暫停（${(counts.pending || 0) + (counts.quota_wait || 0)} 項等待）`;
-      show(false, false, true);
+      setQueueButtonsVisible(false, true, false);
+    } else if (counts.pending > 0 || counts.quota_wait > 0 || counts.failed > 0) {
+      const waitN = (counts.pending || 0) + (counts.quota_wait || 0) + (counts.failed || 0);
+      queue.textContent = `佇列已暫停（${waitN} 項待處理${counts.failed ? `・含 ${counts.failed} 項失敗` : ''}）`;
+      setQueueButtonsVisible(false, false, true);
     } else {
       queue.textContent = `佇列閒置（已完成 ${counts.done || 0} 項）`;
-      show(true, false, false);
+      setQueueButtonsVisible(true, false, false);
     }
     const digest = `${!!data.queue_running}:${counts.done || 0}:${counts.running || 0}:${counts.pending || 0}:${counts.quota_wait || 0}:${counts.failed || 0}`;
     await syncLiveCourseProgress(digest);
@@ -188,19 +175,25 @@ function formatResume(iso) {
  * Counts per status, plus when paused or waiting jobs continue.
  * @param {Array<object>} jobs Jobs of the course
  * @param {boolean} paused Whether the course is paused
+ * @param {string} [code] Course code for bulk failed-job retry button
  * @returns {string} HTML
  */
-function renderStatusBar(jobs, paused) {
+function renderStatusBar(jobs, paused, code) {
   const activeJobs = jobs.filter(j => j.status !== 'skipped');
   const counts = {};
   activeJobs.forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; });
   const order = ['done', 'running', 'pending', 'quota_wait', 'needs_review', 'failed'];
   const chips = order.filter(k => counts[k]).map(k => `<span class="badge ${STATUS_LABELS[k].cls}">${STATUS_LABELS[k].text} ${counts[k]}</span>`).join('');
+  const attnCount = (counts.failed || 0) + (counts.needs_review || 0);
+  const retryAllBtn = attnCount && code
+    ? `<button class="btn btn-soft btn-sm" onclick="retryFailedJobs('${escHtml(code)}')">重試失敗／需審查項目（${attnCount}）</button>` : '';
   const waits = activeJobs.filter(j => j.status === 'quota_wait' && j.cooldown_until).map(j => j.cooldown_until).sort();
-  const resume = paused
-    ? '<div class="status-note">這門課暫停中，按上方「開始生成」才會繼續。</div>'
-    : (waits.length ? `<div class="status-note">額度用完的工作會等額度重置，${formatResume(waits[0])}。網頁服務開著就會自己接著跑。</div>` : '');
-  return `<div class="status-chips"><strong class="small">共 ${activeJobs.length} 項</strong>${chips}</div>${resume}`;
+  const notes = [];
+  if (paused) notes.push('這門課暫停中，按上方「開始生成」才會繼續。');
+  else if (waits.length) notes.push(`額度用完的工作會等額度重置，${formatResume(waits[0])}。網頁服務開著就會自己接著跑。`);
+  if (counts.failed) notes.push('失敗的工作在冷卻後會由背景自動重試，也可按「重試」立即重新執行。');
+  const noteHtml = notes.length ? `<div class="status-note">${notes.join(' ')}</div>` : '';
+  return `<div class="status-chips"><strong class="small">共 ${activeJobs.length} 項</strong>${chips}${retryAllBtn}</div>${noteHtml}`;
 }
 
 /**
@@ -234,7 +227,9 @@ function renderActiveJobs(jobs, code) {
     const scope = j.lecture_no === null ? '整門課' : lectureName(j.lecture_no);
     const st = STATUS_LABELS[j.status] || { text: j.status };
     const hue = j.status === 'failed' ? '--danger' : hueFor(j.artifact_type);
-    return `<li style="--hue:var(${hue})"><div class="job-top"><span>${scope}　${escHtml(j.label || j.artifact_type)}</span><span>${st.text}</span></div><div class="bar hue"><i style="width:${width[j.status]}%"></i></div></li>`;
+    const retryBtn = (j.status === 'failed' || j.status === 'needs_review')
+      ? `<button class="btn btn-ghost btn-sm" onclick="retryJob('${j.id}', '${escHtml(code)}')">重試</button>` : '';
+    return `<li style="--hue:var(${hue})"><div class="job-top"><span>${scope}　${escHtml(j.label || j.artifact_type)}</span><span>${st.text} ${retryBtn}</span></div><div class="bar hue"><i style="width:${width[j.status]}%"></i></div></li>`;
   }).join('') : `<li class="small muted">${escHtml(code)} 目前沒有進行中的工作。</li>`;
 }
 
@@ -275,12 +270,14 @@ function jobRowHtml(j, code, versionsBySlot) {
   if (j.status === 'quota_wait' && j.cooldown_until) statusExtra = `<div class="job-sub">${formatResume(j.cooldown_until)}</div>`;
   else if ((j.status === 'needs_review' || j.status === 'failed') && j.error_message) statusExtra = `<div class="job-sub">${escHtml(j.error_message.slice(0, 80))}</div>`;
   const lecArg = j.lecture_no === null ? 'null' : j.lecture_no;
-  const regenBtn = (j.status === 'done' || j.status === 'needs_review') && j.version === total
+  const retryBtn = (j.status === 'failed' || j.status === 'needs_review')
+    ? `<button class="btn btn-primary btn-sm" onclick="retryJob('${j.id}', '${escHtml(code)}')">重試</button>` : '';
+  const regenBtn = (j.status === 'done' || j.status === 'needs_review' || j.status === 'failed') && j.version === total
     ? `<button class="btn btn-soft btn-sm" onclick="regenerateArtifact('${code}', ${lecArg}, '${j.artifact_type}', { label: '${escHtml(j.label || j.artifact_type)}', nextVersion: ${total + 1} })">重新生成</button>` : '';
   return `<tr><td><strong>${escHtml(j.label || j.artifact_type)}</strong><div class="job-sub"><code>${j.artifact_type}</code>　${scope}</div></td><td>${ver}</td>
     <td><span class="badge ${st.cls}">${st.text}</span>${statusExtra}</td>
     <td><button class="btn btn-ghost btn-sm" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">Prompt</button><button class="btn btn-ghost btn-sm" onclick="openJobOptions('${j.id}')" title="只調整這一份產出的設定">設定${hasOwn}</button></td>
-    <td>${dlLink}</td><td>${regenBtn}</td></tr>`;
+    <td>${dlLink}</td><td><div style="display:flex;gap:6px;flex-wrap:wrap">${retryBtn}${regenBtn}</div></td></tr>`;
 }
 
 /**
@@ -354,7 +351,7 @@ async function viewCourseDetail(code, silent = false) {
     document.getElementById('detailTitle').textContent = `${data.name || code}（${code}）`;
     // Keep the groups the user opened or closed when the page refreshes itself.
     const openState = new Map([...content.querySelectorAll('details.job-group')].map(d => [d.querySelector('summary span').textContent, d.open]));
-    content.innerHTML = renderStatusBar(data.jobs || [], data.paused) + jobGroupsHtml(data, code) +
+    content.innerHTML = renderStatusBar(data.jobs || [], data.paused, code) + jobGroupsHtml(data, code) +
       `<details class="job-group"><summary><span>講義上傳與 Gemini Notebook 技術資訊</span><span class="badge">${(data.lectures || []).length} 份 PDF</span></summary><div>${lecturesTableHtml(data, code)}</div></details>`;
     if (silent) content.querySelectorAll('details.job-group').forEach(d => {
       const key = d.querySelector('summary span').textContent;

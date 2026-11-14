@@ -4,6 +4,58 @@
  * fetchStatus, fetchCourses, viewCourseDetail, loadStudyCourseData, showToast).
  */
 
+/**
+ * Show only the queue buttons that fit the current execution state.
+ * @param {boolean} start Show 啟動批次生成 button
+ * @param {boolean} pause Show 溫和暫停 button
+ * @param {boolean} resume Show 繼續執行 button
+ */
+function setQueueButtonsVisible(start, pause, resume) {
+  document.getElementById('btnStartQueue').style.display = start ? '' : 'none';
+  document.getElementById('btnPauseQueue').style.display = pause ? '' : 'none';
+  document.getElementById('btnResumeQueue').style.display = resume ? '' : 'none';
+}
+
+/**
+ * Retry a single failed or needs_review job immediately and wake the queue.
+ * @param {string} jobId Task UUID
+ * @param {string} [code] Optional active course code to refresh detail view
+ * @returns {Promise<void>} Resolves after retry request
+ */
+async function retryJob(jobId, code) {
+  try {
+    const res = await fetch(`/api/jobs/${jobId}/retry`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '重試失敗');
+    showToast('已重新排入佇列並啟動重試。', 'success', 2500);
+    await fetchStatus();
+    await fetchCourses();
+    if (code) await viewCourseDetail(code, true);
+  } catch (e) {
+    showToast('重試失敗：' + e.message, 'error');
+  }
+}
+
+/**
+ * Re-queue every failed or needs_review job in a course and start the worker pool.
+ * @param {string} code Course code
+ * @returns {Promise<void>} Resolves after re-queue request
+ */
+async function retryFailedJobs(code) {
+  try {
+    const res = await fetch(`/api/courses/${code}/jobs/retry-failed`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '重試失敗');
+    const n = data.retried_count ?? 0;
+    showToast(n > 0 ? `已重新排入 ${n} 項失敗／需審查工作，佇列已啟動。` : '目前沒有失敗或需審查的工作。', n > 0 ? 'success' : 'info');
+    await fetchStatus();
+    await fetchCourses();
+    await viewCourseDetail(code, true);
+  } catch (e) {
+    showToast('批次重試失敗：' + e.message, 'error');
+  }
+}
+
 /** Start the generation queue. */
 async function startQueue() {
   try {

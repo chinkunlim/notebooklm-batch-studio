@@ -9,7 +9,7 @@ import tempfile
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from notebooklm_batch_studio.domain.exceptions import NeedsReviewError
+from notebooklm_batch_studio.domain.exceptions import AuthExpiredError, NeedsReviewError, QuotaExceededError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
@@ -197,6 +197,33 @@ async def _run_single_quiz_attempt(
     return art_id, quiz
 
 
+async def _try_single_quiz_attempt(
+    client: NotebookLMClientProtocol,
+    course: Course,
+    target: JobTarget,
+    ctx: tuple[_BatchSpec, str | None, Path, int],
+) -> tuple[tuple[str, Quiz | None] | None, Exception | None]:
+    """Run one quiz generation attempt, swallowing transient errors for retry.
+
+    Args:
+        client: Gemini Notebook client protocol.
+        course: Course domain entity.
+        target: Resolved notebook target and sources.
+        ctx: Tuple of `(_BatchSpec, custom_prompt, tmp_dir_path, attempt_index)`.
+
+    Returns:
+        Tuple of `((artifact_id, quiz) or None, captured_error or None)`.
+    """
+    spec, _, _, attempt = ctx
+    try:
+        return await _run_single_quiz_attempt(client, course, target, ctx), None
+    except (QuotaExceededError, AuthExpiredError):
+        raise
+    except Exception as err:
+        logger.warning("Quiz batch attempt %d/%d failed: %s", attempt + 1, spec.attempts, err)
+        return None, err
+
+
 async def _collect_batches(
     client: NotebookLMClientProtocol,
     course: Course,
@@ -217,17 +244,25 @@ async def _collect_batches(
     spec, custom_prompt = spec_and_prompt
     batches: list[Quiz] = []
     art_ids: list[str] = []
+    last_err: Exception | None = None
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         for attempt in range(spec.attempts):
-            art_id, quiz = await _run_single_quiz_attempt(
+            res, err = await _try_single_quiz_attempt(
                 client, course, target, (spec, custom_prompt, tmp_path, attempt)
             )
-            art_ids.append(art_id)
-            if quiz is not None:
-                batches.append(quiz)
+            if err is not None:
+                last_err = err
+                continue
+            if res is None:
+                continue
+            art_ids.append(res[0])
+            if res[1] is not None:
+                batches.append(res[1])
             if merge_and_deduplicate_quizzes(batches, target_count=spec.target_count)[1]:
                 break
+    if not batches and last_err is not None:
+        raise last_err
     return batches, art_ids
 
 
@@ -287,7 +322,7 @@ class QuizRunner:
             difficulty = course.generation_options.quiz_difficulty
         target_count = course.generation_options.quiz_questions
         spec = _BatchSpec(
-            attempts=3,
+            attempts=4,
             target_count=target_count,
             lecture_no=job.lecture_no or 0,
             variant=variant,
@@ -325,7 +360,7 @@ class QuizRunner:
         # Gemini Notebook's size setting follows the mock exam target, not the lecture quiz count.
         mock_options = dataclasses.replace(course.generation_options, quiz_questions=min(target_q, 60))
         spec = _BatchSpec(
-            attempts=5,
+            attempts=6,
             target_count=target_q,
             lecture_no=0,
             variant="模擬考",

@@ -1,0 +1,28 @@
+{
+  "id": "TASK-021",
+  "title": "Fix failed artifact job manual rerun and automatic retry recovery",
+  "status": "done",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Enable manual UI/HTTP/MCP rerun and automatic cooldown/orphan recovery for failed artifact jobs (ISSUE-038)",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-14 05:12 UTC",
+  "updated_at": "2026-11-14 05:18 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-14 05:12 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-14 05:18 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Enable manual UI/HTTP/MCP rerun and automatic cooldown/orphan recovery for failed artifact jobs (ISSUE-038)"
+    }
+  ],
+  "summary": "Enable manual UI/HTTP/MCP rerun and automatic cooldown/orphan recovery for failed artifact jobs (ISSUE-038)"
+}

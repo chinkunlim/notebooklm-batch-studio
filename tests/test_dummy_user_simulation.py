@@ -258,9 +258,13 @@ class UiAndStaticRegressionTest(unittest.TestCase):
         self.assertIn("position: fixed; top: 0; bottom: 0;", studio_css)
         self.assertIn("scrollbar-gutter: stable", studio_css)
         self.assertIn("scrollTo({ top: 0", shell_js)
-        # ISSUE-034 & ISSUE-036 & TASK-018: cleanup + skipped exclusion + live polling + StudioBus/Store
+        # ISSUE-034 & ISSUE-036 & ISSUE-038 & TASK-018: cleanup + progress + failed rerun + StudioBus
+        queue_js = (STATIC_DIR / "studio-queue.js").read_text(encoding="utf-8")
         self.assertIn("clearCoursePreferences(code)", batch_js)
         self.assertIn("j.status !== 'skipped'", batch_js)
+        self.assertIn("retryJob(", batch_js)
+        self.assertIn("retryFailedJobs(", batch_js)
+        self.assertIn("/api/courses/${code}/jobs/retry-failed", queue_js)
         self.assertIn("fetchCourses()", start_js)
         self.assertIn("window.StudioBus", core_js)
         self.assertIn("window.StudioStore", core_js)

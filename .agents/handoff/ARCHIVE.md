@@ -193,3 +193,15 @@
 ### [2026-11-02 07:31 UTC] 建立任務 `TASK-013`: Apply one course's settings to other courses (by `system`)
 - **狀態**: `open`
 - **相關範圍**: `src/notebooklm_batch_studio/services/course_settings.py, src/notebooklm_batch_studio/entrypoints/http/settings.py, src/notebooklm_batch_studio/entrypoints/mcp_course_settings.py, src/notebooklm_batch_studio/entrypoints/static/studio-settings.js`
+
+### [2026-11-02 12:58 UTC] 完成任務 `TASK-011` — Apply v05 design to the web UI (by `claude-code`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: (無)
+
+### [2026-11-02 12:59 UTC] Session Closeout (結束對話收尾) (by `claude-code`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: Apply the approved v05 design to the real web UI, then refine it with the user: local preferences, offline icons/fonts, font pairings, overview check-in and exa
+- **錯誤與根因**: Safari sidebar gap -> sticky + 100vh/dvh measured differently in Safari -> position fixed top/bottom 0 (ISSUE-031); page-switch jank -> View Transitions snapsho
+- **下一步**: User enables GitHub Pages (Settings -> Pages -> main /docs) to publish docs/demo/; open backlog TASK-012 (course filter) and TASK-013 (apply settings to other c
+- **交接備註**: v05 is live and pushed; 183 tests pass; demo at docs/demo/index.html verified in Chromium and WebKit
+- **本機對話紀錄**: `.agents/conversations/2026-11-02-2059-claude-code-summary.md`（只在這台電腦）

@@ -145,13 +145,13 @@ class CourseOnboardingMixin:
             lec: Lecture metadata object.
             existing_sources: Map of existing filename to source ID.
         """
-        if not lec.source_id and lec.filename in existing_sources:
+        if (not lec.source_id or lec.upload_status == "failed") and lec.filename in existing_sources:
             src_id = existing_sources[lec.filename]
             self.course_repo.update_lecture_upload_status(course.code, lec.no, "ready", source_id=src_id)
             logger.info("Lecture %d reuses existing source %s", lec.no, src_id)
             return
 
-        if lec.source_id:
+        if lec.source_id and lec.upload_status != "failed":
             self.course_repo.update_lecture_upload_status(
                 course.code, lec.no, "ready", source_id=lec.source_id
             )

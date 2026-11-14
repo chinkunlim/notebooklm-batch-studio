@@ -74,6 +74,11 @@ class WorkerPool:
         if self._running:
             return
         self._running = True
+        with self.queue_provider() as repo:
+            recover = getattr(repo, "recover_running_jobs", None)
+            recovered = recover() if callable(recover) else 0
+        if recovered:
+            logger.info("Recovered %d orphaned RUNNING job(s) back to PENDING", recovered)
         logger.info("Starting WorkerPool with concurrency=%d", self.concurrency)
         for i in range(self.concurrency):
             worker_id = f"worker-{i + 1}"
@@ -156,6 +161,8 @@ class WorkerPool:
             logger.exception("Worker %s failed job=%s: %s", worker_id, job.id, err)
             with self.queue_provider() as repo:
                 repo.fail_job(job.id, error_message=str(err))
+            # Brief backoff avoids immediate tight-loop claims on transient failures (ISSUE-038).
+            await asyncio.sleep(0.2)
 
     async def _worker_loop(self, worker_id: str) -> None:
         """Main execution loop for an individual worker.
@@ -187,10 +194,14 @@ class WorkerPool:
                 await asyncio.sleep(self.probe_interval_seconds)
                 with self.queue_provider() as repo:
                     awakened = repo.refresh_quota_wait()
+                    retry_fn = getattr(repo, "retry_failed_jobs", None)
+                    retried = retry_fn(respect_cooldown=True) if callable(retry_fn) else 0
                     active_types = {job.artifact_type for job in repo.list_jobs(status=JobStatus.QUOTA_WAIT)}
 
                 if awakened > 0:
                     logger.info("Quota probe awakened %d tasks back to PENDING", awakened)
+                if isinstance(retried, int) and retried > 0:
+                    logger.info("Probe auto-retried %d failed task(s) back to PENDING", retried)
                 stale = self.blocked_quota_types - active_types
                 if stale:
                     self.blocked_quota_types.intersection_update(active_types)

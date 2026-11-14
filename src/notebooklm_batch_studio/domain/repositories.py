@@ -208,6 +208,32 @@ class QueueRepositoryProtocol(Protocol):
         """
         ...
 
+    def retry_failed_jobs(
+        self,
+        course_code: str | None = None,
+        include_needs_review: bool = False,
+        respect_cooldown: bool = False,
+    ) -> int:
+        """Reset failed (and optionally needs_review) jobs back to PENDING.
+
+        Args:
+            course_code: Optional course filter.
+            include_needs_review: Whether to include NEEDS_REVIEW jobs.
+            respect_cooldown: When True, honor cooldown_until and max auto-retry rounds.
+
+        Returns:
+            Number of jobs reset to PENDING.
+        """
+        ...
+
+    def recover_running_jobs(self) -> int:
+        """Reset orphaned RUNNING jobs back to PENDING on worker pool startup.
+
+        Returns:
+            Number of recovered jobs.
+        """
+        ...
+
     def update_job_prompt(self, job_id: str, prompt: str) -> bool:
         """Update the custom generation prompt for a specific job.
 

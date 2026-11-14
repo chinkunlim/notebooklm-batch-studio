@@ -163,7 +163,9 @@ class BatchStudioService(CourseOnboardingMixin):
         if course is None:
             raise CourseNotFoundError(f"Course {job.course_code} not found")
         await ensure_quota_for(self.notebooklm_client, job.artifact_type)
-        if not course.notebook_id or any(not lec.source_id for lec in course.lectures):
+        if not course.notebook_id or any(
+            not lec.source_id or lec.upload_status == "failed" for lec in course.lectures
+        ):
             logger.info("Initializing Gemini Notebook notebook and sources for course %s", course.code)
             course = await self.setup_notebook_and_sources(course.code)
 
@@ -223,7 +225,7 @@ class BatchStudioService(CourseOnboardingMixin):
         )
 
     def retry_job(self, job_id: str) -> bool:
-        """Reset a failed or cancelled task back to pending.
+        """Reset a failed, needs-review, or quota-waiting task back to pending and ensure queue starts.
 
         Args:
             job_id: Task UUID.
@@ -233,17 +235,48 @@ class BatchStudioService(CourseOnboardingMixin):
         """
         job = self.queue_repo.get_job(job_id)
         ok = self.queue_repo.retry_job(job_id)
-        if ok and job is not None and self.worker_pool is not None:
-            self.worker_pool.blocked_quota_types.discard(job.artifact_type)
+        if ok:
+            if job is not None and self.worker_pool is not None:
+                self.worker_pool.blocked_quota_types.discard(job.artifact_type)
+            self.start_queue()
         return ok
 
+    def retry_course_failed_jobs(
+        self, course_code: str | None = None, include_needs_review: bool = True
+    ) -> int:
+        """Reset failed (and optionally needs_review) jobs to pending and start the worker pool.
+
+        Args:
+            course_code: Optional course filter (validated when supplied).
+            include_needs_review: Also reset NEEDS_REVIEW jobs back to pending.
+
+        Returns:
+            Number of jobs re-queued to pending.
+
+        Raises:
+            CourseNotFoundError: When `course_code` does not exist.
+        """
+        if course_code is not None and self.course_repo.get_course(course_code) is None:
+            raise CourseNotFoundError(f"Course not found: {course_code}")
+        count = self.queue_repo.retry_failed_jobs(
+            course_code=course_code, include_needs_review=include_needs_review, respect_cooldown=False
+        )
+        if self.worker_pool is not None:
+            self.worker_pool.blocked_quota_types.clear()
+        self.start_queue()
+        logger.info("Re-queued %d failed job(s) for course=%s", count, course_code or "*")
+        return int(count)
+
     def resume_quota_wait(self) -> int:
-        """Wake all quota-blocked tasks back to pending immediately.
+        """Wake all quota-blocked and failed tasks back to pending immediately.
 
         Returns:
             Number of awakened jobs.
         """
         awakened = self.queue_repo.refresh_quota_wait(force=True)
+        retried = self.queue_repo.retry_failed_jobs(include_needs_review=False, respect_cooldown=False)
+        if isinstance(retried, int):
+            awakened += retried
         if self.worker_pool is not None:
             self.worker_pool.blocked_quota_types.clear()
         return awakened
@@ -340,11 +373,14 @@ class BatchStudioService(CourseOnboardingMixin):
             logger.info("WorkerPool background start scheduled.")
 
     def start_queue(self) -> bool:
-        """Start active queue processing.
+        """Re-queue any FAILED jobs and start active queue processing.
 
         Returns:
             True upon start request.
         """
+        retry_fn = getattr(self.queue_repo, "retry_failed_jobs", None)
+        if callable(retry_fn):
+            retry_fn(include_needs_review=False, respect_cooldown=False)
         self._is_queue_running = True
         if self.worker_pool and self.worker_pool.is_paused:
             self.worker_pool.resume()

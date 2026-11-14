@@ -128,7 +128,7 @@ def copy_course_options(code: str, req: CopyOptionsRequest, request: Request) ->
 @settings_router.post(
     "/api/courses/{code}/jobs/regenerate", tags=["Settings"], operation_id="regenerate_artifact"
 )
-def regenerate_artifact(code: str, req: RegenerateRequest, request: Request) -> dict[str, Any]:
+async def regenerate_artifact(code: str, req: RegenerateRequest, request: Request) -> dict[str, Any]:
     """Enqueue a new version (v2, v3, ...) of one artifact; older versions are kept.
 
     Args:
@@ -144,11 +144,13 @@ def regenerate_artifact(code: str, req: RegenerateRequest, request: Request) -> 
     """
     service: BatchStudioService = request.app.state.service
     try:
-        return service.course_settings.regenerate(code, req.lecture_no, req.artifact_type)
+        result = service.course_settings.regenerate(code, req.lecture_no, req.artifact_type)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    service.start_queue()
+    return result
 
 
 @settings_router.get(
@@ -290,7 +292,7 @@ def pause_course(code: str, request: Request) -> dict[str, Any]:
 
 
 @settings_router.post("/api/courses/{code}/start", tags=["Settings"], operation_id="start_course")
-def start_course(code: str, request: Request) -> dict[str, Any]:
+async def start_course(code: str, request: Request) -> dict[str, Any]:
     """Let one course's jobs run (and make sure the queue itself is running).
 
     Args:
@@ -308,6 +310,7 @@ def start_course(code: str, request: Request) -> dict[str, Any]:
         result = service.course_settings.set_paused(code, False)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    service.queue_repo.retry_failed_jobs(course_code=code, include_needs_review=False, respect_cooldown=False)
     service.start_queue()
     return result
 
