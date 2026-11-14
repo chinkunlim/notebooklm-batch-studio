@@ -1281,9 +1281,10 @@ img, iframe, video, audio { max-width: 100%; }
 .cram-panel { margin-bottom: var(--s5); }
 
 /* Right column arrow collapse/expand + split-mode viewport-fit equal height & card collapse */
+html:has(#view-study.on #paneStudy[data-layout="split"]) { scroll-snap-type: y proximity; }
 .study[data-layout="split"] {
   align-items: stretch; height: var(--study-h, calc(100vh - 48px)); min-height: 460px;
-  position: sticky; top: 24px; margin-bottom: 0; scroll-margin-top: 24px;
+  position: sticky; top: 24px; margin-bottom: 0; scroll-margin-top: 24px; scroll-snap-align: start;
 }
 .app:has(#paneStudy[data-layout="split"]:not([hidden])) .views { padding-bottom: 24px; }
 .study[data-layout="split"] .study-main,
