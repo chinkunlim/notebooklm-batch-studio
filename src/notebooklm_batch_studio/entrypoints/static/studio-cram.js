@@ -445,7 +445,7 @@ function initStudyStickyWheel() {
     if (e.deltaY > 0 && top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); return; }
     if (e.deltaY < 0) {
       const scroller = e.target.closest('.kp-list.kp-all-mode, #readerPages');
-      if ((!scroller || scroller.scrollTop <= 0) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
+      if ((!scroller || scroller.scrollTop <= 1) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
     }
   }, { passive: false });
 }

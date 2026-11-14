@@ -111,6 +111,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(reader): re-layout PDF pages and textLayer on container resize to prevent highlight drift (by `@antigravity`)
 - fix(ui,reader): set 12px symmetric top/bottom study margins and resolve exact PDF page on first keypoint click (by `@antigravity`)
 - fix(ui): restore global wheel scrolling across all pages and bidirectional study page scroll (by `@antigravity`)
+- fix(ui): unlock outer page upward scroll with subpixel top threshold on PDF reader (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
