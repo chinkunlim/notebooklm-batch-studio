@@ -434,7 +434,58 @@ function updateStudyViewportHeight() {
   pane.style.setProperty('--study-h', `${avail}px`);
 }
 
+/**
+ * Scroll outer page down until #paneStudy sticks at 12px top margin before scrolling inner PDF/bench.
+ * @returns {void}
+ */
+function initStudyStickyWheel() {
+  const pane = document.getElementById('paneStudy');
+  if (!pane || pane.dataset.stickyWheelHooked) return;
+  pane.dataset.stickyWheelHooked = '1';
+  pane.addEventListener('wheel', e => {
+    if (pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
+    if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
+    const top = pane.getBoundingClientRect().top;
+    if (e.deltaY > 0 && top > 13) {
+      e.preventDefault();
+      window.scrollBy(0, Math.min(e.deltaY, top - 12));
+    }
+  }, { passive: false });
+}
+
+/**
+ * Switch the right column of #paneStudy between study tools and course catalog without hiding #readerCard.
+ * @param {string} v Target pane ('study' or 'courses')
+ * @returns {void}
+ */
+function switchStudySidePane(v) {
+  const study = document.getElementById('paneStudy'), courses = document.getElementById('paneCourses'), side = document.getElementById('studySide');
+  if (study && side && study.dataset.layout === 'split') {
+    let host = document.getElementById('sideCatalogHost');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'sideCatalogHost';
+      host.className = 'side-catalog-host';
+      side.appendChild(host);
+    }
+    if (courses && !host.children.length) Array.from(courses.children).forEach(ch => host.appendChild(ch));
+    if (courses) courses.hidden = true;
+    study.hidden = false;
+    study.dataset.sideMode = v;
+    if (v === 'courses' && study.classList.contains('side-collapsed')) {
+      const tg = study.querySelector(':scope > .col-resizer .col-toggle');
+      if (tg) tg.click();
+    }
+  } else {
+    if (courses) courses.hidden = v !== 'courses';
+    if (study) study.hidden = v !== 'study';
+  }
+  if (typeof updateMini === 'function') updateMini();
+  if (typeof sizeCanvases === 'function') requestAnimationFrame(sizeCanvases);
+}
+
 initSideCardCollapses();
+initStudyStickyWheel();
 updateStudyViewportHeight();
 window.addEventListener('load', updateStudyViewportHeight);
 window.addEventListener('resize', updateStudyViewportHeight);

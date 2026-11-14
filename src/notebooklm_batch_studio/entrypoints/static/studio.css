@@ -1290,6 +1290,9 @@ html:has(#view-study.on #paneStudy[data-layout="split"]) { scroll-snap-type: y p
 .study[data-layout="split"] .study-main,
 .study[data-layout="split"] .study-side { height: 100%; min-height: 0; position: relative; top: auto; display: flex; flex-direction: column; }
 .study[data-layout="split"].side-collapsed > .study-side { display: none; }
+.study[data-layout="split"][data-side-mode="courses"] .study-side > :not(.side-catalog-host) { display: none !important; }
+.study[data-layout="split"]:not([data-side-mode="courses"]) .study-side > .side-catalog-host { display: none !important; }
+.side-catalog-host { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
 .study[data-layout="split"] #readerCard { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .study[data-layout="split"] #readerHome,
 .study[data-layout="split"] #readerContent,

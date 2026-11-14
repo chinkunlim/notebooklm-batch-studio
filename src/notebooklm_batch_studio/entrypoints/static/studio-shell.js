@@ -366,7 +366,7 @@ const handlers = {
     $$('#speedMenu button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   },
   layout: v => applyLayout(v),
-  studioPane: v => { $('#paneCourses').hidden = v !== 'courses'; $('#paneStudy').hidden = v !== 'study'; updateMini(); requestAnimationFrame(sizeCanvases); },
+  studioPane: v => switchStudySidePane(v),
   reviewTab: v => { $('#reviewMistakes').hidden = v !== 'mistakes'; $('#reviewCards').hidden = v !== 'cards'; },
   courseFilter: v => {
     if (window.StudioStore) window.StudioStore.patch({ courseFilter: v });
