@@ -56,6 +56,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(study,cram): add Cramming Mode with priority pacing, scoped cram bundles, rapid mistakes/notes review, and 1.5x audio playlist (by `@antigravity`)
 - feat(ui): add layout debug guide lines overlay (Cmd+Shift+G) and record ISSUE-039/ISSUE-040 (by `@antigravity`)
 - feat(ui): render labeled bounding boxes for every layout container and button in layout guides (by `@antigravity`)
+- feat(ui): click any layout guide box to copy its element label (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

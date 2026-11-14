@@ -236,8 +236,9 @@ function renderLayoutGuides() {
     let ty = 0;
     while (placed.some(p => Math.abs(p.x - r.left) < 110 && Math.abs(p.y - (r.top + ty)) < 14)) ty += 14;
     placed.push({ x: r.left, y: r.top + ty });
-    return `<div class="lg-box" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-color:${c}">
-      <span class="lg-tag" style="background:${c};top:${ty}px">${escHtml(guideLabelFor(el))}</span></div>`;
+    const label = guideLabelFor(el);
+    return `<div class="lg-box" data-label="${escHtml(label)}" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-color:${c}">
+      <span class="lg-tag" style="background:${c};top:${ty}px">${escHtml(label)}</span></div>`;
   }).join('');
 }
 
@@ -258,12 +259,13 @@ function toggleLayoutGuides() {
     app.appendChild(hud);
   }
   const mode = document.querySelector('.seg[data-seg="layout"] .on')?.textContent || '—';
-  hud.innerHTML = `<span>📐 參考線（含按鈕框與 div 名稱）｜版型：${escHtml(mode)} (${window.innerWidth}×${window.innerHeight})</span>
+  hud.innerHTML = `<span>📐 參考線｜點擊任意框線即可複製名稱（${escHtml(mode)} ${window.innerWidth}×${window.innerHeight}）</span>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;padding:1px 8px" onclick="toggleLayoutGuides()">關閉</button>`;
   if (!layoutGuidesHooked) {
     layoutGuidesHooked = true;
     window.addEventListener('resize', () => requestAnimationFrame(renderLayoutGuides));
     document.addEventListener('scroll', () => requestAnimationFrame(renderLayoutGuides), true);
+    document.addEventListener('click', copyGuideLabelAt, true);
     document.addEventListener('click', () => setTimeout(renderLayoutGuides, 80), true);
     document.addEventListener('mousemove', e => highlightGuideAt(e.clientX, e.clientY));
   }
@@ -283,6 +285,30 @@ function highlightGuideAt(x, y) {
     const r = box.getBoundingClientRect();
     box.classList.toggle('is-hover', x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
   });
+}
+
+/**
+ * Copy the innermost layout guide box label at the clicked coordinates to clipboard.
+ * @param {MouseEvent} e Click event
+ * @returns {void}
+ */
+function copyGuideLabelAt(e) {
+  const app = document.getElementById('app');
+  const layer = document.getElementById('layoutGuideLayer');
+  if (!app?.classList.contains('layout-guides') || !layer) return;
+  if (e.target.closest('#layoutGuideHud, #btnLayoutGuides')) return;
+  const hits = [...layer.querySelectorAll('.lg-box')].filter(box => {
+    const r = box.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  });
+  if (!hits.length) return;
+  hits.sort((a, b) => (a.offsetWidth * a.offsetHeight) - (b.offsetWidth * b.offsetHeight));
+  const label = hits[0].dataset.label || '';
+  if (!label) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(label).catch(() => {});
+  showToast(`📋 已複製：${label}`, 'info', 2200);
 }
 
 document.addEventListener('keydown', e => {
