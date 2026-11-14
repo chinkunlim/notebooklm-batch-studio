@@ -2,6 +2,7 @@
    collapsible margin comments, and horizontal splitter. */
 
 let readerCurrentPage = 1;
+let kpViewMode = 'page';
 
 /**
  * Build the localStorage key for per-lecture reader state.
@@ -104,16 +105,41 @@ function toggleReaderBookmark(code, no) {
  * @returns {void}
  */
 function renderReaderBookmarks(code, no) {
-  const bar = document.getElementById('readerBookmarksBar');
-  if (!bar) return;
   const { bookmarks } = loadReaderLocal(code, no);
-  if (!bookmarks.length) { bar.innerHTML = ''; bar.hidden = true; return; }
-  bar.hidden = false;
-  bar.innerHTML = `<span class="small muted">書籤：</span>` + bookmarks.map(b =>
-    `<span class="bm-chip"><button type="button" class="bm-go" onclick="jumpToReaderPage(${b.page})">🔖 ${escHtml(b.label)}</button>` +
-    `<button type="button" class="bm-del" aria-label="移除書籤" onclick="removeReaderBookmark('${escHtml(code)}',${no},${b.page})">×</button></span>`
+  const count = document.getElementById('bmCount');
+  const pop = document.getElementById('bmPop');
+  if (count) count.textContent = String(bookmarks.length);
+  if (!pop) return;
+  if (!bookmarks.length) {
+    pop.innerHTML = '<div class="small muted" style="padding:8px 10px">尚無書籤，點左側「加書籤」加入目前頁碼</div>';
+    return;
+  }
+  pop.innerHTML = bookmarks.map(b =>
+    `<div class="bm-pop-row"><button type="button" class="bm-pop-go" onclick="jumpToReaderPage(${b.page});document.getElementById('bmPick')?.classList.remove('open')">🔖 ${escHtml(b.label)}</button>` +
+    `<button type="button" class="bm-del" aria-label="移除書籤" onclick="removeReaderBookmark('${escHtml(code)}',${no},${b.page})">×</button></div>`
   ).join('');
 }
+
+/**
+ * Toggle the bookmark dropdown menu open/closed.
+ * @param {MouseEvent} e Click event
+ * @returns {void}
+ */
+function toggleBmMenu(e) {
+  e.stopPropagation();
+  const wrap = document.getElementById('bmPick');
+  if (!wrap) return;
+  const open = wrap.classList.toggle('open');
+  document.getElementById('bmMenuBtn')?.setAttribute('aria-expanded', String(open));
+}
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('bmPick');
+  if (wrap && !wrap.contains(e.target)) {
+    wrap.classList.remove('open');
+    document.getElementById('bmMenuBtn')?.setAttribute('aria-expanded', 'false');
+  }
+});
 
 /**
  * Remove a saved bookmark by page number.
@@ -148,13 +174,33 @@ function toggleReaderComments(code, no) {
  * @param {number} pageNum Active page number
  * @returns {void}
  */
+/**
+ * Toggle margin comments between current-page-only (e-book margin style) and all pages.
+ * @returns {void}
+ */
+function toggleKpViewMode() {
+  kpViewMode = kpViewMode === 'page' ? 'all' : 'page';
+  const btn = document.getElementById('kpModeBtn');
+  if (btn) btn.textContent = kpViewMode === 'page' ? '顯示全部' : '僅看本頁';
+  syncActivePageComments(readerCurrentPage);
+}
+
+/**
+ * Show only margin comments anchored to the active PDF page (or all when toggled).
+ * @param {number} pageNum Active page number
+ * @returns {void}
+ */
 function syncActivePageComments(pageNum) {
+  let shown = 0;
   document.querySelectorAll('#keyPointList .kp-item').forEach(item => {
-    const p = Number(item.dataset.page || 0);
-    const active = !p || Math.abs(p - pageNum) <= 1;
-    item.classList.toggle('is-on-page', active);
-    item.classList.toggle('is-off-page', !active);
+    const pdfPage = Number(item.dataset.pdfPage || 0);
+    const match = kpViewMode === 'all' || pdfPage === pageNum;
+    item.hidden = !match;
+    item.classList.toggle('is-on-page', pdfPage === pageNum);
+    if (match) shown++;
   });
+  const empty = document.getElementById('kpEmptyPage');
+  if (empty) empty.hidden = kpViewMode === 'all' || shown > 0;
 }
 
 /**
@@ -278,6 +324,8 @@ Object.assign(window, {
   renderReaderBookmarks,
   removeReaderBookmark,
   toggleReaderComments,
+  toggleKpViewMode,
+  toggleBmMenu,
   syncActivePageComments,
   initReaderSplitter,
   deleteUserPdfHighlight,

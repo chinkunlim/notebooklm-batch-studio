@@ -132,7 +132,7 @@ a { color: var(--primary); }
 /* Header: title (home link) | status | actions — status and buttons separated */
 .topbar {
   display: flex; align-items: center; flex-wrap: wrap; gap: var(--s3) var(--s4);
-  padding: var(--s5) var(--gutter) var(--s4);
+  margin: 0 var(--gutter); padding: var(--s5) 0 var(--s4);
 }
 .brand { text-align: left; min-width: 0; margin-right: auto; }
 .brand-title { font-family: var(--font-head); font-size: clamp(17px, 1.6cqi, 20px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
@@ -297,7 +297,10 @@ html[data-style="editorial"] .card { box-shadow: none; border: 1px solid var(--l
 /* =========================================================
    5. Study studio: courses (ref-4 list) + reader | player + workbench
    ========================================================= */
-.subbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); margin-bottom: var(--gap); flex-wrap: wrap; }
+.subbar { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: var(--gap); }
+.subbar-top { display: flex; align-items: center; min-width: 0; }
+.subbar-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+.subbar-sep { width: 1px; height: 18px; background: var(--line); margin: 0 2px; flex: none; }
 .crumbs { font-size: 13.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .crumbs b { color: var(--ink); font-weight: 500; }
 
@@ -1288,11 +1291,8 @@ img, iframe, video, audio { max-width: 100%; }
   box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: border-color var(--dur-hover) var(--ease), background var(--dur-hover) var(--ease), color var(--dur-hover) var(--ease);
 }
 .side-collapse-btn:hover, .side-expand-btn:hover { border-color: var(--accent); background: var(--primary); color: var(--primary-ink); }
-.study[data-layout="split"]:not(.side-collapsed) .side-collapse-btn { display: grid; position: absolute; top: 14px; right: 14px; z-index: 6; }
-.study[data-layout="split"].side-collapsed:not(.side-empty) .side-expand-btn { display: grid; position: absolute; top: 10px; right: 10px; z-index: 20; }
-.study[data-layout="split"] .study-side > .card:first-of-type > .card-head,
-.study[data-layout="split"] .study-side > .card:first-of-type > .bench-head,
-.study[data-layout="split"] .study-side > .card:first-of-type > .player-controls { padding-right: 42px; }
+.study[data-layout="split"]:not(.side-collapsed):not(.side-empty) #readerCard .side-collapse-btn { display: grid; position: absolute; top: 14px; right: 14px; z-index: 18; }
+.study[data-layout="split"].side-collapsed:not(.side-empty) #readerCard .side-expand-btn { display: grid; position: absolute; top: 14px; right: 14px; z-index: 18; }
 .card-collapse-btn {
   display: none; width: 28px; height: 28px; border-radius: 50%; place-items: center; flex: none;
   background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); cursor: pointer; margin-left: 4px;
@@ -1303,9 +1303,9 @@ img, iframe, video, audio { max-width: 100%; }
 .card.is-collapsed > .card-head, .card.is-collapsed > .player-controls, .card.is-collapsed > .bench-head { margin-bottom: 0; }
 
 /* Reader sticky bar & scroll stop */
-#readerCard { scroll-margin-top: 14px; }
-#readerContent > .card-head { position: sticky; top: 0; z-index: 16; background: var(--surface); padding-top: 4px; padding-bottom: 6px; }
-.reader-bar { position: sticky; top: 36px; z-index: 15; background: var(--surface); padding: 8px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
+#readerCard { position: relative; scroll-margin-top: 24px; }
+#readerContent > .card-head { position: sticky; top: 10px; z-index: 16; background: var(--surface); padding: 8px 44px 6px 0; }
+.reader-bar { position: sticky; top: 46px; z-index: 15; background: var(--surface); padding: 8px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
 
 /* Layout Debug Guides (Cmd+Shift+G / 參考線按鈕) */
 .app.layout-guides .topbar { outline: 2px dashed #e11d48; outline-offset: -2px; }

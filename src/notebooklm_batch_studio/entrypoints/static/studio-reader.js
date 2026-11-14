@@ -45,16 +45,19 @@ function renderReaderShell(box, code, no, pdfUrl) {
         <button class="icon-btn" onclick="readerZoom(-0.15)" aria-label="縮小"><i class="icon-zoom-out"></i></button>
         <button type="button" class="reader-zoom-pill" id="readerZoomLabel" onclick="cycleReaderZoom()" title="點擊切換 小(125%) / 中 / 大(200%)">${Math.round(reader.scale * 100)}%</button>
         <button class="icon-btn" onclick="readerZoom(0.15)" aria-label="放大"><i class="icon-zoom-in"></i></button>
-        <a class="btn btn-ghost btn-sm" href="${pdfUrl}" target="_blank" rel="noopener">新分頁開啟</a>
-        <button type="button" class="btn btn-ghost btn-sm" id="readerResumeBtn" onclick="jumpToLastReadPage('${escHtml(code)}',${no})">📍 續讀 p.${st.lastPage || 1}</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="toggleReaderBookmark('${escHtml(code)}',${no})">🔖 書籤</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="readerToggleCommentsBtn" onclick="toggleReaderComments('${escHtml(code)}',${no})">收合重點</button>
+        <a class="reader-pill-btn" href="${pdfUrl}" target="_blank" rel="noopener">新分頁開啟</a>
+        <button type="button" class="reader-pill-btn" id="readerResumeBtn" onclick="jumpToLastReadPage('${escHtml(code)}',${no})">📍 續讀 p.${st.lastPage || 1}</button>
+        <div class="bm-pick" id="bmPick">
+          <button type="button" class="reader-pill-btn" onclick="toggleReaderBookmark('${escHtml(code)}',${no})" title="將目前頁面加入或移除書籤">🔖 加書籤</button>
+          <button type="button" class="reader-pill-btn" id="bmMenuBtn" onclick="toggleBmMenu(event)" aria-haspopup="listbox" aria-expanded="false">📑 書籤 (<span id="bmCount">0</span>) ▾</button>
+          <div class="bm-pop" id="bmPop" role="listbox" aria-label="書籤列表"></div>
+        </div>
+        <button type="button" class="reader-pill-btn" id="readerToggleCommentsBtn" onclick="toggleReaderComments('${escHtml(code)}',${no})">收合重點</button>
       </div>
       <div class="reader-legend">
         <span class="kp-dot kp-i3"></span>必考核心 <span class="kp-dot kp-i2"></span>重要概念 <span class="kp-dot kp-i1"></span>補充 <span class="kp-dot kp-i4"></span>個人標記
       </div>
     </div>
-    <div id="readerBookmarksBar" class="reader-bookmarks-bar" hidden></div>
     <div class="reader-layout">
       <aside id="keyPointList" class="kp-list">讀取重點中…</aside>
       <div id="readerSplitter" class="reader-splitter" role="separator" aria-orientation="vertical" title="拖曳調整重點欄與 PDF 寬度"></div>
@@ -137,18 +140,22 @@ function renderKeyPointList() {
     return;
   }
   list.innerHTML = `<div class="kp-head"><strong>重點與備註 ${allPts.length} 則</strong>
-      <button class="link-btn" onclick="generateKeyPoints(true)">重新產生</button></div>` +
+      <span class="row" style="gap:8px"><button type="button" class="link-btn" id="kpModeBtn" onclick="toggleKpViewMode()">顯示全部</button>
+      <button class="link-btn" onclick="generateKeyPoints(true)">重新產生</button></span></div>` +
     allPts.map(p => {
       const click = p._user ? `jumpToReaderPage(${p.page || 1})` : `jumpToPoint(${p._idx})`;
       const idAttr = p._user ? '' : ` id="kpItem-${p._idx}"`;
+      const pdfPage = p.foundOn || (p.page && (!reader.doc || p.page <= reader.doc.numPages) ? p.page : 0);
       const del = p._user
         ? `<button type="button" class="kp-del" title="刪除個人標記" onclick="event.stopPropagation();deleteUserPdfHighlight('${escHtml(code)}',${no},'${escHtml(p.id)}')">✕</button>`
         : '';
-      return `<div class="kp-item kp-i${p.importance || 2}"${idAttr} data-page="${p.page || 0}" onclick="${click}">
+      return `<div class="kp-item kp-i${p.importance || 2}"${idAttr} data-page="${p.page || 0}" data-pdf-page="${pdfPage}" onclick="${click}">
         <span class="kp-page">${p.page ? `p.${p.page}` : '—'}</span>
         <span class="kp-text"><span class="kp-quote">${escHtml(p.quote)}</span>
         ${p.note ? `<span class="kp-note">${escHtml(p.note)}</span>` : ''}</span>${del}</div>`;
-    }).join('');
+    }).join('') +
+    '<div class="kp-empty-page" id="kpEmptyPage" hidden>本頁無重點批註（往下捲動或點「顯示全部」）</div>';
+  if (typeof syncActivePageComments === 'function') syncActivePageComments(typeof readerCurrentPage === 'number' ? readerCurrentPage : 1);
 }
 
 /**
@@ -195,7 +202,7 @@ async function layoutPages(token) {
   const first = await reader.doc.getPage(1);
   const base = first.getViewport({ scale: 1 });
   const fitWidth = pages.clientWidth || 720;
-  const width = Math.max(320, Math.round(fitWidth * Math.min(1.25, reader.scale / 2.0)));
+  const width = Math.max(320, Math.round(fitWidth * (reader.scale / 1.25)));
   for (let n = 1; n <= reader.doc.numPages; n++) {
     const page = document.createElement('div');
     page.className = 'reader-page';
@@ -308,9 +315,11 @@ function highlightPage(n) {
     });
     if (i < reader.points.length) {
       p.foundOn = n;
-      document.getElementById(`kpItem-${i}`)?.classList.add('found');
+      const item = document.getElementById(`kpItem-${i}`);
+      if (item) { item.classList.add('found'); item.dataset.pdfPage = String(n); }
     }
   });
+  if (typeof syncActivePageComments === 'function') syncActivePageComments(typeof readerCurrentPage === 'number' ? readerCurrentPage : 1);
   markMissingPoints();
 }
 
