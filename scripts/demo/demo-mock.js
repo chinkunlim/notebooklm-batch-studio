@@ -291,6 +291,7 @@ function demoStudy(c, rest, method, body, q) {
  * @returns {Response} Response
  */
 function demoCourseRoute(code, rest, method, body, q) {
+  if (rest.startsWith('notes') || rest.startsWith('qa/')) return demoQaNotesRoute(code, rest, method, body, q);
   const c = demoCourse(code);
   if (!c) return demoJson({ detail: '找不到課程' }, 404);
   if (rest === '' && method === 'GET') return demoJson(demoCourseJson(c));
@@ -340,6 +341,46 @@ function demoCourseRoute(code, rest, method, body, q) {
     return demoJson({ code, deleted_source_id: decodeURIComponent(rest.slice(8)), unlinked_lectures: [] });
   }
   if (method === 'POST') { demoNote('這個動作'); return demoJson({ ok: true, notebook_id: 'demo', upload_status: 'ready', updated_jobs_count: 0, remote_artifacts_found: 0, synced_count: 0 }); }
+  return demoJson({ detail: 'not in demo' }, 404);
+}
+
+/**
+ * Handle /api/courses/{code}/qa/* and /notes/* routes in demo mode.
+ * @param {string} code Course code or '*'
+ * @param {string} rest Path after course code
+ * @param {string} method HTTP method
+ * @param {object} body Request body
+ * @param {URLSearchParams} q Query parameters
+ * @returns {Response} JSON response
+ */
+function demoQaNotesRoute(code, rest, method, body, q) {
+  const list = demoState.qaNotes || (demoState.qaNotes = [
+    { id: 'demo-n1', course_code: code === '*' ? 'BIO101' : code, lecture_no: 1, title: '細胞膜通透性重點', content_markdown: '## 重點\n磷脂質雙層具選擇性通透。', personal_memo: '必考圖表', tags: ['#課程/BIO101/L01', '#L01', '#類型/問答', '#掌握度/待加強', '#主題/細胞膜'], source_scene: 'chat_drawer', mastery_status: 'needs_review', is_uploaded_as_source: false, uploaded_source_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  ]);
+  if (rest === 'qa/ask' && method === 'POST') return demoJson({ answer: `（示範回答）關於「${(body && body.question) || ''}」，講義重點在於結構與功能的對應關係。`, conversation_id: 'demo-conv-1', references: [{ source_id: 's1', citation_number: 1, cited_text: '講義第 3 頁重點摘要' }] });
+  if (rest === 'qa/summarize' && method === 'POST') return demoJson({ title: '對話精華整理', markdown: '## 核心觀念\n- 示範摘要內容', tags: ['#類型/問答', '#掌握度/待加強'], conversation_id: 'demo-conv-1' });
+  if (rest === 'notes' && method === 'GET') {
+    const tag = (q.get('tag') || '').toLowerCase();
+    const mastery = q.get('mastery') || '';
+    const filtered = list.filter(n => (code === '*' || n.course_code === code) && (!mastery || n.mastery_status === mastery) && (!tag || n.title.toLowerCase().includes(tag) || n.tags.some(t => t.toLowerCase().includes(tag))));
+    return demoJson({ notes: filtered });
+  }
+  if (rest === 'notes' && method === 'POST') {
+    const note = { id: `demo-n-${Date.now()}`, course_code: code, lecture_no: body.lecture_no ?? null, title: body.title || '新筆記', content_markdown: body.content_markdown || '', personal_memo: body.personal_memo || '', tags: body.tags || ['#類型/問答', '#掌握度/待加強'], source_scene: body.source_scene || 'chat_drawer', mastery_status: 'needs_review', is_uploaded_as_source: false, uploaded_source_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    list.unshift(note);
+    demoSave();
+    return demoJson(note);
+  }
+  if (rest === 'notes/bundle_to_source' && method === 'POST') { demoNote('打包回灌來源'); return demoJson({ code, source_id: 'demo-src', bundled_count: (body.note_ids || []).length, filename: 'bundle.pdf' }); }
+  const idMatch = rest.match(/^notes\/([^/]+)(?:\/(mastery|memo|push_to_source))?$/);
+  if (idMatch) {
+    const note = list.find(n => n.id === idMatch[1]);
+    if (!note) return demoJson({ detail: 'not found' }, 404);
+    if (method === 'DELETE') { const idx = list.indexOf(note); list.splice(idx, 1); demoSave(); return demoJson({ deleted: true, note_id: idMatch[1] }); }
+    if (idMatch[2] === 'mastery') { note.mastery_status = body.status; demoSave(); return demoJson(note); }
+    if (idMatch[2] === 'memo') { note.personal_memo = body.personal_memo; demoSave(); return demoJson(note); }
+    if (idMatch[2] === 'push_to_source') { note.is_uploaded_as_source = true; demoSave(); return demoJson(note); }
+  }
   return demoJson({ detail: 'not in demo' }, 404);
 }
 

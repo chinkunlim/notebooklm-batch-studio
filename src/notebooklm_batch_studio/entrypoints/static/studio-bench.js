@@ -110,7 +110,7 @@ function ensureReader() {
 /** Put every feature panel back in its hidden home (so moving them never destroys their state). */
 function parkPanels() {
   $('#readerHome').append(readerContent);
-  ['panelQuiz', 'panelFlash', 'panelReports', 'panelTutor'].forEach(id => $('#panelHome').append($('#' + id)));
+  ['panelQuiz', 'panelFlash', 'panelReports', 'panelTutor', 'panelQaNotes'].forEach(id => $('#panelHome').append($('#' + id)));
 }
 /**
  * Select a workbench item: highlight it in every arrangement and show its panel in the stage.
@@ -138,6 +138,7 @@ function selectTool(id) {
     if (id === 'quiz') ensureLoaded('quiz', () => loadQuizForChapter(null));
     else if (id === 'flash') ensureLoaded('flash', loadFlashcardsViewer);
     else if (id === 'tutor') ensureLoaded('tutor', loadTutor);
+    else if (id === 'qa_notes') ensureLoaded('qa_notes', loadCourseNotes);
     if (REPORT_GROUPS[id]) currentReportGroup = REPORT_GROUPS[id];
     // the report viewer is shared: show this item's output again when coming back from another report item
     if (REPORT_GROUPS[id] && loadedFor.reportShown !== id) { loadedFor.reportShown = id; loadReportInViewer(REPORT_GROUPS[id][0]); }

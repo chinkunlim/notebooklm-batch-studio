@@ -563,6 +563,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js
 │       │   │   ├── studio-nav.js
+│       │   │   ├── studio-notes-tab.js
 │       │   │   ├── studio-player.js
 │       │   │   ├── studio-qa-drawer.js
 │       │   │   ├── studio-queue.js

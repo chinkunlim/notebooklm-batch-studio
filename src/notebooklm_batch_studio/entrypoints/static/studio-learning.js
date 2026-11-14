@@ -62,7 +62,7 @@ function savedPlace() {
 }
 
 /** Tab names shown in the resume card. */
-const TAB_NAMES = { reader: '講義', audio: '語音摘要', quiz: '測驗', mistakes: '錯題', flashcards: '學習卡', reports: '報告', tutor: 'AI 家教' };
+const TAB_NAMES = { reader: '講義', audio: '語音摘要', quiz: '測驗', mistakes: '錯題', flashcards: '學習卡', reports: '報告', tutor: 'AI 家教', qa_notes: '問答筆記' };
 
 /**
  * Resume the remembered place.

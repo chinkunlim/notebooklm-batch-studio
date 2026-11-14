@@ -151,6 +151,7 @@ const TOOLS = [
   { id: 'quiz', name: '測驗', group: 2, hue: '--h-quiz' },
   { id: 'flash', name: '學習卡', group: 2, hue: '--h-flash' },
   { id: 'tutor', name: 'AI 家教', group: 2, hue: '--primary' },
+  { id: 'qa_notes', name: '問答筆記', group: 2, hue: '--accent' },
 ];
 /** Artifact types behind each workbench item (lecture names; course_ is added for the whole course). */
 const TOOL_TYPES = {
@@ -161,9 +162,9 @@ const TOOL_TYPES = {
 /** Report viewer kinds (REPORT_KINDS in studio-app.js) offered by each item. */
 const REPORT_GROUPS = { report: ['guide', 'concept', 'briefing', 'blog'], video: ['video'], mindmap: ['mindmap'], infographic: ['infographic'], slides: ['slides'], table: ['table'] };
 /** Feature panel node for each item (notes uses the reader). */
-const PANEL_FOR = { quiz: 'panelQuiz', flash: 'panelFlash', tutor: 'panelTutor', video: 'panelReports', report: 'panelReports', mindmap: 'panelReports', infographic: 'panelReports', slides: 'panelReports', table: 'panelReports' };
+const PANEL_FOR = { quiz: 'panelQuiz', flash: 'panelFlash', tutor: 'panelTutor', qa_notes: 'panelQaNotes', video: 'panelReports', report: 'panelReports', mindmap: 'panelReports', infographic: 'panelReports', slides: 'panelReports', table: 'panelReports' };
 /** Older tab names (used by rememberPlace / resumePlace) for each item. */
-const TAB_FOR = { notes: 'reader', quiz: 'quiz', flash: 'flashcards', tutor: 'tutor', video: 'reports', report: 'reports', mindmap: 'reports', infographic: 'reports', slides: 'reports', table: 'reports' };
+const TAB_FOR = { notes: 'reader', quiz: 'quiz', flash: 'flashcards', tutor: 'tutor', qa_notes: 'qa_notes', video: 'reports', report: 'reports', mindmap: 'reports', infographic: 'reports', slides: 'reports', table: 'reports' };
 
 /**
  * One-line status of an item for the current lecture, e.g. "已生成 v2" or "尚未生成".
@@ -175,6 +176,7 @@ function toolMeta(id) {
   const lec = activeStudyLectureNo;
   if (id === 'notes') return lec === null ? '請先選一講' : '講義 PDF 與重點';
   if (id === 'tutor') return '用問題引導你想通';
+  if (id === 'qa_notes') return '提問與階層標籤筆記庫';
   const wanted = TOOL_TYPES[id].map(t => (lec === null ? `course_${t}` : t));
   const jobs = (currentStudyCourse.jobs || []).filter(j => wanted.includes(j.artifact_type) && (lec === null ? j.lecture_no === null : j.lecture_no === lec));
   const done = jobs.filter(j => ['done', 'needs_review'].includes(j.status));
@@ -447,7 +449,7 @@ function switchStudyTab(tab) {
     requestAnimationFrame(() => $('#playerCard').scrollIntoView({ behavior: lowMotion() ? 'auto' : 'smooth', block: 'center' }));
     return;
   }
-  const map = { reader: 'notes', quiz: 'quiz', flashcards: 'flash', reports: 'report', tutor: 'tutor' };
+  const map = { reader: 'notes', quiz: 'quiz', flashcards: 'flash', reports: 'report', tutor: 'tutor', qa_notes: 'qa_notes' };
   selectTool(map[tab] || 'notes');
 }
 
