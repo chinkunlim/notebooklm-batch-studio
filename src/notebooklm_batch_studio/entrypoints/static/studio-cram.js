@@ -438,11 +438,13 @@ function canInnerScroll(target, dir) {
  */
 function initStudyStickyWheel() {
   const pane = document.getElementById('paneStudy');
-  if (!pane || pane.dataset.stickyWheelHooked) return;
+  const host = document.getElementById('app') || pane;
+  if (!pane || !host || pane.dataset.stickyWheelHooked) return;
   pane.dataset.stickyWheelHooked = '1';
-  pane.addEventListener('wheel', e => {
-    if (pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
+  host.addEventListener('wheel', e => {
+    if (!document.getElementById('view-study')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
     if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
+    if (e.target instanceof Element && e.target.closest('dialog[open], .qa-drawer.open, .focus-pop.open, .speed-menu.open, .disc-pop.open')) return;
     const top = pane.getBoundingClientRect().top;
     if (e.deltaY > 0) {
       if (top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); }
