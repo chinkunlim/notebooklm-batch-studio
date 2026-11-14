@@ -149,7 +149,8 @@ function renderKeyPointList() {
       const del = p._user
         ? `<button type="button" class="kp-del" title="刪除個人標記" onclick="event.stopPropagation();deleteUserPdfHighlight('${escHtml(code)}',${no},'${escHtml(p.id)}')">✕</button>`
         : '';
-      return `<div class="kp-item kp-i${p.importance || 2}"${idAttr} data-page="${p.page || 0}" data-pdf-page="${pdfPage}" onclick="${click}">
+      const kpIdx = p._user ? `u_${p.id}` : String(p._idx);
+      return `<div class="kp-item kp-i${p.importance || 2}"${idAttr} data-kp-idx="${escHtml(kpIdx)}" data-page="${p.page || 0}" data-pdf-page="${pdfPage}" onclick="${click}">
         <span class="kp-page">${p.page ? `p.${p.page}` : '—'}</span>
         <span class="kp-text"><span class="kp-quote">${escHtml(p.quote)}</span>
         ${p.note ? `<span class="kp-note">${escHtml(p.note)}</span>` : ''}</span>${del}</div>`;
@@ -201,15 +202,14 @@ async function layoutPages(token) {
   pages.innerHTML = '';
   const first = await reader.doc.getPage(1);
   const base = first.getViewport({ scale: 1 });
-  const fitWidth = pages.clientWidth || 720;
-  const width = Math.max(320, Math.round(fitWidth * (reader.scale / 1.25)));
+  const pct = Math.round((reader.scale / 1.25) * 100);
   for (let n = 1; n <= reader.doc.numPages; n++) {
     const page = document.createElement('div');
     page.className = 'reader-page';
     page.id = `readerPage-${n}`;
     page.dataset.page = String(n);
     page.style.aspectRatio = `${base.width} / ${base.height}`;
-    page.style.maxWidth = `${width}px`;
+    page.style.width = reader.scale <= 1.26 ? '100%' : `${pct}%`;
     page.innerHTML = `<span class="reader-page-no">${n} / ${reader.doc.numPages}</span>`;
     pages.appendChild(page);
   }
@@ -217,15 +217,18 @@ async function layoutPages(token) {
     entries.forEach(entry => {
       if (entry.isIntersecting && entry.target.dataset.rendered !== '1') renderPage(Number(entry.target.dataset.page), token);
     });
-  }, { root: null, rootMargin: '600px 0px' });
+  }, { root: pages, rootMargin: '600px 0px' });
   pages.querySelectorAll('.reader-page').forEach(el => reader.observer.observe(el));
+  if (typeof syncActivePageComments === 'function') {
+    pages.addEventListener('scroll', () => requestAnimationFrame(() => syncActivePageComments()), { passive: true });
+  }
   if (typeof updateReaderPageTracking === 'function' && currentStudyCourse) {
     const code = currentStudyCourse.code;
     const no = activeStudyLectureNo;
     reader.pageObserver = new IntersectionObserver(entries => {
       const vis = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
       if (vis.length) updateReaderPageTracking(code, no, Number(vis[0].target.dataset.page));
-    }, { root: null, threshold: [0.35, 0.65] });
+    }, { root: pages, threshold: [0.35, 0.65] });
     pages.querySelectorAll('.reader-page').forEach(el => reader.pageObserver.observe(el));
   }
 }
@@ -307,10 +310,13 @@ function highlightPage(n) {
     let len = quote.length;
     if (at < 0 && quote.length > 30) { at = text.indexOf(quote.slice(0, 30)); len = 30; }
     if (at < 0) return;
+    let firstHit = true;
+    const anchorId = i < reader.points.length ? String(i) : `u_${p.id}`;
     divs.forEach((d, k) => {
       if (ends[k] > at && starts[k] < at + len) {
         d.classList.add('kp-hl', `kp-i${p.importance || 2}`);
         d.dataset.kp = String(i);
+        if (firstHit) { d.dataset.kpAnchor = anchorId; firstHit = false; }
       }
     });
     if (i < reader.points.length) {

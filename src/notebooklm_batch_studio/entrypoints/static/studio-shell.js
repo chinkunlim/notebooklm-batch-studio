@@ -375,7 +375,7 @@ const handlers = {
 };
 const persisted = ['pace', 'mode', 'palette', 'style', 'arr', 'skin', 'speed', 'layout', 'courseFilter'];
 /* The current design is the default; everything the user changes is remembered and can be restored in one click */
-const DEFAULTS = { palette: 'forest', mode: 'auto', style: 'flow', arr: 'matrix', pace: 'relax', speed: '1', skin: 'vinyl', layout: 'stage', courseFilter: 'all' };
+const DEFAULTS = { palette: 'forest', mode: 'auto', style: 'flow', arr: 'matrix', pace: 'relax', speed: '1', skin: 'vinyl', layout: 'split', courseFilter: 'all' };
 const COL_DEFAULTS = { stage: 28, split: 50, queue: 36, courses: 46, review: 50, reviewCards: 50 };
 const COL_LABELS = { queue: '進行中', courses: '課程內容', review: '題目詳解', reviewCards: '複習盒' };
 /**

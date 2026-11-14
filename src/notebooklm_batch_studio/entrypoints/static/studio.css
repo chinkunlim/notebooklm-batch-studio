@@ -1280,11 +1280,23 @@ img, iframe, video, audio { max-width: 100%; }
 .subbar-group .seg button { height: 30px; padding: 0 11px; font-size: 13px; }
 .cram-panel { margin-bottom: var(--s5); }
 
-/* Right column arrow collapse/expand + split-mode equal height & card collapse */
-.study[data-layout="split"] { align-items: stretch; }
-.study[data-layout="split"] .study-main > .card:last-child,
-.study[data-layout="split"] .study-side > .card:last-child { flex: 1; }
-.study[data-layout="split"] .study-side { position: relative; }
+/* Right column arrow collapse/expand + split-mode viewport-fit equal height & card collapse */
+.study[data-layout="split"] {
+  align-items: stretch; height: calc(100vh - 180px); min-height: 520px;
+  margin-bottom: var(--s5); scroll-margin-top: 24px;
+}
+.study[data-layout="split"] .study-main,
+.study[data-layout="split"] .study-side { height: 100%; min-height: 0; position: relative; }
+.study[data-layout="split"] #readerCard { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.study[data-layout="split"] #readerHome,
+.study[data-layout="split"] #readerContent,
+.study[data-layout="split"] #readerContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.study[data-layout="split"] .study-side { overflow-y: auto; scrollbar-width: none; }
+.study[data-layout="split"] .study-side::-webkit-scrollbar { display: none; }
+.study[data-layout="split"] .study-main > .card:last-child:not(.is-collapsed),
+.study[data-layout="split"] .study-side > .card:last-child:not(.is-collapsed) { flex: 1; }
+.card.is-collapsed { flex: 0 0 auto !important; min-height: 0 !important; }
+.study-side .bench-head .seg { border-radius: var(--radius-m); flex-wrap: wrap; gap: 2px; padding: 4px; max-width: 100%; }
 .side-collapse-btn, .side-expand-btn {
   display: none; width: 32px; height: 32px; padding: 0; border-radius: 50%; place-items: center;
   background: var(--surface); border: 1px solid var(--line); color: var(--ink); cursor: pointer;

@@ -115,6 +115,7 @@
         <span id="queueBadge" data-state="">佇列讀取中</span>
         <span id="quotaBadge" data-state="" title="Gemini Notebook 生成額度（5 小時 / 每週）">額度讀取中</span>
       </div>
+      <button type="button" class="btn btn-soft focus-exit" id="focusExit" aria-label="離開專注" title="離開專注 (Esc)"><i class="icon-minimize"></i></button>
       <div class="course-pick" id="coursePick">
         <select id="studyCourseSelect" class="sr-only" tabindex="-1" aria-hidden="true"><option value="">載入課程中…</option></select>
         <button class="cp-btn" id="coursePickBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="切換研讀課程">
@@ -125,7 +126,6 @@
         <div class="cp-pop" id="coursePop" role="listbox" aria-label="研讀課程"></div>
       </div>
       <button type="button" class="qa-toggle-btn" id="qaDrawerToggleBtn" onclick="toggleQaDrawer()" title="開啟 Gemini Notebook 探索提問 (⌘J)">💬 探索提問 <kbd>⌘J</kbd></button>
-      <button type="button" class="btn btn-soft focus-exit" id="focusExit" aria-label="離開專注" title="離開專注 (Esc)"><i class="icon-minimize"></i></button>
     </header>
 
     <div class="views">
@@ -234,7 +234,7 @@
             <div class="subbar-group">
               <button class="btn btn-ghost pomodoro" id="btnPomodoro" title="番茄鐘：開始專注，計時會收進側欄">專注 25:00</button>
               <span class="subbar-sep" aria-hidden="true"></span>
-              <div class="seg" data-seg="layout"><button data-value="stage" class="on">主舞台</button><button data-value="split">雙欄</button><button data-value="stack">上下</button></div>
+              <div class="seg" data-seg="layout"><button data-value="split" class="on">雙欄</button><button data-value="stack">上下</button></div>
               <span class="subbar-sep" aria-hidden="true"></span>
               <div class="seg" data-seg="studioPane"><button data-value="courses">課程目錄</button><button data-value="study" class="on">研讀</button></div>
             </div>

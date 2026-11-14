@@ -269,6 +269,7 @@ function blocksFor(v) {
  * @param {string} v Layout: stage | split | stack
  */
 function applyLayout(v) {
+  if (v === 'stage') v = 'split';
   const main = $('#studyMain'), side = $('#studySide'), parts = $('#studyParts'), ps = $('#paneStudy');
   ps.dataset.layout = v;
   const b = blocksFor(v);

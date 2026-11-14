@@ -116,7 +116,7 @@ function renderReaderBookmarks(code, no) {
   }
   pop.innerHTML = bookmarks.map(b =>
     `<div class="bm-pop-row"><button type="button" class="bm-pop-go" onclick="jumpToReaderPage(${b.page});document.getElementById('bmPick')?.classList.remove('open')">🔖 ${escHtml(b.label)}</button>` +
-    `<button type="button" class="bm-del" aria-label="移除書籤" onclick="removeReaderBookmark('${escHtml(code)}',${no},${b.page})">×</button></div>`
+    `<button type="button" class="bm-del" aria-label="移除書籤" onclick="removeReaderBookmark(event,'${escHtml(code)}',${no},${b.page})">×</button></div>`
   ).join('');
 }
 
@@ -142,13 +142,15 @@ document.addEventListener('click', e => {
 });
 
 /**
- * Remove a saved bookmark by page number.
+ * Remove a saved bookmark by page number without closing the bookmark dropdown.
+ * @param {MouseEvent} e Click event
  * @param {string} code Course code
  * @param {number} no Lecture number
  * @param {number} page Page number to remove
  * @returns {void}
  */
-function removeReaderBookmark(code, no, page) {
+function removeReaderBookmark(e, code, no, page) {
+  if (e) e.stopPropagation();
   const st = loadReaderLocal(code, no);
   saveReaderLocal(code, no, { bookmarks: st.bookmarks.filter(b => b.page !== page) });
   renderReaderBookmarks(code, no);
@@ -186,18 +188,33 @@ function toggleKpViewMode() {
 }
 
 /**
- * Show only margin comments anchored to the active PDF page (or all when toggled).
- * @param {number} pageNum Active page number
+ * Position margin comments next to their highlighted line inside #readerPages (Word/e-book style).
+ * @param {number} [pageNum] Active page number
  * @returns {void}
  */
 function syncActivePageComments(pageNum) {
+  const list = document.getElementById('keyPointList');
+  const pages = document.getElementById('readerPages');
+  if (!list || !pages) return;
+  const listRect = list.getBoundingClientRect();
+  const pagesRect = pages.getBoundingClientRect();
+  let lastBottom = 36;
   let shown = 0;
-  document.querySelectorAll('#keyPointList .kp-item').forEach(item => {
-    const pdfPage = Number(item.dataset.pdfPage || 0);
-    const match = kpViewMode === 'all' || pdfPage === pageNum;
-    item.hidden = !match;
-    item.classList.toggle('is-on-page', pdfPage === pageNum);
-    if (match) shown++;
+  list.classList.toggle('kp-all-mode', kpViewMode === 'all');
+  list.querySelectorAll('.kp-item').forEach(item => {
+    if (kpViewMode === 'all') { item.hidden = false; item.style.position = ''; item.style.top = ''; shown++; return; }
+    const anchor = document.querySelector(`.reader-page [data-kp-anchor="${item.dataset.kpIdx}"]`);
+    if (!anchor) { item.hidden = true; return; }
+    const ar = anchor.getBoundingClientRect();
+    if (ar.bottom < pagesRect.top - 40 || ar.top > pagesRect.bottom + 40) { item.hidden = true; return; }
+    item.hidden = false;
+    const rawTop = Math.max(lastBottom, ar.top - listRect.top);
+    item.style.position = 'absolute';
+    item.style.top = `${Math.round(rawTop)}px`;
+    item.style.left = '0';
+    item.style.right = '0';
+    lastBottom = rawTop + (item.offsetHeight || 72) + 8;
+    shown++;
   });
   const empty = document.getElementById('kpEmptyPage');
   if (empty) empty.hidden = kpViewMode === 'all' || shown > 0;
