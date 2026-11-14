@@ -129,7 +129,7 @@ function showView(view) {
   $$('.dock-btn[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === view));
   $('#btnCustom').classList.toggle('on', view === 'custom');
   $('#pageName').textContent = pageNames[view];
-  $('#app').classList.toggle('view-hide-course', view === 'queue' || view === 'custom');
+  $('#app').classList.remove('view-hide-course');
   currentView = view;
   updateMini();
   if (view === 'overview') animateRings($('#view-overview'));
@@ -140,3 +140,12 @@ function showView(view) {
   if (view === 'studio') requestAnimationFrame(sizeCanvases);
   requestAnimationFrame(refreshThumbs);
 }
+
+// Close open .more-menu popovers when clicking outside or choosing a menu action.
+document.addEventListener('click', e => {
+  document.querySelectorAll('details.more-menu[open]').forEach(menu => {
+    if (!menu.contains(e.target) || e.target.closest('.menu button, .menu a')) {
+      menu.removeAttribute('open');
+    }
+  });
+});

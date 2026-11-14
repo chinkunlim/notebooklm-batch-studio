@@ -124,14 +124,31 @@ async function loadArtifactSelection(code) {
      * @param {string} title Group title
      * @returns {string} HTML
      */
-    const grid = (scope, title) => `<div class="check-group" style="margin-bottom:var(--s3)"><span class="field-label">${title}</span><div class="checks">
+    const grid = (scope, title) => `<div class="check-group" style="margin-bottom:var(--s3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <span class="field-label" style="margin:0">${title}</span>
+        <span class="row" style="gap:6px"><button type="button" class="btn btn-ghost btn-sm" onclick="toggleArtifactGroup('${scope}', true)">全選</button><button type="button" class="btn btn-ghost btn-sm" onclick="toggleArtifactGroup('${scope}', false)">全不選</button></span>
+      </div>
+      <div class="checks">
         ${data.choices[scope].map(c => `<label class="cbox" style="--hue:var(${hueFor(c.value)})"><input type="checkbox" data-scope="${scope}" value="${c.value}" ${data[scope].includes(c.value) ? 'checked' : ''}><span class="hue-dot"></span>${escHtml(c.label)}</label>`).join('')}
       </div></div>`;
-    box.innerHTML = grid('chapter', '每份 PDF 各自生成') + grid('course', '全部 PDF 整合生成（整門課）') +
-      `<div class="sec-foot"><button class="btn btn-primary" onclick="saveArtifactSelection('${code}')">儲存產出內容</button></div>`;
+    box.innerHTML = grid('chapter', '每份 PDF 各自生成（套用到全部講次）') + grid('course', '全部 PDF 整合生成（整門課）') +
+      `<div class="sec-foot"><button class="btn btn-primary" onclick="saveArtifactSelection('${code}')">儲存並排入佇列</button></div>`;
   } catch (e) {
     box.innerHTML = `<p style="color:var(--danger)">載入失敗：${escHtml(e.message)}</p>`;
   }
+}
+
+/**
+ * Check or uncheck every artifact checkbox in one scope group.
+ * @param {string} scope 'chapter' or 'course'
+ * @param {boolean} checked Whether to check or uncheck all boxes
+ * @returns {void}
+ */
+function toggleArtifactGroup(scope, checked) {
+  document.querySelectorAll(`#detailSelection input[data-scope="${scope}"]`).forEach(box => {
+    box.checked = checked;
+  });
 }
 
 /**

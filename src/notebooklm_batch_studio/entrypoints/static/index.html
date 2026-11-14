@@ -463,13 +463,13 @@
             <div id="courseDetailSection" style="display:none">
               <div class="divider"></div>
               <div class="card-head"><div><h2 class="h2" id="detailTitle">課程</h2><p class="hint">每門課各自保存設定，新加入的課程從預設值開始。</p></div><div class="row" id="detailCourseActions" style="flex-wrap:wrap"></div></div>
-              <details class="sec" id="detailOptionsBox" open>
+              <details class="sec" id="detailSelectionBox" open>
+                <summary><span>批量選擇產出內容</span><span class="sec-sum">勾選整門課要生成的項目，儲存後按上方「開始生成」一次批量生成（已完成檔案會保留）</span><i class="icon-chevron-down"></i></summary>
+                <div class="sec-body" id="detailSelection"><p class="loading-line">載入中…</p></div>
+              </details>
+              <details class="sec" id="detailOptionsBox">
                 <summary><span>課程設定</span><span class="sec-sum">語言、考試日期、題數、各產出物的形式與補充指示</span><i class="icon-chevron-down"></i></summary>
                 <div class="sec-body" id="detailOptions"><p class="loading-line">載入中…</p></div>
-              </details>
-              <details class="sec" id="detailSelectionBox">
-                <summary><span>產出內容</span><span class="sec-sum">新增的會排入佇列，取消的不再生成，已完成的檔案不會刪</span><i class="icon-chevron-down"></i></summary>
-                <div class="sec-body" id="detailSelection"><p class="loading-line">載入中…</p></div>
               </details>
               <details class="sec" id="detailSourcesBox" open>
                 <summary><span>筆記本來源管理</span><span class="sec-sum" id="detailSourcesSummary">查看 Gemini Notebook 來源、上載或刪除 PDF</span><i class="icon-chevron-down"></i></summary>
