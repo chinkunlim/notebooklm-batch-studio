@@ -433,7 +433,7 @@ function canInnerScroll(target, dir) {
 
 /**
  * Scroll outer page down until #paneStudy sticks at 12px top margin before scrolling inner PDF/bench.
- * Clamps #paneStudy top at 12px across reader, side-column, and scrollbar scrolling while #view-study.on.
+ * Clamps #paneStudy top at 12px across reader, side-column, and scrollbar scrolling while #view-studio.on.
  * @returns {void}
  */
 function initStudyStickyWheel() {
@@ -442,7 +442,7 @@ function initStudyStickyWheel() {
   if (!pane || !host || pane.dataset.stickyWheelHooked) return;
   pane.dataset.stickyWheelHooked = '1';
   host.addEventListener('wheel', e => {
-    if (!document.getElementById('view-study')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
+    if (!document.getElementById('view-studio')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
     if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
     if (e.target instanceof Element && e.target.closest('dialog[open], .qa-drawer.open, .focus-pop.open, .speed-menu.open, .disc-pop.open')) return;
     const top = pane.getBoundingClientRect().top;
@@ -456,7 +456,7 @@ function initStudyStickyWheel() {
     }
   }, { passive: false });
   window.addEventListener('scroll', () => {
-    if (!document.getElementById('view-study')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split') return;
+    if (!document.getElementById('view-studio')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split') return;
     const top = pane.getBoundingClientRect().top;
     if (top < 11.5) window.scrollTo(window.scrollX, Math.max(0, Math.round(window.scrollY + top - 12)));
   }, { passive: true });
