@@ -125,7 +125,7 @@
         </button>
         <div class="cp-pop" id="coursePop" role="listbox" aria-label="研讀課程"></div>
       </div>
-      <button type="button" class="qa-toggle-btn" id="qaDrawerToggleBtn" onclick="toggleQaDrawer()" title="開啟 Gemini Notebook 探索提問 (⌘J)">💬 探索提問 <kbd>⌘J</kbd></button>
+      <button type="button" class="qa-toggle-btn" id="qaDrawerToggleBtn" onclick="toggleQaDrawer()" title="開啟 Gemini Notebook 探索提問 (⌘J)"><i class="icon-sparkles"></i><span>探索提問</span><kbd>⌘J</kbd></button>
     </header>
 
     <div class="views">
@@ -817,37 +817,41 @@
 
 <aside id="qaDrawer" class="qa-drawer" aria-label="Gemini Notebook 探索提問" aria-hidden="true">
   <div class="qa-drawer-head">
-    <h3>💬 Gemini Notebook 探索提問</h3>
-    <div class="row" style="gap:6px">
-      <button type="button" class="btn btn-ghost btn-sm" onclick="expandQaToStudioTab()" title="展開至問答筆記大頁">展開至大頁</button>
+    <h3><i class="icon-sparkles"></i><span>Gemini Notebook 探索提問</span></h3>
+    <div class="qa-head-actions">
+      <button type="button" class="btn btn-soft btn-sm" id="qaExpandBtn" onclick="expandQaToStudioTab()" title="展開至問答筆記大頁"><i class="icon-panel-right-open"></i>展開至大頁</button>
       <button type="button" class="icon-btn" onclick="toggleQaDrawer(false)" aria-label="關閉提問抽屜"><i class="icon-x"></i></button>
     </div>
   </div>
   <div class="qa-drawer-controls">
-    <select id="qaScopeSelect" class="text-input" style="font-size:13px;padding:4px 8px">
-      <option value="all">全部講義</option>
-    </select>
-    <button type="button" class="btn btn-soft btn-sm" onclick="resetQaConversation()">開啟新話題</button>
-    <button type="button" class="btn btn-soft btn-sm" id="qaSummarizeBtn" onclick="summarizeQaConversation()">✨ 一鍵整理精華</button>
-    <select id="qaChatGoalSelect" class="text-input" style="font-size:12px;padding:3px 6px" title="對話模式" onchange="configureQaChatStyle()">
-      <option value="default">預設風格</option>
-      <option value="learning_guide">學習引導</option>
-      <option value="custom">自訂角色</option>
-    </select>
-    <select id="qaChatLenSelect" class="text-input" style="font-size:12px;padding:3px 6px" title="回答長度" onchange="configureQaChatStyle()">
-      <option value="default">適中篇幅</option>
-      <option value="shorter">精簡回答</option>
-      <option value="longer">詳細深入</option>
-    </select>
-    <input type="text" id="qaChatCustomPrompt" class="text-input" placeholder="輸入自訂角色提示詞…" style="display:none;font-size:12px;padding:3px 6px;flex:1;min-width:140px" onchange="configureQaChatStyle()">
+    <div class="qa-ctrl-row">
+      <select id="qaScopeSelect" class="qa-select qa-select-scope" aria-label="提問講義範圍">
+        <option value="all">全部講義</option>
+      </select>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="resetQaConversation()">開啟新話題</button>
+      <button type="button" class="btn btn-soft btn-sm" id="qaSummarizeBtn" onclick="summarizeQaConversation()"><i class="icon-sparkles"></i>一鍵整理精華</button>
+    </div>
+    <div class="qa-ctrl-row">
+      <select id="qaChatGoalSelect" class="qa-select" title="對話模式" aria-label="對話模式" onchange="configureQaChatStyle()">
+        <option value="default">預設風格</option>
+        <option value="learning_guide">學習引導</option>
+        <option value="custom">自訂角色</option>
+      </select>
+      <select id="qaChatLenSelect" class="qa-select" title="回答長度" aria-label="回答長度" onchange="configureQaChatStyle()">
+        <option value="default">適中篇幅</option>
+        <option value="shorter">精簡回答</option>
+        <option value="longer">詳細深入</option>
+      </select>
+    </div>
+    <input type="text" id="qaChatCustomPrompt" class="qa-field" placeholder="輸入自訂角色提示詞…" style="display:none" onchange="configureQaChatStyle()">
   </div>
   <div id="qaDrawerMsgs" class="qa-drawer-msgs">
     <div class="empty-state small">針對本講或整門課向 Gemini Notebook 發問，多輪追問後可一鍵整理成結構化筆記。</div>
   </div>
   <div class="qa-drawer-foot">
-    <input type="text" id="qaQuickMemoInput" class="text-input" placeholder="順手記下個人心得（選填，存筆記時一併帶入）" style="font-size:13px">
+    <input type="text" id="qaQuickMemoInput" class="qa-field" placeholder="順手記下個人心得（選填，存筆記時一併帶入）">
     <div class="qa-input-row">
-      <textarea id="qaQuestionInput" class="text-input" rows="2" placeholder="輸入問題…（Enter 送出，Shift+Enter 換行）"></textarea>
+      <textarea id="qaQuestionInput" class="qa-field" rows="2" placeholder="輸入問題…（Enter 送出，Shift+Enter 換行）"></textarea>
       <button type="button" class="btn btn-primary" id="qaSendBtn" onclick="sendQaQuestion()">發問</button>
     </div>
   </div>

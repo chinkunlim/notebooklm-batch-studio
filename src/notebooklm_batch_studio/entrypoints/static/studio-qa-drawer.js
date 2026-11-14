@@ -34,8 +34,11 @@ function syncQaScopeOptions() {
   const lectures = (typeof currentStudyCourse !== 'undefined' && currentStudyCourse && currentStudyCourse.lectures) || [];
   const opts = ['<option value="all">全部講義</option>'];
   lectures.forEach(lec => {
-    const label = `L${String(lec.lecture_no).padStart(2, '0')} ${lec.title || ''}`.trim();
-    opts.push(`<option value="${lec.lecture_no}">${escHtml(label)}</option>`);
+    const no = lec.no ?? lec.lecture_no;
+    const title = lec.topic ?? lec.title ?? '';
+    if (no === undefined || no === null) return;
+    const label = `L${String(no).padStart(2, '0')} ${title}`.trim();
+    opts.push(`<option value="${no}">${escHtml(label)}</option>`);
   });
   select.innerHTML = opts.join('');
   if (typeof activeStudyLectureNo !== 'undefined' && activeStudyLectureNo !== null) {
@@ -267,7 +270,16 @@ async function collectExplanationAsNote(btn) {
  */
 function expandQaToStudioTab() {
   toggleQaDrawer(false);
-  if (typeof switchStudyTab === 'function') switchStudyTab('qa_notes');
+  if (typeof showView === 'function') showView('studio');
+  if (typeof setChoice === 'function') setChoice('studioPane', 'study', false);
+  const pane = document.getElementById('paneStudy');
+  if (pane && pane.dataset.layout === 'split' && pane.classList.contains('side-collapsed')) {
+    pane.querySelector(':scope > .col-resizer .col-toggle')?.click();
+  }
+  if (typeof selectTool === 'function') selectTool('qa_notes');
+  if (pane && pane.dataset.layout !== 'split') {
+    document.getElementById('bench')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 /**
