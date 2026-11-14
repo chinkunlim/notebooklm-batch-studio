@@ -64,6 +64,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - style: wrap the memory-strength usage line (by `@claude-code`)
 
 ### Fixed
+- fix(ui,reader): keep split-pane Study Studio sticky with 12px top/bottom framing across Safari/fullscreen, restore global wheel scrolling across all pages, style keypoint header actions as balanced 1-or-2 line pill buttons, switch `課程目錄`/`研讀` in the right column only, resolve exact PDF page & paragraph on first keypoint click, and re-layout PDF textLayer highlights on container resize (by `@antigravity`)
 - fix(web): resolve mobile simulator viewport mismatch when toggling iPhone 416px on desktop displays (ISSUE-026) (by `@antigravity`)
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)
 - fix(web): switch default HTTP port from 8767 to 8768 to prevent collision with literature-parser (by `@antigravity`)
@@ -137,6 +138,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs(docs/issues): update docs/issues documentation (ADR-009, ISSUE-025, ISSUE-028, ISSUE-029, ISSUE-030, ISSUE-031, ISSUE-032, ISSUE-033, TASK-006, TASK-007, TASK-011, TASK-012, TASK-013) (by `@claude-code`)
 - docs: register ISSUE-037 and TASK-020 for course code collision (by `@antigravity`)
 - docs: resolve ISSUE-037 and complete TASK-020 (by `@antigravity`)
+- docs: document Study Studio reader, scrolling, and UI fixes in README and CHANGELOG (by `@antigravity`)
 
 ### Chore
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)
