@@ -444,7 +444,11 @@ function initStudyStickyWheel() {
     if (pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
     if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
     const top = pane.getBoundingClientRect().top;
-    if (e.deltaY > 0 && top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); return; }
+    if (e.deltaY > 0) {
+      if (top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); }
+      else if (!canInnerScroll(e.target, 1)) e.preventDefault();
+      return;
+    }
     if (e.deltaY < 0 && !canInnerScroll(e.target, -1) && window.scrollY > 0) {
       e.preventDefault(); window.scrollBy(0, e.deltaY);
     }
@@ -485,12 +489,9 @@ function switchStudySidePane(v) {
 }
 
 initSideCardCollapses(); initStudyStickyWheel(); updateStudyViewportHeight();
-window.addEventListener('load', updateStudyViewportHeight);
-window.addEventListener('resize', updateStudyViewportHeight);
+['load', 'resize'].forEach(ev => window.addEventListener(ev, updateStudyViewportHeight));
 window.visualViewport?.addEventListener('resize', updateStudyViewportHeight);
 ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => { setTimeout(updateStudyViewportHeight, 60); setTimeout(updateStudyViewportHeight, 360); }));
 document.addEventListener('click', () => setTimeout(updateStudyViewportHeight, 60));
 const _studyPaneObs = document.getElementById('paneStudy');
-if (_studyPaneObs && typeof MutationObserver === 'function') {
-  new MutationObserver(updateStudyViewportHeight).observe(_studyPaneObs, { attributes: true, attributeFilter: ['hidden', 'data-layout'] });
-}
+if (_studyPaneObs && typeof MutationObserver === 'function') new MutationObserver(updateStudyViewportHeight).observe(_studyPaneObs, { attributes: true, attributeFilter: ['hidden', 'data-layout'] });
