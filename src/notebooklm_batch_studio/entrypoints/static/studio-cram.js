@@ -254,8 +254,24 @@ function toggleLayoutGuides() {
     window.addEventListener('resize', () => requestAnimationFrame(renderLayoutGuides));
     document.addEventListener('scroll', () => requestAnimationFrame(renderLayoutGuides), true);
     document.addEventListener('click', () => setTimeout(renderLayoutGuides, 80), true);
+    document.addEventListener('mousemove', e => highlightGuideAt(e.clientX, e.clientY));
   }
   if (on) renderLayoutGuides();
+}
+
+/**
+ * Highlight layout guide boxes whose bounds contain the pointer coordinates.
+ * @param {number} x Viewport X coordinate
+ * @param {number} y Viewport Y coordinate
+ * @returns {void}
+ */
+function highlightGuideAt(x, y) {
+  const layer = document.getElementById('layoutGuideLayer');
+  if (!layer || !document.getElementById('app')?.classList.contains('layout-guides')) return;
+  layer.querySelectorAll('.lg-box').forEach(box => {
+    const r = box.getBoundingClientRect();
+    box.classList.toggle('is-hover', x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
+  });
 }
 
 document.addEventListener('keydown', e => {

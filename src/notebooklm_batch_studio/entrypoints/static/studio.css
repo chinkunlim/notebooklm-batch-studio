@@ -1230,5 +1230,6 @@ img, iframe, video, audio { max-width: 100%; }
 .layout-guide-layer { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; display: none; }
 .app.layout-guides .layout-guide-layer { display: block; }
 .lg-box { position: fixed; border: 1px dashed; box-sizing: border-box; pointer-events: none; }
-.lg-tag { position: absolute; top: 0; left: 0; font: 700 10px/1.2 ui-monospace, monospace; color: #fff; padding: 1px 5px; border-radius: 0 0 4px 0; white-space: nowrap; opacity: .32; pointer-events: auto; cursor: default; transition: opacity .15s ease; box-shadow: 0 1px 2px rgba(0,0,0,.35); }
-.lg-tag:hover { opacity: 1; z-index: 99; }
+.lg-tag { position: absolute; top: 0; left: 0; font: 700 10px/1.2 ui-monospace, monospace; color: #fff; padding: 1px 5px; border-radius: 0 0 4px 0; white-space: nowrap; opacity: .3; pointer-events: none; transition: opacity .12s ease; box-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.lg-box.is-hover .lg-tag { opacity: 1; }
+.lg-box.is-hover { z-index: 98; }

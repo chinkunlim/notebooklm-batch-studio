@@ -90,6 +90,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix: enable manual and automatic rerun for failed artifact jobs (ISSUE-038) (by `@antigravity`)
 - fix(ui): make layout guide tags opaque and auto-stagger overlapping labels (by `@antigravity`)
 - fix(ui): make layout guide labels semi-transparent by default and opaque on hover (by `@antigravity`)
+- fix(ui): highlight layout guide labels whenever pointer is anywhere inside box bounds (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
