@@ -142,6 +142,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): show lecture tile in split sidebar and move arrangement/pin controls to user settings (by `@antigravity`)
 - fix(ui): stabilize split-stage panel heights, pin quiz pager/action bar, and unify report toolbar row (by `@antigravity`)
 - fix(ui): round all report frame corners, lock single-row toolbar divider height, and add inner layout guides (by `@antigravity`)
+- fix(ui): unify split-stage toolbar buttons and move mindmap controls to panel header (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

@@ -268,7 +268,7 @@ function addQuizTools() {
   const bar = document.getElementById('quizKindButtons');
   if (!bar || bar.querySelector('.mixed-btn')) return;
   bar.insertAdjacentHTML('beforeend', `
-    <button class="chip mixed-btn${activeQuizVariant === 'mixed_review' ? ' on' : ''}" style="--hue:var(--h-flash)" onclick="startMixedReview()" title="從學過的各講隨機抽題（交錯練習）">混合複習</button>
+    <button type="button" class="reader-pill-btn mixed-btn${activeQuizVariant === 'mixed_review' ? ' on' : ''}" onclick="startMixedReview()" title="從學過的各講隨機抽題（交錯練習）">混合複習</button>
     <label class="hide-toggle"><input type="checkbox" ${hideChoices ? 'checked' : ''} onchange="setHideChoices(this.checked)"> 先回想再看選項</label>`);
 }
 

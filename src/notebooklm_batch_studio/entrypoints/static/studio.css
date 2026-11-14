@@ -1386,6 +1386,8 @@ img, iframe, video, audio { max-width: 100%; }
   justify-content: space-between; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none;
 }
 .study[data-layout="split"] #splitStage .panel-head::-webkit-scrollbar { display: none; }
+.study[data-layout="split"] #splitStage .panel-head .chips { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.study[data-layout="split"] #splitStage .panel-head .hide-toggle { font-size: 12px; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; cursor: pointer; }
 .study[data-layout="split"] #splitStage .panel-head .chips,
 .study[data-layout="split"] #splitStage .panel-head .panel-note { flex-wrap: nowrap; white-space: nowrap; }
 .study[data-layout="split"] #splitStage .panel-head .panel-note { overflow: hidden; text-overflow: ellipsis; }

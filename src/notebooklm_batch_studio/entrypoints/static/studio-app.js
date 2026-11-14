@@ -314,7 +314,7 @@ async function loadQuizForChapter(variant) {
   if (!variant || !kinds.some(k => k.variant === variant)) variant = kinds.length ? kinds[0].variant : null;
   activeQuizVariant = variant;
   document.getElementById('quizKindButtons').innerHTML = kinds.map(k =>
-    `<button class="chip${k.variant === variant ? ' on' : ''}" style="--hue:var(--h-quiz)" onclick="loadQuizForChapter('${k.variant}')">${k.label}${k.version > 1 ? ` v${k.version}` : ''}</button>`).join('');
+    `<button type="button" class="reader-pill-btn${k.variant === variant ? ' on' : ''}" onclick="loadQuizForChapter('${k.variant}')">${k.label}${k.version > 1 ? ` v${k.version}` : ''}</button>`).join('');
   const container = document.getElementById('quizContainer');
   document.getElementById('quizScoreHeader').textContent = '';
   document.getElementById('quizActionBar').style.display = 'none';

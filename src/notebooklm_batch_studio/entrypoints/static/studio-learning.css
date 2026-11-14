@@ -7,6 +7,7 @@
 .reader-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; overflow: visible; margin-bottom: var(--s4); }
 .reader-tools { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .reader-tools .icon-btn,
+.panel-head .icon-btn,
 .reader-zoom-pill,
 .reader-pill-btn {
   height: 32px; padding: 0 9px; border-radius: 999px; white-space: nowrap;
@@ -15,9 +16,11 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;
   transition: border-color var(--dur-hover) var(--ease), background var(--dur-hover) var(--ease);
 }
-.reader-tools .icon-btn { width: 32px; padding: 0; }
+.reader-tools .icon-btn,
+.panel-head .icon-btn { width: 32px; padding: 0; }
 .reader-zoom-pill { min-width: 56px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.reader-tools .icon-btn:hover, .reader-zoom-pill:hover, .reader-pill-btn:hover { border-color: var(--accent); background: var(--surface); }
+.reader-tools .icon-btn:hover, .panel-head .icon-btn:hover, .reader-zoom-pill:hover, .reader-pill-btn:hover { border-color: var(--accent); background: var(--surface); }
+.reader-pill-btn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .bm-pick { position: relative; display: inline-flex; align-items: center; gap: 6px; }
 .bm-pop {
   position: absolute; left: 0; top: calc(100% + 6px); z-index: 65; min-width: 210px; max-height: 260px;

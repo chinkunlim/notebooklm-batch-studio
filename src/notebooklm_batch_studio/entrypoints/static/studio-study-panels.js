@@ -346,6 +346,17 @@ async function renderCsvTableHtml(dl) {
 }
 
 /**
+ * Send a control command to the embedded mind map iframe.
+ * @param {string} cmd Command name (zoomOut, fit, zoomIn, expandAll, toggleOutline)
+ * @param {HTMLElement} [btn] Optional button whose active state toggles
+ */
+function sendMindmapCmd(cmd, btn) {
+  const frame = document.querySelector('#reportContentContainer iframe.report-frame');
+  if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'mindmap-cmd', cmd }, '*');
+  if (cmd === 'toggleOutline' && btn) btn.classList.toggle('on');
+}
+
+/**
  * Show one document-like output inside the workbench (iframe, image, table or video by file type).
  * @param {string} kind Key of REPORT_KINDS
  * @returns {Promise<void>} Resolves when viewer content is rendered
@@ -353,8 +364,9 @@ async function renderCsvTableHtml(dl) {
 async function loadReportInViewer(kind) {
   if (!currentStudyCourse) return;
   const group = currentReportGroup.includes(kind) ? currentReportGroup : [kind];
-  document.getElementById('reportKindButtons').innerHTML = group.length > 1 ? group.map(key =>
-    `<button class="chip${key === kind ? ' on' : ''}" style="--hue:var(--h-report)" onclick="loadReportInViewer('${key}')">${REPORT_KINDS[key].label}</button>`).join('') : '';
+  const kindBox = document.getElementById('reportKindButtons');
+  kindBox.innerHTML = group.length > 1 ? group.map(key =>
+    `<button type="button" class="reader-pill-btn${key === kind ? ' on' : ''}" onclick="loadReportInViewer('${key}')">${REPORT_KINDS[key].label}</button>`).join('') : '';
   const container = document.getElementById('reportContentContainer');
   const metaBar = document.getElementById('reportMetaBar');
   const spec = REPORT_KINDS[kind] || REPORT_KINDS.guide;
@@ -366,10 +378,18 @@ async function loadReportInViewer(kind) {
   }
   const code = currentStudyCourse.code, path = job.rel_path || job.output_file.split('/').pop(), enc = encodeURI(path);
   const dl = `/api/artifacts/${code}/download/${enc}`, readable = ['guide', 'concept'].includes(kind) && activeStudyLectureNo !== null;
+  const ext = path.split('.').pop().toLowerCase();
+  if (kind === 'mindmap' && ['json', 'opml'].includes(ext)) {
+    kindBox.innerHTML = `
+      <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomOut')" aria-label="縮小">－</button>
+      <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('fit')">適應畫面</button>
+      <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomIn')" aria-label="放大">＋</button>
+      <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('expandAll')">全部展開</button>
+      <button type="button" class="reader-pill-btn" id="mmOutlineBtn" onclick="sendMindmapCmd('toggleOutline', this)">大綱文字</button>`;
+  }
   const metaHtml = `<span class="tag">v${job.version || 1}</span>${job.status === 'needs_review' ? '<span class="tag warn">需審查</span>' : ''}
     <a class="reader-pill-btn" href="${dl}" target="_blank" rel="noopener">新分頁 / 下載</a>${readable ? `<button type="button" class="reader-pill-btn" onclick="markStep('guide')">我讀完了</button>` : ''}`;
   if (metaBar) metaBar.innerHTML = metaHtml;
-  const ext = path.split('.').pop().toLowerCase();
   if (['md', 'opml', 'json'].includes(ext)) container.innerHTML = `<iframe class="report-frame" src="/api/artifacts/${code}/view/${enc}" title="${escHtml(spec.label)}"></iframe>`;
   else if (ext === 'png') container.innerHTML = (await renderPngDeviceExtras(code, path)) + `<img class="report-img" src="${dl}" alt="${escHtml(spec.label)}">`;
   else if (ext === 'csv') container.innerHTML = await renderCsvTableHtml(dl);

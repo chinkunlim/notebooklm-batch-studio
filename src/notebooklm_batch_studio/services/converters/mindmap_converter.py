@@ -184,6 +184,9 @@ _MINDMAP_HTML_CSS = """
     display: none; height: calc(100% - 45px); overflow-y: auto;
     padding: 24px 28px; background: #ffffff; line-height: 1.7;
   }
+  html.embedded .bar { display: none; }
+  html.embedded .stage, html.embedded .outline { height: 100%; }
+  }
   .outline.on { display: block; }
   .stage.off { display: none; }
   .outline ul { padding-left: 22px; margin: 4px 0; }
@@ -327,6 +330,13 @@ _MINDMAP_HTML_JS = """
   }
   outlineEl.innerHTML = `<h1>${esc(ROOT.label)}</h1><ul>${ROOT.children.map(buildOutline).join('')}</ul>`;
   const zoomBy = k => { pan.scale = Math.min(2.2, Math.max(0.25, pan.scale * k)); render(); };
+  if (window.self !== window.top) document.documentElement.classList.add('embedded');
+  const toggleOutline = () => {
+    const on = outlineEl.classList.toggle('on');
+    stage.classList.toggle('off', on);
+    document.getElementById('btnOutline').classList.toggle('on', on);
+    return on;
+  };
   document.getElementById('btnZoomIn').onclick = () => zoomBy(1.18);
   document.getElementById('btnZoomOut').onclick = () => zoomBy(1 / 1.18);
   document.getElementById('btnFit').onclick = fitView;
@@ -334,11 +344,15 @@ _MINDMAP_HTML_JS = """
     const openAll = n => { n.collapsed = false; n.children.forEach(openAll); };
     openAll(ROOT); fitView();
   };
-  document.getElementById('btnOutline').onclick = e => {
-    const on = outlineEl.classList.toggle('on');
-    stage.classList.toggle('off', on);
-    e.currentTarget.classList.toggle('on', on);
-  };
+  document.getElementById('btnOutline').onclick = () => toggleOutline();
+  window.addEventListener('message', e => {
+    if (!e.data || e.data.type !== 'mindmap-cmd') return;
+    if (e.data.cmd === 'zoomIn') zoomBy(1.18);
+    else if (e.data.cmd === 'zoomOut') zoomBy(1 / 1.18);
+    else if (e.data.cmd === 'fit') fitView();
+    else if (e.data.cmd === 'expandAll') document.getElementById('btnExpandAll').click();
+    else if (e.data.cmd === 'toggleOutline') toggleOutline();
+  });
   let drag = null;
   stage.addEventListener('pointerdown', e => {
     if (!e.target.closest('.node')) drag = { x: e.clientX - pan.x, y: e.clientY - pan.y };
