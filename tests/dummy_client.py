@@ -430,6 +430,43 @@ class DummyStudioClient(NotebookLMClientProtocol):
         self.calls.append(f"retry_remote_artifact:{notebook_id}:{artifact_id}")
         return {"artifact_id": artifact_id, "task_id": "retry-1", "status": "submitted"}
 
+    async def add_url_source(self, notebook_id: str, url: str, title: str | None = None) -> dict[str, Any]:
+        """Record URL source addition and return dummy source."""
+        self.calls.append(f"add_url_source:{notebook_id}:{url}")
+        return {"id": "src-url-1", "title": title or url}
+
+    async def add_text_source(self, notebook_id: str, title: str, content: str) -> dict[str, Any]:
+        """Record text source addition and return dummy source."""
+        self.calls.append(f"add_text_source:{notebook_id}:{title}")
+        return {"id": "src-text-1", "title": title}
+
+    async def research_sources(self, notebook_id: str, query: str, mode: str = "fast") -> dict[str, Any]:
+        """Return dummy discovered web sources for research query."""
+        self.calls.append(f"research_sources:{notebook_id}:{mode}:{query}")
+        return {
+            "task_id": "res-task-1",
+            "summary": f"Found references for {query}",
+            "sources": [{"url": "https://example.org/paper", "title": f"{query} 綜述", "snippet": "摘要"}],
+        }
+
+    async def import_research_sources(
+        self, notebook_id: str, task_id: str, sources: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
+        """Record research source import and return imported items."""
+        self.calls.append(f"import_research_sources:{notebook_id}:{task_id}:{len(sources)}")
+        return [{"id": f"src-res-{i}", "title": s.get("title", "web")} for i, s in enumerate(sources, 1)]
+
+    async def configure_chat(
+        self,
+        notebook_id: str,
+        goal: str = "default",
+        response_length: str = "default",
+        custom_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        """Record chat configuration update and return applied settings."""
+        self.calls.append(f"configure_chat:{notebook_id}:{goal}:{response_length}")
+        return {"goal": goal, "response_length": response_length, "custom_prompt": custom_prompt}
+
     async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
         """Return dummy artifact id fallback."""
         return "art-latest-1"

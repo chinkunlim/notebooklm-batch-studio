@@ -315,6 +315,9 @@ function sourceToolbarHtml(data, code) {
     <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseSources('${escAttr(code)}')">重新整理來源</button>
     <button type="button" class="btn btn-soft btn-sm" onclick="setupCourse('${escAttr(code)}', event)">補傳未上傳講義</button>
     <label class="btn btn-primary btn-sm" style="cursor:pointer">＋ 上傳 PDF 到筆記本<input type="file" accept=".pdf,application/pdf" hidden onchange="uploadCustomSourcePdf('${escAttr(code)}', this)"></label>
+    <button type="button" class="btn btn-soft btn-sm" onclick="addUrlSourceUi('${escAttr(code)}')">🌐 網址 / YouTube</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="addTextSourceUi('${escAttr(code)}')">📝 貼上文字</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="researchSourcesUi('${escAttr(code)}')">🔍 網路研究搜來源</button>
   </div>`;
 }
 

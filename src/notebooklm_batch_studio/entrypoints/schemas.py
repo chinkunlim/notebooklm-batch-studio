@@ -303,3 +303,39 @@ class ExportArtifactRequest(BaseModel):
 
     title: str = "Export"
     kind: str = "report"
+
+
+class UrlSourceRequest(BaseModel):
+    """Payload to add a web or YouTube URL source to a course notebook."""
+
+    url: str = Field(min_length=4)
+    title: str | None = None
+
+
+class TextSourceRequest(BaseModel):
+    """Payload to add pasted plain text as a source in a course notebook."""
+
+    title: str = Field(min_length=1)
+    content: str = Field(min_length=1)
+
+
+class ResearchQueryRequest(BaseModel):
+    """Payload to start web discovery research in a course notebook."""
+
+    query: str = Field(min_length=1)
+    mode: str = "fast"
+
+
+class ResearchImportRequest(BaseModel):
+    """Payload to import discovered research sources into a course notebook."""
+
+    task_id: str = Field(min_length=1)
+    sources: list[dict[str, str]] = Field(min_length=1)
+
+
+class ChatConfigureRequest(BaseModel):
+    """Payload to configure NotebookLM chat goal and response length."""
+
+    goal: str = "default"
+    response_length: str = "default"
+    custom_prompt: str | None = None

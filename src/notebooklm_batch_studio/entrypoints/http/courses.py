@@ -9,12 +9,18 @@ from fastapi import APIRouter, HTTPException, Request
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError, OllamaUnavailableError
 from notebooklm_batch_studio.entrypoints.schemas import (
     AddCoursesRequest,
+    ChatConfigureRequest,
     CourseSummaryResponse,
     PreviewCoursesRequest,
+    ResearchImportRequest,
+    ResearchQueryRequest,
+    TextSourceRequest,
     UpdateProfileRequest,
     UploadSourceRequest,
+    UrlSourceRequest,
 )
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.remote_admin_service import RemoteAdminService
 
 courses_router = APIRouter()
 
@@ -309,3 +315,125 @@ async def sync_course_from_notebooklm(code: str, request: Request) -> dict[str, 
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Sync error: {exc}") from exc
+
+
+def _course_remote_admin(request: Request) -> RemoteAdminService:
+    """Build RemoteAdminService from app.state.service.
+
+    Args:
+        request: Incoming HTTP request context.
+
+    Returns:
+        Configured RemoteAdminService instance.
+    """
+    svc: BatchStudioService = request.app.state.service
+    return RemoteAdminService(svc.course_repo, svc.notebooklm_client)
+
+
+@courses_router.post("/api/courses/{code}/sources/url", tags=["Courses"], operation_id="add_url_source")
+async def add_url_source_endpoint(code: str, payload: UrlSourceRequest, request: Request) -> dict[str, Any]:
+    """Add a web page or YouTube URL as a source in the course's Gemini Notebook.
+
+    Args:
+        code: Course identifier.
+        payload: URL and optional title.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Created source summary dictionary.
+    """
+    try:
+        return await _course_remote_admin(request).add_url_source(code, payload.url, title=payload.title)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.post("/api/courses/{code}/sources/text", tags=["Courses"], operation_id="add_text_source")
+async def add_text_source_endpoint(code: str, payload: TextSourceRequest, request: Request) -> dict[str, Any]:
+    """Add pasted plain text as a source in the course's Gemini Notebook.
+
+    Args:
+        code: Course identifier.
+        payload: Title and text content.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Created source summary dictionary.
+    """
+    try:
+        return await _course_remote_admin(request).add_text_source(code, payload.title, payload.content)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.post(
+    "/api/courses/{code}/sources/research", tags=["Courses"], operation_id="research_course_sources"
+)
+async def research_sources_endpoint(
+    code: str, payload: ResearchQueryRequest, request: Request
+) -> dict[str, Any]:
+    """Run web discovery research in the course's Gemini Notebook.
+
+    Args:
+        code: Course identifier.
+        payload: Research query and mode ('fast' or 'deep').
+        request: Incoming HTTP request context.
+
+    Returns:
+        Discovered candidate sources and task_id.
+    """
+    try:
+        return await _course_remote_admin(request).research_sources(code, payload.query, mode=payload.mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.post(
+    "/api/courses/{code}/sources/research/import",
+    tags=["Courses"],
+    operation_id="import_research_sources",
+)
+async def import_research_sources_endpoint(
+    code: str, payload: ResearchImportRequest, request: Request
+) -> dict[str, Any]:
+    """Import selected discovered research sources into the course notebook.
+
+    Args:
+        code: Course identifier.
+        payload: Research task_id and selected sources.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Import summary dictionary.
+    """
+    try:
+        return await _course_remote_admin(request).import_research_sources(
+            code, payload.task_id, payload.sources
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.put("/api/courses/{code}/qa/configure", tags=["Courses"], operation_id="configure_chat")
+async def configure_chat_endpoint(
+    code: str, payload: ChatConfigureRequest, request: Request
+) -> dict[str, Any]:
+    """Configure Gemini Notebook chat goal and response length for a course.
+
+    Args:
+        code: Course identifier.
+        payload: Goal, response length, and optional custom prompt.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Applied configuration dictionary.
+    """
+    try:
+        return await _course_remote_admin(request).configure_chat(
+            code,
+            goal=payload.goal,
+            response_length=payload.response_length,
+            custom_prompt=payload.custom_prompt,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

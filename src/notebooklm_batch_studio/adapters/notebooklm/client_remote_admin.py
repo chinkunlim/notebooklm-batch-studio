@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from notebooklm import ChatGoal, ChatResponseLength
+
 from notebooklm_batch_studio.adapters.notebooklm.errors import _translate_errors
 from notebooklm_batch_studio.adapters.notebooklm.generation import finish_generation, to_nlm_language
 
@@ -124,3 +126,118 @@ class NotebookLMRemoteAdminMixin:
             "task_id": getattr(status, "task_id", None),
             "status": str(getattr(status, "status", "submitted")),
         }
+
+    @_translate_errors
+    async def add_url_source(self, notebook_id: str, url: str, title: str | None = None) -> dict[str, Any]:
+        """Add a web page or YouTube URL as a source in Gemini Notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            url: Target web or YouTube URL.
+            title: Optional source title override.
+
+        Returns:
+            Created source summary dictionary.
+        """
+        async with self._client() as client:
+            src = await client.sources.add_url(notebook_id, url, wait=True, title=title)
+        return {"id": str(getattr(src, "id", "") or ""), "title": str(getattr(src, "title", "") or url)}
+
+    @_translate_errors
+    async def add_text_source(self, notebook_id: str, title: str, content: str) -> dict[str, Any]:
+        """Add pasted plain text as a source in Gemini Notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            title: Source title.
+            content: Plain text body.
+
+        Returns:
+            Created source summary dictionary.
+        """
+        async with self._client() as client:
+            src = await client.sources.add_text(notebook_id, title, content, wait=True)
+        return {"id": str(getattr(src, "id", "") or ""), "title": str(getattr(src, "title", "") or title)}
+
+    @_translate_errors
+    async def research_sources(self, notebook_id: str, query: str, mode: str = "fast") -> dict[str, Any]:
+        """Run web discovery research in a notebook and return candidate sources.
+
+        Args:
+            notebook_id: Notebook identifier.
+            query: Search topic or research question.
+            mode: Discovery mode ('fast' or 'deep').
+
+        Returns:
+            Research task dictionary with task_id, summary, and discovered sources.
+        """
+        async with self._client() as client:
+            task = await client.research.discover(notebook_id, query, mode=mode)
+        sources = [
+            {
+                "url": str(getattr(s, "url", "") or ""),
+                "title": str(getattr(s, "title", "") or ""),
+                "snippet": str(getattr(s, "snippet", "") or ""),
+            }
+            for s in (getattr(task, "sources", None) or [])
+        ]
+        return {
+            "task_id": str(getattr(task, "task_id", "") or ""),
+            "summary": str(getattr(task, "summary", "") or ""),
+            "sources": sources,
+        }
+
+    @_translate_errors
+    async def import_research_sources(
+        self, notebook_id: str, task_id: str, sources: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
+        """Import selected discovered research sources into a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            task_id: Research task identifier.
+            sources: List of source dicts (`url`, `title`).
+
+        Returns:
+            List of imported source records.
+        """
+        async with self._client() as client:
+            return list(await client.research.import_sources(notebook_id, task_id, sources))
+
+    @_translate_errors
+    async def configure_chat(
+        self,
+        notebook_id: str,
+        goal: str = "default",
+        response_length: str = "default",
+        custom_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        """Configure chat goal and response length for a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            goal: Chat goal ('default', 'learning_guide', 'custom').
+            response_length: Response length ('default', 'shorter', 'longer').
+            custom_prompt: Custom instructions when goal is 'custom'.
+
+        Returns:
+            Applied configuration dictionary.
+        """
+        goal_map = {
+            "default": ChatGoal.DEFAULT,
+            "learning_guide": ChatGoal.LEARNING_GUIDE,
+            "custom": ChatGoal.CUSTOM,
+        }
+        len_map = {
+            "default": ChatResponseLength.DEFAULT,
+            "shorter": ChatResponseLength.SHORTER,
+            "longer": ChatResponseLength.LONGER,
+        }
+        async with self._client() as client:
+            await client.chat.configure(
+                notebook_id,
+                goal=goal_map.get(goal, ChatGoal.DEFAULT),
+                response_length=len_map.get(response_length, ChatResponseLength.DEFAULT),
+                custom_prompt=custom_prompt,
+            )
+        return {"goal": goal, "response_length": response_length, "custom_prompt": custom_prompt}

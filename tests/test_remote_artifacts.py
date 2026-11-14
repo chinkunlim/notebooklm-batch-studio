@@ -157,3 +157,59 @@ class TestRemoteArtifactsAdmin(unittest.IsolatedAsyncioTestCase):
             await tools["generate_cinematic_video"].fn("BIO101", instructions="核心", confirm=True)
         )
         self.assertEqual(mc_vid["artifact_id"], "art-cinematic-1")
+
+    async def test_sources_research_and_chat_configure_endpoints_and_mcp(self) -> None:
+        """HTTP and MCP cover URL/text source import, web research, and chat config."""
+        u = self.http.post("/api/courses/BIO101/sources/url", json={"url": "https://youtu.be/xyz"})
+        t = self.http.post("/api/courses/BIO101/sources/text", json={"title": "N", "content": "Body"})
+        self.assertEqual((u.status_code, t.status_code), (200, 200))
+
+        res = self.http.post("/api/courses/BIO101/sources/research", json={"query": "ATP", "mode": "fast"})
+        self.assertEqual(res.status_code, 200)
+        imp = self.http.post(
+            "/api/courses/BIO101/sources/research/import",
+            json={"task_id": res.json()["task_id"], "sources": res.json()["sources"]},
+        )
+        self.assertEqual(imp.status_code, 200)
+        self.assertEqual(imp.json()["imported_count"], 1)
+
+        cfg = self.http.put(
+            "/api/courses/BIO101/qa/configure",
+            json={"goal": "learning_guide", "response_length": "shorter"},
+        )
+        self.assertEqual(cfg.status_code, 200)
+        self.assertEqual(cfg.json()["goal"], "learning_guide")
+
+        tools = self.mcp._tool_manager._tools  # type: ignore[attr-defined]
+        self.assertTrue(
+            json.loads(await tools["add_url_source"].fn("BIO101", "https://a.b", confirm=False))[
+                "requires_confirmation"
+            ]
+        )
+        self.assertTrue(
+            json.loads(await tools["add_text_source"].fn("BIO101", "T", "B", confirm=False))[
+                "requires_confirmation"
+            ]
+        )
+        self.assertTrue(
+            json.loads(
+                await tools["import_research_sources"].fn(
+                    "BIO101", "t1", [{"url": "https://a.b", "title": "A"}], confirm=False
+                )
+            )["requires_confirmation"]
+        )
+        from notebooklm_batch_studio.entrypoints.schemas import ChatConfigureRequest
+
+        self.assertTrue(
+            json.loads(
+                await tools["configure_notebook_chat"].fn("BIO101", ChatConfigureRequest(), confirm=False)
+            )["requires_confirmation"]
+        )
+        mc_res = json.loads(await tools["research_course_sources"].fn("BIO101", "ATP", mode="deep"))
+        self.assertEqual(mc_res["task_id"], "res-task-1")
+        mc_cfg = json.loads(
+            await tools["configure_notebook_chat"].fn(
+                "BIO101", ChatConfigureRequest(goal="learning_guide"), confirm=True
+            )
+        )
+        self.assertEqual(mc_cfg["goal"], "learning_guide")

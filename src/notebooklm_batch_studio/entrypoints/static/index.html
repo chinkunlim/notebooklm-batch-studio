@@ -803,6 +803,15 @@
     </select>
     <button type="button" class="btn btn-soft btn-sm" onclick="resetQaConversation()">開啟新話題</button>
     <button type="button" class="btn btn-soft btn-sm" id="qaSummarizeBtn" onclick="summarizeQaConversation()">✨ 一鍵整理精華</button>
+    <select id="qaChatGoalSelect" class="text-input" style="font-size:12px;padding:3px 6px" title="對話模式" onchange="configureQaChatStyle()">
+      <option value="default">預設風格</option>
+      <option value="learning_guide">學習引導</option>
+    </select>
+    <select id="qaChatLenSelect" class="text-input" style="font-size:12px;padding:3px 6px" title="回答長度" onchange="configureQaChatStyle()">
+      <option value="default">適中篇幅</option>
+      <option value="shorter">精簡回答</option>
+      <option value="longer">詳細深入</option>
+    </select>
   </div>
   <div id="qaDrawerMsgs" class="qa-drawer-msgs">
     <div class="empty-state small">針對本講或整門課向 Gemini Notebook 發問，多輪追問後可一鍵整理成結構化筆記。</div>

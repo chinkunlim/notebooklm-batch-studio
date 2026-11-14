@@ -128,3 +128,85 @@ class RemoteAdminService:
         """
         _, nb_id = self._require_notebook(course_code)
         return await self.client.retry_remote_artifact(nb_id, artifact_id)
+
+    async def add_url_source(self, course_code: str, url: str, title: str | None = None) -> dict[str, Any]:
+        """Add a web page or YouTube URL as a source in the course's Gemini Notebook.
+
+        Args:
+            course_code: Course identifier.
+            url: Target web or YouTube URL.
+            title: Optional source title.
+
+        Returns:
+            Created source summary dictionary.
+        """
+        _, nb_id = self._require_notebook(course_code)
+        return await self.client.add_url_source(nb_id, url, title=title)
+
+    async def add_text_source(self, course_code: str, title: str, content: str) -> dict[str, Any]:
+        """Add pasted plain text as a source in the course's Gemini Notebook.
+
+        Args:
+            course_code: Course identifier.
+            title: Source title.
+            content: Plain text content.
+
+        Returns:
+            Created source summary dictionary.
+        """
+        _, nb_id = self._require_notebook(course_code)
+        return await self.client.add_text_source(nb_id, title, content)
+
+    async def research_sources(self, course_code: str, query: str, mode: str = "fast") -> dict[str, Any]:
+        """Discover web sources for a query in the course's Gemini Notebook.
+
+        Args:
+            course_code: Course identifier.
+            query: Search query.
+            mode: Research mode ('fast' or 'deep').
+
+        Returns:
+            Research result dictionary with task_id, summary, and sources.
+        """
+        _, nb_id = self._require_notebook(course_code)
+        return await self.client.research_sources(nb_id, query, mode=mode)
+
+    async def import_research_sources(
+        self, course_code: str, task_id: str, sources: list[dict[str, str]]
+    ) -> dict[str, Any]:
+        """Import selected research sources into the course's Gemini Notebook.
+
+        Args:
+            course_code: Course identifier.
+            task_id: Research task identifier.
+            sources: Candidate source dicts (`url`, `title`).
+
+        Returns:
+            Import summary dictionary.
+        """
+        _, nb_id = self._require_notebook(course_code)
+        imported = await self.client.import_research_sources(nb_id, task_id, sources)
+        return {"course_code": course_code, "imported_count": len(imported), "sources": imported}
+
+    async def configure_chat(
+        self,
+        course_code: str,
+        goal: str = "default",
+        response_length: str = "default",
+        custom_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        """Configure chat goal and response length for the course's Gemini Notebook.
+
+        Args:
+            course_code: Course identifier.
+            goal: Chat goal ('default', 'learning_guide', 'custom').
+            response_length: Response length ('default', 'shorter', 'longer').
+            custom_prompt: Optional custom system prompt.
+
+        Returns:
+            Applied configuration dictionary.
+        """
+        _, nb_id = self._require_notebook(course_code)
+        return await self.client.configure_chat(
+            nb_id, goal=goal, response_length=response_length, custom_prompt=custom_prompt
+        )

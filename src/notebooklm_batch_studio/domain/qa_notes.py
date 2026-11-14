@@ -197,3 +197,77 @@ class NotebookLMRemoteAdminProtocol(Protocol):
             Status summary dictionary.
         """
         ...
+
+    async def add_url_source(self, notebook_id: str, url: str, title: str | None = None) -> dict[str, Any]:
+        """Add a web page or YouTube URL as a source in a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            url: Target web or YouTube URL.
+            title: Optional source title override.
+
+        Returns:
+            Created source summary dictionary.
+        """
+        ...
+
+    async def add_text_source(self, notebook_id: str, title: str, content: str) -> dict[str, Any]:
+        """Add pasted plain text as a source in a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            title: Source title.
+            content: Plain text body.
+
+        Returns:
+            Created source summary dictionary.
+        """
+        ...
+
+    async def research_sources(self, notebook_id: str, query: str, mode: str = "fast") -> dict[str, Any]:
+        """Run web discovery research in a notebook and return candidate sources.
+
+        Args:
+            notebook_id: Notebook identifier.
+            query: Search topic or research question.
+            mode: Discovery mode ('fast' or 'deep').
+
+        Returns:
+            Research task dictionary with task_id, summary, and discovered sources.
+        """
+        ...
+
+    async def import_research_sources(
+        self, notebook_id: str, task_id: str, sources: list[dict[str, str]]
+    ) -> list[dict[str, str]]:
+        """Import selected discovered research sources into a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            task_id: Research task identifier.
+            sources: List of source dicts (`url`, `title`).
+
+        Returns:
+            List of imported source records.
+        """
+        ...
+
+    async def configure_chat(
+        self,
+        notebook_id: str,
+        goal: str = "default",
+        response_length: str = "default",
+        custom_prompt: str | None = None,
+    ) -> dict[str, Any]:
+        """Configure chat persona goal and response length for a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            goal: Chat goal ('default', 'learning_guide', 'custom').
+            response_length: Response length ('default', 'shorter', 'longer').
+            custom_prompt: Custom system instructions when goal is 'custom'.
+
+        Returns:
+            Applied configuration dictionary.
+        """
+        ...

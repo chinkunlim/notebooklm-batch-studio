@@ -270,6 +270,27 @@ function expandQaToStudioTab() {
   if (typeof switchStudyTab === 'function') switchStudyTab('qa_notes');
 }
 
+/**
+ * Update Gemini Notebook chat goal and response length for the current course.
+ * @returns {Promise<void>} Resolves when configured
+ */
+async function configureQaChatStyle() {
+  if (typeof currentStudyCourse === 'undefined' || !currentStudyCourse) return;
+  const goal = document.getElementById('qaChatGoalSelect')?.value || 'default';
+  const responseLength = document.getElementById('qaChatLenSelect')?.value || 'default';
+  try {
+    const res = await fetch(`/api/courses/${currentStudyCourse.code}/qa/configure`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goal, response_length: responseLength }),
+    });
+    if (!res.ok) throw new Error(res.statusText);
+    showToast('已套用對話角色與篇幅設定', 'success', 1800);
+  } catch (err) {
+    showToast(`套用設定失敗：${err.message}`, 'error');
+  }
+}
+
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
     e.preventDefault();

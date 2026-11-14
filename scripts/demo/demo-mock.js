@@ -336,6 +336,13 @@ function demoCourseRoute(code, rest, method, body, q) {
       remote_error: null,
     });
   }
+  if (rest === 'sources/url' || rest === 'sources/text') return demoJson({ course_code: code, source_id: 'src-demo-extra', title: (body && (body.title || body.url)) || 'Demo Source', status: 'ready' });
+  if (rest === 'sources/research') return demoJson({ task_id: 'task-demo-res', summary: 'Demo research summary', sources: [{ url: 'https://example.com/study', title: 'Demo Research Paper' }] });
+  if (rest === 'sources/research/import') return demoJson({ course_code: code, imported_count: ((body && body.sources) || []).length, sources: [] });
+  if (rest === 'qa/configure' && method === 'PUT') return demoJson({ course_code: code, goal: (body && body.goal) || 'default', response_length: (body && body.response_length) || 'default' });
+  if (rest === 'remote-artifacts/suggest-reports') return demoJson({ course_code: code, suggestions: [{ title: '考前核心重點整理', description: '彙整重要定義與高頻考點', prompt: 'Summarize key concepts', audience_level: 'student' }] });
+  if (rest === 'remote-artifacts/cinematic-video') return demoJson({ course_code: code, artifact_id: 'art-demo-cinematic', kind: 'video' });
+  if (rest.startsWith('remote-artifacts/') && method === 'POST') return demoJson({ course_code: code, ok: true, artifact_id: 'art-demo-1', document_id: 'gdoc-demo', title: (body && body.title) || 'Demo Export' });
   if (rest.startsWith('sources/') && method === 'DELETE') {
     demoNote('刪除來源');
     return demoJson({ code, deleted_source_id: decodeURIComponent(rest.slice(8)), unlinked_lectures: [] });
