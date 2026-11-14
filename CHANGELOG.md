@@ -127,6 +127,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): restore #paneCourses children when switching out of split layout (by `@antigravity`)
 - fix(ui): guard missing .col-toggle in applyColumns to prevent startup crash (by `@antigravity`)
 - fix(ui): read data-value on studioPane active button when switching layout (by `@antigravity`)
+- fix(ui): persist choice before invoking handler in setChoice so courseFilter renders new state (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

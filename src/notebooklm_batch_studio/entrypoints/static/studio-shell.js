@@ -387,8 +387,8 @@ const COL_LABELS = { queue: '進行中', courses: '課程內容', review: '題�
 function setChoice(name, value, persist = true) {
   $$(`.seg[data-seg="${name}"] button`).forEach(b => b.classList.toggle('on', b.dataset.value === value));
   $$(`.opt-cards[data-opt="${name}"] .opt-card`).forEach(b => b.classList.toggle('on', b.dataset.value === value));
-  (handlers[name] || (() => {}))(value);
   if (persist && persisted.includes(name)) save(name, value);
+  (handlers[name] || (() => {}))(value);
   requestAnimationFrame(refreshThumbs);
 }
 $$('.opt-cards[data-opt]').forEach(g => g.addEventListener('click', e => {
