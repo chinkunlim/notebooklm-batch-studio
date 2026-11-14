@@ -304,7 +304,8 @@ function highlightPage(n) {
   const userPts = (typeof loadReaderLocal === 'function' && currentStudyCourse)
     ? loadReaderLocal(currentStudyCourse.code, activeStudyLectureNo).userHighlights : [];
   [...reader.points, ...userPts].forEach((p, i) => {
-    if (p.page && Math.abs(p.page - n) > 1) return;
+    if (p.foundOn && p.foundOn !== n) return;
+    if (i >= reader.points.length && p.page && p.page !== n) return;
     const quote = norm(p.quote);
     let at = text.indexOf(quote);
     let len = quote.length;
@@ -349,7 +350,11 @@ function markMissingPoints() {
  */
 function jumpToPoint(i) {
   const p = reader.points[i];
-  const page = document.getElementById(`readerPage-${p.foundOn || p.page || 1}`);
+  const total = reader.doc ? reader.doc.numPages : 1;
+  const ref = reader.points.find(pt => pt.foundOn && pt.page);
+  const offset = ref ? ref.page - ref.foundOn : 0;
+  const guess = p.page ? Math.max(1, Math.min(total, p.page - offset)) : 1;
+  const page = document.getElementById(`readerPage-${p.foundOn || guess}`);
   if (!page) return;
   page.scrollIntoView({ behavior: 'smooth', block: 'start' });
   setTimeout(() => {

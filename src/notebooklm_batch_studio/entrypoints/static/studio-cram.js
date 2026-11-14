@@ -430,13 +430,17 @@ function initSideCardCollapses() {
 function updateStudyViewportHeight() {
   const pane = document.getElementById('paneStudy');
   if (!pane || pane.hidden || pane.dataset.layout !== 'split') return;
-  const top = pane.getBoundingClientRect().top;
-  const avail = Math.max(460, Math.floor(window.innerHeight - top - 24));
+  const avail = Math.max(460, Math.floor(window.innerHeight - 48));
   pane.style.setProperty('--study-h', `${avail}px`);
 }
 
 initSideCardCollapses();
 updateStudyViewportHeight();
+window.addEventListener('load', updateStudyViewportHeight);
 window.addEventListener('resize', updateStudyViewportHeight);
 document.addEventListener('fullscreenchange', () => setTimeout(updateStudyViewportHeight, 60));
 document.addEventListener('click', () => setTimeout(updateStudyViewportHeight, 60));
+const _studyPaneObs = document.getElementById('paneStudy');
+if (_studyPaneObs && typeof MutationObserver === 'function') {
+  new MutationObserver(updateStudyViewportHeight).observe(_studyPaneObs, { attributes: true, attributeFilter: ['hidden', 'data-layout'] });
+}

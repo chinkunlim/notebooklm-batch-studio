@@ -98,6 +98,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui,reader): align topbar width and status position, two-row subbar, page-synced comments, fit-width PDF, bookmark dropdown, and readerCard collapse (by `@antigravity`)
 - fix(ui,reader): remove stage mode, viewport-fit scrollable PDF with inline-aligned margin comments, bookmark delete keeps menu open, collapsed card shrink, and focusExit placement (by `@antigravity`)
 - fix(ui,reader): fix PDF flex-shrink scroll, dynamic viewport height, bench header collapse and seg grid, and reader header alignment (by `@antigravity`)
+- fix(ui,reader): match book-printed keypoint pages across PDF, size study pane to full viewport scroll frame, and keep playerCard compact (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
