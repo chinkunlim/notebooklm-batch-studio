@@ -424,8 +424,9 @@ function initSideCardCollapses() {
  */
 function updateStudyViewportHeight() {
   const pane = document.getElementById('paneStudy');
-  if (!pane) return;
-  pane.style.removeProperty('--study-h');
+  if (!pane || pane.hidden || pane.dataset.layout !== 'split') return;
+  const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  pane.style.setProperty('--study-h', `${Math.max(460, Math.floor(h - 24))}px`);
 }
 
 /**
@@ -447,6 +448,11 @@ function initStudyStickyWheel() {
       if ((!scroller || scroller.scrollTop <= 1) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
     }
   }, { passive: false });
+  window.addEventListener('scroll', () => {
+    if (pane.hidden || pane.dataset.layout !== 'split') return;
+    const top = pane.getBoundingClientRect().top;
+    if (top < 11.5) window.scrollTo(window.scrollX, Math.max(0, Math.round(window.scrollY + top - 12)));
+  }, { passive: true });
 }
 
 /**
@@ -468,10 +474,7 @@ function switchStudySidePane(v) {
     if (courses) courses.hidden = true;
     study.hidden = false;
     study.dataset.sideMode = v;
-    if (v === 'courses' && study.classList.contains('side-collapsed')) {
-      const tg = study.querySelector(':scope > .col-resizer .col-toggle');
-      if (tg) tg.click();
-    }
+    if (v === 'courses' && study.classList.contains('side-collapsed')) study.querySelector(':scope > .col-resizer .col-toggle')?.click();
   } else {
     if (courses) courses.hidden = v !== 'courses';
     if (study) study.hidden = v !== 'study';
@@ -485,7 +488,10 @@ initStudyStickyWheel();
 updateStudyViewportHeight();
 window.addEventListener('load', updateStudyViewportHeight);
 window.addEventListener('resize', updateStudyViewportHeight);
-document.addEventListener('fullscreenchange', () => setTimeout(updateStudyViewportHeight, 60));
+window.visualViewport?.addEventListener('resize', updateStudyViewportHeight);
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
+  setTimeout(updateStudyViewportHeight, 60); setTimeout(updateStudyViewportHeight, 360);
+}));
 document.addEventListener('click', () => setTimeout(updateStudyViewportHeight, 60));
 const _studyPaneObs = document.getElementById('paneStudy');
 if (_studyPaneObs && typeof MutationObserver === 'function') {

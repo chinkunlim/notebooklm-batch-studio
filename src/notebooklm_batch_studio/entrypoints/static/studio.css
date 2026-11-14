@@ -1282,7 +1282,7 @@ img, iframe, video, audio { max-width: 100%; }
 
 /* Right column arrow collapse/expand + split-mode viewport-fit equal height & card collapse */
 .study[data-layout="split"] {
-  align-items: stretch; height: calc(100vh - 24px); height: calc(100dvh - 24px); min-height: 460px;
+  align-items: stretch; height: var(--study-h, calc(100dvh - 24px)); min-height: 460px;
   position: sticky; top: 12px; margin-bottom: 0; scroll-margin-top: 12px;
 }
 .app:has(#paneStudy[data-layout="split"]:not([hidden])) .views { padding-bottom: 12px; }
