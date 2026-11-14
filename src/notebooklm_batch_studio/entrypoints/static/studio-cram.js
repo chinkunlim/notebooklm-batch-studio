@@ -426,7 +426,7 @@ function updateStudyViewportHeight() {
  * @returns {boolean}
  */
 function canInnerScroll(target, dir) {
-  const sel = '.kp-list.kp-all-mode, #readerPages, .bench-body, .side-catalog-host, .study-side';
+  const sel = '.kp-list.kp-all-mode, #readerPages, .bench-body, .bench-stage > .panel, .side-catalog-host, .study-side';
   for (let el = target instanceof Element ? target.closest(sel) : null; el; el = el.parentElement?.closest(sel) || null) {
     if (el.scrollHeight > el.clientHeight + 1 && (dir > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 1)) return true;
   }
@@ -443,7 +443,7 @@ function initStudyStickyWheel() {
   if (!pane || !host || pane.dataset.stickyWheelHooked) return;
   pane.dataset.stickyWheelHooked = '1';
   host.addEventListener('wheel', e => {
-    const target = pane.dataset.layout === 'split' ? pane : (pane.dataset.layout === 'stack' ? document.getElementById('bench') : null);
+    const target = pane.dataset.layout === 'split' ? pane : (pane.dataset.layout === 'stack' ? document.querySelector('#bench .bench-stage') : null);
     if (!target || !document.getElementById('view-studio')?.classList.contains('on') || pane.hidden || e.ctrlKey) return;
     if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
     if (e.target instanceof Element && e.target.closest('dialog[open], .qa-drawer.open, .focus-pop.open, .speed-menu.open, .disc-pop.open')) return;
@@ -456,7 +456,7 @@ function initStudyStickyWheel() {
     if (e.deltaY < 0 && !canInnerScroll(e.target, -1) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
   }, { passive: false });
   window.addEventListener('scroll', () => {
-    const target = pane.dataset.layout === 'split' ? pane : (pane.dataset.layout === 'stack' ? document.getElementById('bench') : null);
+    const target = pane.dataset.layout === 'split' ? pane : (pane.dataset.layout === 'stack' ? document.querySelector('#bench .bench-stage') : null);
     if (!target || !document.getElementById('view-studio')?.classList.contains('on') || pane.hidden) return;
     const top = target.getBoundingClientRect().top;
     if (top < 11.5) window.scrollTo(window.scrollX, Math.max(0, Math.round(window.scrollY + top - 12)));

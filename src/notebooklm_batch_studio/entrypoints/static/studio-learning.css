@@ -4,9 +4,8 @@
 .small { font-size: 13px; }
 
 /* ---------- Reader (lecture PDF with highlighted key points) ---------- */
-.reader-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-bottom: var(--s4); }
-.reader-bar::-webkit-scrollbar { display: none; }
-.reader-tools { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; flex-shrink: 0; }
+.reader-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; overflow: visible; margin-bottom: var(--s4); }
+.reader-tools { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .reader-tools .icon-btn,
 .reader-zoom-pill,
 .reader-pill-btn {
