@@ -181,8 +181,53 @@ function playNextCramAudio(code, audioEl) {
   showToast(`🎧 1.5× 急救連播：L${pad2(job.lecture_no || 0)}（剩餘 ${cramAudioQueue.length} 講）`, 'info', 2400);
 }
 
+let layoutGuidesHooked = false;
+
 /**
- * Toggle visual layout guide outlines across the app (Cmd/Ctrl+Shift+G).
+ * Build a concise selector label for a DOM element (tag#id.firstClass).
+ * @param {Element} el Target DOM element
+ * @returns {string} Readable element label
+ */
+function guideLabelFor(el) {
+  const tag = el.tagName.toLowerCase();
+  const id = el.id ? `#${el.id}` : '';
+  const cls = typeof el.className === 'string'
+    ? el.className.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(c => `.${c}`).join('')
+    : '';
+  return `${tag}${id}${cls}`;
+}
+
+/**
+ * Render detailed bounding boxes and top-left element labels when Layout Guides are active.
+ * @returns {void}
+ */
+function renderLayoutGuides() {
+  const app = document.getElementById('app');
+  if (!app || !app.classList.contains('layout-guides')) return;
+  let layer = document.getElementById('layoutGuideLayer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'layoutGuideLayer';
+    layer.className = 'layout-guide-layer';
+    app.appendChild(layer);
+  }
+  const sel = '.dock,.topbar,.subbar,.resizable,.col,.gutter,.card,#cramPanel,.seg,.study-lec-switch,.reader-bar,.reader-layout,#keyPointList,#readerPages,button,select,input,.tile,.dock-btn';
+  const els = [...document.querySelectorAll(sel)].filter(el => {
+    if (el.closest('#layoutGuideHud,#layoutGuideLayer')) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 6 && r.height > 6 && r.bottom > 0 && r.top < window.innerHeight;
+  });
+  const colors = { button: '#db2777', select: '#9333ea', input: '#9333ea', aside: '#2563eb', header: '#e11d48', article: '#0284c7' };
+  layer.innerHTML = els.map(el => {
+    const r = el.getBoundingClientRect();
+    const c = colors[el.tagName.toLowerCase()] || (el.classList.contains('gutter') ? '#e11d48' : '#0f766e');
+    return `<div class="lg-box" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-color:${c}">
+      <span class="lg-tag" style="background:${c}">${escHtml(guideLabelFor(el))}</span></div>`;
+  }).join('');
+}
+
+/**
+ * Toggle visual layout guide outlines and element labels across the app (Cmd/Ctrl+Shift+G).
  * @returns {void}
  */
 function toggleLayoutGuides() {
@@ -198,9 +243,15 @@ function toggleLayoutGuides() {
     app.appendChild(hud);
   }
   const mode = document.querySelector('.seg[data-seg="layout"] .on')?.textContent || '—';
-  hud.innerHTML = `<span>📐 參考線：<b>藍</b>側欄 <b>紅</b>頂欄/分隔線 <b>橘</b>工具列/急救 <b>紫</b>雙欄 <b>青</b>卡片 <b>綠</b>PDF</span>
-    <span>版型：${escHtml(mode)} (${window.innerWidth}×${window.innerHeight})</span>
+  hud.innerHTML = `<span>📐 參考線（含按鈕框與 div 名稱）｜版型：${escHtml(mode)} (${window.innerWidth}×${window.innerHeight})</span>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;padding:1px 8px" onclick="toggleLayoutGuides()">關閉</button>`;
+  if (!layoutGuidesHooked) {
+    layoutGuidesHooked = true;
+    window.addEventListener('resize', () => requestAnimationFrame(renderLayoutGuides));
+    document.addEventListener('scroll', () => requestAnimationFrame(renderLayoutGuides), true);
+    document.addEventListener('click', () => setTimeout(renderLayoutGuides, 80), true);
+  }
+  if (on) renderLayoutGuides();
 }
 
 document.addEventListener('keydown', e => {

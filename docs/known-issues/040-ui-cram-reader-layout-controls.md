@@ -25,6 +25,8 @@
    - 右側欄位內的每一個獨立區塊（如「語音摘要」、「學習產出物」、「本講重點」）也都要能各自**上下收合 / 展開（collapse / expand）**。
 6. **圖 6（補充）— 研讀右上工具列高度不一致與按鈕群組整合**：
    - `專注 25:00` 計時器按鈕高度與旁邊切換列不同，且目前 `專注 25:00`、`主舞台 / 雙欄 / 上下`、`課程目錄 / 研讀` 分散為三個獨立膠囊，應整合為同一組等高一體化控制列（以細分隔線區分機能）。
+7. **圖 7（補充）— 點擊頂部課程選擇膠囊時出現整塊藍色反白（Text Selection Highlight）**：
+   - 點擊頂欄 `#coursePickBtn` 展開 `#coursePop` 課程選單時，選單內文字會被意外選取成整塊藍色反白。
 
 - **影響範圍**：`index.html`、`studio.css`、`studio-start.js`、`studio-cram.js`、`studio-learning.js`、`studio-reader.js`
 
@@ -36,6 +38,7 @@
 4. `studio-reader.js` 目前只在 `loadKeyPoints` 渲染手動按鈕、尚未自動觸發生成、未持久化 `last_position` 與 `bookmarks`、縮放標籤為純 `<span>` 不可點擊切換三段比例。
 5. 雙欄模式的收合把手（`.col-toggle`）僅掛在 `.gutter` 分隔線上且預設透明/hover 才出現；右側各 `.card` 缺少獨立折疊標題列與收合狀態。
 6. `.subbar` 右側將 `#btnPomodoro`（`.btn.btn-ghost.pomodoro`）與兩個 `.seg` 各自獨立擺放，padding 與高度規則不同，未統一整合在同一個膠囊容器內。
+7. `studio.css:879` 的 `.cp-btn` 與 `.cp-pop` 未設定 `user-select: none; -webkit-user-select: none;`，導致點擊/連點展開選單時觸發瀏覽器原生文字選取反白。
 
 ## 3. 修正或規避方式
 

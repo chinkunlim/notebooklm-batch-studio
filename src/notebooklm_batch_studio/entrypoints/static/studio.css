@@ -1227,3 +1227,7 @@ img, iframe, video, audio { max-width: 100%; }
 .app.layout-guides #readerPages { outline: 2px dotted #15803d; outline-offset: -2px; }
 .layout-guide-hud { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 95; background: rgba(20, 26, 23, .9); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 12px; display: none; gap: 10px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.22); pointer-events: auto; }
 .app.layout-guides .layout-guide-hud { display: inline-flex; }
+.layout-guide-layer { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; display: none; }
+.app.layout-guides .layout-guide-layer { display: block; }
+.lg-box { position: fixed; border: 1px dashed; box-sizing: border-box; pointer-events: none; }
+.lg-tag { position: absolute; top: 0; left: 0; font: 600 9.5px/1.15 ui-monospace, monospace; color: #fff; padding: 1px 4px; border-radius: 0 0 3px 0; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; opacity: .9; }
