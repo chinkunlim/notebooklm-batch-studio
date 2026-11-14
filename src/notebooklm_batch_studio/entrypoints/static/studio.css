@@ -1300,7 +1300,7 @@ img, iframe, video, audio { max-width: 100%; }
 .study[data-layout="split"] #bench:not(.is-collapsed) { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .study[data-layout="split"] #bench:not(.is-collapsed) .bench-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .study[data-layout="split"] #bench:not(.is-collapsed) .bench-body::-webkit-scrollbar { display: none; }
-.card.is-collapsed { flex: 0 0 auto !important; min-height: 0 !important; }
+.study[data-layout="split"] .study-side .card.is-collapsed { flex: 0 0 auto !important; min-height: 0 !important; }
 .card-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); width: 100%; min-height: 32px; }
 .study-side #bench .card-head { flex-direction: column; align-items: stretch; gap: 10px; }
 .study-side #bench .card-head .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: var(--radius-m); gap: 3px; padding: 3px; width: 100%; max-width: 100%; }
@@ -1319,8 +1319,10 @@ img, iframe, video, audio { max-width: 100%; }
 }
 .study[data-layout="split"] .study-side .card-collapse-btn { display: grid; }
 .card-collapse-btn:hover { color: var(--ink); border-color: var(--accent); }
-.card.is-collapsed > :not(.blk-grip):not(.card-head):not(.player-controls):not(.bench-head) { display: none !important; }
-.card.is-collapsed > .card-head, .card.is-collapsed > .player-controls, .card.is-collapsed > .bench-head { margin-bottom: 0; }
+.study[data-layout="split"] .study-side .card.is-collapsed > :not(.blk-grip):not(.card-head):not(.player-controls):not(.bench-head) { display: none !important; }
+.study[data-layout="split"] .study-side .card.is-collapsed > .card-head,
+.study[data-layout="split"] .study-side .card.is-collapsed > .player-controls,
+.study[data-layout="split"] .study-side .card.is-collapsed > .bench-head { margin-bottom: 0; }
 
 /* Reader sticky bar & scroll stop */
 /* Reader header & bar alignment */
