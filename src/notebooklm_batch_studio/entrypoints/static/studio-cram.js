@@ -388,7 +388,7 @@ function toggleStudySideCollapse() {
  * @returns {void}
  */
 function initSideCardCollapses() {
-  ['playerCard', 'sideInfo', 'bench'].forEach(id => {
+  ['playerCard', 'sideInfo', 'bench', 'myCoursesCard', 'courseLecturesCard'].forEach(id => {
     const card = document.getElementById(id);
     const head = card && !card.dataset.collapseHooked && card.querySelector(':scope > .card-head, :scope > .player-controls, :scope > .bench-head');
     if (!head) return;
@@ -400,8 +400,10 @@ function initSideCardCollapses() {
       btn.setAttribute('aria-expanded', String(!collapsed));
       btn.innerHTML = collapsed ? '<i class="icon-chevron-down"></i>' : '<i class="icon-chevron-up"></i>';
     });
+    const existingRow = head.querySelector(':scope > .card-title-row');
     const title = head.querySelector(':scope > h2, :scope > .h2');
-    if (id === 'bench' && title) {
+    if (existingRow) existingRow.appendChild(btn);
+    else if (id === 'bench' && title) {
       const row = Object.assign(document.createElement('div'), { className: 'card-title-row' });
       head.insertBefore(row, title); row.append(title, btn);
     } else head.appendChild(btn);

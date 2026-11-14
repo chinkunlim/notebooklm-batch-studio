@@ -257,11 +257,13 @@
 
         <!-- 課程目錄: courses on the left, the chosen course's lectures on the right -->
         <div class="resizable" data-col-key="courses" id="paneCourses" hidden>
-          <div class="card">
+          <div class="card" id="myCoursesCard">
             <div class="card-head">
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                <h2 class="h2">我的課程</h2>
-                <span class="eyebrow" id="courseCount"></span>
+              <div class="card-title-row">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <h2 class="h2">我的課程</h2>
+                  <span class="eyebrow" id="courseCount"></span>
+                </div>
               </div>
               <div class="seg" id="courseFilter" data-seg="courseFilter" role="tablist" aria-label="課程進度篩選">
                 <button type="button" class="on" data-value="all">全部</button>
@@ -271,10 +273,14 @@
             </div>
             <div class="course-list" id="courseList"></div>
           </div>
-          <div class="card">
-            <div class="eyebrow" id="cdCode"></div>
-            <h2 class="h1" style="margin:4px 0 8px" id="cdName">選一門課</h2>
-            <p class="muted" style="margin-bottom:16px" id="cdMeta"></p>
+          <div class="card" id="courseLecturesCard">
+            <div class="card-head course-detail-head">
+              <div class="card-title-row">
+                <div class="eyebrow" id="cdCode"></div>
+              </div>
+              <h2 class="h1" style="margin:4px 0 8px" id="cdName">選一門課</h2>
+              <p class="muted" style="margin-bottom:16px" id="cdMeta"></p>
+            </div>
             <ul class="lectures" id="lectureList"></ul>
           </div>
         </div>

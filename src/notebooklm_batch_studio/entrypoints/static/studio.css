@@ -1393,6 +1393,12 @@ img, iframe, video, audio { max-width: 100%; }
 .app:has(#paneStudy[data-layout="stack"]:not([hidden])) .views { padding-bottom: 12px; }
 .study[data-layout="split"] .study-side .card.is-collapsed { flex: 0 0 auto !important; min-height: 0 !important; }
 .card-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); width: 100%; min-height: 32px; }
+#myCoursesCard .card-title-row { width: auto; flex: 1 1 auto; }
+.side-catalog-host #myCoursesCard .card-title-row { width: 100%; flex: 0 0 100%; }
+.side-catalog-host #myCoursesCard > .card-head { gap: 10px; }
+.course-detail-head { flex-direction: column; align-items: stretch; gap: 0; margin-bottom: 0; }
+.study[data-layout="split"] .study-side #myCoursesCard.is-collapsed .seg,
+.study[data-layout="split"] .study-side #courseLecturesCard.is-collapsed #cdMeta { display: none; }
 .study-side #bench .card-head { flex-direction: column; align-items: stretch; gap: 10px; }
 .study-side #bench .card-head .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: var(--radius-m); gap: 3px; padding: 3px; width: 100%; max-width: 100%; }
 .study-side #bench .card-head .seg button { width: 100%; justify-content: center; text-align: center; padding: 6px 8px; }
