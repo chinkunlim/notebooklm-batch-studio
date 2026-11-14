@@ -414,7 +414,7 @@ function initSideCardCollapses() {
  */
 function updateStudyViewportHeight() {
   const pane = document.getElementById('paneStudy');
-  if (!pane || pane.hidden || pane.dataset.layout !== 'split') return;
+  if (!pane || pane.hidden || (pane.dataset.layout !== 'split' && pane.dataset.layout !== 'stack')) return;
   const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
   pane.style.setProperty('--study-h', `${Math.max(460, Math.floor(h - 24))}px`);
 }
@@ -426,9 +426,11 @@ function updateStudyViewportHeight() {
  * @returns {boolean}
  */
 function canInnerScroll(target, dir) {
-  const scroller = target instanceof Element && target.closest('.kp-list.kp-all-mode, #readerPages, .bench-body, .side-catalog-host, .study-side');
-  if (!scroller || scroller.scrollHeight <= scroller.clientHeight + 1) return false;
-  return dir > 0 ? scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1 : scroller.scrollTop > 1;
+  const sel = '.kp-list.kp-all-mode, #readerPages, .bench-body, .side-catalog-host, .study-side';
+  for (let el = target instanceof Element ? target.closest(sel) : null; el; el = el.parentElement?.closest(sel) || null) {
+    if (el.scrollHeight > el.clientHeight + 1 && (dir > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 1)) return true;
+  }
+  return false;
 }
 
 /**
@@ -437,27 +439,26 @@ function canInnerScroll(target, dir) {
  * @returns {void}
  */
 function initStudyStickyWheel() {
-  const pane = document.getElementById('paneStudy');
-  const host = document.getElementById('app') || pane;
+  const pane = document.getElementById('paneStudy'), host = document.getElementById('app') || pane;
   if (!pane || !host || pane.dataset.stickyWheelHooked) return;
   pane.dataset.stickyWheelHooked = '1';
   host.addEventListener('wheel', e => {
-    if (!document.getElementById('view-studio')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
+    const target = pane.dataset.layout === 'split' ? pane : (pane.dataset.layout === 'stack' ? document.getElementById('bench') : null);
+    if (!target || !document.getElementById('view-studio')?.classList.contains('on') || pane.hidden || e.ctrlKey) return;
     if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
     if (e.target instanceof Element && e.target.closest('dialog[open], .qa-drawer.open, .focus-pop.open, .speed-menu.open, .disc-pop.open')) return;
-    const top = pane.getBoundingClientRect().top;
+    const top = target.getBoundingClientRect().top;
     if (e.deltaY > 0) {
       if (top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); }
       else if (!canInnerScroll(e.target, 1)) e.preventDefault();
       return;
     }
-    if (e.deltaY < 0 && !canInnerScroll(e.target, -1) && window.scrollY > 0) {
-      e.preventDefault(); window.scrollBy(0, e.deltaY);
-    }
+    if (e.deltaY < 0 && !canInnerScroll(e.target, -1) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
   }, { passive: false });
   window.addEventListener('scroll', () => {
-    if (!document.getElementById('view-studio')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split') return;
-    const top = pane.getBoundingClientRect().top;
+    const target = pane.dataset.layout === 'split' ? pane : (pane.dataset.layout === 'stack' ? document.getElementById('bench') : null);
+    if (!target || !document.getElementById('view-studio')?.classList.contains('on') || pane.hidden) return;
+    const top = target.getBoundingClientRect().top;
     if (top < 11.5) window.scrollTo(window.scrollX, Math.max(0, Math.round(window.scrollY + top - 12)));
   }, { passive: true });
 }

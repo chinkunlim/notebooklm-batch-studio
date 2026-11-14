@@ -131,6 +131,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): read data-value on studioPane active button when switching layout (by `@antigravity`)
 - fix(ui): persist choice before invoking handler in setChoice so courseFilter renders new state (by `@antigravity`)
 - fix(ui): unify QA drawer styling, fix lecture scope select, and wire expandQaToStudioTab (by `@antigravity`)
+- fix(ui): support stack-layout player collapse, #bench sticky scroll lock, and .reader-bar flex-shrink (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

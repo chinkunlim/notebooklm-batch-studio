@@ -1371,8 +1371,12 @@ img, iframe, video, audio { max-width: 100%; }
 .study[data-layout="split"] .study-side > #bench:not(.is-collapsed) { flex: 1 1 auto; min-height: 0; }
 .study[data-layout="split"] .study-side > .card:not(#bench) { flex: 0 0 auto; }
 .study[data-layout="split"] #bench:not(.is-collapsed) { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-.study[data-layout="split"] #bench:not(.is-collapsed) .bench-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
-.study[data-layout="split"] #bench:not(.is-collapsed) .bench-body::-webkit-scrollbar { display: none; }
+.study[data-layout="split"] #bench:not(.is-collapsed) .bench-body,
+.study[data-layout="stack"] #bench:not(.is-collapsed) .bench-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.study[data-layout="split"] #bench:not(.is-collapsed) .bench-body::-webkit-scrollbar,
+.study[data-layout="stack"] #bench:not(.is-collapsed) .bench-body::-webkit-scrollbar { display: none; }
+.study[data-layout="stack"] #bench:not(.is-collapsed) { height: var(--study-h, calc(100dvh - 24px)); min-height: 460px; display: flex; flex-direction: column; overflow: hidden; position: sticky; top: 12px; margin-bottom: 0; scroll-margin-top: 12px; }
+.app:has(#paneStudy[data-layout="stack"]:not([hidden])) .views { padding-bottom: 12px; }
 .study[data-layout="split"] .study-side .card.is-collapsed { flex: 0 0 auto !important; min-height: 0 !important; }
 .card-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); width: 100%; min-height: 32px; }
 .study-side #bench .card-head { flex-direction: column; align-items: stretch; gap: 10px; }
@@ -1390,18 +1394,21 @@ img, iframe, video, audio { max-width: 100%; }
   display: none; width: 28px; height: 28px; border-radius: 50%; place-items: center; flex: none;
   background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); cursor: pointer; margin-left: 4px;
 }
-.study[data-layout="split"] .study-side .card-collapse-btn { display: grid; }
+.study[data-layout="split"] .study-side .card-collapse-btn,
+.study[data-layout="stack"] #playerCard .card-collapse-btn { display: grid; }
 .card-collapse-btn:hover { color: var(--ink); border-color: var(--accent); }
-.study[data-layout="split"] .study-side .card.is-collapsed > :not(.blk-grip):not(.card-head):not(.player-controls):not(.bench-head) { display: none !important; }
+.study[data-layout="split"] .study-side .card.is-collapsed > :not(.blk-grip):not(.card-head):not(.player-controls):not(.bench-head),
+.study[data-layout="stack"] #playerCard.is-collapsed > :not(.blk-grip):not(.card-head):not(.player-controls):not(.bench-head) { display: none !important; }
 .study[data-layout="split"] .study-side .card.is-collapsed > .card-head,
 .study[data-layout="split"] .study-side .card.is-collapsed > .player-controls,
-.study[data-layout="split"] .study-side .card.is-collapsed > .bench-head { margin-bottom: 0; }
+.study[data-layout="split"] .study-side .card.is-collapsed > .bench-head,
+.study[data-layout="stack"] #playerCard.is-collapsed > .player-controls { margin-bottom: 0; }
 
 /* Reader sticky bar & scroll stop */
 /* Reader header & bar alignment */
 #readerCard { position: relative; scroll-margin-top: 24px; }
 #readerContent > .card-head { min-height: 32px; display: flex; align-items: center; padding: 0 44px 0 0; margin-bottom: var(--s3); }
-.reader-bar { background: var(--surface); padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
+.reader-bar { flex: none; min-height: 42px; background: var(--surface); padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
 
 /* Layout Debug Guides (Cmd+Shift+G / 參考線按鈕) */
 .app.layout-guides .topbar { outline: 2px dashed #e11d48; outline-offset: -2px; }
