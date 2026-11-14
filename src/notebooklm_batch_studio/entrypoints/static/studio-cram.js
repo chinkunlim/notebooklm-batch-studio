@@ -372,12 +372,7 @@ document.addEventListener('click', e => {
   }
 });
 
-// Prevent background page scrolling while lecture or course dropdown menu is open.
-document.addEventListener('wheel', e => {
-  const openMenu = document.querySelector('.lec-pick.open .lec-pop, .course-pick.open .cp-pop');
-  if (!openMenu) return;
-  if (!e.target.closest('.lec-pop, .cp-pop')) e.preventDefault();
-}, { passive: false });
+// Prevent background page scrolling while lecture or course dropdown menu is open. (Handled by CSS overscroll-behavior: contain)
 
 /**
  * Toggle collapse/expand of the study right column via the existing col-toggle button.
@@ -436,6 +431,7 @@ function updateStudyViewportHeight() {
 
 /**
  * Scroll outer page down until #paneStudy sticks at 12px top margin before scrolling inner PDF/bench.
+ * Only intercepts wheel over #readerCard; everywhere else scrolls the outer page freely.
  * @returns {void}
  */
 function initStudyStickyWheel() {
@@ -444,11 +440,12 @@ function initStudyStickyWheel() {
   pane.dataset.stickyWheelHooked = '1';
   pane.addEventListener('wheel', e => {
     if (pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
-    if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
+    if (document.querySelector('.lec-pop.open, .bm-pick.open') || !e.target.closest('#readerCard')) return;
     const top = pane.getBoundingClientRect().top;
-    if (e.deltaY > 0 && top > 13) {
-      e.preventDefault();
-      window.scrollBy(0, Math.min(e.deltaY, top - 12));
+    if (e.deltaY > 0 && top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); return; }
+    if (e.deltaY < 0) {
+      const scroller = e.target.closest('.kp-list.kp-all-mode, #readerPages');
+      if ((!scroller || scroller.scrollTop <= 0) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
     }
   }, { passive: false });
 }
