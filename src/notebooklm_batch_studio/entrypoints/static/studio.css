@@ -172,7 +172,7 @@ a { color: var(--primary); }
 .seg button.on { color: var(--ink); font-weight: 500; }
 
 /* Views + page-load rise (motion only on entry, then still) */
-.views { flex: 1; padding: 0 var(--gutter) 24px; }
+.views { flex: 1; padding: 0 var(--gutter) 12px; }
 .view { display: none; }
 .view.on { display: block; animation: viewIn .6s var(--ease-gentle) both; }
 /* the page being left fades and lifts a little; the new one rises in (see go() in studio-shell.js) */
@@ -1283,10 +1283,10 @@ img, iframe, video, audio { max-width: 100%; }
 /* Right column arrow collapse/expand + split-mode viewport-fit equal height & card collapse */
 html:has(#view-study.on #paneStudy[data-layout="split"]) { scroll-snap-type: y proximity; }
 .study[data-layout="split"] {
-  align-items: stretch; height: var(--study-h, calc(100vh - 48px)); min-height: 460px;
-  position: sticky; top: 24px; margin-bottom: 0; scroll-margin-top: 24px; scroll-snap-align: start;
+  align-items: stretch; height: var(--study-h, calc(100vh - 24px)); min-height: 460px;
+  position: sticky; top: 12px; margin-bottom: 0; scroll-margin-top: 12px; scroll-snap-align: start;
 }
-.app:has(#paneStudy[data-layout="split"]:not([hidden])) .views { padding-bottom: 24px; }
+.app:has(#paneStudy[data-layout="split"]:not([hidden])) .views { padding-bottom: 12px; }
 .study[data-layout="split"] .study-main,
 .study[data-layout="split"] .study-side { height: 100%; min-height: 0; position: relative; top: auto; display: flex; flex-direction: column; }
 .study[data-layout="split"].side-collapsed > .study-side { display: none; }

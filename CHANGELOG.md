@@ -108,6 +108,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui,reader): unify .views bottom padding to 24px and scroll #readerPages directly on keypoint jump (by `@antigravity`)
 - fix(ui,reader): keep reader-bar legend single-row and add scroll-snap at 24px top margin (by `@antigravity`)
 - fix(reader): re-layout PDF pages and textLayer on container resize to prevent highlight drift (by `@antigravity`)
+- fix(ui,reader): set 12px symmetric top/bottom study margins and resolve exact PDF page on first keypoint click (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

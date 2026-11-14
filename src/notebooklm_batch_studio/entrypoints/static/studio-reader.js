@@ -369,16 +369,39 @@ function markMissingPoints() {
 }
 
 /**
+ * Find the real 1-based PDF page containing a key point's quote near an estimated page.
+ * @param {object} p Key point object with quote
+ * @param {number} guess Initial estimated PDF page number
+ * @returns {Promise<number>} Matching PDF page number or guess
+ */
+async function findQuotePdfPage(p, guess) {
+  if (!reader.doc || !p.quote) return guess;
+  const total = reader.doc.numPages;
+  const needle = norm(p.quote).slice(0, 30);
+  const cand = [guess, guess - 1, guess + 1, guess - 2, guess + 2, guess - 3, guess + 3]
+    .filter((n, idx, arr) => n >= 1 && n <= total && arr.indexOf(n) === idx);
+  for (const n of cand) {
+    const pg = await reader.doc.getPage(n);
+    const tc = await pg.getTextContent();
+    const txt = norm(tc.items.map(it => it.str).join(' ')).replace(/-\s+/g, '');
+    if (txt.includes(needle)) { p.foundOn = n; return n; }
+  }
+  return guess;
+}
+
+/**
  * Scroll to a key point's page and flash its highlight.
  * @param {number} i Key point index
+ * @returns {Promise<void>}
  */
-function jumpToPoint(i) {
+async function jumpToPoint(i) {
   const p = reader.points[i];
   const total = reader.doc ? reader.doc.numPages : 1;
   const ref = reader.points.find(pt => pt.foundOn && pt.page);
   const offset = ref ? ref.page - ref.foundOn : 0;
   const guess = p.page ? Math.max(1, Math.min(total, p.page - offset)) : 1;
-  const page = document.getElementById(`readerPage-${p.foundOn || guess}`);
+  const targetPage = p.foundOn || await findQuotePdfPage(p, guess);
+  const page = document.getElementById(`readerPage-${targetPage}`);
   const pages = document.getElementById('readerPages');
   if (!page || !pages) return;
   /**
@@ -392,17 +415,19 @@ function jumpToPoint(i) {
     const dy = center ? (er.top - pr.top - (pr.height - er.height) / 2) : (er.top - pr.top);
     pages.scrollBy({ top: dy, behavior: 'smooth' });
   };
-  const target = page.querySelector(`[data-kp="${i}"]`);
+  let target = page.querySelector(`[data-kp="${i}"]`);
   scrollToEl(target || page, !!target);
-  setTimeout(() => {
-    const els = page.querySelectorAll(`[data-kp="${i}"]`);
-    if (!target && els.length) scrollToEl(els[0], true);
-    els.forEach(el => {
-      el.classList.remove('kp-flash');
-      void el.offsetWidth;  // restart the animation
-      el.classList.add('kp-flash');
-    });
-  }, 450);
+  for (let tries = 0; tries < 10 && !target; tries++) {
+    await new Promise(r => setTimeout(r, 140));
+    target = page.querySelector(`[data-kp="${i}"]`);
+  }
+  const els = page.querySelectorAll(`[data-kp="${i}"]`);
+  if (els.length) scrollToEl(els[0], true);
+  els.forEach(el => {
+    el.classList.remove('kp-flash');
+    void el.offsetWidth;  // restart the animation
+    el.classList.add('kp-flash');
+  });
 }
 
 /**

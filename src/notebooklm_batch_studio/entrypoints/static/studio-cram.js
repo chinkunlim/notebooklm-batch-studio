@@ -430,7 +430,7 @@ function initSideCardCollapses() {
 function updateStudyViewportHeight() {
   const pane = document.getElementById('paneStudy');
   if (!pane || pane.hidden || pane.dataset.layout !== 'split') return;
-  const avail = Math.max(460, Math.floor(window.innerHeight - 48));
+  const avail = Math.max(460, Math.floor(window.innerHeight - 24));
   pane.style.setProperty('--study-h', `${avail}px`);
 }
 
