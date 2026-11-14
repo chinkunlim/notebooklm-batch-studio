@@ -16,6 +16,7 @@ from typing import Any
 from notebooklm import NotebookLMClient
 
 from notebooklm_batch_studio.adapters.notebooklm.client_artifacts import ArtifactOperationsMixin
+from notebooklm_batch_studio.adapters.notebooklm.client_remote_admin import NotebookLMRemoteAdminMixin
 from notebooklm_batch_studio.adapters.notebooklm.downloads import ArtifactDownloadsMixin
 from notebooklm_batch_studio.adapters.notebooklm.errors import (
     CONCEPT_EXPLANATION_DIRECTIVE as CONCEPT_EXPLANATION_DIRECTIVE,
@@ -32,7 +33,7 @@ from notebooklm_batch_studio.config.settings import AppConfig, load_config
 logger = logging.getLogger(__name__)
 
 
-class NotebookLMAdapter(ArtifactOperationsMixin, ArtifactDownloadsMixin):
+class NotebookLMAdapter(ArtifactOperationsMixin, ArtifactDownloadsMixin, NotebookLMRemoteAdminMixin):
     """Adapter implementing NotebookLMClientProtocol using official notebooklm-py client.
 
     Every `generate_*` passes the course output language, checks the returned status, waits for

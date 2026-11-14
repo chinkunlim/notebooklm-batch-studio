@@ -282,3 +282,24 @@ class BundleNotesRequest(BaseModel):
 
     note_ids: list[str] = Field(..., min_length=1, description="Note IDs to bundle")
     title: str = Field(..., min_length=1, description="Bundle document title")
+
+
+class CinematicVideoRequest(BaseModel):
+    """Payload to generate a cinematic video overview in Gemini Notebook."""
+
+    instructions: str = ""
+    lecture_no: int | None = None
+
+
+class ReviseSlideRequest(BaseModel):
+    """Payload to revise a single slide in an existing slide deck artifact."""
+
+    slide_index: int = Field(ge=0)
+    prompt: str = Field(min_length=1)
+
+
+class ExportArtifactRequest(BaseModel):
+    """Payload to export a report or data table to Google Docs / Sheets."""
+
+    title: str = "Export"
+    kind: str = "report"

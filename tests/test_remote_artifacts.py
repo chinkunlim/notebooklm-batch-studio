@@ -119,3 +119,41 @@ class TestRemoteArtifactsAdmin(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(blocked["requires_confirmation"])
         done = json.loads(await tools["delete_remote_artifact"].fn("BIO101", "art-v1", confirm=True))
         self.assertEqual(done["deleted_artifact_id"], "art-v1")
+
+    async def test_advanced_remote_artifact_endpoints_and_mcp(self) -> None:
+        """Verify suggest-reports, cinematic-video, revise-slide, export, and retry routes + MCP."""
+        sug = self.http.get("/api/courses/BIO101/remote-artifacts/suggest-reports")
+        self.assertEqual(sug.status_code, 200)
+        self.assertEqual(len(sug.json()["suggestions"]), 1)
+
+        vid = self.http.post(
+            "/api/courses/BIO101/remote-artifacts/cinematic-video", json={"instructions": "重點"}
+        )
+        self.assertEqual(vid.status_code, 200)
+        self.assertEqual(vid.json()["artifact_id"], "art-cinematic-1")
+
+        rev = self.http.post(
+            "/api/courses/BIO101/remote-artifacts/art-v2/revise-slide",
+            json={"slide_index": 0, "prompt": "簡化圖表"},
+        )
+        self.assertEqual(rev.status_code, 200)
+
+        exp = self.http.post(
+            "/api/courses/BIO101/remote-artifacts/art-v2/export",
+            json={"title": "BIO101 彙整", "kind": "data_table"},
+        )
+        self.assertEqual(exp.status_code, 200)
+
+        ret = self.http.post("/api/courses/BIO101/remote-artifacts/art-v2/retry")
+        self.assertEqual(ret.status_code, 200)
+
+        tools = self.mcp._tool_manager._tools  # type: ignore[attr-defined]
+        self.assertTrue(
+            json.loads(await tools["generate_cinematic_video"].fn("BIO101", confirm=False))[
+                "requires_confirmation"
+            ]
+        )
+        mc_vid = json.loads(
+            await tools["generate_cinematic_video"].fn("BIO101", instructions="核心", confirm=True)
+        )
+        self.assertEqual(mc_vid["artifact_id"], "art-cinematic-1")

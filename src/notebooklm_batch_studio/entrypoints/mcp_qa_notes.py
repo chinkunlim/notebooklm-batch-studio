@@ -6,6 +6,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
+from notebooklm_batch_studio.entrypoints.mcp_remote_admin import register_remote_extra_tools
 from notebooklm_batch_studio.services.qa_notes_service import QANotesService
 
 if TYPE_CHECKING:
@@ -133,7 +134,18 @@ def register_qa_notes_tools(mcp: MCPServer, qa_notes: QANotesService) -> None:
 
 
 def register_remote_artifact_tools(mcp: MCPServer, service: Any) -> None:
-    """Register remote Gemini Notebook artifact listing and deletion MCP tools.
+    """Register remote Gemini Notebook artifact listing, deletion, and admin MCP tools.
+
+    Args:
+        mcp: FastMCP server instance.
+        service: BatchStudioService instance.
+    """
+    _register_remote_list_delete(mcp, service)
+    register_remote_extra_tools(mcp, service)
+
+
+def _register_remote_list_delete(mcp: MCPServer, service: Any) -> None:
+    """Register list_remote_artifacts and delete_remote_artifact MCP tools.
 
     Args:
         mcp: FastMCP server instance.
@@ -142,7 +154,7 @@ def register_remote_artifact_tools(mcp: MCPServer, service: Any) -> None:
 
     @mcp.tool()
     async def list_remote_artifacts(course_code: str) -> str:
-        """List remote Gemini Notebook artifacts and mark which version is currently active locally.
+        """List remote Gemini Notebook artifacts and mark active local versions.
 
         Args:
             course_code: Course identifier (e.g. 'BIO101').

@@ -391,6 +391,45 @@ class DummyStudioClient(NotebookLMClientProtocol):
         """Record remote artifact deletion for offline tests."""
         self.calls.append(f"delete_artifact:{notebook_id}:{artifact_id}")
 
+    async def generate_cinematic_video(
+        self,
+        notebook_id: str,
+        instructions: str,
+        source_ids: list[str] | None = None,
+        language: str = "zh-TW",
+    ) -> str:
+        """Record cinematic video generation and return dummy artifact id."""
+        self.calls.append(f"generate_cinematic_video:{notebook_id}:{language}")
+        return "art-cinematic-1"
+
+    async def revise_slide(self, notebook_id: str, artifact_id: str, slide_index: int, prompt: str) -> str:
+        """Record slide revision and return dummy artifact id."""
+        self.calls.append(f"revise_slide:{notebook_id}:{artifact_id}:{slide_index}")
+        return artifact_id
+
+    async def export_artifact(
+        self, notebook_id: str, artifact_id: str, title: str = "Export", kind: str = "report"
+    ) -> dict[str, Any]:
+        """Record artifact export and return dummy result."""
+        self.calls.append(f"export_artifact:{notebook_id}:{artifact_id}:{kind}")
+        return {"artifact_id": artifact_id, "title": title, "kind": kind, "result": "exported"}
+
+    async def suggest_reports(self, notebook_id: str) -> list[dict[str, Any]]:
+        """Return dummy suggested report topics."""
+        return [
+            {
+                "title": "重點整理報告",
+                "description": "核心觀念",
+                "prompt": "整理重點",
+                "audience_level": "intermediate",
+            }
+        ]
+
+    async def retry_remote_artifact(self, notebook_id: str, artifact_id: str) -> dict[str, Any]:
+        """Record remote retry and return dummy status."""
+        self.calls.append(f"retry_remote_artifact:{notebook_id}:{artifact_id}")
+        return {"artifact_id": artifact_id, "task_id": "retry-1", "status": "submitted"}
+
     async def find_latest_artifact(self, notebook_id: str, artifact_type: str | None = None) -> str | None:
         """Return dummy artifact id fallback."""
         return "art-latest-1"

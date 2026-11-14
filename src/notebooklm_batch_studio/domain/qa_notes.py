@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class MasteryStatus(str, Enum):
@@ -122,5 +122,78 @@ class NotebookLMRemoteAdminProtocol(Protocol):
         Args:
             notebook_id: Notebook identifier.
             artifact_id: Remote artifact identifier.
+        """
+        ...
+
+    async def generate_cinematic_video(
+        self,
+        notebook_id: str,
+        instructions: str,
+        source_ids: list[str] | None = None,
+        language: str = "zh-TW",
+    ) -> str:
+        """Generate a cinematic video overview in a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            instructions: Prompt or focus instructions.
+            source_ids: Optional source IDs to scope generation.
+            language: Output language code.
+
+        Returns:
+            Generated remote artifact identifier.
+        """
+        ...
+
+    async def revise_slide(self, notebook_id: str, artifact_id: str, slide_index: int, prompt: str) -> str:
+        """Revise a single slide in an existing slide deck artifact.
+
+        Args:
+            notebook_id: Notebook identifier.
+            artifact_id: Existing slide deck artifact identifier.
+            slide_index: Zero-based slide index to revise.
+            prompt: Revision instructions.
+
+        Returns:
+            Revised artifact identifier.
+        """
+        ...
+
+    async def export_artifact(
+        self, notebook_id: str, artifact_id: str, title: str = "Export", kind: str = "report"
+    ) -> dict[str, Any]:
+        """Export a remote report or data table to Google Docs or Sheets.
+
+        Args:
+            notebook_id: Notebook identifier.
+            artifact_id: Remote artifact identifier.
+            title: Target document title.
+            kind: Artifact kind ('report' or 'data_table').
+
+        Returns:
+            Export result metadata dictionary.
+        """
+        ...
+
+    async def suggest_reports(self, notebook_id: str) -> list[dict[str, Any]]:
+        """Ask Gemini Notebook for AI-suggested report topics.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            List of suggested report dictionaries.
+        """
+        ...
+
+    async def retry_remote_artifact(self, notebook_id: str, artifact_id: str) -> dict[str, Any]:
+        """Retry a failed remote artifact generation directly on Gemini Notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            artifact_id: Failed remote artifact identifier.
+
+        Returns:
+            Status summary dictionary.
         """
         ...

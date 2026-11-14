@@ -10,9 +10,15 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
+from notebooklm_batch_studio.entrypoints.schemas import (
+    CinematicVideoRequest,
+    ExportArtifactRequest,
+    ReviseSlideRequest,
+)
 from notebooklm_batch_studio.services.converters.report_converter import report_to_html
 from notebooklm_batch_studio.services.job_views import NEEDS_REVIEW_PREFIX
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.remote_admin_service import RemoteAdminService
 
 artifacts_router = APIRouter()
 
@@ -248,3 +254,139 @@ async def delete_remote_artifact_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Remote artifact deletion failed: {exc}") from exc
+
+
+def _remote_admin(request: Request) -> RemoteAdminService:
+    """Build a RemoteAdminService from app.state.service.
+
+    Args:
+        request: Incoming HTTP request context.
+
+    Returns:
+        Configured RemoteAdminService instance.
+    """
+    svc: BatchStudioService = request.app.state.service
+    return RemoteAdminService(svc.course_repo, svc.notebooklm_client)
+
+
+@artifacts_router.get(
+    "/api/courses/{code}/remote-artifacts/suggest-reports",
+    tags=["Artifacts"],
+    operation_id="suggest_course_reports",
+)
+async def suggest_course_reports_endpoint(code: str, request: Request) -> dict[str, Any]:
+    """Ask Gemini Notebook for AI-suggested report topics for a course.
+
+    Args:
+        code: Course identifier.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Dictionary with course_code and suggested reports.
+    """
+    try:
+        return await _remote_admin(request).suggest_reports(code)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@artifacts_router.post(
+    "/api/courses/{code}/remote-artifacts/cinematic-video",
+    tags=["Artifacts"],
+    operation_id="generate_cinematic_video",
+)
+async def generate_cinematic_video_endpoint(
+    code: str, payload: CinematicVideoRequest, request: Request
+) -> dict[str, Any]:
+    """Generate a cinematic video overview in Gemini Notebook.
+
+    Args:
+        code: Course identifier.
+        payload: Video focus instructions and optional lecture scope.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Summary dictionary with generated artifact_id.
+    """
+    try:
+        return await _remote_admin(request).generate_cinematic_video(
+            code, instructions=payload.instructions, lecture_no=payload.lecture_no
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@artifacts_router.post(
+    "/api/courses/{code}/remote-artifacts/{artifact_id}/revise-slide",
+    tags=["Artifacts"],
+    operation_id="revise_remote_slide",
+)
+async def revise_remote_slide_endpoint(
+    code: str, artifact_id: str, payload: ReviseSlideRequest, request: Request
+) -> dict[str, Any]:
+    """Revise a single slide in an existing slide deck artifact.
+
+    Args:
+        code: Course identifier.
+        artifact_id: Slide deck artifact identifier.
+        payload: Zero-based slide index and revision prompt.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Summary dictionary with updated artifact_id.
+    """
+    try:
+        return await _remote_admin(request).revise_slide(
+            code, artifact_id, payload.slide_index, payload.prompt
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@artifacts_router.post(
+    "/api/courses/{code}/remote-artifacts/{artifact_id}/export",
+    tags=["Artifacts"],
+    operation_id="export_remote_artifact",
+)
+async def export_remote_artifact_endpoint(
+    code: str, artifact_id: str, payload: ExportArtifactRequest, request: Request
+) -> dict[str, Any]:
+    """Export a remote report or data table to Google Docs or Sheets.
+
+    Args:
+        code: Course identifier.
+        artifact_id: Remote artifact identifier.
+        payload: Export title and artifact kind.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Export result dictionary.
+    """
+    try:
+        return await _remote_admin(request).export_artifact(
+            code, artifact_id, title=payload.title, kind=payload.kind
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@artifacts_router.post(
+    "/api/courses/{code}/remote-artifacts/{artifact_id}/retry",
+    tags=["Artifacts"],
+    operation_id="retry_remote_artifact",
+)
+async def retry_remote_artifact_endpoint(code: str, artifact_id: str, request: Request) -> dict[str, Any]:
+    """Retry a failed remote artifact directly on Gemini Notebook.
+
+    Args:
+        code: Course identifier.
+        artifact_id: Failed artifact identifier.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Retry status dictionary.
+    """
+    try:
+        return await _remote_admin(request).retry_remote_artifact(code, artifact_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

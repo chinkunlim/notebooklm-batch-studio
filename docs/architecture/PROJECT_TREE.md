@@ -273,6 +273,7 @@ notebooklm-batch-studio/
 │       │   │   ├── __init__.py
 │       │   │   ├── client.py
 │       │   │   ├── client_artifacts.py
+│       │   │   ├── client_remote_admin.py
 │       │   │   ├── downloads.py
 │       │   │   ├── errors.py
 │       │   │   ├── generation.py
@@ -587,6 +588,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_learning.py
 │       │   ├── mcp_preferences.py
 │       │   ├── mcp_qa_notes.py
+│       │   ├── mcp_remote_admin.py
 │       │   ├── mcp_server.py
 │       │   ├── mcp_studio_tools.py
 │       │   ├── mcp_study_plan.py
@@ -623,6 +625,7 @@ notebooklm-batch-studio/
 │       │   ├── quiz_reader.py
 │       │   ├── quiz_runner.py
 │       │   ├── quota_planner.py
+│       │   ├── remote_admin_service.py
 │       │   ├── reporter.py
 │       │   ├── source_manager.py
 │       │   ├── study_plan_service.py
