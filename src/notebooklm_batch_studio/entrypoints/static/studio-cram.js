@@ -448,11 +448,6 @@ function initStudyStickyWheel() {
       if ((!scroller || scroller.scrollTop <= 1) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
     }
   }, { passive: false });
-  window.addEventListener('scroll', () => {
-    if (!document.getElementById('view-study')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split') return;
-    const top = pane.getBoundingClientRect().top;
-    if (top < 11.5) window.scrollTo(window.scrollX, Math.max(0, Math.round(window.scrollY + top - 12)));
-  }, { passive: true });
 }
 
 /**

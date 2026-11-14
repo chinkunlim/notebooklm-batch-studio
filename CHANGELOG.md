@@ -116,6 +116,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): hide courses col-resizer inside right-column sideCatalogHost (by `@antigravity`)
 - fix(ui): clamp study sticky top at 12px on scrollbar drag and sync visualViewport height (by `@antigravity`)
 - fix(ui): guard study sticky scroll clamp to active #view-study.on only (by `@antigravity`)
+- fix(ui): scope study sticky behavior exclusively to wheel scrolling over #readerCard (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
