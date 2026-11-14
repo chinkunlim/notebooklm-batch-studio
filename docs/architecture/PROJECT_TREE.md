@@ -259,6 +259,7 @@ notebooklm-batch-studio/
 │       │   │   ├── learning_repository.py
 │       │   │   ├── mappers.py
 │       │   │   ├── models.py
+│       │   │   ├── notes_repository.py
 │       │   │   ├── preferences_repository.py
 │       │   │   ├── queue_repository.py
 │       │   │   ├── repository.py
@@ -593,6 +594,7 @@ notebooklm-batch-studio/
 │       │   │   ├── flashcard_converter.py
 │       │   │   ├── image_fitter.py
 │       │   │   ├── mindmap_converter.py
+│       │   │   ├── note_pdf_renderer.py
 │       │   │   ├── pdf_renderer.py
 │       │   │   ├── quiz_converter.py
 │       │   │   ├── quiz_formatter.py
@@ -611,6 +613,8 @@ notebooklm-batch-studio/
 │       │   ├── orchestrator.py
 │       │   ├── preferences_service.py
 │       │   ├── prompt_generator.py
+│       │   ├── qa_notes_formatter.py
+│       │   ├── qa_notes_service.py
 │       │   ├── quiz_reader.py
 │       │   ├── quiz_runner.py
 │       │   ├── quota_planner.py
@@ -649,6 +653,7 @@ notebooklm-batch-studio/
 │   ├── test_port_check.py
 │   ├── test_preferences.py
 │   ├── test_qa_notes_db.py
+│   ├── test_qa_notes_service.py
 │   ├── test_quota_and_limits.py
 │   ├── test_remaining_fixes.py
 │   ├── test_rename.py

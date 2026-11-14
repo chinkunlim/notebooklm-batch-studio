@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from typing import Protocol
 
 
 class MasteryStatus(str, Enum):
@@ -55,3 +56,58 @@ class CourseQANote:
     uploaded_source_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class QANoteRepositoryProtocol(Protocol):
+    """Persistence contract for Q&A notes."""
+
+    def upsert_note(self, note: CourseQANote) -> CourseQANote:
+        """Insert or update a CourseQANote record.
+
+        Args:
+            note: CourseQANote entity to save.
+
+        Returns:
+            Saved CourseQANote.
+        """
+        ...
+
+    def get_note(self, note_id: str) -> CourseQANote | None:
+        """Fetch one note by ID.
+
+        Args:
+            note_id: Note primary key.
+
+        Returns:
+            CourseQANote or None if missing.
+        """
+        ...
+
+    def list_notes(
+        self,
+        course_code: str | None = None,
+        lecture_no: int | None = None,
+        mastery_status: str | None = None,
+    ) -> list[CourseQANote]:
+        """List notes with optional filters.
+
+        Args:
+            course_code: Course identifier filter.
+            lecture_no: Lecture sequence filter.
+            mastery_status: Mastery filter.
+
+        Returns:
+            List of matching CourseQANote objects.
+        """
+        ...
+
+    def delete_note(self, note_id: str) -> bool:
+        """Delete one note by ID.
+
+        Args:
+            note_id: Note primary key.
+
+        Returns:
+            True if deleted, False otherwise.
+        """
+        ...
