@@ -1246,6 +1246,12 @@ img, iframe, video, audio { max-width: 100%; }
 .qa-msg { padding: 10px 13px; border-radius: var(--radius-m); font-size: 14px; line-height: 1.6; max-width: 94%; word-break: break-word; }
 .qa-msg.user { align-self: flex-end; background: var(--primary); color: var(--primary-ink); }
 .qa-msg.ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); width: 100%; }
+.qa-typing { display: inline-flex; align-items: center; gap: 10px; width: auto; color: var(--muted); font-size: 13px; }
+.qa-typing-dots { display: inline-flex; align-items: center; gap: 4px; }
+.qa-typing-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); opacity: .35; animation: qaBounce 1.2s infinite ease-in-out; }
+.qa-typing-dots i:nth-child(2) { animation-delay: .18s; }
+.qa-typing-dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes qaBounce { 0%, 80%, 100% { transform: translateY(0); opacity: .35; } 40% { transform: translateY(-4px); opacity: 1; } }
 .qa-msg-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
 .qa-cites { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .qa-cite { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); cursor: pointer; }

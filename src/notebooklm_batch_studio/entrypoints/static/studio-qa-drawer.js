@@ -129,9 +129,11 @@ function resetQaConversation() {
 async function sendQaQuestion() {
   if (qaState.busy || typeof currentStudyCourse === 'undefined' || !currentStudyCourse) return;
   const input = document.getElementById('qaQuestionInput');
+  const sendBtn = document.getElementById('qaSendBtn');
   const question = (input?.value || '').trim();
   if (!question) return;
   qaState.busy = true;
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = '等待中…'; }
   qaState.messages.push({ role: 'user', text: question, references: [] });
   input.value = '';
   renderQaMessages();
@@ -158,6 +160,7 @@ async function sendQaQuestion() {
     qaState.messages.push({ role: 'ai', text: `⚠️ 提問失敗：${err.message}`, references: [], error: true });
   } finally {
     qaState.busy = false;
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = '發問'; }
     renderQaMessages();
   }
 }
@@ -169,11 +172,14 @@ async function sendQaQuestion() {
 function renderQaMessages() {
   const box = document.getElementById('qaDrawerMsgs');
   if (!box) return;
-  if (!qaState.messages.length) {
+  if (!qaState.messages.length && !qaState.busy) {
     box.innerHTML = '<div class="empty-state small">針對本講或整門課向 Gemini Notebook 發問，多輪追問後可一鍵整理成結構化筆記。</div>';
     return;
   }
-  box.innerHTML = qaState.messages.map((m, idx) => renderOneQaMessage(m, idx)).join('');
+  const typingHtml = qaState.busy
+    ? '<div class="qa-msg ai qa-typing" aria-live="polite"><span class="qa-typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>已連線，正在等待 Gemini Notebook 回應…</span></div>'
+    : '';
+  box.innerHTML = qaState.messages.map((m, idx) => renderOneQaMessage(m, idx)).join('') + typingHtml;
   box.scrollTop = box.scrollHeight;
 }
 
