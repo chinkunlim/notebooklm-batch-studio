@@ -355,12 +355,24 @@ function jumpToPoint(i) {
   const offset = ref ? ref.page - ref.foundOn : 0;
   const guess = p.page ? Math.max(1, Math.min(total, p.page - offset)) : 1;
   const page = document.getElementById(`readerPage-${p.foundOn || guess}`);
-  if (!page) return;
+  const pages = document.getElementById('readerPages');
+  if (!page || !pages) return;
+  /**
+   * Smoothly scroll #readerPages to bring an element into view without shifting the outer page.
+   * @param {HTMLElement} el Target page or highlight span
+   * @param {boolean} center Whether to vertically center inside #readerPages
+   */
+  const scrollToEl = (el, center) => {
+    const pr = pages.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    const dy = center ? (er.top - pr.top - (pr.height - er.height) / 2) : (er.top - pr.top);
+    pages.scrollBy({ top: dy, behavior: 'smooth' });
+  };
   const target = page.querySelector(`[data-kp="${i}"]`);
-  (target || page).scrollIntoView({ behavior: 'smooth', block: target ? 'center' : 'start' });
+  scrollToEl(target || page, !!target);
   setTimeout(() => {
     const els = page.querySelectorAll(`[data-kp="${i}"]`);
-    if (!target && els.length) els[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!target && els.length) scrollToEl(els[0], true);
     els.forEach(el => {
       el.classList.remove('kp-flash');
       void el.offsetWidth;  // restart the animation

@@ -105,6 +105,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): hide redundant bottom-right floating side-fab button (by `@antigravity`)
 - fix(ui): stick split study pane at 24px top with matching 24px bottom margin (by `@antigravity`)
 - fix(reader): scroll directly to highlighted keypoint span when jumping to point (by `@antigravity`)
+- fix(ui,reader): unify .views bottom padding to 24px and scroll #readerPages directly on keypoint jump (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

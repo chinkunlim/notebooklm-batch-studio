@@ -172,7 +172,7 @@ a { color: var(--primary); }
 .seg button.on { color: var(--ink); font-weight: 500; }
 
 /* Views + page-load rise (motion only on entry, then still) */
-.views { flex: 1; padding: 0 var(--gutter) var(--s6); }
+.views { flex: 1; padding: 0 var(--gutter) 24px; }
 .view { display: none; }
 .view.on { display: block; animation: viewIn .6s var(--ease-gentle) both; }
 /* the page being left fades and lifts a little; the new one rises in (see go() in studio-shell.js) */
