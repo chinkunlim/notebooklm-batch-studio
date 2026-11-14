@@ -115,7 +115,7 @@ def _copy_course_options_payload(
 
 
 def register_course_settings_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
-    """Register per-output setting tools and course admin tools (changes require confirm=True).
+    """Register per-output setting tools, source tools, and course admin tools.
 
     Args:
         mcp: MCPServer instance.
@@ -123,6 +123,7 @@ def register_course_settings_tools(mcp: MCPServer, active_service: BatchStudioSe
     """
     _register_job_option_tools(mcp, active_service)
     _register_course_admin_tools(mcp, active_service)
+    _register_course_source_tools(mcp, active_service)
 
 
 def _register_job_option_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
@@ -232,3 +233,141 @@ def _register_copy_options_tool(mcp: MCPServer, active_service: BatchStudioServi
             JSON string with copied targets and values, or a confirmation warning.
         """
         return _copy_course_options_payload(active_service, code, targets, confirm)
+
+
+async def _upload_source_payload(
+    active_service: BatchStudioService,
+    code: str,
+    target: tuple[int | None, str | None],
+    confirm: bool,
+) -> str:
+    """Validate confirmation flag and upload a source to a course's Gemini Notebook.
+
+    Args:
+        active_service: Orchestrator service.
+        code: Course code.
+        target: Tuple of `(lecture_no, file_path)`.
+        confirm: Explicit confirmation flag.
+
+    Returns:
+        JSON string response.
+    """
+    lecture_no, file_path = target
+    if not confirm:
+        return json.dumps(
+            {"confirmed": False, "warning": "Set confirm=True to upload source to Gemini Notebook."},
+            ensure_ascii=False,
+        )
+    try:
+        payload: dict[str, Any] = {}
+        if lecture_no is not None:
+            payload["lecture_no"] = lecture_no
+        if file_path is not None:
+            payload["file_path"] = file_path
+        res = await active_service.upload_custom_source(code, **payload)
+        res["confirmed"] = True
+        return json.dumps(res, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+async def _delete_source_payload(
+    active_service: BatchStudioService, code: str, source_id: str, confirm: bool
+) -> str:
+    """Validate confirmation flag and delete a source from a course's Gemini Notebook.
+
+    Args:
+        active_service: Orchestrator service.
+        code: Course code.
+        source_id: Remote Gemini Notebook source identifier.
+        confirm: Explicit confirmation flag.
+
+    Returns:
+        JSON string response.
+    """
+    if not confirm:
+        return json.dumps(
+            {"confirmed": False, "warning": "Set confirm=True to delete source from Gemini Notebook."},
+            ensure_ascii=False,
+        )
+    try:
+        res = await active_service.delete_course_source(code, source_id)
+        res["confirmed"] = True
+        return json.dumps(res, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+def _register_list_source_tool(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register the read-only `list_course_sources` MCP tool.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+
+    @mcp.tool()
+    async def list_course_sources(code: str) -> str:
+        """List all remote Gemini Notebook sources and local lecture sync state for a course (read-only).
+
+        Args:
+            code: Course code.
+
+        Returns:
+            JSON string containing remote sources and local lecture upload statuses.
+        """
+        try:
+            return json.dumps(await active_service.list_course_sources(code), ensure_ascii=False, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+def _register_mutate_source_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register `upload_course_source` and `delete_course_source` MCP tools.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+
+    @mcp.tool()
+    async def upload_course_source(
+        code: str, lecture_no: int | None = None, file_path: str | None = None, confirm: bool = False
+    ) -> str:
+        """Upload a lecture PDF or local PDF file to a course's Gemini Notebook (requires confirm=True).
+
+        Args:
+            code: Course code.
+            lecture_no: Optional lecture sequence number to upload or re-upload.
+            file_path: Optional local PDF path to upload.
+            confirm: Must be True to perform the remote upload.
+
+        Returns:
+            JSON string with upload status or confirmation warning.
+        """
+        return await _upload_source_payload(active_service, code, (lecture_no, file_path), confirm)
+
+    @mcp.tool()
+    async def delete_course_source(code: str, source_id: str, confirm: bool = False) -> str:
+        """Delete a source from a course's Gemini Notebook (requires confirm=True).
+
+        Args:
+            code: Course code.
+            source_id: Remote Gemini Notebook source identifier to remove.
+            confirm: Must be True to permanently delete the remote source.
+
+        Returns:
+            JSON string confirming deletion or a confirmation warning.
+        """
+        return await _delete_source_payload(active_service, code, source_id, confirm)
+
+
+def _register_course_source_tools(mcp: MCPServer, active_service: BatchStudioService) -> None:
+    """Register MCP tools for listing, uploading, and deleting Gemini Notebook sources.
+
+    Args:
+        mcp: MCPServer instance.
+        active_service: Orchestrator service.
+    """
+    _register_list_source_tool(mcp, active_service)
+    _register_mutate_source_tools(mcp, active_service)

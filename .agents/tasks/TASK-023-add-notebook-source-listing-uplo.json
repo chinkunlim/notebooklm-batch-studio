@@ -1,0 +1,28 @@
+{
+  "id": "TASK-023",
+  "title": "Add notebook source listing, upload, and deletion management",
+  "status": "done",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Added Gemini Notebook source listing, PDF/lecture upload, and source deletion across HTTP, MCP, Web UI, and demo",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-14 07:39 UTC",
+  "updated_at": "2026-11-14 07:47 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-14 07:39 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-14 07:47 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Added Gemini Notebook source listing, PDF/lecture upload, and source deletion across HTTP, MCP, Web UI, and demo"
+    }
+  ],
+  "summary": "Added Gemini Notebook source listing, PDF/lecture upload, and source deletion across HTTP, MCP, Web UI, and demo"
+}

@@ -325,6 +325,20 @@ function demoCourseRoute(code, rest, method, body, q) {
     const chapter = pick('chap_art'), course = pick('course_art');
     return demoJson({ chapter: chapter.map(x => x.value).filter(v => used.includes(v)), course: course.map(x => x.value).filter(v => used.includes(v)), choices: { chapter, course } });
   }
+  if (rest === 'sources') {
+    if (method === 'POST') { demoNote('上傳來源'); return demoJson({ ok: true, code, status: 'ready' }); }
+    const lecs = demoCourseJson(c).lectures;
+    return demoJson({
+      code, name: c.name, notebook_id: `demo-${code}`, notebook_url: `https://notebook.google.com/notebook/demo-${code}`,
+      sources: lecs.map(l => ({ id: l.source_id, title: l.filename, status: 'ready', kind: 'pdf', word_count: 2400, lecture_no: l.no, lecture_topic: l.topic })),
+      lectures: lecs.map(l => ({ ...l, in_notebook: true })),
+      remote_error: null,
+    });
+  }
+  if (rest.startsWith('sources/') && method === 'DELETE') {
+    demoNote('刪除來源');
+    return demoJson({ code, deleted_source_id: decodeURIComponent(rest.slice(8)), unlinked_lectures: [] });
+  }
   if (method === 'POST') { demoNote('這個動作'); return demoJson({ ok: true, notebook_id: 'demo', upload_status: 'ready', updated_jobs_count: 0, remote_artifacts_found: 0, synced_count: 0 }); }
   return demoJson({ detail: 'not in demo' }, 404);
 }

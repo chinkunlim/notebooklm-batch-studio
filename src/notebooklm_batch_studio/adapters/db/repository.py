@@ -90,7 +90,7 @@ class CourseRepository:
         record = self.session.scalars(stmt).first()
         if record:
             record.upload_status = status
-            if source_id:
+            if "source_id" in details:
                 record.source_id = source_id
             record.error_message = error_message
             self.session.flush()

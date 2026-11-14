@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
+from unittest import mock
 
 from notebooklm import ArtifactTimeoutError, AuthError, RateLimitError
 
@@ -108,6 +112,68 @@ class TestNotebookLMAdapter(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(AuthExpiredError):
             await mock_http_401()
+
+    @staticmethod
+    def _mock_async_client(client: Any) -> mock.MagicMock:
+        """Build an async context manager mock yielding the provided client object.
+
+        Args:
+            client: Fake NotebookLM client exposing `sources`.
+
+        Returns:
+            MagicMock configured with `__aenter__` and `__aexit__`.
+        """
+        ctx = mock.MagicMock()
+        ctx.__aenter__ = mock.AsyncMock(return_value=client)
+        ctx.__aexit__ = mock.AsyncMock(return_value=False)
+        return ctx
+
+    async def test_list_sources_normalizes_metadata(self) -> None:
+        """Verify list_sources normalizes enum/string statuses, kinds, and ISO timestamps."""
+        ts = datetime(2026, 1, 2, 3, 4, tzinfo=UTC)
+        fake_sources = [
+            SimpleNamespace(
+                id="src-1",
+                title="01 Intro.pdf",
+                status=SimpleNamespace(name="READY"),
+                kind=SimpleNamespace(value="pdf"),
+                word_count=1200,
+                created_at=ts,
+            ),
+            SimpleNamespace(
+                id="src-2", title=None, status="PROCESSING", kind=None, word_count=None, created_at="bad"
+            ),
+        ]
+        client = SimpleNamespace(sources=SimpleNamespace(list=mock.AsyncMock(return_value=fake_sources)))
+        with mock.patch.object(self.adapter, "_client", return_value=self._mock_async_client(client)):
+            result = await self.adapter.list_sources("nb-1")
+
+        client.sources.list.assert_awaited_once_with("nb-1")
+        expected_first = {
+            "id": "src-1",
+            "title": "01 Intro.pdf",
+            "status": "ready",
+            "kind": "pdf",
+            "word_count": 1200,
+            "created_at": ts.isoformat(),
+        }
+        expected_second = {
+            "id": "src-2",
+            "title": "",
+            "status": "processing",
+            "kind": "pdf",
+            "word_count": None,
+            "created_at": None,
+        }
+        self.assertEqual(result, [expected_first, expected_second])
+
+    async def test_delete_source_calls_client(self) -> None:
+        """Verify delete_source forwards notebook_id and source_id to client.sources.delete."""
+        client = SimpleNamespace(sources=SimpleNamespace(delete=mock.AsyncMock(return_value=None)))
+        with mock.patch.object(self.adapter, "_client", return_value=self._mock_async_client(client)):
+            await self.adapter.delete_source("nb-1", "src-1")
+
+        client.sources.delete.assert_awaited_once_with("nb-1", "src-1")
 
 
 if __name__ == "__main__":

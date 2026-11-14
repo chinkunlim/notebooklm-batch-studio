@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-14 06:10 UTC`
+- **最後更新時間**: `2026-11-14 07:47 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `6e7e87d fix: enable manual and automatic rerun for failed artifact jobs (ISSUE-038) [agent:antigravity]`
+- **最新 Git Commit**: `2f91a69 feat(ui,settings): support adding missing artifacts per lecture or course (TASK-022) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-14 07:47 UTC] 完成任務 `TASK-023` — Add notebook source listing, upload, and deletion management (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Added Gemini Notebook source listing, PDF/lecture upload, and source deletion across HTTP, MCP, Web UI, and demo
+
+### [2026-11-14 07:39 UTC] 建立任務 `TASK-023`: Add notebook source listing, upload, and deletion management (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-14 06:10 UTC] 完成任務 `TASK-022` — Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -89,11 +97,3 @@
 ### [2026-11-10 03:05 UTC] 建立任務 `TASK-018`: Analyze graphify report and project workflow for code alignment and entanglement (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
-
-### [2026-11-10 02:56 UTC] 建立任務 `TASK-017`: Dummy-mode end-to-end chaos & foolproof test suite (simulate naive user exploring all features with mock files) (by `system`)
-- **狀態**: `open`
-- **相關範圍**: `tests/, src/notebooklm_batch_studio/entrypoints/static/, tests/fixtures/`
-
-### [2026-11-09 09:21 UTC] 建立任務 `TASK-016`: Fix course overall output progress not updating and exclude skipped jobs from progress_percent (by `system`)
-- **狀態**: `open`
-- **相關範圍**: `src/notebooklm_batch_studio/services/orchestrator.py, src/notebooklm_batch_studio/entrypoints/static/studio-batch.js, src/notebooklm_batch_studio/entrypoints/static/studio-start.js, tests/test_course_settings.py`

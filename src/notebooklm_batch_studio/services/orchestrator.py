@@ -38,6 +38,7 @@ from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 from notebooklm_batch_studio.services.quiz_reader import read_quiz_content
 from notebooklm_batch_studio.services.quota_planner import ensure_quota_for
 from notebooklm_batch_studio.services.reporter import CourseReporter
+from notebooklm_batch_studio.services.source_manager import CourseSourceMixin
 from notebooklm_batch_studio.services.sync_service import RemoteSyncService
 from notebooklm_batch_studio.services.worker_pool import (
     QueueSessionProvider,
@@ -48,7 +49,7 @@ from notebooklm_batch_studio.services.worker_pool import (
 logger = logging.getLogger(__name__)
 
 
-class BatchStudioService(CourseOnboardingMixin):
+class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
     """Core domain service for orchestrating course batch operations."""
 
     def __init__(

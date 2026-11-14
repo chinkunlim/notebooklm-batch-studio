@@ -234,22 +234,6 @@ function renderActiveJobs(jobs, code) {
 }
 
 /**
- * Table of the course's lecture PDFs with their upload status (technical details, collapsed by default).
- * @param {object} data Course from GET /api/courses/{code}
- * @param {string} code Course code
- * @returns {string} HTML
- */
-function lecturesTableHtml(data, code) {
-  return `<table><thead><tr><th>講次</th><th>主題</th><th>檔名</th><th>狀態</th><th>來源 ID</th><th></th></tr></thead><tbody>
-    ${(data.lectures || []).map(l => {
-      const statusText = l.upload_status || 'pending';
-      const cls = statusText === 'ready' ? 'badge-success' : ['uploading', 'parsing'].includes(statusText) ? 'badge-warning' : statusText === 'failed' ? 'badge-danger' : '';
-      return `<tr><td>L${pad2(l.no)}</td><td>${escHtml(l.topic)}</td><td><code>${escHtml(l.filename)}</code></td><td><span class="badge ${cls}">${escHtml(statusText)}</span></td>
-        <td><code>${escHtml(l.source_id || '—')}</code></td><td>${statusText === 'failed' ? `<button class="btn btn-ghost btn-sm" onclick="retryUpload('${code}', ${l.no})">重傳</button>` : ''}</td></tr>`;
-    }).join('')}</tbody></table>`;
-}
-
-/**
  * One job row: name, version, status, prompt / settings buttons, download and regenerate.
  * @param {object} j Job
  * @param {string} code Course code
@@ -348,6 +332,7 @@ async function viewCourseDetail(code, silent = false) {
     content.innerHTML = '<p class="loading-line">載入中…</p>';
     loadCourseOptions(code);
     loadArtifactSelection(code);
+    if (typeof loadCourseSources === 'function') loadCourseSources(code);
   }
   try {
     const res = await fetch(`/api/courses/${code}`);
@@ -355,12 +340,14 @@ async function viewCourseDetail(code, silent = false) {
     document.getElementById('detailTitle').textContent = `${data.name || code}（${code}）`;
     // Keep the groups the user opened or closed when the page refreshes itself.
     const openState = new Map([...content.querySelectorAll('details.job-group')].map(d => [d.querySelector('summary span').textContent, d.open]));
-    content.innerHTML = renderStatusBar(data.jobs || [], data.paused, code) + jobGroupsHtml(data, code) +
-      `<details class="job-group"><summary><span>講義上傳與 Gemini Notebook 技術資訊</span><span class="badge">${(data.lectures || []).length} 份 PDF</span></summary><div>${lecturesTableHtml(data, code)}</div></details>`;
-    if (silent) content.querySelectorAll('details.job-group').forEach(d => {
-      const key = d.querySelector('summary span').textContent;
-      if (openState.has(key)) d.open = openState.get(key);
-    });
+    content.innerHTML = renderStatusBar(data.jobs || [], data.paused, code) + jobGroupsHtml(data, code);
+    if (silent) {
+      content.querySelectorAll('details.job-group').forEach(d => {
+        const key = d.querySelector('summary span').textContent;
+        if (openState.has(key)) d.open = openState.get(key);
+      });
+      if (typeof loadCourseSources === 'function') loadCourseSources(code);
+    }
     document.getElementById('detailCourseActions').innerHTML = courseActionsHtml(code, data.paused);
     renderActiveJobs(data.jobs || [], code);
   } catch (e) {

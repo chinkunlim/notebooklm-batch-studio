@@ -184,3 +184,19 @@ class ArtifactSelectionRequest(BaseModel):
 
     chapter: list[str] = Field(default_factory=list, description="Per-lecture artifact types")
     course: list[str] = Field(default_factory=list, description="Course-wide artifact types")
+
+
+class UploadSourceRequest(BaseModel):
+    """Payload to upload a lecture PDF or custom PDF source to a course's notebook.
+
+    Attributes:
+        lecture_no: Lecture sequence number to upload or re-upload.
+        file_path: Local PDF file path to upload.
+        filename: Filename for browser-uploaded PDF.
+        content_base64: Base64-encoded PDF content.
+    """
+
+    lecture_no: int | None = Field(default=None, description="Lecture sequence number to upload or re-upload")
+    file_path: str | None = Field(default=None, description="Local PDF file path to upload")
+    filename: str | None = Field(default=None, description="Filename for browser-uploaded PDF")
+    content_base64: str | None = Field(default=None, description="Base64-encoded PDF content")

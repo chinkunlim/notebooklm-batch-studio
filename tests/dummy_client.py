@@ -75,9 +75,10 @@ class DummyStudioClient(NotebookLMClientProtocol):
     """Offline dummy client covering all 12 artifact types and interactive learning aids."""
 
     def __init__(self) -> None:
-        """Initialize call log and sequence counter."""
+        """Initialize call log, sequence counter, and per-notebook source store."""
         self.calls: list[str] = []
         self._seq = 0
+        self._sources: dict[str, list[dict[str, Any]]] = {}
 
     def _next_id(self, prefix: str) -> str:
         """Generate a unique synthetic identifier.
@@ -135,15 +136,41 @@ class DummyStudioClient(NotebookLMClientProtocol):
         return None
 
     async def list_ready_sources(self, notebook_id: str) -> dict[str, str]:
-        """Return empty source mapping for fresh dummy notebooks.
+        """Map ready source titles to source ids for a dummy notebook.
 
         Args:
             notebook_id: Notebook identifier.
 
         Returns:
-            Empty dict.
+            Title-to-id mapping of ready dummy sources.
         """
-        return {}
+        return {
+            str(s["title"]): str(s["id"])
+            for s in self._sources.get(notebook_id, [])
+            if s.get("status") == "ready"
+        }
+
+    async def list_sources(self, notebook_id: str) -> list[dict[str, Any]]:
+        """List all dummy sources currently stored in a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            List of source metadata dictionaries.
+        """
+        return [dict(s) for s in self._sources.get(notebook_id, [])]
+
+    async def delete_source(self, notebook_id: str, source_id: str) -> None:
+        """Record source deletion and remove matching source from dummy storage.
+
+        Args:
+            notebook_id: Notebook identifier.
+            source_id: Source identifier to delete.
+        """
+        self.calls.append(f"delete_source:{notebook_id}:{source_id}")
+        items = self._sources.get(notebook_id, [])
+        self._sources[notebook_id] = [s for s in items if s.get("id") != source_id]
 
     async def create_notebook(self, title: str) -> str:
         """Record notebook creation and return a dummy id.
@@ -167,8 +194,22 @@ class DummyStudioClient(NotebookLMClientProtocol):
         Returns:
             Dummy source identifier.
         """
-        self.calls.append(f"upload:{Path(file_path).name}")
-        return f"src-{Path(file_path).stem}"
+        filename = Path(file_path).name
+        src_id = f"src-{Path(file_path).stem}"
+        self.calls.append(f"upload:{filename}")
+        items = self._sources.setdefault(notebook_id, [])
+        items[:] = [s for s in items if s.get("id") != src_id]
+        items.append(
+            {
+                "id": src_id,
+                "title": filename,
+                "status": "ready",
+                "kind": "pdf",
+                "word_count": 1200,
+                "created_at": None,
+            }
+        )
+        return src_id
 
     async def wait_source_ready(self, notebook_id: str, source_id: str, timeout_seconds: int = 180) -> None:
         """Complete immediately for dummy source indexing.

@@ -183,6 +183,49 @@ class NotebookLMAdapter(ArtifactOperationsMixin, ArtifactDownloadsMixin):
         }
 
     @_translate_errors
+    async def list_sources(self, notebook_id: str) -> list[dict[str, Any]]:
+        """List all sources currently inside a Gemini Notebook with normalized metadata.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            List of dictionaries containing id, title, status, kind, word_count, and created_at.
+        """
+        async with self._client() as client:
+            sources = await client.sources.list(notebook_id)
+        items: list[dict[str, Any]] = []
+        for s in sources:
+            raw_status = getattr(s.status, "name", str(getattr(s, "status", "UNKNOWN"))).lower()
+            raw_kind = getattr(s, "kind", None)
+            kind_str = getattr(raw_kind, "value", str(raw_kind)).lower() if raw_kind is not None else "pdf"
+            created = getattr(s, "created_at", None)
+            items.append(
+                {
+                    "id": str(s.id),
+                    "title": str(s.title or ""),
+                    "status": raw_status,
+                    "kind": kind_str,
+                    "word_count": getattr(s, "word_count", None),
+                    "created_at": created.isoformat() if isinstance(created, datetime) else None,
+                }
+            )
+        return items
+
+    @_translate_errors
+    async def delete_source(self, notebook_id: str, source_id: str) -> None:
+        """Delete a source from an existing Gemini Notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            source_id: Source identifier to remove.
+        """
+        async with self._client() as client:
+            logger.info("Deleting source %s from notebook %s", source_id, notebook_id)
+            await client.sources.delete(notebook_id, source_id)
+            logger.info("Deleted source %s from notebook %s", source_id, notebook_id)
+
+    @_translate_errors
     async def create_notebook(self, title: str) -> str:
         """Create a new notebook in Gemini Notebook.
 

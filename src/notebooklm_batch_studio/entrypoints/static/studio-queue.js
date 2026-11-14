@@ -279,3 +279,204 @@ async function addSingleArtifact(code, lectureNo) {
     showToast('新增產出失敗：' + e.message, 'error');
   }
 }
+
+/**
+ * Escape text safely for HTML attribute values.
+ * @param {*} value Text to escape
+ * @returns {string} Escaped attribute string
+ */
+function escAttr(value) {
+  return escHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
+ * Render a status badge for a remote source or local lecture upload state.
+ * @param {string} status Status string
+ * @returns {string} HTML badge span
+ */
+function sourceStatusBadge(status) {
+  const st = String(status || 'pending').toLowerCase();
+  const cls = st === 'ready' ? 'badge-success' : ['uploading', 'parsing', 'processing'].includes(st) ? 'badge-warning' : ['failed', 'error'].includes(st) ? 'badge-danger' : '';
+  return `<span class="badge ${cls}">${escHtml(st)}</span>`;
+}
+
+/**
+ * Render the top action toolbar for Gemini Notebook source management.
+ * @param {object} data Response from GET /api/courses/{code}/sources
+ * @param {string} code Course code
+ * @returns {string} HTML toolbar string
+ */
+function sourceToolbarHtml(data, code) {
+  const link = data.notebook_url
+    ? `<a href="${escAttr(data.notebook_url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">開啟 Gemini Notebook ↗</a>`
+    : '<span class="badge badge-warning">尚未建立遠端筆記本</span>';
+  return `<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center">
+    ${link}
+    <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseSources('${escAttr(code)}')">重新整理來源</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="setupCourse('${escAttr(code)}', event)">補傳未上傳講義</button>
+    <label class="btn btn-primary btn-sm" style="cursor:pointer">＋ 上傳 PDF 到筆記本<input type="file" accept=".pdf,application/pdf" hidden onchange="uploadCustomSourcePdf('${escAttr(code)}', this)"></label>
+  </div>`;
+}
+
+/**
+ * Render one row in the remote Gemini Notebook sources table.
+ * @param {object} src Source metadata from GET /api/courses/{code}/sources
+ * @param {string} code Course code
+ * @returns {string} HTML table row
+ */
+function remoteSourceRowHtml(src, code) {
+  const title = src.title || src.id;
+  const words = src.word_count ? `<div class="job-sub">${Number(src.word_count).toLocaleString()} 字</div>` : '';
+  const matched = src.lecture_no ? `第 ${pad2(src.lecture_no)} 講・${escHtml(src.lecture_topic || '')}` : '額外來源';
+  return `<tr><td><code>${escHtml(title)}</code>${words}</td><td>${sourceStatusBadge(src.status)}</td><td>${matched}</td><td><code>${escHtml(src.id)}</code></td>
+    <td><button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)" data-code="${escAttr(code)}" data-source-id="${escAttr(src.id)}" data-title="${escAttr(title)}" onclick="deleteNotebookSource(this.dataset.code, this.dataset.sourceId, this.dataset.title)">刪除</button></td></tr>`;
+}
+
+/**
+ * Render the remote Gemini Notebook sources section.
+ * @param {object} data Response from GET /api/courses/{code}/sources
+ * @param {string} code Course code
+ * @returns {string} HTML snippet
+ */
+function remoteSourcesTableHtml(data, code) {
+  if (data.remote_error) return `<p class="small" style="color:var(--danger)">無法讀取遠端筆記本來源：${escHtml(data.remote_error)}</p>`;
+  if (!data.notebook_id) return '<p class="small muted">尚未建立 Gemini Notebook 筆記本；上傳任一 PDF 或按「補傳未上傳講義」後會自動建立。</p>';
+  const rows = data.sources || [];
+  if (!rows.length) return '<p class="small muted">遠端筆記本目前沒有來源檔案。</p>';
+  return `<table><thead><tr><th>來源名稱</th><th>狀態</th><th>對應講次</th><th>來源 ID</th><th></th></tr></thead><tbody>
+    ${rows.map(s => remoteSourceRowHtml(s, code)).join('')}</tbody></table>`;
+}
+
+/**
+ * Render the local course lectures upload and unlink management table.
+ * @param {object} data Response from GET /api/courses/{code}/sources
+ * @param {string} code Course code
+ * @returns {string} HTML snippet
+ */
+function courseLecturesSourcesHtml(data, code) {
+  const rows = data.lectures || [];
+  if (!rows.length) return '<p class="small muted">尚未掃描到課程講義 PDF。</p>';
+  const body = rows.map(l => {
+    const upLabel = l.source_id ? '重傳' : '上傳';
+    const rmBtn = l.source_id
+      ? `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)" data-code="${escAttr(code)}" data-source-id="${escAttr(l.source_id)}" data-title="${escAttr(l.filename)}" onclick="deleteNotebookSource(this.dataset.code, this.dataset.sourceId, this.dataset.title)">移除遠端</button>` : '';
+    return `<tr><td>L${pad2(l.no)}</td><td>${escHtml(l.topic)}</td><td><code>${escHtml(l.filename)}</code></td><td>${sourceStatusBadge(l.upload_status)}</td><td><code>${escHtml(l.source_id || '—')}</code></td>
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-soft btn-sm" onclick="uploadLectureSource('${escAttr(code)}', ${l.no})">${upLabel}</button>${rmBtn}</div></td></tr>`;
+  }).join('');
+  return `<table><thead><tr><th>講次</th><th>主題</th><th>檔名</th><th>狀態</th><th>來源 ID</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+/**
+ * Fetch and render Gemini Notebook sources and local lecture upload statuses for a course.
+ * @param {string} code Course code
+ * @returns {Promise<void>} Resolves when rendered
+ */
+async function loadCourseSources(code) {
+  const box = document.getElementById('detailSources');
+  const sum = document.getElementById('detailSourcesSummary');
+  if (!box) return;
+  try {
+    const res = await fetch(`/api/courses/${code}/sources`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    const remoteN = (data.sources || []).length;
+    const lecN = (data.lectures || []).length;
+    if (sum) sum.textContent = `遠端 ${remoteN} 份來源 · 課程講義 ${lecN} 份`;
+    box.innerHTML = sourceToolbarHtml(data, code) +
+      '<h4 class="small muted" style="margin:6px 0">遠端筆記本來源</h4>' + remoteSourcesTableHtml(data, code) +
+      '<h4 class="small muted" style="margin:14px 0 6px">課程資料夾講義</h4>' + courseLecturesSourcesHtml(data, code);
+  } catch (e) {
+    box.innerHTML = `<p style="color:var(--danger)">來源載入失敗：${escHtml(e.message)}</p>`;
+  }
+}
+
+/**
+ * Upload or re-upload one lecture PDF to the course's Gemini Notebook.
+ * @param {string} code Course code
+ * @param {number} lectureNo Lecture sequence number
+ * @returns {Promise<void>} Resolves when upload completes
+ */
+async function uploadLectureSource(code, lectureNo) {
+  try {
+    showToast(`正在上傳第 ${pad2(lectureNo)} 講到 Gemini Notebook…`, 'info', 8000);
+    const res = await fetch(`/api/courses/${code}/sources`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lecture_no: lectureNo }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    showToast(`第 ${pad2(lectureNo)} 講已上傳（${data.source_id || 'ready'}）`, 'success');
+    await loadCourseSources(code);
+    await fetchCourses();
+    await viewCourseDetail(code, true);
+  } catch (e) {
+    showToast('上傳講義失敗：' + e.message, 'error');
+  }
+}
+
+/**
+ * Read a browser File object into a pure Base64 string.
+ * @param {File} file Selected file
+ * @returns {Promise<string>} Base64 string without data URL prefix
+ */
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || '').split(',').pop() || '');
+    reader.onerror = () => reject(reader.error || new Error('無法讀取檔案'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Upload a user-picked PDF file from the browser to the course's Gemini Notebook.
+ * @param {string} code Course code
+ * @param {HTMLInputElement} inputEl File input element
+ * @returns {Promise<void>} Resolves when upload finishes
+ */
+async function uploadCustomSourcePdf(code, inputEl) {
+  const file = inputEl && inputEl.files && inputEl.files[0];
+  if (!file) return;
+  try {
+    if (!file.name.toLowerCase().endsWith('.pdf')) throw new Error('只支援上傳 .pdf 檔案');
+    showToast(`正在上傳「${file.name}」到 Gemini Notebook…`, 'info', 10000);
+    const contentBase64 = await readFileAsBase64(file);
+    const res = await fetch(`/api/courses/${code}/sources`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, content_base64: contentBase64 }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    showToast(`已上傳「${data.filename || file.name}」到筆記本`, 'success');
+    await loadCourseSources(code);
+    await fetchCourses();
+    await viewCourseDetail(code, true);
+  } catch (e) {
+    showToast('上傳 PDF 失敗：' + e.message, 'error');
+  } finally {
+    inputEl.value = '';
+  }
+}
+
+/**
+ * Delete a source from Gemini Notebook after user confirmation.
+ * @param {string} code Course code
+ * @param {string} sourceId Remote source identifier
+ * @param {string} title Display title shown in confirmation prompt
+ * @returns {Promise<void>} Resolves when deletion finishes
+ */
+async function deleteNotebookSource(code, sourceId, title) {
+  const msg = `確定從 Gemini Notebook 刪除來源「${title}」？\n\n• 遠端筆記本會移除這份來源\n• 本機課程資料夾中的 PDF 不會被刪除`;
+  if (!(await askConfirm(msg, { okLabel: '刪除來源', danger: true }))) return;
+  try {
+    const res = await fetch(`/api/courses/${code}/sources/${encodeURIComponent(sourceId)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    showToast(`已從筆記本刪除「${title}」`, 'success');
+    await loadCourseSources(code);
+    await fetchCourses();
+    await viewCourseDetail(code, true);
+  } catch (e) {
+    showToast('刪除來源失敗：' + e.message, 'error');
+  }
+}

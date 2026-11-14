@@ -77,6 +77,26 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
+    async def list_sources(self, notebook_id: str) -> list[dict[str, Any]]:
+        """List all sources currently stored in a notebook with status metadata.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            List of source metadata dictionaries.
+        """
+        ...
+
+    async def delete_source(self, notebook_id: str, source_id: str) -> None:
+        """Delete a source from a notebook.
+
+        Args:
+            notebook_id: Notebook identifier.
+            source_id: Source identifier to remove.
+        """
+        ...
+
     async def create_notebook(self, title: str) -> str:
         """Create a new notebook in Gemini Notebook.
 

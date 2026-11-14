@@ -12,6 +12,7 @@ from notebooklm_batch_studio.entrypoints.schemas import (
     CourseSummaryResponse,
     PreviewCoursesRequest,
     UpdateProfileRequest,
+    UploadSourceRequest,
 )
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
@@ -180,7 +181,7 @@ def refine_course_prompts(code: str, request: Request) -> dict[str, Any]:
     operation_id="retry_lecture_upload",
 )
 async def retry_lecture_upload(code: str, no: int, request: Request) -> dict[str, Any]:
-    """Retry uploading a single failed lecture PDF to Gemini Notebook.
+    """Retry uploading a single lecture PDF to Gemini Notebook.
 
     Args:
         code: Course identifier.
@@ -188,23 +189,99 @@ async def retry_lecture_upload(code: str, no: int, request: Request) -> dict[str
         request: Incoming HTTP request context.
 
     Returns:
-        Status result.
+        Upload status and source identifier payload.
+
+    Raises:
+        HTTPException: 404 if course not found, 422 if lecture or local file is missing.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return await service.upload_lecture_source(code, no, force=True)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@courses_router.get(
+    "/api/courses/{code}/sources",
+    tags=["Courses"],
+    operation_id="list_course_sources",
+)
+async def list_course_sources(code: str, request: Request) -> dict[str, Any]:
+    """List remote Gemini Notebook sources and local lecture sync states for a course.
+
+    Args:
+        code: Course identifier.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Dictionary containing notebook URL, remote sources, local lectures, and any remote error.
 
     Raises:
         HTTPException: 404 if course not found.
     """
     service: BatchStudioService = request.app.state.service
     try:
-        course = await service.setup_notebook_and_sources(code)
-        lec = next((item for item in course.lectures if item.no == no), None)
-        return {
-            "code": code,
-            "no": no,
-            "upload_status": lec.upload_status if lec else "unknown",
-            "source_id": lec.source_id if lec else None,
-        }
+        return await service.list_course_sources(code)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@courses_router.post(
+    "/api/courses/{code}/sources",
+    tags=["Courses"],
+    operation_id="upload_course_source",
+)
+async def upload_course_source(code: str, req: UploadSourceRequest, request: Request) -> dict[str, Any]:
+    """Upload a lecture PDF, local PDF file, or browser-uploaded PDF to the course notebook.
+
+    Args:
+        code: Course identifier.
+        req: Source upload payload (`lecture_no`, `file_path`, or `filename` + `content_base64`).
+        request: Incoming HTTP request context.
+
+    Returns:
+        Uploaded source metadata dictionary.
+
+    Raises:
+        HTTPException: 404 if course not found, 422 if upload payload or file is invalid.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return await service.upload_custom_source(code, **req.model_dump(exclude_none=True))
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@courses_router.delete(
+    "/api/courses/{code}/sources/{source_id}",
+    tags=["Courses"],
+    operation_id="delete_course_source",
+)
+async def delete_course_source(code: str, source_id: str, request: Request) -> dict[str, Any]:
+    """Delete a source from the course's Gemini Notebook and unlink matching local lectures.
+
+    Args:
+        code: Course identifier.
+        source_id: Remote Gemini Notebook source identifier.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Deletion summary dictionary with unlinked lecture numbers.
+
+    Raises:
+        HTTPException: 404 if course not found, 422 if source_id or linked notebook is invalid.
+    """
+    service: BatchStudioService = request.app.state.service
+    try:
+        return await service.delete_course_source(code, source_id)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @courses_router.post(

@@ -85,7 +85,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-019-audit-all-resolved-known-issues-.json
 │   │   ├── TASK-020-fix-course-code-collision-overwr.json
 │   │   ├── TASK-021-fix-failed-artifact-job-manual-r.json
-│   │   └── TASK-022-support-adding-missing-artifacts.json
+│   │   ├── TASK-022-support-adding-missing-artifacts.json
+│   │   └── TASK-023-add-notebook-source-listing-uplo.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -607,6 +608,7 @@ notebooklm-batch-studio/
 │       │   ├── quiz_runner.py
 │       │   ├── quota_planner.py
 │       │   ├── reporter.py
+│       │   ├── source_manager.py
 │       │   ├── study_plan_service.py
 │       │   ├── study_service.py
 │       │   ├── sync_service.py

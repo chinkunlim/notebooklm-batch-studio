@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import base64
 import json
 import tempfile
 import unittest
@@ -28,6 +30,7 @@ from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.course_settings import apply_job_settings
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from tests.dummy_client import DummyStudioClient
 
 LECTURES = [Lecture(no=i, topic=f"t{i}", filename=f"Ch0{i}-t{i}.pdf", sha256=str(i)) for i in (1, 2, 3, 4)]
 
@@ -316,6 +319,87 @@ class StudyStateAndCopyOptionsTest(Fixture):
             self.service.course_settings.get_options("CHEM110")["options"]["exam_date"],
             "2027-01-15",
         )
+
+
+class CourseSourceManagementTest(Fixture):
+    """HTTP, service, and MCP tests for Gemini Notebook source listing, upload, and deletion."""
+
+    def setUp(self) -> None:
+        """Configure dummy client, course BIO101, and FastAPI TestClient."""
+        super().setUp()
+        self.dummy = DummyStudioClient()
+        self.service = BatchStudioService(self.course_repo, self.queue_repo, self.dummy, self.config)
+        self.config.data_dir.mkdir(parents=True, exist_ok=True)
+        self.service.add_course_folders([str(self.folder)], paused=True)
+        self.http = TestClient(
+            create_app(config=self.config, service=self.service, study_service=mock.MagicMock())
+        )
+
+    def test_list_and_reconcile_sources(self) -> None:
+        """Upload lecture sources, simulate remote drift, and verify reconciliation via HTTP GET."""
+        r1 = self.http.post("/api/courses/BIO101/sources", json={"lecture_no": 1})
+        r2 = self.http.post("/api/courses/BIO101/lectures/2/retry_upload")
+        self.assertEqual((r1.status_code, r2.status_code), (200, 200))
+        nb_id = r1.json()["notebook_id"]
+        self.dummy._sources[nb_id] = [
+            {"id": "src-relinked", "title": "Ch02-t2.pdf", "status": "ready", "kind": "pdf"}
+        ]
+        listing = self.http.get("/api/courses/BIO101/sources")
+        self.assertEqual(listing.status_code, 200)
+        body = listing.json()
+        self.assertEqual([s["id"] for s in body["sources"]], ["src-relinked"])
+        lecs = {lec["no"]: lec for lec in body["lectures"]}
+        self.assertEqual((lecs[1]["upload_status"], lecs[1]["source_id"]), ("pending", None))
+        self.assertEqual((lecs[2]["upload_status"], lecs[2]["source_id"]), ("ready", "src-relinked"))
+
+    def test_upload_custom_pdf_validation_and_delete(self) -> None:
+        """Verify DATA_DIR path upload, base64 upload, 422 guards, and source deletion unlinking."""
+        extra_pdf = self.config.data_dir / "extra.pdf"
+        extra_pdf.write_bytes(b"%PDF-1.4 extra")
+        by_path = self.http.post("/api/courses/BIO101/sources", json={"file_path": str(extra_pdf)})
+        self.assertEqual((by_path.status_code, by_path.json()["filename"]), (200, "extra.pdf"))
+        b64_pdf = base64.b64encode(b"%PDF-1.4 notes").decode()
+        by_b64 = self.http.post(
+            "/api/courses/BIO101/sources", json={"filename": "notes.pdf", "content_base64": b64_pdf}
+        )
+        self.assertEqual((by_b64.status_code, by_b64.json()["filename"]), (200, "notes.pdf"))
+        uploaded_copy = self.config.courses_input_dir / "BIO101" / "_uploaded_sources" / "notes.pdf"
+        self.assertTrue(uploaded_copy.exists())
+        self.assertEqual(self.http.post("/api/courses/BIO101/sources", json={}).status_code, 422)
+        bad_path = {"file_path": "/etc/outside.pdf"}
+        self.assertEqual(self.http.post("/api/courses/BIO101/sources", json=bad_path).status_code, 422)
+        up = self.http.post("/api/courses/BIO101/sources", json={"lecture_no": 1}).json()
+        removed = self.http.delete(f"/api/courses/BIO101/sources/{up['source_id']}")
+        self.assertEqual((removed.status_code, removed.json()["unlinked_lectures"]), (200, [1]))
+        course = self.course_repo.get_course("BIO101")
+        assert course is not None
+        lec1 = next(lec for lec in course.lectures if lec.no == 1)
+        self.assertEqual((lec1.upload_status, lec1.source_id), ("pending", None))
+        self.assertTrue((self.folder / lec1.filename).exists())
+
+    def test_mcp_source_tools_and_confirm_guard(self) -> None:
+        """Verify read-only listing and confirm=True enforcement on MCP source mutations."""
+        mcp = build_mcp_server(service=self.service, study_service=mock.MagicMock(), config=self.config)
+        tools = mcp._tool_manager._tools  # type: ignore[attr-defined]
+        denied_up = json.loads(asyncio.run(tools["upload_course_source"].fn("BIO101", lecture_no=1)))
+        self.assertFalse(denied_up["confirmed"])
+        approved_up = json.loads(
+            asyncio.run(tools["upload_course_source"].fn("BIO101", lecture_no=1, confirm=True))
+        )
+        self.assertTrue(approved_up["confirmed"])
+        listed = json.loads(asyncio.run(tools["list_course_sources"].fn("BIO101")))
+        self.assertEqual([s["id"] for s in listed["sources"]], [approved_up["source_id"]])
+        denied_del = json.loads(
+            asyncio.run(tools["delete_course_source"].fn("BIO101", approved_up["source_id"]))
+        )
+        self.assertFalse(denied_del["confirmed"])
+        approved_del = json.loads(
+            asyncio.run(tools["delete_course_source"].fn("BIO101", approved_up["source_id"], confirm=True))
+        )
+        self.assertTrue(approved_del["confirmed"])
+        self.assertEqual(approved_del["unlinked_lectures"], [1])
+        after = json.loads(asyncio.run(tools["list_course_sources"].fn("BIO101")))
+        self.assertEqual(after["sources"], [])
 
 
 if __name__ == "__main__":
