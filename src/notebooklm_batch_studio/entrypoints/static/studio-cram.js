@@ -410,8 +410,33 @@ function initSideCardCollapses() {
       btn.setAttribute('aria-expanded', String(!collapsed));
       btn.innerHTML = collapsed ? '<i class="icon-chevron-down"></i>' : '<i class="icon-chevron-up"></i>';
     });
-    head.appendChild(btn);
+    const title = head.querySelector(':scope > h2, :scope > .h2');
+    if (id === 'bench' && title) {
+      const row = document.createElement('div');
+      row.className = 'card-title-row';
+      head.insertBefore(row, title);
+      row.appendChild(title);
+      row.appendChild(btn);
+    } else {
+      head.appendChild(btn);
+    }
   });
 }
 
+/**
+ * Dynamically size #paneStudy to fit available browser viewport height (adapts to Safari/Chrome bars and fullscreen).
+ * @returns {void}
+ */
+function updateStudyViewportHeight() {
+  const pane = document.getElementById('paneStudy');
+  if (!pane || pane.hidden || pane.dataset.layout !== 'split') return;
+  const top = pane.getBoundingClientRect().top;
+  const avail = Math.max(460, Math.floor(window.innerHeight - top - 24));
+  pane.style.setProperty('--study-h', `${avail}px`);
+}
+
 initSideCardCollapses();
+updateStudyViewportHeight();
+window.addEventListener('resize', updateStudyViewportHeight);
+document.addEventListener('fullscreenchange', () => setTimeout(updateStudyViewportHeight, 60));
+document.addEventListener('click', () => setTimeout(updateStudyViewportHeight, 60));

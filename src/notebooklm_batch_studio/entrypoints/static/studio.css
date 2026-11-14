@@ -1282,11 +1282,11 @@ img, iframe, video, audio { max-width: 100%; }
 
 /* Right column arrow collapse/expand + split-mode viewport-fit equal height & card collapse */
 .study[data-layout="split"] {
-  align-items: stretch; height: calc(100vh - 180px); min-height: 520px;
+  align-items: stretch; height: var(--study-h, calc(100vh - 180px)); min-height: 460px;
   margin-bottom: var(--s5); scroll-margin-top: 24px;
 }
 .study[data-layout="split"] .study-main,
-.study[data-layout="split"] .study-side { height: 100%; min-height: 0; position: relative; }
+.study[data-layout="split"] .study-side { height: 100%; min-height: 0; position: relative; display: flex; flex-direction: column; }
 .study[data-layout="split"] #readerCard { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .study[data-layout="split"] #readerHome,
 .study[data-layout="split"] #readerContent,
@@ -1294,17 +1294,23 @@ img, iframe, video, audio { max-width: 100%; }
 .study[data-layout="split"] .study-side { overflow-y: auto; scrollbar-width: none; }
 .study[data-layout="split"] .study-side::-webkit-scrollbar { display: none; }
 .study[data-layout="split"] .study-main > .card:last-child:not(.is-collapsed),
-.study[data-layout="split"] .study-side > .card:last-child:not(.is-collapsed) { flex: 1; }
+.study[data-layout="split"] .study-side > .card:last-child:not(.is-collapsed) { flex: 1; min-height: 0; }
+.study[data-layout="split"] #bench:not(.is-collapsed) { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.study[data-layout="split"] #bench:not(.is-collapsed) .bench-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.study[data-layout="split"] #bench:not(.is-collapsed) .bench-body::-webkit-scrollbar { display: none; }
 .card.is-collapsed { flex: 0 0 auto !important; min-height: 0 !important; }
-.study-side .bench-head .seg { border-radius: var(--radius-m); flex-wrap: wrap; gap: 2px; padding: 4px; max-width: 100%; }
+.card-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); width: 100%; min-height: 32px; }
+.study-side #bench .card-head { flex-direction: column; align-items: stretch; gap: 10px; }
+.study-side #bench .card-head .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: var(--radius-m); gap: 3px; padding: 3px; width: 100%; max-width: 100%; }
+.study-side #bench .card-head .seg button { width: 100%; justify-content: center; text-align: center; padding: 6px 8px; }
 .side-collapse-btn, .side-expand-btn {
   display: none; width: 32px; height: 32px; padding: 0; border-radius: 50%; place-items: center;
   background: var(--surface); border: 1px solid var(--line); color: var(--ink); cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: border-color var(--dur-hover) var(--ease), background var(--dur-hover) var(--ease), color var(--dur-hover) var(--ease);
 }
 .side-collapse-btn:hover, .side-expand-btn:hover { border-color: var(--accent); background: var(--primary); color: var(--primary-ink); }
-.study[data-layout="split"]:not(.side-collapsed):not(.side-empty) #readerCard .side-collapse-btn { display: grid; position: absolute; top: 14px; right: 14px; z-index: 18; }
-.study[data-layout="split"].side-collapsed:not(.side-empty) #readerCard .side-expand-btn { display: grid; position: absolute; top: 14px; right: 14px; z-index: 18; }
+.study[data-layout="split"]:not(.side-collapsed):not(.side-empty) #readerCard .side-collapse-btn { display: grid; position: absolute; top: var(--s5); right: var(--s5); z-index: 18; }
+.study[data-layout="split"].side-collapsed:not(.side-empty) #readerCard .side-expand-btn { display: grid; position: absolute; top: var(--s5); right: var(--s5); z-index: 18; }
 .card-collapse-btn {
   display: none; width: 28px; height: 28px; border-radius: 50%; place-items: center; flex: none;
   background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); cursor: pointer; margin-left: 4px;
@@ -1315,9 +1321,10 @@ img, iframe, video, audio { max-width: 100%; }
 .card.is-collapsed > .card-head, .card.is-collapsed > .player-controls, .card.is-collapsed > .bench-head { margin-bottom: 0; }
 
 /* Reader sticky bar & scroll stop */
+/* Reader header & bar alignment */
 #readerCard { position: relative; scroll-margin-top: 24px; }
-#readerContent > .card-head { position: sticky; top: 10px; z-index: 16; background: var(--surface); padding: 8px 44px 6px 0; }
-.reader-bar { position: sticky; top: 46px; z-index: 15; background: var(--surface); padding: 8px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
+#readerContent > .card-head { min-height: 32px; display: flex; align-items: center; padding: 0 44px 0 0; margin-bottom: var(--s3); }
+.reader-bar { background: var(--surface); padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
 
 /* Layout Debug Guides (Cmd+Shift+G / 參考線按鈕) */
 .app.layout-guides .topbar { outline: 2px dashed #e11d48; outline-offset: -2px; }
