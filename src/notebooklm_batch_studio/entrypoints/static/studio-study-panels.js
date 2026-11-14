@@ -356,21 +356,24 @@ async function loadReportInViewer(kind) {
   document.getElementById('reportKindButtons').innerHTML = group.length > 1 ? group.map(key =>
     `<button class="chip${key === kind ? ' on' : ''}" style="--hue:var(--h-report)" onclick="loadReportInViewer('${key}')">${REPORT_KINDS[key].label}</button>`).join('') : '';
   const container = document.getElementById('reportContentContainer');
+  const metaBar = document.getElementById('reportMetaBar');
   const spec = REPORT_KINDS[kind] || REPORT_KINDS.guide;
   const job = pickLatestJob(spec.types);
   if (!job) {
+    if (metaBar) metaBar.innerHTML = '';
     container.innerHTML = `<div class="empty-state">${activeStudyLectureNo === null ? '整門課' : '這一講'}還沒有「${spec.label}」。<br>可到「批次排程」的「產出內容」勾選後生成。<br><button class="btn btn-soft" onclick="go('queue')">前往批次排程</button></div>`;
     return;
   }
   const code = currentStudyCourse.code, path = job.rel_path || job.output_file.split('/').pop(), enc = encodeURI(path);
   const dl = `/api/artifacts/${code}/download/${enc}`, readable = ['guide', 'concept'].includes(kind) && activeStudyLectureNo !== null;
-  const header = `<div class="report-meta"><span class="tag">v${job.version || 1}</span>${job.status === 'needs_review' ? '<span class="tag warn">需審查</span>' : ''}
-    <a href="${dl}" target="_blank" rel="noopener">開新分頁 / 下載</a><span class="spacer"></span>${readable ? `<button class="btn btn-soft btn-sm" onclick="markStep('guide')">我讀完了</button>` : ''}</div>`;
+  const metaHtml = `<span class="tag">v${job.version || 1}</span>${job.status === 'needs_review' ? '<span class="tag warn">需審查</span>' : ''}
+    <a class="reader-pill-btn" href="${dl}" target="_blank" rel="noopener">新分頁 / 下載</a>${readable ? `<button type="button" class="reader-pill-btn" onclick="markStep('guide')">我讀完了</button>` : ''}`;
+  if (metaBar) metaBar.innerHTML = metaHtml;
   const ext = path.split('.').pop().toLowerCase();
-  if (['md', 'opml', 'json'].includes(ext)) container.innerHTML = header + `<iframe class="report-frame" src="/api/artifacts/${code}/view/${enc}" title="${escHtml(spec.label)}"></iframe>`;
-  else if (ext === 'png') container.innerHTML = header + (await renderPngDeviceExtras(code, path)) + `<img class="report-img" src="${dl}" alt="${escHtml(spec.label)}">`;
-  else if (ext === 'csv') container.innerHTML = header + (await renderCsvTableHtml(dl));
-  else if (['mp4', 'webm', 'mov'].includes(ext)) container.innerHTML = header + `<video class="report-video" controls preload="metadata" src="${dl}"></video>`;
-  else if (ext === 'pdf' || ext === 'html') container.innerHTML = header + `<iframe class="report-frame" src="${dl}" title="${escHtml(spec.label)}"></iframe>`;
-  else container.innerHTML = header + `<div class="empty-state">這個格式（.${escHtml(ext)}）無法在網頁預覽，請用上方連結下載。</div>`;
+  if (['md', 'opml', 'json'].includes(ext)) container.innerHTML = `<iframe class="report-frame" src="/api/artifacts/${code}/view/${enc}" title="${escHtml(spec.label)}"></iframe>`;
+  else if (ext === 'png') container.innerHTML = (await renderPngDeviceExtras(code, path)) + `<img class="report-img" src="${dl}" alt="${escHtml(spec.label)}">`;
+  else if (ext === 'csv') container.innerHTML = await renderCsvTableHtml(dl);
+  else if (['mp4', 'webm', 'mov'].includes(ext)) container.innerHTML = `<video class="report-video" controls preload="metadata" src="${dl}"></video>`;
+  else if (ext === 'pdf' || ext === 'html') container.innerHTML = `<iframe class="report-frame" src="${dl}" title="${escHtml(spec.label)}"></iframe>`;
+  else container.innerHTML = `<div class="empty-state">這個格式（.${escHtml(ext)}）無法在網頁預覽，請用上方連結下載。</div>`;
 }

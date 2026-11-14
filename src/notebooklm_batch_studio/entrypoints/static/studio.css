@@ -1378,13 +1378,29 @@ img, iframe, video, audio { max-width: 100%; }
 .study[data-layout="split"] #splitStage > #panelTutor,
 .study[data-layout="split"] #splitStage > #panelQaNotes { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 .study[data-layout="split"] #splitStage > #panelReports,
+.study[data-layout="split"] #splitStage > #panelQuiz,
 .study[data-layout="split"] #splitStage > #panelTutor { overflow: hidden; }
-.study[data-layout="split"] #splitStage #reportContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.study[data-layout="split"] #splitStage #reportContainer .report-frame { flex: 1; min-height: 0; height: 100%; }
+.study[data-layout="split"] #splitStage .panel-head {
+  min-height: 40px; padding: 6px 0 10px; border-bottom: 1px solid var(--line);
+  margin-bottom: var(--s3); flex: none; display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+.report-meta-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.report-meta-bar a.reader-pill-btn { text-decoration: none; }
+.study[data-layout="split"] #splitStage #reportContentContainer,
+.study[data-layout="split"] #splitStage #flashcardsViewerContainer,
+.study[data-layout="split"] #splitStage #qaNotesContainer,
 .study[data-layout="split"] #splitStage #tutorContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.study[data-layout="split"] #splitStage #reportContentContainer .report-frame { flex: 1; min-height: 0; height: 100%; }
+.study[data-layout="split"] #splitStage #quizContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.study[data-layout="split"] #splitStage #quizActionBar { flex: none; margin-top: var(--s3); }
+.study[data-layout="split"] #splitStage .empty-state {
+  flex: 1; min-height: 380px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+}
 .study[data-layout="split"] #splitStage #tutorContainer .tutor-box { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .study[data-layout="split"] #splitStage #tutorLog { flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
-.quiz-pager { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-top: var(--s3); padding: var(--s2) 0; }
+.quiz-pager { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-top: auto; padding: var(--s3) 0 var(--s1); flex: none; }
 .quiz-pager-meta { font-size: 13px; font-weight: 600; color: var(--muted); }
 .study[data-layout="split"] #benchStage { display: none; }
 .study[data-layout="split"] .study-side { overflow-y: auto; scrollbar-width: none; scrollbar-gutter: stable; }

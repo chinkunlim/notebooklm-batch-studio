@@ -140,6 +140,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): add vertical collapse/expand buttons to split-sidebar course cards (by `@antigravity`)
 - fix(ui): close .more-menu on outside click, keep course picker visible on all pages, prioritize batch selection, and align split sidebar (by `@antigravity`)
 - fix(ui): show lecture tile in split sidebar and move arrangement/pin controls to user settings (by `@antigravity`)
+- fix(ui): stabilize split-stage panel heights, pin quiz pager/action bar, and unify report toolbar row (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
