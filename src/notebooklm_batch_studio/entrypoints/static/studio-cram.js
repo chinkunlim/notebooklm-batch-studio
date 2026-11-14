@@ -431,7 +431,7 @@ function updateStudyViewportHeight() {
 
 /**
  * Scroll outer page down until #paneStudy sticks at 12px top margin before scrolling inner PDF/bench.
- * Only intercepts wheel over #readerCard; everywhere else scrolls the outer page freely.
+ * Clamps #paneStudy top at 12px across reader, side-column, and scrollbar scrolling while #view-study.on.
  * @returns {void}
  */
 function initStudyStickyWheel() {
@@ -440,14 +440,19 @@ function initStudyStickyWheel() {
   pane.dataset.stickyWheelHooked = '1';
   pane.addEventListener('wheel', e => {
     if (pane.hidden || pane.dataset.layout !== 'split' || e.ctrlKey) return;
-    if (document.querySelector('.lec-pop.open, .bm-pick.open') || !e.target.closest('#readerCard')) return;
+    if (document.querySelector('.lec-pop.open, .bm-pick.open')) return;
     const top = pane.getBoundingClientRect().top;
     if (e.deltaY > 0 && top > 13) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, top - 12)); return; }
     if (e.deltaY < 0) {
-      const scroller = e.target.closest('.kp-list.kp-all-mode, #readerPages');
+      const scroller = e.target.closest('.kp-list.kp-all-mode, #readerPages, .bench-body, .side-catalog-host, .study-side');
       if ((!scroller || scroller.scrollTop <= 1) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
     }
   }, { passive: false });
+  window.addEventListener('scroll', () => {
+    if (!document.getElementById('view-study')?.classList.contains('on') || pane.hidden || pane.dataset.layout !== 'split') return;
+    const top = pane.getBoundingClientRect().top;
+    if (top < 11.5) window.scrollTo(window.scrollX, Math.max(0, Math.round(window.scrollY + top - 12)));
+  }, { passive: true });
 }
 
 /**
