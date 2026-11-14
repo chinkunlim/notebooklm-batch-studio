@@ -52,6 +52,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(studio,remote): add remote artifact admin with active-version guard, grayed missing tools, and inline lecture switcher (by `@antigravity`)
 - feat(adapter,api,mcp): wire cinematic video, slide revision, export, report suggestions, and remote retry (by `@antigravity`)
 - feat(sources,research,ui): add URL/text import, web research, chat style config, and remote artifact UI (by `@antigravity`)
+- feat(studio,ui): complete all Studio options, custom chat prompt, cinematic video, and source-scoped generation (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

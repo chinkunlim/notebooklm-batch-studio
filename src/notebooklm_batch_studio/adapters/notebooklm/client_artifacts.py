@@ -48,6 +48,8 @@ def _report_format_and_kwargs(report_format: str, instructions: str) -> tuple[Re
         Tuple of (`ReportFormat`, kwargs dict).
     """
     formats = {"study_guide": ReportFormat.STUDY_GUIDE, "blog_post": ReportFormat.BLOG_POST}
+    if report_format == "custom":
+        return ReportFormat.CUSTOM, {"custom_prompt": instructions}
     if report_format == "concept_explanation":
         return ReportFormat.CUSTOM, {"custom_prompt": f"{CONCEPT_EXPLANATION_DIRECTIVE}\n\n{instructions}"}
     return formats.get(report_format, ReportFormat.BRIEFING_DOC), {"extra_instructions": instructions}

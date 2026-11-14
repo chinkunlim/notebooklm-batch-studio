@@ -213,3 +213,35 @@ class TestRemoteArtifactsAdmin(unittest.IsolatedAsyncioTestCase):
             )
         )
         self.assertEqual(mc_cfg["goal"], "learning_guide")
+
+        custom_cfg = self.http.put(
+            "/api/courses/BIO101/qa/configure",
+            json={"goal": "custom", "response_length": "longer", "custom_prompt": "Act as tutor"},
+        )
+        self.assertEqual(custom_cfg.status_code, 200)
+        self.assertEqual(custom_cfg.json()["custom_prompt"], "Act as tutor")
+
+        scoped = self.http.post(
+            "/api/courses/BIO101/remote-artifacts/generate",
+            json={"kind": "custom_report", "source_ids": ["src-1"], "instructions": "重點彙整"},
+        )
+        self.assertEqual(scoped.status_code, 200)
+        self.assertEqual(scoped.json()["source_count"], 1)
+
+        from notebooklm_batch_studio.entrypoints.schemas import GenerateScopedArtifactRequest
+
+        self.assertTrue(
+            json.loads(
+                await tools["generate_from_sources"].fn(
+                    "BIO101", GenerateScopedArtifactRequest(kind="audio"), confirm=False
+                )
+            )["requires_confirmation"]
+        )
+        mc_gen = json.loads(
+            await tools["generate_from_sources"].fn(
+                "BIO101",
+                GenerateScopedArtifactRequest(kind="custom_report", source_ids=["src-1"], instructions="A"),
+                confirm=True,
+            )
+        )
+        self.assertEqual(mc_gen["kind"], "custom_report")

@@ -22,7 +22,7 @@ class GenerationOptions:
         slide_format: 'detailed_deck' or 'presenter_slides'.
         slide_length: 'default' or 'short'.
         slide_download: 'pdf' or 'pptx'.
-        video_format: 'explainer', 'brief' or 'short'.
+        video_format: 'explainer', 'brief', 'short' or 'cinematic'.
         video_style: 'auto_select', 'classic', 'whiteboard', 'kawaii', 'anime', 'watercolor',
             'retro_print', 'heritage' or 'paper_craft'.
         quiz_questions: Questions per lecture quiz (default 30); drives the prompt, the completeness
@@ -80,7 +80,7 @@ GENERATION_OPTION_CHOICES: dict[str, tuple[str, ...] | None] = {
     "slide_format": ("detailed_deck", "presenter_slides"),
     "slide_length": ("default", "short"),
     "slide_download": ("pdf", "pptx"),
-    "video_format": ("explainer", "brief", "short"),
+    "video_format": ("explainer", "brief", "short", "cinematic"),
     "video_style": (
         "auto_select",
         "classic",

@@ -210,3 +210,68 @@ class RemoteAdminService:
         return await self.client.configure_chat(
             nb_id, goal=goal, response_length=response_length, custom_prompt=custom_prompt
         )
+
+    def _scoped_dispatch(
+        self, course: Course, nb_id: str, sids: list[str], prompt: str | None
+    ) -> dict[str, Any]:
+        """Build artifact-kind generator callables for generate_from_sources.
+
+        Args:
+            course: Course domain model.
+            nb_id: Remote notebook identifier.
+            sids: Target source identifiers.
+            prompt: Optional custom prompt or instructions.
+
+        Returns:
+            Mapping from artifact kind string to zero-arg async callable.
+        """
+        o, lang, c = course.generation_options, course.language, self.client
+        return {
+            "custom_report": lambda: c.generate_report(
+                nb_id, sids, prompt=prompt, language=lang, report_format="custom"
+            ),
+            "audio": lambda: c.generate_audio(nb_id, sids, prompt=prompt, language=lang, options=o),
+            "video": lambda: c.generate_video(nb_id, sids, prompt=prompt, language=lang, options=o),
+            "cinematic_video": lambda: c.generate_cinematic_video(
+                nb_id, prompt or "", source_ids=sids, language=lang
+            ),
+            "infographic": lambda: c.generate_infographic(
+                nb_id, sids, prompt=prompt, language=lang, options=o
+            ),
+            "slide_deck": lambda: c.generate_slide_deck(nb_id, sids, prompt=prompt, language=lang, options=o),
+            "quiz": lambda: c.generate_quiz(nb_id, sids, prompt=prompt, options=o),
+            "flashcards": lambda: c.generate_flashcards(nb_id, sids, prompt=prompt, options=o),
+            "mind_map": lambda: c.generate_mind_map(nb_id, sids, prompt=prompt, language=lang),
+            "data_table": lambda: c.generate_data_table(nb_id, sids, prompt=prompt, language=lang),
+        }
+
+    async def generate_from_sources(
+        self, course_code: str, kind: str, opts: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Generate a Studio artifact or custom report scoped to specific source_ids.
+
+        Args:
+            course_code: Course identifier.
+            kind: Artifact kind ('custom_report', 'audio', 'video', 'cinematic_video',
+                'infographic', 'slide_deck', 'quiz', 'flashcards', 'mind_map', 'data_table').
+            opts: Optional dict with `source_ids` and `instructions`.
+
+        Returns:
+            Dictionary containing `course_code`, `kind`, and created `artifact_id`.
+
+        Raises:
+            ValueError: If kind is unsupported or notebook has no sources.
+        """
+        course, nb_id = self._require_notebook(course_code)
+        cfg = opts or {}
+        sids: list[str] = list(cfg.get("source_ids") or [])
+        if not sids:
+            sids = [str(s["id"]) for s in await self.client.list_sources(nb_id)]
+        if not sids:
+            raise ValueError(f"No sources available in notebook for {course_code}")
+        prompt = str(cfg.get("instructions") or "").strip() or None
+        fn = self._scoped_dispatch(course, nb_id, sids, prompt).get(kind)
+        if fn is None:
+            raise ValueError(f"Unsupported artifact kind: {kind}")
+        art_id = await fn()
+        return {"course_code": course_code, "kind": kind, "artifact_id": art_id, "source_count": len(sids)}

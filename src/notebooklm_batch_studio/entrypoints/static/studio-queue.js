@@ -318,6 +318,7 @@ function sourceToolbarHtml(data, code) {
     <button type="button" class="btn btn-soft btn-sm" onclick="addUrlSourceUi('${escAttr(code)}')">🌐 網址 / YouTube</button>
     <button type="button" class="btn btn-soft btn-sm" onclick="addTextSourceUi('${escAttr(code)}')">📝 貼上文字</button>
     <button type="button" class="btn btn-soft btn-sm" onclick="researchSourcesUi('${escAttr(code)}')">🔍 網路研究搜來源</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick="generateFromSelectedSourcesUi('${escAttr(code)}')">✨ 依勾選來源生成</button>
   </div>`;
 }
 
@@ -331,7 +332,8 @@ function remoteSourceRowHtml(src, code) {
   const title = src.title || src.id;
   const words = src.word_count ? `<div class="job-sub">${Number(src.word_count).toLocaleString()} 字</div>` : '';
   const matched = src.lecture_no ? `第 ${pad2(src.lecture_no)} 講・${escHtml(src.lecture_topic || '')}` : '額外來源';
-  return `<tr><td><code>${escHtml(title)}</code>${words}</td><td>${sourceStatusBadge(src.status)}</td><td>${matched}</td><td><code>${escHtml(src.id)}</code></td>
+  return `<tr><td><input type="checkbox" class="src-pick" value="${escAttr(src.id)}" aria-label="選取來源 ${escAttr(title)}"></td>
+    <td><code>${escHtml(title)}</code>${words}</td><td>${sourceStatusBadge(src.status)}</td><td>${matched}</td><td><code>${escHtml(src.id)}</code></td>
     <td><button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)" data-code="${escAttr(code)}" data-source-id="${escAttr(src.id)}" data-title="${escAttr(title)}" onclick="deleteNotebookSource(this.dataset.code, this.dataset.sourceId, this.dataset.title)">刪除</button></td></tr>`;
 }
 
@@ -346,7 +348,7 @@ function remoteSourcesTableHtml(data, code) {
   if (!data.notebook_id) return '<p class="small muted">尚未建立 Gemini Notebook 筆記本；上傳任一 PDF 或按「補傳未上傳講義」後會自動建立。</p>';
   const rows = data.sources || [];
   if (!rows.length) return '<p class="small muted">遠端筆記本目前沒有來源檔案。</p>';
-  return `<table><thead><tr><th>來源名稱</th><th>狀態</th><th>對應講次</th><th>來源 ID</th><th></th></tr></thead><tbody>
+  return `<table><thead><tr><th>選</th><th>來源名稱</th><th>狀態</th><th>對應講次</th><th>來源 ID</th><th></th></tr></thead><tbody>
     ${rows.map(s => remoteSourceRowHtml(s, code)).join('')}</tbody></table>`;
 }
 

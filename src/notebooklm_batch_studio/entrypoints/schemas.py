@@ -339,3 +339,11 @@ class ChatConfigureRequest(BaseModel):
     goal: str = "default"
     response_length: str = "default"
     custom_prompt: str | None = None
+
+
+class GenerateScopedArtifactRequest(BaseModel):
+    """Payload to generate a Studio artifact or custom report for selected sources."""
+
+    kind: str = Field(min_length=1)
+    source_ids: list[str] | None = None
+    instructions: str = ""

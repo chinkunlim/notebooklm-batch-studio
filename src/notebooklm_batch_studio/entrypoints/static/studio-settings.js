@@ -15,7 +15,7 @@ const OPTION_LABELS = {
   slide_format: ['投影片形式', { detailed_deck: '詳細版（自學）', presenter_slides: '講者版（上台）' }],
   slide_length: ['投影片長度', { default: '標準', short: '精簡' }],
   slide_download: ['投影片下載格式', { pdf: 'PDF', pptx: 'PowerPoint (PPTX)' }],
-  video_format: ['影片形式', { explainer: '講解', brief: '簡短', short: '直式短片' }],
+  video_format: ['影片形式', { explainer: '講解', brief: '簡短', short: '直式短片', cinematic: '電影感' }],
   video_style: ['影片風格', { auto_select: '自動', classic: '經典', whiteboard: '白板', kawaii: '可愛', anime: '動漫', watercolor: '水彩', retro_print: '復古印刷', heritage: '傳統', paper_craft: '紙藝' }],
   quiz_questions: ['每份測驗題數（10–60）', 'number'],
   flashcards_quantity: ['學習卡數量', { fewer: '較少', standard: '標準', more: '較多' }],

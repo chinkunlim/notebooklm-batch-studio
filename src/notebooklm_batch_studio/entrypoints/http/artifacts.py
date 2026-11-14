@@ -13,6 +13,7 @@ from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.entrypoints.schemas import (
     CinematicVideoRequest,
     ExportArtifactRequest,
+    GenerateScopedArtifactRequest,
     ReviseSlideRequest,
 )
 from notebooklm_batch_studio.services.converters.report_converter import report_to_html
@@ -390,3 +391,29 @@ async def retry_remote_artifact_endpoint(code: str, artifact_id: str, request: R
         return await _remote_admin(request).retry_remote_artifact(code, artifact_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@artifacts_router.post(
+    "/api/courses/{code}/remote-artifacts/generate",
+    tags=["Artifacts"],
+    operation_id="generate_scoped_remote_artifact",
+)
+async def generate_scoped_remote_artifact_endpoint(
+    code: str, payload: GenerateScopedArtifactRequest, request: Request
+) -> dict[str, Any]:
+    """Generate a Studio artifact or custom report scoped to selected sources.
+
+    Args:
+        code: Course identifier.
+        payload: Artifact kind, optional source_ids, and instructions.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Dictionary with created `artifact_id` and `source_count`.
+    """
+    try:
+        return await _remote_admin(request).generate_from_sources(
+            code, payload.kind, {"source_ids": payload.source_ids, "instructions": payload.instructions}
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

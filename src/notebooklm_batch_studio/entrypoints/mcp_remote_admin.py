@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from notebooklm_batch_studio.entrypoints.schemas import (
     ChatConfigureRequest,
     ExportArtifactRequest,
+    GenerateScopedArtifactRequest,
     ReviseSlideRequest,
 )
 from notebooklm_batch_studio.services.remote_admin_service import RemoteAdminService
@@ -34,6 +35,7 @@ def register_remote_extra_tools(mcp: MCPServer, service: Any) -> None:
     _reg_research_discover_tool(mcp, admin)
     _reg_research_import_tool(mcp, admin)
     _reg_chat_config_tool(mcp, admin)
+    _reg_scoped_generate_tool(mcp, admin)
 
 
 def _reg_suggest_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
@@ -310,5 +312,37 @@ def _reg_chat_config_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
             goal=settings.goal,
             response_length=settings.response_length,
             custom_prompt=settings.custom_prompt,
+        )
+        return json.dumps(res, ensure_ascii=False, indent=2)
+
+
+def _reg_scoped_generate_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
+    """Register generate_from_sources MCP tool.
+
+    Args:
+        mcp: FastMCP server instance.
+        admin: RemoteAdminService instance.
+    """
+
+    @mcp.tool()
+    async def generate_from_sources(
+        course_code: str, payload: GenerateScopedArtifactRequest, confirm: bool = False
+    ) -> str:
+        """Generate a Studio artifact or custom report for selected source IDs.
+
+        Args:
+            course_code: Course identifier.
+            payload: Artifact kind, optional source_ids, and instructions.
+            confirm: Must be True to trigger remote generation.
+
+        Returns:
+            JSON string with created artifact_id or confirmation prompt.
+        """
+        if not confirm:
+            return json.dumps({"requires_confirmation": True, "kind": payload.kind})
+        res = await admin.generate_from_sources(
+            course_code,
+            payload.kind,
+            {"source_ids": payload.source_ids, "instructions": payload.instructions},
         )
         return json.dumps(res, ensure_ascii=False, indent=2)

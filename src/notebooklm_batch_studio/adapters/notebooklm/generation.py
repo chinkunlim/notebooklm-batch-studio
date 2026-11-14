@@ -112,8 +112,8 @@ def _video_kwargs(o: GenerationOptions) -> dict[str, Any]:
     Returns:
         Keyword arguments for `generate_video`.
     """
-    if o.video_format == "short":
-        return {"video_format": VideoFormat.SHORT, "video_style": VideoStyle.AUTO_SELECT}
+    if o.video_format in ("short", "cinematic"):
+        return {"video_format": to_enum(VideoFormat, o.video_format), "video_style": VideoStyle.AUTO_SELECT}
     if o.video_style_prompt:
         return {
             "video_format": to_enum(VideoFormat, o.video_format),

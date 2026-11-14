@@ -35,6 +35,7 @@ function remoteArtifactsToolbarHtml(code) {
     <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseRemoteArtifacts('${c}')">重新整理雲端清單</button>
     <button type="button" class="btn btn-primary btn-sm" onclick="syncRemoteArtifactsNow('${c}')">同步回網頁</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="suggestRemoteReportsUi('${c}')">💡 AI 建議報告</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCustomReportUi('${c}')">📝 自訂報告</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="generateCinematicVideoUi('${c}')">🎬 生成電影感影片</button>
   </div>`;
 }
@@ -131,27 +132,33 @@ async function suggestRemoteReportsUi(code) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || res.statusText);
     const items = data.suggestions || [];
-    const text = items.length
-      ? items.map((s, i) => `${i + 1}. ${s.title} (${s.audience_level || 'general'})\n   ${s.description || ''}`).join('\n\n')
-      : '目前沒有建議報告。';
-    await askConfirm(text, { okLabel: '關閉' });
+    if (!items.length) { showToast('目前沒有建議報告', 'info'); return; }
+    const text = items.map((s, i) => `${i + 1}. ${s.title} (${s.audience_level || 'general'})\n   ${s.description || ''}`).join('\n\n');
+    const pick = window.prompt(`${text}\n\n輸入編號（1–${items.length}）即可直接生成自訂報告，留空取消：`, '');
+    const idx = Number(pick) - 1;
+    if (pick && idx >= 0 && idx < items.length) {
+      await triggerScopedGenerate(code, 'custom_report', null, items[idx].prompt || items[idx].title);
+    }
   } catch (err) {
     showToast(`取得 AI 建議報告失敗：${err.message}`, 'error');
   }
 }
 
 /**
- * Prompt for instructions and trigger cinematic video generation.
+ * Prompt for instructions and optional lecture number to trigger cinematic video generation.
  * @param {string} code Course code
  * @returns {Promise<void>} Resolves when request finishes
  */
 async function generateCinematicVideoUi(code) {
+  const lecRaw = window.prompt('要為第幾講生成電影感影片？（留空代表全課程）：', '');
+  if (lecRaw === null) return;
   const instructions = window.prompt('請輸入電影感影片的敘事風格或重點指令（可留空使用預設）：', '');
   if (instructions === null) return;
+  const lecNo = lecRaw.trim() ? Number(lecRaw.trim()) : null;
   try {
     const res = await fetch(`/api/courses/${code}/remote-artifacts/cinematic-video`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instructions: instructions.trim(), lecture_no: null }),
+      body: JSON.stringify({ instructions: instructions.trim(), lecture_no: lecNo || null }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || res.statusText);
@@ -321,4 +328,56 @@ async function importSelectedResearch(code, data) {
   if (!res.ok) throw new Error(imp.detail || res.statusText);
   showToast(`已匯入 ${imp.imported_count || found.length} 筆研究來源`, 'success', 2400);
   if (typeof loadCourseSources === 'function') await loadCourseSources(code);
+}
+
+/**
+ * Prompt for a custom report prompt and generate ReportFormat.CUSTOM.
+ * @param {string} code Course code
+ * @returns {Promise<void>} Resolves when generation request finishes
+ */
+async function generateCustomReportUi(code) {
+  const instructions = window.prompt('請輸入完全自訂報告的格式與內容指令：', '');
+  if (!instructions || !instructions.trim()) return;
+  await triggerScopedGenerate(code, 'custom_report', null, instructions.trim());
+}
+
+/**
+ * Generate a Studio artifact scoped to checked source checkboxes in the Sources tab.
+ * @param {string} code Course code
+ * @returns {Promise<void>} Resolves when generation request finishes
+ */
+async function generateFromSelectedSourcesUi(code) {
+  const picked = [...document.querySelectorAll('.src-pick:checked')].map(el => el.value);
+  if (!picked.length) { showToast('請先在來源清單勾選至少一個來源', 'info'); return; }
+  const kind = window.prompt(
+    `已選 ${picked.length} 個來源。請輸入產出類型（custom_report / audio / video / cinematic_video / infographic / slide_deck / quiz / flashcards / mind_map / data_table）：`,
+    'custom_report',
+  );
+  if (!kind || !kind.trim()) return;
+  const instructions = window.prompt('請輸入生成指令或重點（可留空）：', '');
+  if (instructions === null) return;
+  await triggerScopedGenerate(code, kind.trim(), picked, instructions.trim());
+}
+
+/**
+ * Call POST /api/courses/{code}/remote-artifacts/generate with scoped sources.
+ * @param {string} code Course code
+ * @param {string} kind Artifact kind
+ * @param {Array<string>|null} sourceIds Selected source IDs or null for all
+ * @param {string} instructions Prompt or extra instructions
+ * @returns {Promise<void>} Resolves when generation finishes
+ */
+async function triggerScopedGenerate(code, kind, sourceIds, instructions) {
+  try {
+    const res = await fetch(`/api/courses/${code}/remote-artifacts/generate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, source_ids: sourceIds, instructions }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    showToast(`已依 ${data.source_count || '全部'} 筆來源生成 ${kind} (${data.artifact_id || 'ok'})`, 'success', 2600);
+    await loadCourseRemoteArtifacts(code);
+  } catch (err) {
+    showToast(`生成失敗：${err.message}`, 'error');
+  }
 }
