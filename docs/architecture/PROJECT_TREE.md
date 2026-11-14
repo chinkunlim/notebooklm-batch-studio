@@ -564,6 +564,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-learning.js
 │       │   │   ├── studio-nav.js
 │       │   │   ├── studio-player.js
+│       │   │   ├── studio-qa-drawer.js
 │       │   │   ├── studio-queue.js
 │       │   │   ├── studio-reader.js
 │       │   │   ├── studio-settings.js
