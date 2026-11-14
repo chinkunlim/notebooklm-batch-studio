@@ -15,6 +15,7 @@ from notebooklm_batch_studio.adapters.db.models import (
     TutorMessageRecord,
     UiPreferenceRecord,
 )
+from notebooklm_batch_studio.adapters.db.notes_repository import QANoteRepository
 from notebooklm_batch_studio.adapters.db.preferences_repository import PreferencesRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
@@ -26,6 +27,7 @@ from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.preferences_service import PreferencesService
+from notebooklm_batch_studio.services.qa_notes_service import QANotesService
 from notebooklm_batch_studio.services.study_plan_service import StudyPlanDeps, StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 from tests.dummy_client import DummyStudioClient
@@ -76,6 +78,12 @@ class DummySimulationFixture(unittest.IsolatedAsyncioTestCase):
         )
         app.state.learning = LearningService(self.course_repo, self.learning_repo, self.client)
         app.state.preferences = PreferencesService(PreferencesRepository(self.session))
+        app.state.qa_notes = QANotesService(
+            self.course_repo,
+            QANoteRepository(self.session),
+            self.client,
+            self.config,
+        )
         self.http = TestClient(app)
 
     def tearDown(self) -> None:
@@ -218,6 +226,8 @@ class NaiveChaosUserJourneyTest(DummySimulationFixture):
             422,
         )
 
+        self._verify_qa_notes_workflow()
+
         # Delete leaves zero DB orphans for BIO101 while keeping global prefs (ISSUE-034)
         self.assertEqual(self.http.delete("/api/courses/BIO101").status_code, 200)
         self.assertIsNone(self.session.get(UiPreferenceRecord, "course"))
@@ -230,6 +240,58 @@ class NaiveChaosUserJourneyTest(DummySimulationFixture):
         # User can cleanly re-add the deleted folder
         self.service.add_course_folders([str(self.course_dir)], paused=True)
         self.assertEqual(len(self.http.get("/api/courses").json()), 1)
+
+    def _verify_qa_notes_workflow(self) -> None:
+        """Simulate QA ask, summarize, quiz explain save, tag search, mastery toggle, and bundle push."""
+        ask = self.http.post(
+            "/api/courses/BIO101/qa/ask",
+            json={"question": "什麼是進化論？", "lecture_no": 1},
+        )
+        self.assertEqual(ask.status_code, 200)
+        conv_id = ask.json()["conversation_id"]
+        summ = self.http.post(
+            "/api/courses/BIO101/qa/summarize",
+            json={"conversation_id": conv_id, "lecture_no": 1, "scene": "chat_drawer"},
+        )
+        self.assertEqual(summ.status_code, 200)
+        s_data = summ.json()
+        n1 = self.http.post(
+            "/api/courses/BIO101/notes",
+            json={
+                "title": s_data["title"],
+                "content_markdown": s_data["markdown"],
+                "lecture_no": 1,
+                "tags": [*s_data["tags"], "#主題/生物/進化論"],
+                "source_scene": "chat_drawer",
+            },
+        )
+        self.assertEqual(n1.status_code, 200)
+        n2 = self.http.post(
+            "/api/courses/BIO101/notes",
+            json={
+                "title": "測驗詳解：天擇",
+                "content_markdown": "## 解析\n天擇是進化論核心。",
+                "lecture_no": 1,
+                "tags": ["#主題/生物/進化論"],
+                "source_scene": "quiz_explain",
+            },
+        )
+        self.assertEqual(n2.status_code, 200)
+        found = self.http.get("/api/courses/*/notes", params={"tag": "進化論"}).json()["notes"]
+        self.assertEqual(len(found), 2)
+        nid = n1.json()["id"]
+        self.assertEqual(
+            self.http.patch(f"/api/courses/BIO101/notes/{nid}/mastery", json={"status": "mastered"}).json()[
+                "mastery_status"
+            ],
+            "mastered",
+        )
+        bundle = self.http.post(
+            "/api/courses/BIO101/notes/bundle_to_source",
+            json={"note_ids": [nid, n2.json()["id"]], "title": "進化論複習合輯"},
+        )
+        self.assertEqual(bundle.status_code, 200)
+        self.assertEqual(bundle.json()["bundled_count"], 2)
 
 
 class UiAndStaticRegressionTest(unittest.TestCase):
