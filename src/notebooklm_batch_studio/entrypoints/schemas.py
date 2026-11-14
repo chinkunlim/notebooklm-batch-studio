@@ -200,3 +200,85 @@ class UploadSourceRequest(BaseModel):
     file_path: str | None = Field(default=None, description="Local PDF file path to upload")
     filename: str | None = Field(default=None, description="Filename for browser-uploaded PDF")
     content_base64: str | None = Field(default=None, description="Base64-encoded PDF content")
+
+
+class AskQARequest(BaseModel):
+    """Payload to ask an exploratory question to Gemini Notebook.
+
+    Attributes:
+        question: Student question text.
+        lecture_no: Optional lecture sequence number to restrict context.
+        conversation_id: Optional existing conversation ID for follow-up turns.
+    """
+
+    question: str = Field(..., min_length=1, description="Question text")
+    lecture_no: int | None = Field(default=None, description="Optional lecture number filter")
+    conversation_id: str | None = Field(default=None, description="Existing conversation ID")
+
+
+class SummarizeQARequest(BaseModel):
+    """Payload to format an active NotebookLM conversation into Markdown notes.
+
+    Attributes:
+        conversation_id: Conversation ID to summarize.
+        lecture_no: Optional lecture number metadata.
+        scene: Origin context (`chat_drawer`, `study_tab`, `quiz_explain`).
+    """
+
+    conversation_id: str = Field(..., min_length=1, description="Conversation ID")
+    lecture_no: int | None = Field(default=None, description="Optional lecture number")
+    scene: str = Field(default="chat_drawer", description="Originating UI scene")
+
+
+class SaveQANoteRequest(BaseModel):
+    """Payload to create or update a saved Markdown Q&A note.
+
+    Attributes:
+        title: Note heading title.
+        content_markdown: Note Markdown body text.
+        lecture_no: Optional lecture number.
+        tags: Optional list of hierarchical tags.
+        source_scene: Originating UI scene.
+        personal_memo: Optional student reminder note.
+        note_id: Optional existing note ID to overwrite.
+    """
+
+    title: str = Field(..., min_length=1, description="Note title")
+    content_markdown: str = Field(..., min_length=1, description="Markdown content")
+    lecture_no: int | None = Field(default=None, description="Lecture sequence number")
+    tags: list[str] = Field(default_factory=list, description="Hierarchical tags")
+    source_scene: str = Field(default="chat_drawer", description="Originating scene")
+    personal_memo: str | None = Field(default=None, description="Personal reminder")
+    note_id: str | None = Field(default=None, description="Optional ID for updates")
+
+
+class MasteryUpdateRequest(BaseModel):
+    """Payload to toggle note mastery status.
+
+    Attributes:
+        status: Target status (`needs_review` or `mastered`).
+    """
+
+    status: str = Field(..., description="Target status: needs_review or mastered")
+
+
+class MemoUpdateRequest(BaseModel):
+    """Payload to update personal reminder on a Q&A note.
+
+    Attributes:
+        personal_memo: Personal annotation text.
+    """
+
+    personal_memo: str = Field(default="", description="Personal annotation text")
+
+
+class BundleNotesRequest(BaseModel):
+    """Payload to bundle multiple notes into one PDF source.
+
+    Attributes:
+        note_ids: Selected note IDs.
+        title: Bundled PDF document title.
+    """
+
+    note_ids: list[str] = Field(..., min_length=1, description="Note IDs to bundle")
+    title: str = Field(..., min_length=1, description="Bundle document title")

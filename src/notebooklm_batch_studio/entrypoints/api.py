@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from notebooklm_batch_studio.adapters.db.learning_repository import LearningRepository
+from notebooklm_batch_studio.adapters.db.notes_repository import QANoteRepository
 from notebooklm_batch_studio.adapters.db.preferences_repository import PreferencesRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
@@ -39,6 +40,7 @@ from notebooklm_batch_studio.entrypoints.http.fonts import fonts_router
 from notebooklm_batch_studio.entrypoints.http.learning import learning_router
 from notebooklm_batch_studio.entrypoints.http.plan import plan_router
 from notebooklm_batch_studio.entrypoints.http.preferences import preferences_router
+from notebooklm_batch_studio.entrypoints.http.qa_notes import qa_notes_router
 from notebooklm_batch_studio.entrypoints.http.queue import queue_router
 from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
@@ -49,6 +51,7 @@ from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.preferences_service import PreferencesService
+from notebooklm_batch_studio.services.qa_notes_service import QANotesService
 from notebooklm_batch_studio.services.study_plan_service import StudyPlanDeps, StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
@@ -321,6 +324,28 @@ def _build_preferences(cfg: AppConfig, engine: Engine | None) -> PreferencesServ
     return PreferencesService(PreferencesRepository(cast(Session, session)))
 
 
+def _build_qa_notes(service: BatchStudioService, cfg: AppConfig, engine: Engine | None) -> QANotesService:
+    """Create the Q&A notes service with request-scoped repository storage.
+
+    Args:
+        service: Orchestrator (course repository and Gemini Notebook client).
+        cfg: Application configuration.
+        engine: Shared engine, or None to open one from configured database URL.
+
+    Returns:
+        Configured QANotesService instance.
+    """
+    session = _request_scoped(
+        sessionmaker(bind=engine or create_db_engine(cfg.database_url), expire_on_commit=False)
+    )
+    return QANotesService(
+        course_repo=service.course_repo,
+        notes_repo=QANoteRepository(cast(Session, session)),
+        notebooklm_client=service.notebooklm_client,
+        config=cfg,
+    )
+
+
 def _configure_app_state(
     app: FastAPI,
     cfg: AppConfig,
@@ -341,8 +366,24 @@ def _configure_app_state(
     app.state.study_plan = study_plan or _build_study_plan(active_service, active_study, cfg, shared_engine)
     app.state.learning = _build_learning(active_service, cfg, shared_engine)
     app.state.preferences = _build_preferences(cfg, shared_engine)
+    app.state.qa_notes = _build_qa_notes(active_service, cfg, shared_engine)
     app.state.fonts = FontService(cfg.fonts_dir, GoogleFontsClient())
     app.state.config = cfg
+
+
+_API_ROUTERS = (
+    system_router,
+    courses_router,
+    artifacts_router,
+    queue_router,
+    study_router,
+    settings_router,
+    plan_router,
+    learning_router,
+    preferences_router,
+    qa_notes_router,
+    fonts_router,
+)
 
 
 def _register_routes_and_middlewares(app: FastAPI, cfg: AppConfig) -> None:
@@ -368,22 +409,12 @@ def _register_routes_and_middlewares(app: FastAPI, cfg: AppConfig) -> None:
         study_plan=app.state.study_plan,
         learning=app.state.learning,
         preferences=app.state.preferences,
+        qa_notes=app.state.qa_notes,
         fonts=app.state.fonts,
     )
     app.mount("/mcp", mcp_server.streamable_http_app())
     app.mount("/static", NoCacheStaticFiles(directory=Path(__file__).parent / "static"), name="static")
-    for router in (
-        system_router,
-        courses_router,
-        artifacts_router,
-        queue_router,
-        study_router,
-        settings_router,
-        plan_router,
-        learning_router,
-        preferences_router,
-        fonts_router,
-    ):
+    for router in _API_ROUTERS:
         app.include_router(router)
 
 

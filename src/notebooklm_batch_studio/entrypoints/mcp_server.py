@@ -15,6 +15,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 
 from notebooklm_batch_studio.adapters.db.learning_repository import LearningRepository
+from notebooklm_batch_studio.adapters.db.notes_repository import QANoteRepository
 from notebooklm_batch_studio.adapters.db.preferences_repository import PreferencesRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
@@ -30,12 +31,14 @@ from notebooklm_batch_studio.entrypoints.mcp_fonts import register_font_tools
 from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
 from notebooklm_batch_studio.entrypoints.mcp_learning import register_learning_tools
 from notebooklm_batch_studio.entrypoints.mcp_preferences import register_preferences_tools
+from notebooklm_batch_studio.entrypoints.mcp_qa_notes import register_qa_notes_tools
 from notebooklm_batch_studio.entrypoints.mcp_studio_tools import register_settings_and_study_tools
 from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
 from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.preferences_service import PreferencesService
+from notebooklm_batch_studio.services.qa_notes_service import QANotesService
 from notebooklm_batch_studio.services.study_plan_service import StudyPlanDeps, StudyPlanService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
 
@@ -406,12 +409,14 @@ def _resolve_mcp_services(
         )
         learn = overrides.get("learning") or LearningService(c_repo, LearningRepository(session), adapter)
         prefs = overrides.get("preferences") or PreferencesService(PreferencesRepository(session))
+        qa = overrides.get("qa_notes") or QANotesService(c_repo, QANoteRepository(session), adapter, cfg)
     return {
         "service": active_service,
         "study_service": active_study,
         "study_plan": plan,
         "learning": learn,
         "preferences": prefs,
+        "qa_notes": qa,
         "fonts": overrides.get("fonts"),
     }
 
@@ -462,6 +467,8 @@ def build_mcp_server(service: BatchStudioService | None = None, **services: Any)
     _register_study_aid_tools(mcp, resolved.get("study_plan"), resolved.get("learning"))
     if resolved.get("preferences") is not None:
         register_preferences_tools(mcp, resolved["preferences"])
+    if resolved.get("qa_notes") is not None:
+        register_qa_notes_tools(mcp, resolved["qa_notes"])
     register_font_tools(mcp, resolved.get("fonts") or FontService(cfg.fonts_dir, GoogleFontsClient()))
     return mcp
 

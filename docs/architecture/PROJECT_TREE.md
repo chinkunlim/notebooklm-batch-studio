@@ -306,6 +306,7 @@ notebooklm-batch-studio/
 │       │   │   ├── learning.py
 │       │   │   ├── plan.py
 │       │   │   ├── preferences.py
+│       │   │   ├── qa_notes.py
 │       │   │   ├── queue.py
 │       │   │   ├── settings.py
 │       │   │   ├── study.py
@@ -582,6 +583,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_job_prompts.py
 │       │   ├── mcp_learning.py
 │       │   ├── mcp_preferences.py
+│       │   ├── mcp_qa_notes.py
 │       │   ├── mcp_server.py
 │       │   ├── mcp_studio_tools.py
 │       │   ├── mcp_study_plan.py
@@ -652,6 +654,7 @@ notebooklm-batch-studio/
 │   ├── test_notebooklm_generation.py
 │   ├── test_port_check.py
 │   ├── test_preferences.py
+│   ├── test_qa_notes_api.py
 │   ├── test_qa_notes_db.py
 │   ├── test_qa_notes_service.py
 │   ├── test_quota_and_limits.py

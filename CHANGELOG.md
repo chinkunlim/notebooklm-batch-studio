@@ -46,6 +46,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(db): add course_qa_notes model and alembic migration (SPEC-011) (by `@antigravity`)
 - feat(adapter): add chat ask_qa protocol and dummy client support (SPEC-011) (by `@antigravity`)
 - feat(services): implement QANotesService with hierarchical tags and source bundling (SPEC-011) (by `@antigravity`)
+- feat(api,mcp): register QA and notes HTTP routes and MCP tools (SPEC-011) (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
