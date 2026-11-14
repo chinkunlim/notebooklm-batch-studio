@@ -88,6 +88,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(parser): prevent course code collision for semester-prefixed folders (ISSUE-037, TASK-020) (by `@antigravity`)
 - fix: resolve remaining issues, complete TASK-012..019, and clear all code-review-guard warnings (by `@antigravity`)
 - fix: enable manual and automatic rerun for failed artifact jobs (ISSUE-038) (by `@antigravity`)
+- fix(ui): make layout guide tags opaque and auto-stagger overlapping labels (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

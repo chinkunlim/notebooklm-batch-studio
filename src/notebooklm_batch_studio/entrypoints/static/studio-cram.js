@@ -218,11 +218,15 @@ function renderLayoutGuides() {
     return r.width > 6 && r.height > 6 && r.bottom > 0 && r.top < window.innerHeight;
   });
   const colors = { button: '#db2777', select: '#9333ea', input: '#9333ea', aside: '#2563eb', header: '#e11d48', article: '#0284c7' };
+  const placed = [];
   layer.innerHTML = els.map(el => {
     const r = el.getBoundingClientRect();
     const c = colors[el.tagName.toLowerCase()] || (el.classList.contains('gutter') ? '#e11d48' : '#0f766e');
+    let ty = 0;
+    while (placed.some(p => Math.abs(p.x - r.left) < 110 && Math.abs(p.y - (r.top + ty)) < 14)) ty += 14;
+    placed.push({ x: r.left, y: r.top + ty });
     return `<div class="lg-box" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-color:${c}">
-      <span class="lg-tag" style="background:${c}">${escHtml(guideLabelFor(el))}</span></div>`;
+      <span class="lg-tag" style="background:${c};top:${ty}px">${escHtml(guideLabelFor(el))}</span></div>`;
   }).join('');
 }
 
