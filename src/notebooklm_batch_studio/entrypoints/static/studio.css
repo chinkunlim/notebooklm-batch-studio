@@ -367,7 +367,7 @@ mark.kp.flash { background: color-mix(in srgb, var(--accent) 30%, transparent); 
   background: var(--primary); color: var(--primary-ink); box-shadow: 0 12px 32px rgba(0,0,0,.22); touch-action: none; cursor: grab;
   opacity: 0; scale: .6; pointer-events: none; transition: opacity var(--dur-slide) var(--ease), scale var(--dur-slide) var(--ease), box-shadow var(--dur-hover) var(--ease);
 }
-.side-fab.show { opacity: 1; scale: 1; pointer-events: auto; }
+.side-fab.show { display: none !important; opacity: 0; pointer-events: none; }
 .side-fab:hover { box-shadow: 0 16px 40px rgba(0,0,0,.28); }
 .side-fab.dragging { cursor: grabbing; }
 .side-fab.snapping { transition: left .45s var(--ease), top .45s var(--ease), opacity var(--dur-slide) var(--ease), scale var(--dur-slide) var(--ease); }

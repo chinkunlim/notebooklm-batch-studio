@@ -102,6 +102,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): clear sticky top offset on study-side in split mode so top edges align (by `@antigravity`)
 - fix(ui): ensure collapsed study-side remains hidden in split mode (by `@antigravity`)
 - fix(ui): scope card collapse styling to split-mode side column so stack layout stays expanded (by `@antigravity`)
+- fix(ui): hide redundant bottom-right floating side-fab button (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
