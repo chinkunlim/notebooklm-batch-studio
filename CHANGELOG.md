@@ -125,6 +125,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): attach study sticky wheel handler to #app container instead of #paneStudy (by `@antigravity`)
 - fix(ui): check #view-studio instead of nonexistent #view-study in sticky wheel and scroll clamp (by `@antigravity`)
 - fix(ui): restore #paneCourses children when switching out of split layout (by `@antigravity`)
+- fix(ui): guard missing .col-toggle in applyColumns to prevent startup crash (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

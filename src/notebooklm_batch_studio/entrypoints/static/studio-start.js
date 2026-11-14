@@ -278,6 +278,7 @@ function applyColumns(el) {
   const collapsed = load('collapse.' + k, 'false') === 'true';
   el.classList.toggle('side-collapsed', collapsed);
   const tg = $(':scope > .col-resizer .col-toggle', el);
+  if (!tg) return;
   const withPlayer = el.id === 'paneStudy' && $('#playerCard').parentElement === $('#studySide');
   const name = el.id === 'paneStudy' ? (withPlayer ? '播放器' : '右欄') : (COL_LABELS[k] || '右欄');
   const label = collapsed ? `展開${name}` : '收合右欄';
