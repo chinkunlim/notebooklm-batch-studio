@@ -180,3 +180,32 @@ function playNextCramAudio(code, audioEl) {
   audioEl.play().catch(() => {});
   showToast(`🎧 1.5× 急救連播：L${pad2(job.lecture_no || 0)}（剩餘 ${cramAudioQueue.length} 講）`, 'info', 2400);
 }
+
+/**
+ * Toggle visual layout guide outlines across the app (Cmd/Ctrl+Shift+G).
+ * @returns {void}
+ */
+function toggleLayoutGuides() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  const on = app.classList.toggle('layout-guides');
+  document.getElementById('btnLayoutGuides')?.classList.toggle('on', on);
+  let hud = document.getElementById('layoutGuideHud');
+  if (!hud) {
+    hud = document.createElement('div');
+    hud.id = 'layoutGuideHud';
+    hud.className = 'layout-guide-hud';
+    app.appendChild(hud);
+  }
+  const mode = document.querySelector('.seg[data-seg="layout"] .on')?.textContent || '—';
+  hud.innerHTML = `<span>📐 參考線：<b>藍</b>側欄 <b>紅</b>頂欄/分隔線 <b>橘</b>工具列/急救 <b>紫</b>雙欄 <b>青</b>卡片 <b>綠</b>PDF</span>
+    <span>版型：${escHtml(mode)} (${window.innerWidth}×${window.innerHeight})</span>
+    <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;padding:1px 8px" onclick="toggleLayoutGuides()">關閉</button>`;
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g') {
+    e.preventDefault();
+    toggleLayoutGuides();
+  }
+});

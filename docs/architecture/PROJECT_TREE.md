@@ -193,6 +193,8 @@ notebooklm-batch-studio/
 │   │   ├── 036-course-overall-progress-not-updating.md
 │   │   ├── 037-course-code-collision-overwrites-notebook.md
 │   │   ├── 038-failed-job-no-rerun-and-auto-retry.md
+│   │   ├── 039-ui-focus-cram-reader-polish.md
+│   │   ├── 040-ui-cram-reader-layout-controls.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

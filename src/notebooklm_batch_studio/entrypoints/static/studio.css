@@ -1212,3 +1212,18 @@ img, iframe, video, audio { max-width: 100%; }
 [data-tool][data-status="missing"]:hover { opacity: .78; }
 .study-lec-switch { display: inline-flex; align-items: center; gap: 4px; }
 .study-lec-switch select { font-size: 13px; padding: 4px 8px; max-width: 240px; }
+
+/* Layout Debug Guides (Cmd+Shift+G / 參考線按鈕) */
+.app.layout-guides .topbar { outline: 2px dashed #e11d48; outline-offset: -2px; }
+.app.layout-guides .dock { outline: 2px dashed #2563eb; outline-offset: -2px; }
+.app.layout-guides .subbar { outline: 2px dashed #d97706; outline-offset: -2px; }
+.app.layout-guides .resizable { outline: 2px dashed #7c3aed; outline-offset: -2px; }
+.app.layout-guides .resizable > .col { outline: 2px dotted #0d9488; outline-offset: -2px; }
+.app.layout-guides .gutter { background: rgba(225, 29, 72, .16) !important; outline: 1px dashed #e11d48; }
+.app.layout-guides .card { outline: 1.5px dashed #0284c7; outline-offset: -1px; }
+.app.layout-guides #cramPanel { outline: 2px dashed #ea580c; outline-offset: -2px; }
+.app.layout-guides .reader-layout { outline: 2px dashed #16a34a; outline-offset: -2px; }
+.app.layout-guides #keyPointList { outline: 2px dotted #ca8a04; outline-offset: -2px; }
+.app.layout-guides #readerPages { outline: 2px dotted #15803d; outline-offset: -2px; }
+.layout-guide-hud { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 95; background: rgba(20, 26, 23, .9); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 12px; display: none; gap: 10px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.22); pointer-events: auto; }
+.app.layout-guides .layout-guide-hud { display: inline-flex; }
