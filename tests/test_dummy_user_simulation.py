@@ -264,6 +264,8 @@ class UiAndStaticRegressionTest(unittest.TestCase):
         self.assertIn("j.status !== 'skipped'", batch_js)
         self.assertIn("retryJob(", batch_js)
         self.assertIn("retryFailedJobs(", batch_js)
+        self.assertIn("addArtifactBarHtml(", batch_js)
+        self.assertIn("addSingleArtifact(", queue_js)
         self.assertIn("/api/courses/${code}/jobs/retry-failed", queue_js)
         self.assertIn("fetchCourses()", start_js)
         self.assertIn("window.StudioBus", core_js)

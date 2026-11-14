@@ -149,6 +149,8 @@ async function saveArtifactSelection(code) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || res.statusText);
     showToast(`已儲存：新排入 ${data.queued + data.revived} 項、取消 ${data.skipped} 項尚未開始的工作。已完成的檔案都保留。`, 'success');
+    await fetchStatus();
+    await fetchCourses();
     await viewCourseDetail(code, true);
   } catch (e) {
     showToast('儲存失敗：' + e.message, 'error');

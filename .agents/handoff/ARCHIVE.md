@@ -205,3 +205,11 @@
 - **下一步**: User enables GitHub Pages (Settings -> Pages -> main /docs) to publish docs/demo/; open backlog TASK-012 (course filter) and TASK-013 (apply settings to other c
 - **交接備註**: v05 is live and pushed; 183 tests pass; demo at docs/demo/index.html verified in Chromium and WebKit
 - **本機對話紀錄**: `.agents/conversations/2026-11-02-2059-claude-code-summary.md`（只在這台電腦）
+
+### [2026-11-09 08:06 UTC] 建立任務 `TASK-014`: Fix incomplete course deletion cleanup (DB tables, preferences, and study UI state) (by `system`)
+- **狀態**: `open`
+- **相關範圍**: `src/notebooklm_batch_studio/adapters/db/repository.py, src/notebooklm_batch_studio/entrypoints/static/studio-app.js, src/notebooklm_batch_studio/entrypoints/static/studio-batch.js, src/notebooklm_batch_studio/entrypoints/static/studio-bench.js, src/notebooklm_batch_studio/entrypoints/static/studio-reader.js, src/notebooklm_batch_studio/entrypoints/static/studio.js, tests/test_course_settings.py`
+
+### [2026-11-09 08:10 UTC] 建立任務 `TASK-015`: Fix WorkerPool blocked_quota_types permanent stall on resume and empty quota_wait (by `system`)
+- **狀態**: `open`
+- **相關範圍**: `src/notebooklm_batch_studio/services/worker_pool.py, src/notebooklm_batch_studio/services/orchestrator.py, src/notebooklm_batch_studio/adapters/db/repository.py, src/notebooklm_batch_studio/domain/repositories.py, tests/test_worker_pool.py`

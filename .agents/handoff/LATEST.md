@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-14 05:18 UTC`
+- **最後更新時間**: `2026-11-14 06:10 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `8514585 fix: resolve remaining issues, complete TASK-012..019, and clear all code-review-guard warnings [agent:antigravity]`
+- **最新 Git Commit**: `6e7e87d fix: enable manual and automatic rerun for failed artifact jobs (ISSUE-038) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-14 06:10 UTC] 完成任務 `TASK-022` — Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Support adding missing artifacts per lecture or course and auto-start queue on selection save
+
+### [2026-11-14 06:08 UTC] 建立任務 `TASK-022`: Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-14 05:18 UTC] 完成任務 `TASK-021` — Fix failed artifact job manual rerun and automatic retry recovery (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -89,11 +97,3 @@
 ### [2026-11-09 09:21 UTC] 建立任務 `TASK-016`: Fix course overall output progress not updating and exclude skipped jobs from progress_percent (by `system`)
 - **狀態**: `open`
 - **相關範圍**: `src/notebooklm_batch_studio/services/orchestrator.py, src/notebooklm_batch_studio/entrypoints/static/studio-batch.js, src/notebooklm_batch_studio/entrypoints/static/studio-start.js, tests/test_course_settings.py`
-
-### [2026-11-09 08:10 UTC] 建立任務 `TASK-015`: Fix WorkerPool blocked_quota_types permanent stall on resume and empty quota_wait (by `system`)
-- **狀態**: `open`
-- **相關範圍**: `src/notebooklm_batch_studio/services/worker_pool.py, src/notebooklm_batch_studio/services/orchestrator.py, src/notebooklm_batch_studio/adapters/db/repository.py, src/notebooklm_batch_studio/domain/repositories.py, tests/test_worker_pool.py`
-
-### [2026-11-09 08:06 UTC] 建立任務 `TASK-014`: Fix incomplete course deletion cleanup (DB tables, preferences, and study UI state) (by `system`)
-- **狀態**: `open`
-- **相關範圍**: `src/notebooklm_batch_studio/adapters/db/repository.py, src/notebooklm_batch_studio/entrypoints/static/studio-app.js, src/notebooklm_batch_studio/entrypoints/static/studio-batch.js, src/notebooklm_batch_studio/entrypoints/static/studio-bench.js, src/notebooklm_batch_studio/entrypoints/static/studio-reader.js, src/notebooklm_batch_studio/entrypoints/static/studio.js, tests/test_course_settings.py`

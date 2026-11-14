@@ -295,6 +295,8 @@ function jobGroupsHtml(data, code) {
   });
   const tableHead = '<table><thead><tr><th style="width:30%">產物</th><th>版本</th><th>狀態</th><th>Prompt / 設定</th><th>檔案</th><th></th></tr></thead><tbody>';
   const groups = new Map();
+  (data.lectures || []).forEach(l => groups.set(l.no, []));
+  groups.set('course', []);
   jobs.filter(j => j.status !== 'skipped').forEach(j => {
     const key = j.lecture_no === null ? 'course' : j.lecture_no;
     if (!groups.has(key)) groups.set(key, []);
@@ -306,10 +308,12 @@ function jobGroupsHtml(data, code) {
     const attention = list.some(j => ['failed', 'needs_review'].includes(j.status));
     const busy = list.some(j => ['running', 'pending', 'quota_wait'].includes(j.status));
     const title = key === 'course' ? '整門課' : `第 ${pad2(key)} 講・${escHtml(topicOf(key))}`;
-    const badge = attention ? 'badge-danger' : done === list.length ? 'badge-success' : 'badge-warning';
+    const badge = attention ? 'badge-danger' : !list.length ? '' : done === list.length ? 'badge-success' : 'badge-warning';
+    const body = list.length ? `${tableHead}${list.map(j => jobRowHtml(j, code, versionsBySlot)).join('')}</tbody></table>` : '<p class="small muted">目前尚未排入此範圍的產出項目。</p>';
+    const addBar = typeof addArtifactBarHtml === 'function' ? addArtifactBarHtml(code, key, list) : '';
     return `<details class="job-group" ${attention || busy ? 'open' : ''}>
       <summary><span>${title}</span><span class="badge ${badge}">${done} / ${list.length} 完成${attention ? '・需處理' : ''}</span></summary>
-      <div>${tableHead}${list.map(j => jobRowHtml(j, code, versionsBySlot)).join('')}</tbody></table></div></details>`;
+      <div>${body}${addBar}</div></details>`;
   }).join('');
 }
 

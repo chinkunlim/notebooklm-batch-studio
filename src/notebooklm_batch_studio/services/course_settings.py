@@ -192,6 +192,26 @@ class CourseSettingsService:
             "mock_exam_questions": source.mock_exam_questions,
         }
 
+    def _latest_slot_job(
+        self, course_code: str, lecture_no: int | None, art_type: ArtifactType
+    ) -> ArtifactJob | None:
+        """Return the highest-version job recorded for one `(course, lecture, artifact_type)` slot.
+
+        Args:
+            course_code: Course code.
+            lecture_no: Target lecture number or None for course-wide scope.
+            art_type: Target ArtifactType enum value.
+
+        Returns:
+            Highest-version domain ArtifactJob in that slot, or None when absent.
+        """
+        slot = [
+            j
+            for j in self.queue_repo.list_jobs(course_code=course_code)
+            if j.lecture_no == lecture_no and j.artifact_type == art_type
+        ]
+        return max(slot, key=lambda j: j.version) if slot else None
+
     def _build_regenerated_job(
         self, course: Course, lecture_no: int | None, art_type: ArtifactType
     ) -> ArtifactJob:
@@ -209,12 +229,7 @@ class CourseSettingsService:
         if lecture_no is not None and lecture is None:
             raise ValueError(f"Lecture {lecture_no} not found in course {course.code}")
         version = self.queue_repo.max_version(course.code, lecture_no, art_type) + 1
-        slot = [
-            j
-            for j in self.queue_repo.list_jobs(course_code=course.code)
-            if j.lecture_no == lecture_no and j.artifact_type == art_type
-        ]
-        latest = max(slot, key=lambda j: j.version) if slot else None
+        latest = self._latest_slot_job(course.code, lecture_no, art_type)
         # Always start from the current blueprint: an older version's stored prompt may predate
         # prompt fixes (e.g. the 10-question quizzes, ISSUE-017). Edit the queued job to customize.
         topic = lecture.topic if lecture else f"{course.code} 全範圍整合"
@@ -231,7 +246,7 @@ class CourseSettingsService:
         )
 
     def regenerate(self, code: str, lecture_no: int | None, artifact_type: str) -> dict[str, Any]:
-        """Enqueue the next version of one artifact slot, keeping every older version.
+        """Enqueue the next version of one artifact slot, reviving skipped v1 jobs when present.
 
         Args:
             code: Course code.
@@ -239,16 +254,26 @@ class CourseSettingsService:
             artifact_type: Artifact type value (e.g. 'infographic').
 
         Returns:
-            Summary of the new job (id, version, label).
+            Summary of the new or revived job (id, version, label, lecture_no).
 
         Raises:
-            ValueError: When the artifact type is unknown or the lecture does not exist.
+            ValueError: When the artifact type is unknown, scope mismatches, or lecture is missing.
         """
         course = self._course(code)
         art_type = ArtifactType(artifact_type)
-        job = self._build_regenerated_job(course, lecture_no, art_type)
-        self.queue_repo.enqueue_jobs([job])
-        logger.info("Enqueued %s v%d for %s L%s", art_type.value, job.version, code, lecture_no)
+        if (lecture_no is None) != (art_type.value in COURSE_TYPES):
+            raise ValueError(f"Scope mismatch for {artifact_type} with lecture_no={lecture_no}")
+        if lecture_no is not None and not any(lec.no == lecture_no for lec in course.lectures):
+            raise ValueError(f"Lecture {lecture_no} not found in course {course.code}")
+        latest = self._latest_slot_job(code, lecture_no, art_type)
+        if latest is not None and latest.status == JobStatus.SKIPPED:
+            self.queue_repo.retry_job(latest.id)
+            logger.info("Revived skipped %s v%d for %s L%s", art_type.value, latest.version, code, lecture_no)
+            job = latest
+        else:
+            job = self._build_regenerated_job(course, lecture_no, art_type)
+            self.queue_repo.enqueue_jobs([job])
+            logger.info("Enqueued %s v%d for %s L%s", art_type.value, job.version, code, lecture_no)
         return {
             "job_id": job.id,
             "version": job.version,

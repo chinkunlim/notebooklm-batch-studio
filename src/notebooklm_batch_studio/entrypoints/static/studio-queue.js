@@ -191,3 +191,91 @@ async function resumeQuota() {
     showToast('喚醒失敗：' + e.message, 'error');
   }
 }
+
+/** Artifact choices shown when adding a missing output to one lecture or the whole course. */
+const ARTIFACT_TYPE_CHOICES = {
+  chapter: [
+    { value: 'audio', label: '語音摘要' },
+    { value: 'quiz_1', label: '測驗 1・基礎' },
+    { value: 'quiz_2', label: '測驗 2・理解' },
+    { value: 'quiz_3', label: '測驗 3・模擬考' },
+    { value: 'quiz_academic', label: '測驗・學術精研' },
+    { value: 'quiz_concept', label: '測驗・概念刷題' },
+    { value: 'flashcards', label: '閃卡' },
+    { value: 'mind_map', label: '心智圖' },
+    { value: 'infographic', label: '資訊圖表' },
+    { value: 'study_guide', label: '讀書指南' },
+    { value: 'slide_deck', label: '投影片' },
+    { value: 'data_table', label: '資料表' },
+    { value: 'video', label: '影片摘要' },
+    { value: 'reports_briefing', label: '報告・簡報文件' },
+    { value: 'reports_study_guide', label: '報告・讀書指南' },
+    { value: 'reports_blog_post', label: '報告・部落格文章' },
+    { value: 'reports_concept_explanation', label: '報告・概念解說' },
+  ],
+  course: [
+    { value: 'course_mock_exam', label: '全課程期末模擬考' },
+    { value: 'course_quiz_academic', label: '全課程・學術精研考' },
+    { value: 'course_quiz_concept', label: '全課程・概念刷題考' },
+    { value: 'course_mind_map', label: '全課程心智圖' },
+    { value: 'course_audio', label: '全課程語音摘要' },
+    { value: 'course_study_guide', label: '全課程讀書指南' },
+    { value: 'course_infographic', label: '全課程資訊圖表' },
+    { value: 'course_slide_deck', label: '全課程投影片' },
+    { value: 'course_data_table', label: '全課程資料表' },
+    { value: 'course_video', label: '全課程影片' },
+    { value: 'course_reports_briefing', label: '全課程報告・簡報文件' },
+    { value: 'course_reports_study_guide', label: '全課程報告・讀書指南' },
+    { value: 'course_reports_blog_post', label: '全課程報告・部落格文章' },
+    { value: 'course_reports_concept_explanation', label: '全課程報告・概念解說' },
+  ],
+};
+
+/**
+ * Render an inline picker to add any unqueued artifact type for one lecture or the whole course.
+ * @param {string} code Course code
+ * @param {string|number} key Group key ('course' or lecture number)
+ * @param {Array<object>} list Active (non-skipped) jobs currently in this group
+ * @returns {string} HTML snippet or empty string when all types are present
+ */
+function addArtifactBarHtml(code, key, list) {
+  const choices = key === 'course' ? ARTIFACT_TYPE_CHOICES.course : ARTIFACT_TYPE_CHOICES.chapter;
+  const existing = new Set(list.map(j => j.artifact_type));
+  const missing = choices.filter(c => !existing.has(c.value));
+  if (!missing.length) return '';
+  const opts = missing.map(c => `<option value="${c.value}">${escHtml(c.label)}</option>`).join('');
+  const lecArg = key === 'course' ? 'null' : key;
+  return `<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">
+    <select class="select" id="addArt_${escHtml(code)}_${key}" aria-label="選擇要補生成的產出">${opts}</select>
+    <button type="button" class="btn btn-soft btn-sm" onclick="addSingleArtifact('${escHtml(code)}', ${lecArg})">＋ 新增並生成</button>
+  </div>`;
+}
+
+/**
+ * Queue and start a missing artifact type for a single lecture or the whole course.
+ * @param {string} code Course code
+ * @param {number|null} lectureNo Lecture number, or null for whole course
+ * @returns {Promise<void>} Resolves after queuing
+ */
+async function addSingleArtifact(code, lectureNo) {
+  const key = lectureNo === null ? 'course' : lectureNo;
+  const select = document.getElementById(`addArt_${code}_${key}`);
+  if (!select || !select.value) return;
+  const artifactType = select.value;
+  const label = (select.options[select.selectedIndex] || {}).textContent || artifactType;
+  const scope = lectureNo === null ? '全課程' : `第 ${pad2(lectureNo)} 講`;
+  try {
+    const res = await fetch(`/api/courses/${code}/jobs/regenerate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artifact_type: artifactType, lecture_no: lectureNo }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    showToast(`已將 ${scope}「${data.label || label}」排入佇列並啟動生成`, 'success');
+    await fetchStatus();
+    await fetchCourses();
+    await viewCourseDetail(code, true);
+  } catch (e) {
+    showToast('新增產出失敗：' + e.message, 'error');
+  }
+}

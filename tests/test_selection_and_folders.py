@@ -131,6 +131,24 @@ class ArtifactSelectionTest(Fixture):
 
         back = settings.set_artifact_selection("BIO101", chapter + ["audio"], current["course"])
         self.assertEqual(back["revived"], 2)
+
+        # Removing audio again, then reviving ONLY lecture 1 leaves lecture 2 skipped.
+        settings.set_artifact_selection("BIO101", chapter, current["course"])
+        revived_l1 = settings.regenerate("BIO101", 1, "audio")
+        self.assertEqual(revived_l1["version"], 1)
+        by_lec = {
+            j.lecture_no: j
+            for j in self.queue_repo.list_jobs(course_code="BIO101")
+            if j.artifact_type == ArtifactType.AUDIO
+        }
+        self.assertEqual(by_lec[1].status, JobStatus.PENDING)
+        self.assertEqual(by_lec[2].status, JobStatus.SKIPPED)
+
+        # Adding a missing course-wide artifact creates v1 for the whole course; scope mismatches fail.
+        whole = settings.regenerate("BIO101", None, "course_audio")
+        self.assertEqual(whole["version"], 1)
+        with self.assertRaises(ValueError):
+            settings.regenerate("BIO101", 1, "course_audio")
         with self.assertRaises(ValueError):
             settings.set_artifact_selection("BIO101", ["course_audio"], [])
 
@@ -171,7 +189,7 @@ class ArtifactSelectionTest(Fixture):
         self.assertEqual(detail["progress_percent"], 100.0)
 
     def test_http_and_mcp(self) -> None:
-        """GET/PUT /api/courses/{code}/artifact-types and the MCP tool need confirm to change."""
+        """GET/PUT /api/courses/{code}/artifact-types and the MCP tool start queue when adding."""
         http = TestClient(
             create_app(config=self.config, service=self.service, study_service=mock.MagicMock())
         )
@@ -179,6 +197,11 @@ class ArtifactSelectionTest(Fixture):
         self.assertIn("video", [c["value"] for c in data["choices"]["chapter"]])
         bad = http.put("/api/courses/BIO101/artifact-types", json={"chapter": ["nope"], "course": []})
         self.assertEqual(bad.status_code, 422)
+        with mock.patch.object(self.service, "start_queue") as start_spy:
+            added = http.put("/api/courses/BIO101/artifact-types", json={"chapter": ["video"], "course": []})
+            self.assertEqual(added.status_code, 200)
+            self.assertEqual(added.json()["queued"], 2)
+            start_spy.assert_called_once()
         mcp = build_mcp_server(service=self.service, study_service=mock.MagicMock(), config=self.config)
         tool = mcp._tool_manager._tools["set_course_artifact_types"].fn  # type: ignore[attr-defined]
         self.assertFalse(json.loads(tool("BIO101", ["audio"], []))["confirmed"])

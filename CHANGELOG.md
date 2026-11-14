@@ -41,6 +41,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(web): sidebar notch and circle slide as one piece, icons stay still (by `@claude-code`)
 - feat(web): pomodoro in the sidebar with habits, weekday calendar, course picker, exam date via course settings (by `@claude-code`)
 - feat(demo): standalone GitHub Pages demo with fictional BIO101 data (by `@claude-code`)
+- feat(ui,settings): support adding missing artifacts per lecture or course (TASK-022) (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

@@ -93,11 +93,11 @@ def _regenerate_artifact_payload(
         warning = "Set confirm=True to enqueue; this spends Gemini Notebook quota."
         return json.dumps({"confirmed": False, "warning": warning}, ensure_ascii=False)
     try:
-        return json.dumps(
-            active_service.course_settings.regenerate(code, lecture_no, artifact_type), ensure_ascii=False
-        )
+        res = active_service.course_settings.regenerate(code, lecture_no, artifact_type)
     except Exception as exc:
         return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    active_service.start_queue()
+    return json.dumps(res, ensure_ascii=False)
 
 
 def _set_artifact_types_payload(
@@ -122,9 +122,11 @@ def _set_artifact_types_payload(
         )
     try:
         result = active_service.course_settings.set_artifact_selection(code, chapter, course)
-        return json.dumps(result, ensure_ascii=False)
     except Exception as exc:
         return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    if result.get("queued", 0) + result.get("revived", 0) > 0:
+        active_service.start_queue()
+    return json.dumps(result, ensure_ascii=False)
 
 
 def _register_study_tools(mcp: MCPServer, active_study: StudyTrackerService) -> None:
