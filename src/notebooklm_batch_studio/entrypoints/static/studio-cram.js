@@ -335,6 +335,13 @@ document.addEventListener('click', e => {
   }
 });
 
+// Prevent background page scrolling while lecture or course dropdown menu is open.
+document.addEventListener('wheel', e => {
+  const openMenu = document.querySelector('.lec-pick.open .lec-pop, .course-pick.open .cp-pop');
+  if (!openMenu) return;
+  if (!e.target.closest('.lec-pop, .cp-pop')) e.preventDefault();
+}, { passive: false });
+
 /**
  * Toggle collapse/expand of the study right column via the existing col-toggle button.
  * @returns {void}

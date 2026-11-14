@@ -106,7 +106,6 @@
 
   <div class="main">
     <header class="topbar">
-      <button type="button" class="btn btn-soft focus-exit" id="focusExit" aria-label="離開專注" title="離開專注 (Esc)"><i class="icon-minimize-2"></i></button>
       <button class="brand" id="brandHome" title="回到研讀總覽">
         <span class="brand-title"><span class="brand-long">Gemini Notebook </span>學習工作室</span>
         <span class="brand-sub" id="pageName">研讀總覽</span>
@@ -121,6 +120,7 @@
         <div class="cp-pop" id="coursePop" role="listbox" aria-label="研讀課程"></div>
       </div>
       <button type="button" class="qa-toggle-btn" id="qaDrawerToggleBtn" onclick="toggleQaDrawer()" title="開啟 Gemini Notebook 探索提問 (⌘J)">💬 探索提問 <kbd>⌘J</kbd></button>
+      <button type="button" class="btn btn-soft focus-exit" id="focusExit" aria-label="離開專注" title="離開專注 (Esc)"><i class="icon-minimize"></i></button>
       <div class="status" aria-label="系統狀態" aria-live="polite">
         <span id="authBadge" data-state=""><i class="dot"></i>檢查登入中</span>
         <span id="queueBadge" data-state="">佇列讀取中</span>
@@ -227,7 +227,7 @@
                 <div class="lec-pop" id="lecPop" role="listbox" aria-label="研讀章節"></div>
               </div>
               <button type="button" class="lec-step-btn" id="studyNextLecBtn" onclick="stepStudyLecture(1)" title="下一講" aria-label="下一講"><i class="icon-chevron-right"></i></button>
-              <button type="button" class="cram-toggle-btn" id="cramModeBtn" onclick="toggleCramMode()" aria-pressed="false" title="考前急救模式：依弱項排序、指定章節生成急救包、錯題筆記連刷與倍速語音連播"><span class="cram-dot"></span><span>🔥 考前急救</span><span class="cram-state" id="cramModeState">OFF</span></button>
+              <button type="button" class="cram-toggle-btn" id="cramModeBtn" onclick="toggleCramMode()" aria-pressed="false" title="考前急救模式：依弱項排序、指定章節生成急救包、錯題筆記連刷與倍速語音連播"><span class="cram-dot"></span><span>🔥 考前急救包</span><span class="cram-state" id="cramModeState">OFF</span></button>
             </div>
           </div>
           <div class="subbar-group">
@@ -280,12 +280,9 @@
           <div class="study-main" id="studyMain"></div>
           <div class="col-resizer" role="separator" aria-orientation="vertical" aria-label="拖曳調整欄寬，按兩下還原" tabindex="0"><button class="col-toggle" aria-label="收合右欄"><i class="icon-panel-right-close"></i></button></div>
           <aside class="study-side side-col" id="studySide">
-            <div class="side-col-bar" id="sideColBar">
-              <span class="eyebrow">右側面板</span>
-              <button type="button" class="side-collapse-btn" id="sideCollapseBtn" onclick="toggleStudySideCollapse()" title="收合右側欄位"><i class="icon-panel-right-close"></i><span>收合右欄</span></button>
-            </div>
+            <button type="button" class="side-collapse-btn" id="sideCollapseBtn" onclick="toggleStudySideCollapse()" title="收合右側欄位" aria-label="收合右側欄位"><i class="icon-chevron-right"></i></button>
           </aside>
-          <button type="button" class="side-expand-btn" id="sideExpandBtn" onclick="toggleStudySideCollapse()" title="展開右側欄位"><i class="icon-panel-right-open"></i><span>展開右欄</span></button>
+          <button type="button" class="side-expand-btn" id="sideExpandBtn" onclick="toggleStudySideCollapse()" title="展開右側欄位" aria-label="展開右側欄位"><i class="icon-chevron-left"></i></button>
         </div>
 
         <div hidden id="studyParts">

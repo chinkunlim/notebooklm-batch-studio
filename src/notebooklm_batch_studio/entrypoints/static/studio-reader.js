@@ -82,7 +82,7 @@ async function loadReader() {
   const no = activeStudyLectureNo;
   const pdfUrl = `/api/courses/${encodeURIComponent(code)}/lectures/${no}/source.pdf`;
   renderReaderShell(box, code, no, pdfUrl);
-  await loadKeyPoints(code, no);
+  loadKeyPoints(code, no);
   try {
     const doc = await pdfjsLib.getDocument(pdfUrl).promise;
     if (token !== reader.token) return;
@@ -95,7 +95,7 @@ async function loadReader() {
 }
 
 /**
- * Load the saved key points and draw the side list (with a button to generate them when missing).
+ * Load the saved key points and draw the side list (auto-generates in background when missing).
  * @param {string} code Course code
  * @param {number} no Lecture number
  * @returns {Promise<void>}
@@ -112,7 +112,7 @@ async function loadKeyPoints(code, no) {
   const key = `${code}:${no}`;
   if (!reader.points.length && !reader.autoTried.has(key)) {
     reader.autoTried.add(key);
-    await generateKeyPoints(false, true);
+    generateKeyPoints(false, true);
   }
   if (!list) return;
 }
