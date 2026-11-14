@@ -152,6 +152,44 @@ class NotebookLMAdapter(ArtifactOperationsMixin, ArtifactDownloadsMixin):
         return str(result.answer), result.conversation_id
 
     @_translate_errors
+    async def ask_qa(
+        self,
+        notebook_id: str,
+        question: str,
+        source_ids: list[str] | None = None,
+        conversation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask a question grounded in sources and return answer, conversation_id, and references.
+
+        Args:
+            notebook_id: Notebook identifier.
+            question: Question text.
+            source_ids: Limit to these sources (None = all).
+            conversation_id: Conversation to continue, or None to start one.
+
+        Returns:
+            Dictionary containing `answer`, `conversation_id`, and `references`.
+        """
+        async with self._client() as client:
+            result = await client.chat.ask(
+                notebook_id, question, source_ids=source_ids, conversation_id=conversation_id
+            )
+        refs: list[dict[str, Any]] = []
+        for r in getattr(result, "references", None) or []:
+            refs.append(
+                {
+                    "source_id": str(getattr(r, "source_id", "")),
+                    "citation_number": getattr(r, "citation_number", None),
+                    "cited_text": str(getattr(r, "cited_text", "") or ""),
+                }
+            )
+        return {
+            "answer": str(result.answer),
+            "conversation_id": result.conversation_id,
+            "references": refs,
+        }
+
+    @_translate_errors
     async def find_notebook_by_title(self, title: str) -> str | None:
         """Find an existing notebook whose title matches exactly (most recent first).
 

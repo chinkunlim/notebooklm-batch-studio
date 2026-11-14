@@ -175,6 +175,26 @@ class TestNotebookLMAdapter(unittest.IsolatedAsyncioTestCase):
 
         client.sources.delete.assert_awaited_once_with("nb-1", "src-1")
 
+    async def test_ask_qa_returns_answer_and_references(self) -> None:
+        """Verify ask_qa extracts answer, conversation_id, and serialized chat references."""
+        fake_ref = SimpleNamespace(source_id="src-1", citation_number=1, cited_text="關鍵段落")
+        fake_res = SimpleNamespace(answer="答案內容", conversation_id="conv-9", references=[fake_ref])
+        client = SimpleNamespace(chat=SimpleNamespace(ask=mock.AsyncMock(return_value=fake_res)))
+        with mock.patch.object(self.adapter, "_client", return_value=self._mock_async_client(client)):
+            res = await self.adapter.ask_qa(
+                "nb-1", "什麼是光反應?", source_ids=["src-1"], conversation_id=None
+            )
+
+        client.chat.ask.assert_awaited_once_with(
+            "nb-1", "什麼是光反應?", source_ids=["src-1"], conversation_id=None
+        )
+        self.assertEqual(res["answer"], "答案內容")
+        self.assertEqual(res["conversation_id"], "conv-9")
+        self.assertEqual(
+            res["references"],
+            [{"source_id": "src-1", "citation_number": 1, "cited_text": "關鍵段落"}],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -262,6 +262,43 @@ class DummyStudioClient(NotebookLMClientProtocol):
         cid = conversation_id or self._next_id("conv")
         return f"針對「{question}」的引導提示：先回顧細胞膜結構。", cid
 
+    async def ask_qa(
+        self,
+        notebook_id: str,
+        question: str,
+        source_ids: list[str] | None = None,
+        conversation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Return a dummy Q&A answer with conversation_id and citations.
+
+        Args:
+            notebook_id: Notebook identifier.
+            question: Question text.
+            source_ids: Optional source filters.
+            conversation_id: Existing conversation identifier.
+
+        Returns:
+            Dictionary with `answer`, `conversation_id`, and `references`.
+        """
+        cid = conversation_id or self._next_id("conv")
+        self.calls.append(f"ask_qa:{notebook_id}:{cid}")
+        if "Markdown" in question and "規格" in question:
+            answer = (
+                "# 核心觀念總結\n\n"
+                "> 標籤：#主題/核心概念/重點解析\n\n"
+                "## 核心結論（TL;DR）\n這是一個模擬整理後的核心結論。\n\n"
+                "## 深度重點解析\n- 要點一：結構化說明。\n- 要點二：關鍵辨析。\n\n"
+                "## 隨堂記憶卡\nQ: 核心重點為何？\nA: 結構化知識與關鍵辨析。\n"
+            )
+        else:
+            answer = f"針對「{question}」的深入解析：此概念與課程講義第 1 節核心原理相符。"
+        src_ref = source_ids[0] if source_ids else "src-dummy-1"
+        return {
+            "answer": answer,
+            "conversation_id": cid,
+            "references": [{"source_id": src_ref, "citation_number": 1, "cited_text": "講義原文節錄"}],
+        }
+
     async def generate_audio(self, notebook_id: str, source_ids: list[str], **_: Any) -> str:
         """Generate dummy audio id."""
         return self._next_id("aud")

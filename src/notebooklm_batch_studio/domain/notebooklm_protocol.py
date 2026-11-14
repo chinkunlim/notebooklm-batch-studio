@@ -55,6 +55,26 @@ class NotebookLMClientProtocol(Protocol):
         """
         ...
 
+    async def ask_qa(
+        self,
+        notebook_id: str,
+        question: str,
+        source_ids: list[str] | None = None,
+        conversation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask a question grounded in sources and return answer, conversation_id, and references.
+
+        Args:
+            notebook_id: Notebook identifier.
+            question: Question text.
+            source_ids: Limit to these sources (None = all).
+            conversation_id: Conversation to continue, or None to start one.
+
+        Returns:
+            Dictionary with `answer`, `conversation_id`, and `references` list.
+        """
+        ...
+
     async def find_notebook_by_title(self, title: str) -> str | None:
         """Find an existing notebook whose title matches exactly.
 
