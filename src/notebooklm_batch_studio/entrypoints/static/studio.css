@@ -1217,6 +1217,31 @@ img, iframe, video, audio { max-width: 100%; }
   transition: border-color var(--dur-hover) var(--ease), box-shadow var(--dur-hover) var(--ease);
 }
 .qa-select:hover, .qa-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.qa-pick { position: relative; flex: 1; min-width: 0; }
+.qa-pick-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; height: 32px;
+  padding: 0 10px 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); font-family: var(--font-sans); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  transition: border-color var(--dur-hover) var(--ease), box-shadow var(--dur-hover) var(--ease);
+}
+.qa-pick-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.qa-pick-btn [class^="icon-"] { font-size: 14px; color: var(--muted); flex: none; transition: transform var(--dur-hover) var(--ease); }
+.qa-pick-btn:hover, .qa-pick.open .qa-pick-btn { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.qa-pick.open .qa-pick-btn [class^="icon-"] { transform: rotate(180deg); }
+.qa-pop {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 90; min-width: 100%; width: max-content; max-width: min(380px, calc(100vw - 32px));
+  max-height: 260px; overflow-y: auto; padding: 6px; border-radius: var(--radius-m); background: var(--surface);
+  border: 1px solid var(--line); box-shadow: var(--shadow); display: none; flex-direction: column; gap: 2px;
+}
+.qa-pick.open .qa-pop { display: flex; }
+.qa-pop-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left;
+  padding: 7px 10px; border-radius: 8px; font-size: 13px; color: var(--ink); cursor: pointer;
+  transition: background var(--dur-hover) var(--ease), color var(--dur-hover) var(--ease);
+}
+.qa-pop-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qa-pop-item:hover { background: var(--surface-2); }
+.qa-pop-item.on { background: var(--accent-soft); color: var(--primary); font-weight: 600; }
 .qa-drawer-msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--canvas); }
 .qa-msg { padding: 10px 13px; border-radius: var(--radius-m); font-size: 14px; line-height: 1.6; max-width: 94%; word-break: break-word; }
 .qa-msg.user { align-self: flex-end; background: var(--primary); color: var(--primary-ink); }

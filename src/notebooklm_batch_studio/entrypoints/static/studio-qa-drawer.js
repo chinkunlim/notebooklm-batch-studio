@@ -44,7 +44,61 @@ function syncQaScopeOptions() {
   if (typeof activeStudyLectureNo !== 'undefined' && activeStudyLectureNo !== null) {
     select.value = String(activeStudyLectureNo);
   }
+  syncQaPicker(select);
 }
+
+/**
+ * Sync or build the custom pill dropdown (.qa-pick) for a QA drawer <select>.
+ * @param {HTMLSelectElement|null} select Native select element to mirror
+ * @returns {void}
+ */
+function syncQaPicker(select) {
+  if (!select) return;
+  let wrap = select.closest('.qa-pick');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.className = 'qa-pick';
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(select);
+    select.classList.add('sr-only');
+    select.tabIndex = -1;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'qa-pick-btn';
+    btn.innerHTML = '<span></span><i class="icon-chevron-down"></i>';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const wasOpen = wrap.classList.contains('open');
+      document.querySelectorAll('#qaDrawer .qa-pick.open').forEach(p => p.classList.remove('open'));
+      if (!wasOpen) wrap.classList.add('open');
+    });
+    const pop = document.createElement('div');
+    pop.className = 'qa-pop';
+    pop.setAttribute('role', 'listbox');
+    wrap.append(btn, pop);
+  }
+  const activeOpt = select.options[select.selectedIndex] || select.options[0];
+  wrap.querySelector('.qa-pick-btn span').textContent = activeOpt ? activeOpt.textContent : '';
+  const pop = wrap.querySelector('.qa-pop');
+  pop.innerHTML = Array.from(select.options).map(o => {
+    const on = o.value === select.value ? ' on' : '';
+    return `<button type="button" class="qa-pop-item${on}" role="option" aria-selected="${o.value === select.value}" data-val="${escHtml(o.value)}"><span>${escHtml(o.textContent)}</span>${on ? '<i class="icon-circle-check" style="font-size:14px;flex:none"></i>' : ''}</button>`;
+  }).join('');
+  pop.querySelectorAll('.qa-pop-item').forEach(item => item.addEventListener('click', e => {
+    e.stopPropagation();
+    select.value = item.dataset.val;
+    wrap.classList.remove('open');
+    syncQaPicker(select);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }));
+}
+
+document.querySelectorAll('#qaDrawer select.qa-select').forEach(syncQaPicker);
+document.addEventListener('click', e => {
+  if (!(e.target instanceof Element && e.target.closest('.qa-pick'))) {
+    document.querySelectorAll('#qaDrawer .qa-pick.open').forEach(p => p.classList.remove('open'));
+  }
+});
 
 /**
  * Resolve the currently selected lecture number in the Q&A drawer, or null for all.

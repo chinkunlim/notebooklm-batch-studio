@@ -58,6 +58,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(ui): render labeled bounding boxes for every layout container and button in layout guides (by `@antigravity`)
 - feat(ui): click any layout guide box to copy its element label (by `@antigravity`)
 - feat(ui): switch studioPane catalog/study in right column only and add sticky wheel handoff to 12px (by `@antigravity`)
+- feat(ui): replace native QA drawer select menus with custom .qa-pick/.qa-pop popovers (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
