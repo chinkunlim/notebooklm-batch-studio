@@ -214,7 +214,7 @@ def build() -> Path:
         Returns:
             Inline script HTML.
         """
-        name = match.group(2)
+        name = match.group(2).split("?", 1)[0]
         code = (STATIC / name).read_text(encoding="utf-8")
         if match.group(1):  # the reader module: pdf.js from the CDN, PDFs from the page
             code = code.replace("/static/vendor/pdfjs/pdf.min.mjs", f"{PDFJS}/build/pdf.min.mjs")

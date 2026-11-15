@@ -159,6 +159,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): toggle mindmap collapse, align tutor top, and stretch flashcard, quiz, and qa-notes containers (by `@antigravity`)
 - fix(ui): anchor split-stage bottom-right primary buttons consistently (by `@antigravity`)
 - fix(ui): fix currentStudyLectureNo undefined error and tablet reader toolbar overlap (by `@Antigravity`)
+- fix(ui): bust Safari static cache for reader JS/CSS and strip query in build_demo (by `@Antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
