@@ -457,12 +457,6 @@ function initStudyStickyWheel() {
     }
     if (e.deltaY < 0 && !canInnerScroll(e.target, -1) && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
   }, { passive: false });
-  window.addEventListener('scroll', () => {
-    const target = pane.dataset.layout === 'split' ? pane : (pane.dataset.layout === 'stack' ? document.querySelector('#bench .bench-stage') : null);
-    if (!target || !document.getElementById('view-studio')?.classList.contains('on') || pane.hidden) return;
-    const top = target.getBoundingClientRect().top;
-    if (top < 11.5) window.scrollTo(window.scrollX, Math.max(0, Math.round(window.scrollY + top - 12)));
-  }, { passive: true });
 }
 
 /**

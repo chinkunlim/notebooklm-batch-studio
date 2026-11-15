@@ -347,17 +347,35 @@ async function renderCsvTableHtml(dl) {
 
 /**
  * Send a control command to the embedded mind map iframe.
- * @param {string} cmd Command name (zoomOut, fit, zoomIn, expandAll, toggleOutline)
+ * @param {string} cmd Command name (zoomOut, fit, zoomIn, expandAll, toggleOutline, setTemplate)
  * @param {HTMLElement} [btn] Optional button whose active state toggles
+ * @param {string} [value] Optional command payload (such as template id)
  */
-function sendMindmapCmd(cmd, btn) {
+function sendMindmapCmd(cmd, btn, value) {
   const frame = document.querySelector('#reportContentContainer iframe.report-frame');
-  if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'mindmap-cmd', cmd }, '*');
+  if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'mindmap-cmd', cmd, value }, '*');
   if (cmd === 'toggleOutline' && btn) btn.classList.toggle('on');
   if (cmd === 'expandAll' && btn) {
     const on = btn.classList.toggle('on');
     btn.textContent = on ? '收合節點' : '全部展開';
   }
+}
+
+/**
+ * Render mind map template selector and zoom/outline buttons into the panel header.
+ * @param {HTMLElement} kindBox Left-hand toolbar container
+ */
+function renderMindmapTools(kindBox) {
+  kindBox.innerHTML = `
+    <select class="reader-pill-btn" aria-label="心智圖模板" onchange="sendMindmapCmd('setTemplate', this, this.value)">
+      <option value="tree-right">橫向樹狀</option><option value="tree-bilateral">雙向放射</option>
+      <option value="org-down">由上而下</option><option value="dark">深色夜讀</option>
+    </select>
+    <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomOut')" aria-label="縮小">－</button>
+    <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('fit')">適應畫面</button>
+    <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomIn')" aria-label="放大">＋</button>
+    <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('expandAll', this)">全部展開</button>
+    <button type="button" class="reader-pill-btn" id="mmOutlineBtn" onclick="sendMindmapCmd('toggleOutline', this)">大綱文字</button>`;
 }
 
 /**
@@ -383,14 +401,7 @@ async function loadReportInViewer(kind) {
   const code = currentStudyCourse.code, path = job.rel_path || job.output_file.split('/').pop(), enc = encodeURI(path);
   const dl = `/api/artifacts/${code}/download/${enc}`, readable = ['guide', 'concept'].includes(kind) && activeStudyLectureNo !== null;
   const ext = path.split('.').pop().toLowerCase();
-  if (kind === 'mindmap' && ['json', 'opml'].includes(ext)) {
-    kindBox.innerHTML = `
-      <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomOut')" aria-label="縮小">－</button>
-      <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('fit')">適應畫面</button>
-      <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomIn')" aria-label="放大">＋</button>
-      <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('expandAll', this)">全部展開</button>
-      <button type="button" class="reader-pill-btn" id="mmOutlineBtn" onclick="sendMindmapCmd('toggleOutline', this)">大綱文字</button>`;
-  }
+  if (kind === 'mindmap' && ['json', 'opml'].includes(ext)) renderMindmapTools(kindBox);
   const metaHtml = `<span class="tag">v${job.version || 1}</span>${job.status === 'needs_review' ? '<span class="tag warn">需審查</span>' : ''}
     <a class="reader-pill-btn" href="${dl}" target="_blank" rel="noopener">新分頁 / 下載</a>${readable ? `<button type="button" class="reader-pill-btn" onclick="markStep('guide')">我讀完了</button>` : ''}`;
   if (metaBar) metaBar.innerHTML = metaHtml;

@@ -605,6 +605,7 @@ notebooklm-batch-studio/
 │       │   │   ├── flashcard_converter.py
 │       │   │   ├── image_fitter.py
 │       │   │   ├── mindmap_converter.py
+│       │   │   ├── mindmap_template.py
 │       │   │   ├── note_pdf_renderer.py
 │       │   │   ├── pdf_renderer.py
 │       │   │   ├── quiz_converter.py

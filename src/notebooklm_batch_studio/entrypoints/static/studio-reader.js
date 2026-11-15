@@ -66,6 +66,35 @@ function renderReaderShell(box, code, no, pdfUrl) {
   if (typeof initReaderSplitter === 'function') initReaderSplitter(code, no);
   if (typeof renderReaderBookmarks === 'function') renderReaderBookmarks(code, no);
   if (typeof hookPdfSelectionHighlight === 'function') hookPdfSelectionHighlight(() => ({ code, no }));
+  hookReaderPinchZoom(document.getElementById('readerPages'));
+}
+
+/**
+ * Enable two-finger pinch-to-zoom inside the PDF reader without zooming the whole browser page.
+ * @param {HTMLElement | null} pagesEl Scrollable PDF pages container
+ * @returns {void}
+ */
+function hookReaderPinchZoom(pagesEl) {
+  if (!pagesEl || pagesEl.dataset.pinchHooked) return;
+  pagesEl.dataset.pinchHooked = '1';
+  let d0 = 0, ratio = 1;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => pagesEl.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+  pagesEl.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = dist(e.touches); ratio = 1; } }, { passive: true });
+  pagesEl.addEventListener('touchmove', e => {
+    if (e.touches.length !== 2 || !d0) return;
+    e.preventDefault();
+    ratio = Math.min(2.2, Math.max(0.6, dist(e.touches) / d0));
+    pagesEl.style.transformOrigin = 'center top';
+    pagesEl.style.transform = `scale(${ratio})`;
+  }, { passive: false });
+  ['touchend', 'touchcancel'].forEach(ev => pagesEl.addEventListener(ev, () => {
+    if (!d0) return;
+    pagesEl.style.transform = '';
+    const delta = Math.round(reader.scale * ratio * 20) / 20 - reader.scale;
+    d0 = 0; ratio = 1;
+    if (Math.abs(delta) >= 0.05) readerZoom(delta);
+  }, { passive: true }));
 }
 
 /**
