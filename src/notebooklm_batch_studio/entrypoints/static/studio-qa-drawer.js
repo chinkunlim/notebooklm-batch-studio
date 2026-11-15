@@ -161,6 +161,26 @@ function resetQaConversation() {
 }
 
 /**
+ * Post a single Q&A question to the backend and return parsed response JSON.
+ * @param {string} question User question text
+ * @returns {Promise<object>} Backend answer payload
+ */
+async function postQaAsk(question) {
+  const res = await fetch(`/api/courses/${currentStudyCourse.code}/qa/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      question,
+      lecture_no: selectedQaLectureNo(),
+      conversation_id: qaState.conversationId,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || res.statusText);
+  return data;
+}
+
+/**
  * Send the user's question in the Q&A drawer to the backend.
  * @returns {Promise<void>} Resolves when the answer is rendered
  */
@@ -177,24 +197,12 @@ async function sendQaQuestion() {
   input.value = '';
   renderQaMessages();
   try {
-    const res = await fetch(`/api/courses/${currentStudyCourse.code}/qa/ask`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        question,
-        lecture_no: selectedQaLectureNo(),
-        conversation_id: qaState.conversationId,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || res.statusText);
+    const data = await postQaAsk(question);
     qaState.conversationId = data.conversation_id || qaState.conversationId;
     qaState.messages.push({
-      role: 'ai',
-      question,
-      text: data.answer || '',
-      references: data.references || [],
+      role: 'ai', question, text: data.answer || '', references: data.references || [],
     });
+    if (typeof window.registerQaCitations === 'function') window.registerQaCitations(data.references || []);
   } catch (err) {
     qaState.messages.push({ role: 'ai', text: `⚠️ 提問失敗：${err.message}`, references: [], error: true });
   } finally {
@@ -248,6 +256,10 @@ function jumpToQaCitation(msgIdx, refIdx) {
   const msg = qaState.messages[msgIdx];
   const ref = msg?.references?.[refIdx];
   if (!ref) return;
+  if (typeof window.highlightQaCitationInPdf === 'function' && ref.cited_text) {
+    window.highlightQaCitationInPdf(ref.cited_text);
+    return;
+  }
   const pageMatch = String(ref.cited_text || '').match(/(?:p\.?|page|第)\s*(\d+)/i);
   if (pageMatch && typeof window.jumpToPdfPage === 'function') {
     window.jumpToPdfPage(Number(pageMatch[1]));

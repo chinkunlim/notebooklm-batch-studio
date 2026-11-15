@@ -55,7 +55,7 @@ function renderReaderShell(box, code, no, pdfUrl) {
         <button type="button" class="reader-pill-btn" id="readerToggleCommentsBtn" onclick="toggleReaderComments('${escHtml(code)}',${no})">收合重點</button>
       </div>
       <div class="reader-legend">
-        <span class="kp-dot kp-i3"></span>必考核心 <span class="kp-dot kp-i2"></span>重要概念 <span class="kp-dot kp-i1"></span>補充 <span class="kp-dot kp-i4"></span>個人標記
+        <span class="kp-dot kp-i3"></span>必考核心 <span class="kp-dot kp-i2"></span>重要概念 <span class="kp-dot kp-i1"></span>補充 <span class="kp-dot kp-i4"></span>個人標記 <span class="kp-dot kp-i5"></span>提問引用
       </div>
     </div>
     <div class="reader-layout">
@@ -350,22 +350,24 @@ function highlightPage(n) {
   const holder = document.getElementById(`readerPage-${n}`);
   const divs = holder && holder._textDivs;
   if (!divs || !divs.length) return;
-  divs.forEach(d => d.classList.remove('kp-hl', 'kp-i1', 'kp-i2', 'kp-i3', 'kp-i4'));
+  divs.forEach(d => d.classList.remove('kp-hl', 'kp-i1', 'kp-i2', 'kp-i3', 'kp-i4', 'kp-i5'));
   // Concatenate the page text and remember where each text piece starts and ends. A word hyphenated
   // at a line end ("mar-" + "riage") is joined, so quotes match the way Gemini Notebook writes them.
   const { text, starts, ends } = collectPageText(divs);
   const userPts = (typeof loadReaderLocal === 'function' && currentStudyCourse)
     ? loadReaderLocal(currentStudyCourse.code, activeStudyLectureNo).userHighlights : [];
-  [...reader.points, ...userPts].forEach((p, i) => {
+  const qaPts = Array.isArray(window._qaCitationHighlights) ? window._qaCitationHighlights : [];
+  [...reader.points, ...userPts, ...qaPts].forEach((p, i) => {
     if (p.foundOn && p.foundOn !== n) return;
     if (i >= reader.points.length && p.page && p.page !== n) return;
     const quote = norm(p.quote);
+    if (!quote) return;
     let at = text.indexOf(quote);
     let len = quote.length;
     if (at < 0 && quote.length > 30) { at = text.indexOf(quote.slice(0, 30)); len = 30; }
     if (at < 0) return;
     let firstHit = true;
-    const anchorId = i < reader.points.length ? String(i) : `u_${p.id}`;
+    const anchorId = i < reader.points.length ? String(i) : (p.id ? `u_${p.id}` : `qa_${i}`);
     divs.forEach((d, k) => {
       if (ends[k] > at && starts[k] < at + len) {
         d.classList.add('kp-hl', `kp-i${p.importance || 2}`);
@@ -377,6 +379,8 @@ function highlightPage(n) {
       p.foundOn = n;
       const item = document.getElementById(`kpItem-${i}`);
       if (item) { item.classList.add('found'); item.dataset.pdfPage = String(n); }
+    } else if (p.importance === 5 && !p.foundOn) {
+      p.foundOn = n;
     }
   });
   if (typeof syncActivePageComments === 'function') syncActivePageComments(typeof readerCurrentPage === 'number' ? readerCurrentPage : 1);
@@ -488,12 +492,7 @@ function cycleReaderZoom() {
 }
 
 Object.assign(window, {
-  loadReader,
-  stopReader,
-  generateKeyPoints,
-  jumpToPoint,
-  readerZoom,
-  cycleReaderZoom,
-  renderKeyPointList,
-  highlightPage,
+  loadReader, stopReader, generateKeyPoints, jumpToPoint, readerZoom,
+  cycleReaderZoom, renderKeyPointList, highlightPage,
+  getReaderDoc: () => reader.doc, normPdfText: norm,
 });

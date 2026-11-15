@@ -568,6 +568,20 @@
             </details>
           </article>
 
+          <article class="card" id="hlColorsCard" style="grid-column:1/-1">
+            <div class="card-head">
+              <h2 class="h2">講義螢光筆顏色</h2>
+              <button type="button" class="btn btn-soft btn-sm" id="btnResetHlColors">恢復預設顏色</button>
+            </div>
+            <div class="hl-color-grid">
+              <label class="hl-color-item"><span><i class="kp-dot kp-i3"></i> 必考核心</span><input type="color" id="hlColor-i3" data-hl-key="i3" value="#e8b83c" aria-label="必考核心螢光筆顏色"></label>
+              <label class="hl-color-item"><span><i class="kp-dot kp-i2"></i> 重要概念</span><input type="color" id="hlColor-i2" data-hl-key="i2" value="#2e6f5b" aria-label="重要概念螢光筆顏色"></label>
+              <label class="hl-color-item"><span><i class="kp-dot kp-i1"></i> 補充</span><input type="color" id="hlColor-i1" data-hl-key="i1" value="#6366f1" aria-label="補充螢光筆顏色"></label>
+              <label class="hl-color-item"><span><i class="kp-dot kp-i4"></i> 個人標記</span><input type="color" id="hlColor-i4" data-hl-key="i4" value="#e11d48" aria-label="個人標記螢光筆顏色"></label>
+              <label class="hl-color-item"><span><i class="kp-dot kp-i5"></i> 提問引用</span><input type="color" id="hlColor-i5" data-hl-key="i5" value="#0284c7" aria-label="提問引用螢光筆顏色"></label>
+            </div>
+          </article>
+
           <article class="card" id="habitCard">
             <div class="card-head"><h2 class="h2">專注習慣</h2><span class="eyebrow">番茄鐘</span></div>
             <div class="settings-grid">
@@ -898,6 +912,7 @@
 <script src="/static/studio-player.js"></script>
 <script src="/static/studio-bench.js"></script>
 <script src="/static/studio-fonts.js"></script>
+<script src="/static/studio-hl-colors.js"></script>
 <script src="/static/studio-focus.js"></script>
 <script src="/static/studio-start.js"></script>
 <script src="/static/studio-reader-notes.js"></script>

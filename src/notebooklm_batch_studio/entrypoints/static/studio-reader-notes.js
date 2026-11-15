@@ -331,11 +331,78 @@ function hookPdfSelectionHighlight(getCtx) {
   });
 }
 
+/**
+ * Register Q&A citation snippets so rendered lecture PDF pages highlight them in the citation color.
+ * @param {Array<{cited_text?: string}>} refs Reference items from Q&A response
+ * @returns {void}
+ */
+function registerQaCitations(refs) {
+  if (!Array.isArray(refs) || !refs.length) return;
+  const list = Array.isArray(window._qaCitationHighlights) ? window._qaCitationHighlights : [];
+  refs.forEach((r, idx) => {
+    const raw = String(r?.cited_text || '').replace(/^\[\d+\]\s*/, '').trim();
+    if (raw.length < 6) return;
+    if (list.some(x => x.quote === raw)) return;
+    const pgMatch = raw.match(/(?:p\.?|page|第)\s*(\d+)/i);
+    list.push({ id: `qa-${Date.now()}-${idx}`, quote: raw, page: pgMatch ? Number(pgMatch[1]) : 0, importance: 5 });
+  });
+  window._qaCitationHighlights = list;
+  document.querySelectorAll('.reader-page[data-rendered="1"]').forEach(el => {
+    if (typeof highlightPage === 'function') highlightPage(Number(el.dataset.page));
+  });
+}
+
+/**
+ * Find a Q&A citation snippet inside the open lecture PDF, jump to its page, and highlight it.
+ * @param {string} citedText Cited passage from Q&A reference
+ * @returns {Promise<void>}
+ */
+async function highlightQaCitationInPdf(citedText) {
+  const raw = String(citedText || '').replace(/^\[\d+\]\s*/, '').trim();
+  if (!raw) return;
+  if (typeof selectBenchItem === 'function') selectBenchItem('lecture');
+  registerQaCitations([{ cited_text: raw }]);
+  const doc = typeof window.getReaderDoc === 'function' ? window.getReaderDoc() : null;
+  const normFn = typeof window.normPdfText === 'function' ? window.normPdfText : s => String(s).toLowerCase().trim();
+  const needle = normFn(raw).slice(0, 26);
+  const pgHint = raw.match(/(?:p\.?|page|第)\s*(\d+)/i);
+  let targetPage = pgHint ? Number(pgHint[1]) : 0;
+  if (doc && needle.length >= 6) {
+    const total = doc.numPages || 0;
+    const order = [];
+    if (targetPage >= 1 && targetPage <= total) order.push(targetPage);
+    for (let p = 1; p <= total; p += 1) if (p !== targetPage) order.push(p);
+    for (const n of order) {
+      const pg = await doc.getPage(n);
+      const tc = await pg.getTextContent();
+      const txt = normFn(tc.items.map(it => it.str).join(' ')).replace(/-\s+/g, '');
+      if (txt.includes(needle)) { targetPage = n; break; }
+    }
+  }
+  const entry = (window._qaCitationHighlights || []).find(x => x.quote === raw);
+  if (entry && targetPage) { entry.page = targetPage; entry.foundOn = targetPage; }
+  if (targetPage && typeof jumpToReaderPage === 'function') {
+    jumpToReaderPage(targetPage);
+    setTimeout(() => {
+      if (typeof highlightPage === 'function') highlightPage(targetPage);
+      const pageEl = document.getElementById(`readerPage-${targetPage}`);
+      const hits = pageEl ? pageEl.querySelectorAll('.kp-hl.kp-i5') : [];
+      if (hits.length) {
+        hits[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        hits.forEach(el => { el.classList.remove('kp-flash'); void el.offsetWidth; el.classList.add('kp-flash'); });
+      }
+    }, 260);
+    return;
+  }
+  if (typeof showToast === 'function') showToast(`引用內容：${raw.slice(0, 140)}`, 'info', 4000);
+}
+
 Object.assign(window, {
   loadReaderLocal,
   saveReaderLocal,
   updateReaderPageTracking,
   jumpToReaderPage,
+  jumpToPdfPage: jumpToReaderPage,
   jumpToLastReadPage,
   toggleReaderBookmark,
   renderReaderBookmarks,
@@ -347,4 +414,6 @@ Object.assign(window, {
   initReaderSplitter,
   deleteUserPdfHighlight,
   hookPdfSelectionHighlight,
+  registerQaCitations,
+  highlightQaCitationInPdf,
 });
