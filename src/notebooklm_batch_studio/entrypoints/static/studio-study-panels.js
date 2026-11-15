@@ -354,6 +354,10 @@ function sendMindmapCmd(cmd, btn) {
   const frame = document.querySelector('#reportContentContainer iframe.report-frame');
   if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'mindmap-cmd', cmd }, '*');
   if (cmd === 'toggleOutline' && btn) btn.classList.toggle('on');
+  if (cmd === 'expandAll' && btn) {
+    const on = btn.classList.toggle('on');
+    btn.textContent = on ? '收合節點' : '全部展開';
+  }
 }
 
 /**
@@ -384,7 +388,7 @@ async function loadReportInViewer(kind) {
       <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomOut')" aria-label="縮小">－</button>
       <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('fit')">適應畫面</button>
       <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomIn')" aria-label="放大">＋</button>
-      <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('expandAll')">全部展開</button>
+      <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('expandAll', this)">全部展開</button>
       <button type="button" class="reader-pill-btn" id="mmOutlineBtn" onclick="sendMindmapCmd('toggleOutline', this)">大綱文字</button>`;
   }
   const metaHtml = `<span class="tag">v${job.version || 1}</span>${job.status === 'needs_review' ? '<span class="tag warn">需審查</span>' : ''}

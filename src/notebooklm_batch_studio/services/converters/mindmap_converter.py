@@ -186,7 +186,6 @@ _MINDMAP_HTML_CSS = """
   }
   html.embedded .bar { display: none; }
   html.embedded .stage, html.embedded .outline { height: 100%; }
-  }
   .outline.on { display: block; }
   .stage.off { display: none; }
   .outline ul { padding-left: 22px; margin: 4px 0; }
@@ -337,20 +336,32 @@ _MINDMAP_HTML_JS = """
     document.getElementById('btnOutline').classList.toggle('on', on);
     return on;
   };
+  let allExpanded = false;
+  const toggleExpandAll = () => {
+    allExpanded = !allExpanded;
+    const walk = n => {
+      n.collapsed = allExpanded ? false : (n.depth >= 2 && n.children.length > 0);
+      n.children.forEach(walk);
+    };
+    walk(ROOT);
+    const b = document.getElementById('btnExpandAll');
+    if (b) {
+      b.textContent = allExpanded ? '收合節點' : '全部展開';
+      b.classList.toggle('on', allExpanded);
+    }
+    fitView();
+  };
   document.getElementById('btnZoomIn').onclick = () => zoomBy(1.18);
   document.getElementById('btnZoomOut').onclick = () => zoomBy(1 / 1.18);
   document.getElementById('btnFit').onclick = fitView;
-  document.getElementById('btnExpandAll').onclick = () => {
-    const openAll = n => { n.collapsed = false; n.children.forEach(openAll); };
-    openAll(ROOT); fitView();
-  };
+  document.getElementById('btnExpandAll').onclick = toggleExpandAll;
   document.getElementById('btnOutline').onclick = () => toggleOutline();
   window.addEventListener('message', e => {
     if (!e.data || e.data.type !== 'mindmap-cmd') return;
     if (e.data.cmd === 'zoomIn') zoomBy(1.18);
     else if (e.data.cmd === 'zoomOut') zoomBy(1 / 1.18);
     else if (e.data.cmd === 'fit') fitView();
-    else if (e.data.cmd === 'expandAll') document.getElementById('btnExpandAll').click();
+    else if (e.data.cmd === 'expandAll') toggleExpandAll();
     else if (e.data.cmd === 'toggleOutline') toggleOutline();
   });
   let drag = null;
