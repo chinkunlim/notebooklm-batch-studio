@@ -55,6 +55,14 @@ function applyFontChoices() {
   // 跟著介面風格: headings use the body font, or Noto Serif in the 編輯典藏 style
   if (head.id === 'auto') root.style.removeProperty('--font-head'); else root.style.setProperty('--font-head', fontStack(head));
   renderFontControls();
+  if (typeof sendMindmapCmd === 'function') {
+    const hrefs = [...document.querySelectorAll('link[id^="font-css-"], link[href*="noto-"]')].map(l => l.href);
+    sendMindmapCmd('applyFont', null, {
+      body: fontStack(body),
+      head: head.id === 'auto' ? '' : fontStack(head),
+      hrefs,
+    });
+  }
 }
 
 /**

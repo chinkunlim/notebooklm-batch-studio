@@ -63,15 +63,51 @@ _MINDMAP_HTML_JS = """
   const stage = document.getElementById('stage');
   const outlineEl = document.getElementById('outline');
   let pan = { x: 40, y: 40, scale: 1 };
+  const DEFAULT_FONT = '-apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif';
+  let mmFontBody = DEFAULT_FONT;
+  let mmFontHead = DEFAULT_FONT;
 
-  function measureText(str, fontSize) {
+  function applyUserFonts(cfg) {
+    if (!cfg) return;
+    if (Array.isArray(cfg.hrefs)) {
+      cfg.hrefs.forEach(href => {
+        if (!href || document.querySelector(`link[href="${href}"]`)) return;
+        const ln = document.createElement('link');
+        ln.rel = 'stylesheet'; ln.href = href;
+        document.head.appendChild(ln);
+      });
+    }
+    if (cfg.body) mmFontBody = cfg.body;
+    mmFontHead = cfg.head || mmFontBody;
+    document.body.style.fontFamily = mmFontBody;
+    const h1 = outlineEl.querySelector('h1');
+    if (h1) h1.style.fontFamily = mmFontHead;
+    render();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => { render(); fitView(); });
+    }
+  }
+  function syncParentFonts() {
+    try {
+      if (!window.parent || window.parent === window) return;
+      const pdoc = window.parent.document;
+      const ps = window.parent.getComputedStyle(pdoc.documentElement);
+      const body = ps.getPropertyValue('--font-sans').trim();
+      const head = ps.getPropertyValue('--font-head').trim();
+      const hrefs = [...pdoc.querySelectorAll('link[id^="font-css-"], link[href*="noto-"]')]
+        .map(l => l.href);
+      if (body || head || hrefs.length) applyUserFonts({ body, head, hrefs });
+    } catch (e) {}
+  }
+
+  function measureText(str, fontSize, isHead) {
     const c = measureText.ctx || (measureText.ctx = document.createElement('canvas').getContext('2d'));
-    c.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "PingFang TC", sans-serif`;
+    c.font = `600 ${fontSize}px ${isHead ? mmFontHead : mmFontBody}`;
     return Math.min(260, Math.max(68, Math.ceil(c.measureText(str).width) + 28));
   }
-  function wrapLabel(str, maxW, fontSize) {
+  function wrapLabel(str, maxW, fontSize, isHead) {
     const c = measureText.ctx || (measureText.ctx = document.createElement('canvas').getContext('2d'));
-    c.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "PingFang TC", sans-serif`;
+    c.font = `600 ${fontSize}px ${isHead ? mmFontHead : mmFontBody}`;
     const lines = []; let cur = '';
     for (const ch of str) {
       if (c.measureText(cur + ch).width > maxW - 24 && cur) { lines.push(cur); cur = ch; }
@@ -187,8 +223,8 @@ _MINDMAP_HTML_JS = """
     const { nodes } = collect(ROOT);
     const fCfg = FONTS[styleCfg.fontSize] || FONTS.md;
     nodes.forEach(n => {
-      const fs = n.depth === 0 ? fCfg.root : fCfg.leaf;
-      n.fs = fs; n.w = measureText(n.label, fs); n.lines = wrapLabel(n.label, n.w, fs);
+      const fs = n.depth === 0 ? fCfg.root : fCfg.leaf, isHead = n.depth === 0;
+      n.fs = fs; n.w = measureText(n.label, fs, isHead); n.lines = wrapLabel(n.label, n.w, fs, isHead);
       n.h = Math.max(36, n.lines.length * (fs + 5) + 18); n.dir = 1;
     });
     if (styleCfg.layout === 'org-down') { layoutOrgW(ROOT); assignOrgPos(ROOT, 0, 0); return; }
@@ -305,6 +341,7 @@ _MINDMAP_HTML_JS = """
         txt.setAttribute('x', n.x + 12);
         txt.setAttribute('y', n.y + 18 + idx * (n.fs + 5));
         txt.setAttribute('font-size', n.fs);
+        txt.setAttribute('font-family', n.depth === 0 ? mmFontHead : mmFontBody);
         txt.setAttribute('font-weight', n.depth <= 1 ? '600' : '500');
         txt.setAttribute('fill', n.depth === 0 ? '#ffffff' : th.text);
         txt.textContent = ln;
@@ -369,7 +406,8 @@ _MINDMAP_HTML_JS = """
       b.textContent = allExpanded ? '收合節點' : '全部展開';
       b.classList.toggle('on', allExpanded);
     }
-    fitView();
+    syncParentFonts();
+  fitView();
   };
   const applyStyle = (partial, refit = true) => {
     const prevLayout = styleCfg.layout;
@@ -412,6 +450,7 @@ _MINDMAP_HTML_JS = """
     else if (e.data.cmd === 'toggleOutline') toggleOutline();
     else if (e.data.cmd === 'setTemplate') setTemplate(e.data.value);
     else if (e.data.cmd === 'applyStyle') applyStyle(e.data.value, true);
+    else if (e.data.cmd === 'applyFont') applyUserFonts(e.data.value);
     else if (e.data.cmd === 'exportSvg') exportSvg();
   });
   const pts = new Map();
@@ -455,5 +494,6 @@ _MINDMAP_HTML_JS = """
       e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.08 : 0.92);
     }
   }, { passive: false });
+  syncParentFonts();
   fitView();
 """

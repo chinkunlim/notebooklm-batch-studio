@@ -65,6 +65,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(ui): apply unified stage toolbars, heights, and button alignment to tablet and mobile layouts (by `@antigravity`)
 - feat(ui): add mindmap templates, iPad pinch-to-zoom for PDF and mindmap, and fix sticky scroll jump (by `@antigravity`)
 - feat(ui): add customizable mindmap designer with themes, shapes, connectors, and SVG export (by `@antigravity`)
+- feat(ui): sync user-configured body and heading fonts to mindmap renderer (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
