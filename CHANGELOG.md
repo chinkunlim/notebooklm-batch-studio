@@ -70,6 +70,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(ui): add mindmap preset preview, highlight preview, PDF night/filter modes, and selection/source actions (by `@antigravity`)
 - feat: add starter habit presets, multi-select tool/AI prefs, and optional web search in Q&A (by `@antigravity`)
 - feat: add optional reverse import from Gemini Notebook and full local file download (by `@antigravity`)
+- feat(ui): add full-path breadcrumb layout guides, WYSIWYG layout tune mode, and template feedback (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

@@ -11,3 +11,7 @@
 | 2026-11-01 | setup_env.py 的 check_dependencies 應利用 IMPORT_HINTS 比對 PyPI 映射名稱（如 PIL -> Pillow），避免誤判未宣告第三方套件 | TASK-009 | 待決定 |
 | 2026-11-01 | 埠號改以 `00 init_dev_env/PORTS.md` 為全機唯一總表：`LOCAL_AI_ENVIRONMENT.md` 指向它；新專案從「下一個可用的埠號」取號並回填；伺服器啟動前檢查埠號，被占用時列出佔用的程式並停止 | 使用者：「port number 似乎會衝突，是不是要記錄在開發環境裡面」 | 待決定 |
 | 2026-11-01 | 有網頁的專案都附一鍵開啟的 macOS App（雙擊後，服務沒開就在背景啟動，再用 Chrome `--app` 全螢幕開啟，沒有網址列） | 使用者：「有沒有可能可以直接點擊打開，方便使用者？」 | 待決定 |
+| 2026-11-15 | 網頁開發流程固定順序：「設計風格與理念對齊 (`DESIGN.md`) → 實作功能（HTTP / MCP / Web UI 同步）→ 桌面 / 平板 / 手機三視口自適應檢查（不強制固定特定版型）→ 參考線與排版對齊 → 動畫/過渡一致性審查（同類功能必須一致、節奏溫潤不急促）→ `design_audit.py` + `agentctl check`」 | 網頁設計與功能反覆打磨經驗 | 待決定 |
+| 2026-11-15 | 網頁介面內建「完整階層路徑參考線（Breadcrumb Layout Guides）」：點擊框線應複製含視口與父層的完整路徑（如 `[desktop 1440px] section#view-study > div#splitStage > div#panelReports > button (112x32)`），而非只有最內層 child 名稱，讓 Agent 一次精準定位 | 使用者：「目前參考線只有 child 名字，分析時還要花時間找」 | 待決定 |
+| 2026-11-15 | 同類 UI 元件必須維持動畫、語彙與自動化互動習慣一致性：(1) 同一設計語彙（純文字膠囊、不混入 emoji）；(2) 所有同類元件（彈窗、抽屜、Popover、分頁切換）共用統一 CSS Motion Tokens（`--dur-hover` / `--dur-slide` / `--ease`）；(3) 跨專案通用的自動化互動習慣（如標準化的 Expand / Collapse 展開收合邏輯與浮動還原按鈕）應模組化複用 | 使用者：「動畫要統一、版位顧慮桌面/平板/手機，expand/collapse 等自動化習慣可複用」 | 待決定 |
+| 2026-11-15 | 複雜版面支援「使用者直接拖動／拉動微調（Layout Tune Mode）」：依 桌面 / 平板 / 手機 視口各自記憶拖拉尺寸（自動吸附 8px 網格），並可一鍵複製微調規格（Copy Layout Diff）給 Agent，取代純靠文字反覆描述排版細節 | 使用者：「有些用文字描述，還不如使用者拖动、拉动等直接调整」 | 待決定 |

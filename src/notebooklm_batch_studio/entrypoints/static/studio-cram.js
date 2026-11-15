@@ -248,7 +248,8 @@ function renderLayoutGuides() {
     while (placed.some(p => Math.abs(p.x - r.left) < 110 && Math.abs(p.y - (r.top + ty)) < 14)) ty += 14;
     placed.push({ x: r.left, y: r.top + ty });
     const label = guideLabelFor(el);
-    return `<div class="lg-box" data-label="${escHtml(label)}" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-color:${c}">
+    const fullPath = guideFullPathFor(el);
+    return `<div class="lg-box" data-label="${escHtml(label)}" data-full-path="${escHtml(fullPath)}" style="left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-color:${c}">
       <span class="lg-tag" style="background:${c};top:${ty}px">${escHtml(label)}</span></div>`;
   }).join('');
 }
@@ -269,8 +270,9 @@ function toggleLayoutGuides() {
     hud.className = 'layout-guide-hud';
     app.appendChild(hud);
   }
-  const mode = document.querySelector('.seg[data-seg="layout"] .on')?.textContent || '—';
-  hud.innerHTML = `<span>參考線｜點擊任意框線即可複製名稱（${escHtml(mode)} ${window.innerWidth}×${window.innerHeight}）</span>
+  const vp = guideViewportBucket();
+  hud.innerHTML = `<span>參考線｜點擊框線複製完整路徑（${escHtml(vp)} ${window.innerWidth}×${window.innerHeight}）</span>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnTuneMode" style="color:#fff;padding:1px 8px" onclick="if(typeof toggleLayoutTuneMode==='function')toggleLayoutTuneMode()">拖曳微調</button>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;padding:1px 8px" onclick="toggleLayoutGuides()">關閉</button>`;
   if (!layoutGuidesHooked) {
     layoutGuidesHooked = true;
@@ -314,12 +316,12 @@ function copyGuideLabelAt(e) {
   });
   if (!hits.length) return;
   hits.sort((a, b) => (a.offsetWidth * a.offsetHeight) - (b.offsetWidth * b.offsetHeight));
-  const label = hits[0].dataset.label || '';
-  if (!label) return;
+  const fullPath = hits[0].dataset.fullPath || hits[0].dataset.label || '';
+  if (!fullPath) return;
   e.preventDefault();
   e.stopPropagation();
-  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(label).catch(() => {});
-  showToast(`已複製：${label}`, 'info', 2200);
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(fullPath).catch(() => {});
+  showToast(`已複製完整路徑：${fullPath}`, 'info', 2600);
 }
 
 document.addEventListener('keydown', e => {
