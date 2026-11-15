@@ -46,7 +46,7 @@ function renderQaNotesPanel() {
   const tagCloud = renderNotesTagCloud();
   const cards = qaNotesState.notes.length
     ? qaNotesState.notes.map(n => renderOneNoteCard(n)).join('')
-    : '<div class="empty-state">目前沒有符合條件的筆記。可按 <b>⌘J</b> 提問後一鍵整理，或在測驗解析點「📥 收錄為問答筆記」。</div>';
+    : '<div class="empty-state">目前沒有符合條件的筆記。可按 <b>⌘J</b> 提問後一鍵整理，或在測驗解析點「收錄為問答筆記」。</div>';
   container.innerHTML = `${head ? '' : toolbar}${tagCloud}<div id="qaNotesList">${cards}</div>`;
 }
 
@@ -65,7 +65,7 @@ function renderNotesToolbar() {
       <option value="needs_review" ${qaNotesState.masteryFilter === 'needs_review' ? 'selected' : ''}>待加強</option>
       <option value="mastered" ${qaNotesState.masteryFilter === 'mastered' ? 'selected' : ''}>已搞懂</option>
     </select>
-    <button type="button" class="reader-pill-btn" ${count ? '' : 'disabled'} onclick="bundleSelectedNotesToSource()">📦 打包勾選 (${count})</button>
+    <button type="button" class="reader-pill-btn" ${count ? '' : 'disabled'} onclick="bundleSelectedNotesToSource()">打包勾選 (${count})</button>
   </div>`;
 }
 
@@ -93,7 +93,7 @@ function renderOneNoteCard(note) {
   const checked = qaNotesState.selectedIds.has(note.id) ? 'checked' : '';
   const lecLabel = note.lecture_no ? `L${String(note.lecture_no).padStart(2, '0')}` : '全課程';
   const nextStatus = note.mastery_status === 'mastered' ? 'needs_review' : 'mastered';
-  const masteryLabel = note.mastery_status === 'mastered' ? '✅ 已搞懂' : '🔥 待加強';
+  const masteryLabel = note.mastery_status === 'mastered' ? '已搞懂' : '待加強';
   const sourceBadge = note.is_uploaded_as_source ? '<span class="tag ok">已回灌來源</span>' : '';
   const tagsHtml = (note.tags || []).map(t => `<button type="button" class="qa-tag-pill" onclick="selectNotesTagPill('${escHtml(t)}')">${escHtml(t)}</button>`).join('');
   return `<article class="qa-note-card" data-note-id="${escHtml(note.id)}">

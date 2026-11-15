@@ -210,7 +210,7 @@ function renderCurrentFlashcard() {
       <div class="flashcard" id="studyFlash" onclick="toggleFlipCard()" role="button" tabindex="0" aria-label="翻面">
         <div class="flashcard-inner" id="flashcardInner">
           <div class="face">${escHtml(card.front)}</div>
-          <div class="face back"><span>${escHtml(card.back)}${card.source ? `<button type="button" class="face-source" style="cursor:pointer;text-decoration:underline;background:none;border:0;color:inherit;font:inherit;display:block;margin-top:8px" data-src="${escHtml(card.source)}" onclick="event.stopPropagation();if(typeof highlightQaCitationInPdf==='function')highlightQaCitationInPdf(this.dataset.src)">📖 出處：${escHtml(card.source)}</button>` : ''}</span></div>
+          <div class="face back"><span>${escHtml(card.back)}${card.source ? `<button type="button" class="face-source" style="cursor:pointer;text-decoration:underline;background:none;border:0;color:inherit;font:inherit;display:block;margin-top:8px" data-src="${escHtml(card.source)}" onclick="event.stopPropagation();if(typeof highlightQaCitationInPdf==='function')highlightQaCitationInPdf(this.dataset.src)">出處：${escHtml(card.source)}</button>` : ''}</span></div>
         </div>
       </div>
       <div class="row" style="justify-content:space-between;flex-wrap:wrap">

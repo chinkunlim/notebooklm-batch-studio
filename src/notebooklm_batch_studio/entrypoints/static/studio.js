@@ -383,7 +383,7 @@ async function loadSavedExplanations() {
 function explanationBox(html, savedAt, askAgain) {
   const when = savedAt ? new Date(savedAt).toLocaleString('zh-TW', { dateStyle: 'short', timeStyle: 'short' }) : '';
   return `<div class="explain-box"><div class="explain-head">Gemini Notebook 解釋${when ? `（已儲存 ${escHtml(when)}）` : ''}
-    <span class="row" style="gap:8px"><button class="link-btn" onclick="collectExplanationAsNote(this)">📥 收錄為問答筆記</button><button class="link-btn" onclick="${askAgain}">重新問</button></span></div>${html}</div>`;
+    <span class="row" style="gap:8px"><button class="link-btn" onclick="collectExplanationAsNote(this)">收錄為問答筆記</button><button class="link-btn" onclick="${askAgain}">重新問</button></span></div>${html}</div>`;
 }
 
 /**

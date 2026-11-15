@@ -144,6 +144,6 @@ function wizardGo(step) {
 /* Every remaining alert() becomes a non-blocking toast; the type follows the message. */
 window.alert = message => {
   const text = String(message);
-  const type = /失敗|錯誤|error/i.test(text) ? 'error' : /✅|成功|已/.test(text) ? 'success' : 'info';
+  const type = /失敗|錯誤|error/i.test(text) ? 'error' : /成功|已/.test(text) ? 'success' : 'info';
   showToast(text, type);
 };

@@ -34,10 +34,10 @@ function remoteArtifactsToolbarHtml(code) {
   return `<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center">
     <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseRemoteArtifacts('${c}')">重新整理雲端清單</button>
     <button type="button" class="btn btn-primary btn-sm" onclick="syncRemoteArtifactsNow('${c}')">同步回網頁</button>
-    <button type="button" class="btn btn-soft btn-sm" onclick="downloadAllCourseFilesNow('${c}')">📥 下載全部來源與產出到本地</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="suggestRemoteReportsUi('${c}')">💡 AI 建議報告</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCustomReportUi('${c}')">📝 自訂報告</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCinematicVideoUi('${c}')">🎬 生成電影感影片</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="downloadAllCourseFilesNow('${c}')">下載全部來源與產出到本地</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="suggestRemoteReportsUi('${c}')">AI 建議報告</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCustomReportUi('${c}')">自訂報告</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCinematicVideoUi('${c}')">生成電影感影片</button>
   </div>`;
 }
 
@@ -68,12 +68,12 @@ function remoteArtifactRowHtml(art, code) {
   const scope = art.lecture_no ? `L${pad2(art.lecture_no)}` : (art.artifact_type ? '全課程' : '—');
   const kind = String(art.kind || art.artifact_type || '').toLowerCase();
   const attrs = `data-code="${escAttr(code)}" data-id="${escAttr(art.id)}" data-title="${escAttr(title)}" data-kind="${escAttr(kind)}"`;
-  const slideBtn = kind.includes('slide') ? `<button type="button" class="btn btn-ghost btn-sm" ${attrs} onclick="reviseRemoteSlideUi(this)">✏️ 微調投影片</button>` : '';
-  const expBtn = (kind.includes('report') || kind.includes('table')) ? `<button type="button" class="btn btn-ghost btn-sm" ${attrs} onclick="exportRemoteArtifactUi(this)">📤 匯出 Docs/Sheets</button>` : '';
+  const slideBtn = kind.includes('slide') ? `<button type="button" class="btn btn-ghost btn-sm" ${attrs} onclick="reviseRemoteSlideUi(this)">微調投影片</button>` : '';
+  const expBtn = (kind.includes('report') || kind.includes('table')) ? `<button type="button" class="btn btn-ghost btn-sm" ${attrs} onclick="exportRemoteArtifactUi(this)">匯出 Docs/Sheets</button>` : '';
   return `<tr><td><code>${escHtml(title)}</code><div class="job-sub">${scope}</div></td>
     <td>${escHtml(art.kind || art.artifact_type || '—')}</td><td>${badge}</td><td><code>${escHtml(art.id)}</code></td>
     <td class="row" style="gap:4px;flex-wrap:wrap">${slideBtn}${expBtn}
-      <button type="button" class="btn btn-ghost btn-sm" ${attrs} onclick="retryRemoteArtifactUi(this)">🔄 遠端重試</button>
+      <button type="button" class="btn btn-ghost btn-sm" ${attrs} onclick="retryRemoteArtifactUi(this)">遠端重試</button>
       <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)" ${attrs}
         data-active="${art.is_latest_active ? '1' : '0'}" data-ver="${escAttr(ver)}"
         onclick="deleteRemoteArtifactUi(this)">刪除</button></td></tr>`;

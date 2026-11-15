@@ -47,15 +47,15 @@ function renderReaderShell(box, code, no, pdfUrl) {
         <button type="button" class="reader-zoom-pill" id="readerZoomLabel" onclick="cycleReaderZoom()" title="點擊切換 小(125%) / 中 / 大(200%)">${Math.round(reader.scale * 100)}%</button>
         <button class="icon-btn" onclick="readerZoom(0.15)" aria-label="放大"><i class="icon-zoom-in"></i></button>
         <a class="reader-pill-btn" href="${pdfUrl}" target="_blank" rel="noopener">新分頁開啟</a>
-        <button type="button" class="reader-pill-btn" id="readerResumeBtn" onclick="jumpToLastReadPage('${escHtml(code)}',${no})">📍 續讀 p.${st.lastPage || 1}</button>
+        <button type="button" class="reader-pill-btn" id="readerResumeBtn" onclick="jumpToLastReadPage('${escHtml(code)}',${no})">續讀 p.${st.lastPage || 1}</button>
         <div class="bm-pick" id="bmPick">
-          <button type="button" class="reader-pill-btn" onclick="toggleReaderBookmark('${escHtml(code)}',${no})" title="將目前頁面加入或移除書籤">🔖 加書籤</button>
-          <button type="button" class="reader-pill-btn" id="bmMenuBtn" onclick="toggleBmMenu(event)" aria-haspopup="listbox" aria-expanded="false">📑 書籤 (<span id="bmCount">0</span>) ▾</button>
+          <button type="button" class="reader-pill-btn" onclick="toggleReaderBookmark('${escHtml(code)}',${no})" title="將目前頁面加入或移除書籤">加書籤</button>
+          <button type="button" class="reader-pill-btn" id="bmMenuBtn" onclick="toggleBmMenu(event)" aria-haspopup="listbox" aria-expanded="false">書籤 (<span id="bmCount">0</span>) ▾</button>
           <div class="bm-pop" id="bmPop" role="listbox" aria-label="書籤列表"></div>
         </div>
         <button type="button" class="reader-pill-btn" id="readerToggleCommentsBtn" onclick="toggleReaderComments('${escHtml(code)}',${no})">收合重點</button>
-        <button type="button" class="reader-pill-btn${localStorage.getItem('v05.readerNight') === '1' ? ' on' : ''}" id="readerNightBtn" onclick="toggleReaderNightMode()" title="反色護眼閱讀模式">🌙 護眼</button>
-        <button type="button" class="reader-pill-btn" id="readerFilterBtn" onclick="toggleReaderFilterImportant()" title="只顯示有重點、書籤或標記的頁面">✨ 只看重點頁</button>
+        <button type="button" class="reader-pill-btn${localStorage.getItem('v05.readerNight') === '1' ? ' on' : ''}" id="readerNightBtn" onclick="toggleReaderNightMode()" title="反色護眼閱讀模式">護眼</button>
+        <button type="button" class="reader-pill-btn" id="readerFilterBtn" onclick="toggleReaderFilterImportant()" title="只顯示有重點、書籤或標記的頁面">只看重點頁</button>
       </div>
       <div class="reader-legend">
         <span class="kp-dot kp-i3"></span>必考核心 <span class="kp-dot kp-i2"></span>重要概念 <span class="kp-dot kp-i1"></span>補充 <span class="kp-dot kp-i4"></span>個人標記 <span class="kp-dot kp-i5"></span>提問引用

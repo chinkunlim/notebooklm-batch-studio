@@ -285,7 +285,7 @@ function renderMindmapTools(kindBox) {
     <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomIn')" aria-label="放大">＋</button>
     <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('expandAll', this)">全部展開</button>
     <button type="button" class="reader-pill-btn" id="mmOutlineBtn" onclick="sendMindmapCmd('toggleOutline', this)">大綱文字</button>
-    <button type="button" class="reader-pill-btn" id="mmStyleBtn" onclick="toggleMindmapStylePop(event)">🎨 自訂樣式</button>`;
+    <button type="button" class="reader-pill-btn" id="mmStyleBtn" onclick="toggleMindmapStylePop(event)">自訂樣式</button>`;
 }
 
 renderMindmapCustomCard();

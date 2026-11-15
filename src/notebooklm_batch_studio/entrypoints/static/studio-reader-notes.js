@@ -56,7 +56,7 @@ function updateReaderPageTracking(code, no, pageNum) {
   readerCurrentPage = pageNum;
   saveReaderLocal(code, no, { lastPage: pageNum });
   const btn = document.getElementById('readerResumeBtn');
-  if (btn) btn.textContent = `📍 續讀 p.${pageNum}`;
+  if (btn) btn.textContent = `續讀 p.${pageNum}`;
   syncActivePageComments(pageNum);
 }
 
@@ -115,7 +115,7 @@ function renderReaderBookmarks(code, no) {
     return;
   }
   pop.innerHTML = bookmarks.map(b =>
-    `<div class="bm-pop-row"><button type="button" class="bm-pop-go" onclick="jumpToReaderPage(${b.page});document.getElementById('bmPick')?.classList.remove('open')">🔖 ${escHtml(b.label)}</button>` +
+    `<div class="bm-pop-row"><button type="button" class="bm-pop-go" onclick="jumpToReaderPage(${b.page});document.getElementById('bmPick')?.classList.remove('open')">${escHtml(b.label)}</button>` +
     `<button type="button" class="bm-del" aria-label="移除書籤" onclick="removeReaderBookmark(event,'${escHtml(code)}',${no},${b.page})">×</button></div>`
   ).join('');
 }
@@ -384,7 +384,7 @@ function hookPdfSelectionHighlight(getCtx) {
       pop = document.createElement('div');
       pop.id = 'readerSelPop';
       pop.className = 'reader-sel-pop';
-      pop.innerHTML = '<button type="button" data-act="hl">🖍️ 標記</button><button type="button" data-act="ask">💬 問這段</button><button type="button" data-act="note">💾 存筆記</button>';
+      pop.innerHTML = '<button type="button" data-act="hl">️ 標記</button><button type="button" data-act="ask">問這段</button><button type="button" data-act="note">存筆記</button>';
       document.body.appendChild(pop);
     }
     const rect = sel.getRangeAt(0).getBoundingClientRect();

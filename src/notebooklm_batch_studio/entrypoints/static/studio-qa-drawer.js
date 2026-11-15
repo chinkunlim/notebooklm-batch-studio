@@ -244,7 +244,7 @@ async function sendQaQuestion() {
     });
     if (typeof window.registerQaCitations === 'function') window.registerQaCitations(data.references || []);
   } catch (err) {
-    qaState.messages.push({ role: 'ai', text: `⚠️ 提問失敗：${err.message}`, references: [], error: true });
+    qaState.messages.push({ role: 'ai', text: `提問失敗：${err.message}`, references: [], error: true });
   } finally {
     qaState.busy = false;
     if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = '發問'; }
@@ -283,9 +283,9 @@ function renderOneQaMessage(msg, idx) {
     `<button type="button" class="qa-cite" onclick="jumpToQaCitation(${idx}, ${rIdx})" title="${escHtml(r.cited_text || '')}">[${r.citation_number || rIdx + 1}] 引用片段</button>`
   )).join('');
   const webRefs = (msg.web_references || []).map(w => (
-    `<a class="qa-web-ref" href="${escHtml(w.url || '#')}" target="_blank" rel="noopener">🌐 ${escHtml(w.title || w.url || '網路來源')}${w.snippet ? `<small>${escHtml(w.snippet)}</small>` : ''}</a>`
+    `<a class="qa-web-ref" href="${escHtml(w.url || '#')}" target="_blank" rel="noopener">${escHtml(w.title || w.url || '網路來源')}${w.snippet ? `<small>${escHtml(w.snippet)}</small>` : ''}</a>`
   )).join('');
-  const saveBtn = msg.error ? '' : `<button type="button" class="btn btn-soft btn-sm" onclick="saveSingleQaMessage(${idx})">💾 存為筆記</button>`;
+  const saveBtn = msg.error ? '' : `<button type="button" class="btn btn-soft btn-sm" onclick="saveSingleQaMessage(${idx})">存為筆記</button>`;
   return `<div class="qa-msg ai"><div>${escHtml(msg.text).replace(/\n/g, '<br>')}</div>${cites ? `<div class="qa-cites">${cites}</div>` : ''}${webRefs ? `<div class="qa-web-refs"><span class="small muted">網路補充參考</span>${webRefs}</div>` : ''}${saveBtn ? `<div class="qa-msg-actions">${saveBtn}</div>` : ''}</div>`;
 }
 

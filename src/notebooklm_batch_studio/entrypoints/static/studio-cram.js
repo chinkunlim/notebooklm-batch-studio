@@ -72,9 +72,9 @@ function applyCramLectureFilter(pack) {
   if (!select || !cramModeActive) return;
   const onlyWeak = document.getElementById('cramOnlyWeakToggle')?.checked;
   const rows = (pack.lectures || []).filter(l => !onlyWeak || l.level !== 'strong');
-  const opts = ['<option value="all">🔥 急救總覽</option>'];
+  const opts = ['<option value="all">急救總覽</option>'];
   rows.forEach(l => {
-    const icon = l.level === 'strong' ? '✅' : (l.mistake_count > 0 || (l.percent !== null && l.percent < 50) ? '🔴' : '🟡');
+    const icon = l.level === 'strong' ? '' : (l.mistake_count > 0 || (l.percent !== null && l.percent < 50) ? '' : '');
     const mem = l.percent === null ? '未練' : `${l.percent}%`;
     const err = l.mistake_count ? `・${l.mistake_count}錯` : '';
     opts.push(`<option value="${l.no}">${icon} L${pad2(l.no)} ${escHtml(l.topic)} (${mem}${err})</option>`);
@@ -96,7 +96,7 @@ function renderCramPanel(pack, checkedNos) {
     ? `距離考試還有 <b>${pack.days_until_exam}</b> 天` : '未設考試日期';
   const checks = (pack.lectures || []).map(l => {
     const on = !checkedNos.length || checkedNos.includes(l.no) ? 'checked' : '';
-    const icon = l.level === 'strong' ? '✅' : '⚠️';
+    const icon = l.level === 'strong' ? '' : '️';
     return `<label class="cbox"><input type="checkbox" class="cram-lec-pick" value="${l.no}" ${on} onchange="refreshCramPack()">${icon} L${pad2(l.no)} (${l.recommended_minutes}分)</label>`;
   }).join('');
   body.innerHTML = `<div class="small" style="margin-bottom:8px">${exam}・已按「低記憶＋多錯題」排好優先順序：</div>
@@ -111,13 +111,13 @@ function renderCramPanel(pack, checkedNos) {
  * @returns {string} HTML string
  */
 function renderCramMistakes(mistakes) {
-  if (!mistakes.length) return '<p class="small muted">勾選章節目前沒有未解決錯題 🎉</p>';
+  if (!mistakes.length) return '<p class="small muted">勾選章節目前沒有未解決錯題 </p>';
   const items = mistakes.slice(0, 12).map(m => {
     const ans = m.choices && m.choices[m.correct_index] ? m.choices[m.correct_index] : `#${m.correct_index}`;
     return `<li style="margin-bottom:6px"><span class="badge">L${pad2(m.lecture_no || 0)}</span> ${escHtml(m.question_text)}
       <details class="small muted"><summary style="cursor:pointer">看正解</summary>${escHtml(ans)}</details></li>`;
   }).join('');
-  return `<div class="field-label">🔥 未掌握錯題 (${mistakes.length})</div><ul class="small" style="padding-left:18px;margin:0">${items}</ul>`;
+  return `<div class="field-label">未掌握錯題 (${mistakes.length})</div><ul class="small" style="padding-left:18px;margin:0">${items}</ul>`;
 }
 
 /**
@@ -132,7 +132,7 @@ function renderCramNotes(notes) {
     return `<li style="margin-bottom:6px"><span class="badge">${scope} ★${n.importance || 1}</span> <b>${escHtml(n.question || n.title || '')}</b>
       <div class="muted">${escHtml((n.answer_markdown || '').slice(0, 110))}…</div></li>`;
   }).join('');
-  return `<div class="field-label">📌 重點問答筆記 (${notes.length})</div><ul class="small" style="padding-left:18px;margin:0">${items}</ul>`;
+  return `<div class="field-label">重點問答筆記 (${notes.length})</div><ul class="small" style="padding-left:18px;margin:0">${items}</ul>`;
 }
 
 /**
@@ -189,7 +189,7 @@ function playNextCramAudio(code, audioEl) {
   audioEl.src = `/api/artifacts/${code}/download/${encodeURIComponent(job.output_path)}`;
   audioEl.playbackRate = 1.5;
   audioEl.play().catch(() => {});
-  showToast(`🎧 1.5× 急救連播：L${pad2(job.lecture_no || 0)}（剩餘 ${cramAudioQueue.length} 講）`, 'info', 2400);
+  showToast(`1.5× 急救連播：L${pad2(job.lecture_no || 0)}（剩餘 ${cramAudioQueue.length} 講）`, 'info', 2400);
 }
 
 let layoutGuidesHooked = false;
@@ -270,7 +270,7 @@ function toggleLayoutGuides() {
     app.appendChild(hud);
   }
   const mode = document.querySelector('.seg[data-seg="layout"] .on')?.textContent || '—';
-  hud.innerHTML = `<span>📐 參考線｜點擊任意框線即可複製名稱（${escHtml(mode)} ${window.innerWidth}×${window.innerHeight}）</span>
+  hud.innerHTML = `<span>參考線｜點擊任意框線即可複製名稱（${escHtml(mode)} ${window.innerWidth}×${window.innerHeight}）</span>
     <button type="button" class="btn btn-ghost btn-sm" style="color:#fff;padding:1px 8px" onclick="toggleLayoutGuides()">關閉</button>`;
   if (!layoutGuidesHooked) {
     layoutGuidesHooked = true;
@@ -319,7 +319,7 @@ function copyGuideLabelAt(e) {
   e.preventDefault();
   e.stopPropagation();
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(label).catch(() => {});
-  showToast(`📋 已複製：${label}`, 'info', 2200);
+  showToast(`已複製：${label}`, 'info', 2200);
 }
 
 document.addEventListener('keydown', e => {

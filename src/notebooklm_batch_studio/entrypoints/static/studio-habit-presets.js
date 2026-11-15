@@ -5,7 +5,7 @@
 
 const HABIT_STARTERS = {
   starter: {
-    label: '🌱 新手引導（預設）',
+    label: '新手引導（預設）',
     focus: 25,
     quizAdvance: 'manual',
     pace: 'relax',
@@ -17,7 +17,7 @@ const HABIT_STARTERS = {
     hiddenTools: [],
   },
   commute: {
-    label: '🎧 通勤聽讀型',
+    label: '通勤聽讀型',
     focus: 15,
     quizAdvance: 'manual',
     pace: 'relax',
@@ -29,7 +29,7 @@ const HABIT_STARTERS = {
     hiddenTools: ['video', 'slides', 'table'],
   },
   sprint: {
-    label: '🎯 考前刷題衝刺',
+    label: '考前刷題衝刺',
     focus: 45,
     quizAdvance: 'auto',
     pace: 'sprint',
@@ -41,7 +41,7 @@ const HABIT_STARTERS = {
     hiddenTools: ['video', 'infographic', 'slides', 'table'],
   },
   deep: {
-    label: '📝 深度精讀筆記',
+    label: '深度精讀筆記',
     focus: 50,
     quizAdvance: 'manual',
     pace: 'relax',
