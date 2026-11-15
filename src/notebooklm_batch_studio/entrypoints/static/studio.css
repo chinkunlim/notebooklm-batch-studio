@@ -1400,6 +1400,19 @@ img, iframe, video, audio { max-width: 100%; }
 }
 .report-meta-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: nowrap; flex: none; }
 .report-meta-bar a.reader-pill-btn { text-decoration: none; white-space: nowrap; }
+#panelReports { position: relative; }
+.mm-style-pop {
+  position: absolute; top: 50px; left: 0; z-index: 60; width: min(440px, 100%);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .16); padding: 12px 14px;
+  display: none; flex-direction: column; gap: 10px;
+}
+.mm-style-pop.open { display: flex; }
+.mm-pop-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
+.mm-pop-row > span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.mm-pop-row > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.mm-swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.mm-pop-foot { display: flex; justify-content: flex-end; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
 :is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #reportContentContainer,
 :is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #flashcardsViewerContainer,
 :is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #qaNotesContainer,

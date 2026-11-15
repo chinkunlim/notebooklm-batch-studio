@@ -566,6 +566,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-fonts.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js
+│       │   │   ├── studio-mindmap-designer.js
 │       │   │   ├── studio-nav.js
 │       │   │   ├── studio-notes-tab.js
 │       │   │   ├── studio-player.js

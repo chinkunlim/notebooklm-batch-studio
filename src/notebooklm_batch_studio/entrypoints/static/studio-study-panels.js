@@ -345,38 +345,7 @@ async function renderCsvTableHtml(dl) {
     <tbody>${body.map(r => `<tr>${r.map(c => `<td>${escHtml(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
-/**
- * Send a control command to the embedded mind map iframe.
- * @param {string} cmd Command name (zoomOut, fit, zoomIn, expandAll, toggleOutline, setTemplate)
- * @param {HTMLElement} [btn] Optional button whose active state toggles
- * @param {string} [value] Optional command payload (such as template id)
- */
-function sendMindmapCmd(cmd, btn, value) {
-  const frame = document.querySelector('#reportContentContainer iframe.report-frame');
-  if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'mindmap-cmd', cmd, value }, '*');
-  if (cmd === 'toggleOutline' && btn) btn.classList.toggle('on');
-  if (cmd === 'expandAll' && btn) {
-    const on = btn.classList.toggle('on');
-    btn.textContent = on ? '收合節點' : '全部展開';
-  }
-}
-
-/**
- * Render mind map template selector and zoom/outline buttons into the panel header.
- * @param {HTMLElement} kindBox Left-hand toolbar container
- */
-function renderMindmapTools(kindBox) {
-  kindBox.innerHTML = `
-    <select class="reader-pill-btn" aria-label="心智圖模板" onchange="sendMindmapCmd('setTemplate', this, this.value)">
-      <option value="tree-right">橫向樹狀</option><option value="tree-bilateral">雙向放射</option>
-      <option value="org-down">由上而下</option><option value="dark">深色夜讀</option>
-    </select>
-    <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomOut')" aria-label="縮小">－</button>
-    <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('fit')">適應畫面</button>
-    <button type="button" class="icon-btn" onclick="sendMindmapCmd('zoomIn')" aria-label="放大">＋</button>
-    <button type="button" class="reader-pill-btn" onclick="sendMindmapCmd('expandAll', this)">全部展開</button>
-    <button type="button" class="reader-pill-btn" id="mmOutlineBtn" onclick="sendMindmapCmd('toggleOutline', this)">大綱文字</button>`;
-}
+/* Mind map controls & style designer live in studio-mindmap-designer.js. */
 
 /**
  * Show one document-like output inside the workbench (iframe, image, table or video by file type).
