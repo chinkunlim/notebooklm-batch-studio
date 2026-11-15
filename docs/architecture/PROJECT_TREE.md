@@ -283,7 +283,8 @@ notebooklm-batch-studio/
 │       │   ├── ollama/
 │       │   │   ├── __init__.py
 │       │   │   └── client.py
-│       │   └── __init__.py
+│       │   ├── __init__.py
+│       │   └── web_search.py
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── logging_setup.py
@@ -564,6 +565,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-cram.js
 │       │   │   ├── studio-focus.js
 │       │   │   ├── studio-fonts.js
+│       │   │   ├── studio-habit-presets.js
 │       │   │   ├── studio-hl-colors.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js

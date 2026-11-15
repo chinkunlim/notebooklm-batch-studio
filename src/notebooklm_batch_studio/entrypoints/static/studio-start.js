@@ -332,7 +332,7 @@ $('#resetGo').addEventListener('click', () => {
   SWITCHES.forEach(f => f());
   setDockX(false, false);
   applyAvatar({ type: 'text', value: 'LK' }); $('#avatarInitials').value = 'LK';
-  $$('.resizable').forEach(applyColumns); updateMini(); renderPalettes(); renderGreeting(); applyFontChoices(); if (typeof applyHighlightColors === 'function') applyHighlightColors(); applyTodayChoices();
+  $$('.resizable').forEach(applyColumns); updateMini(); renderPalettes(); renderGreeting(); applyFontChoices(); if (typeof applyHighlightColors === 'function') applyHighlightColors(); if (typeof applyMultiPrefs === 'function') applyMultiPrefs(); applyTodayChoices();
   $('#resetDialog').close(); notify('已恢復預設設計');
 });
 
@@ -348,6 +348,7 @@ function applyAllPreferences() {
   prefMute = true;
   customPalettes = readCustomPalettes(); renderPalettes();
   if (typeof applyHighlightColors === 'function') applyHighlightColors();
+  if (typeof applyMultiPrefs === 'function') applyMultiPrefs();
   setChoice('palette', load('palette', 'forest'), false);
   setChoice('mode', load('mode', 'auto'), false);
   setChoice('style', load('style', 'flow'), false);

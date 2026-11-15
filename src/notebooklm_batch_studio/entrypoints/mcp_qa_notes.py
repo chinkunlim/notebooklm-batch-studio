@@ -7,12 +7,44 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from notebooklm_batch_studio.entrypoints.mcp_remote_admin import register_remote_extra_tools
-from notebooklm_batch_studio.services.qa_notes_service import QANotesService
+from notebooklm_batch_studio.services.qa_notes_service import AskOptions, QANotesService
 
 if TYPE_CHECKING:
     from mcp.server.mcpserver import MCPServer
 
 logger = logging.getLogger(__name__)
+
+
+def _register_qa_ask_tool(mcp: MCPServer, qa_notes: QANotesService) -> None:
+    """Register the `ask_notebook_question` MCP tool.
+
+    Args:
+        mcp: FastMCP server instance.
+        qa_notes: Configured QANotesService.
+    """
+
+    @mcp.tool()
+    async def ask_notebook_question(
+        code: str, question: str, lecture_no: int | None = None, use_web_search: bool = False
+    ) -> str:
+        """Ask a question grounded in a course's Gemini Notebook (all or one lecture).
+
+        Args:
+            code: Course code.
+            question: Question text.
+            lecture_no: Optional lecture sequence number.
+            use_web_search: Whether to also run web search for supplemental references.
+
+        Returns:
+            JSON string with `answer`, `conversation_id`, `references`, and `web_references`.
+        """
+        try:
+            res = await qa_notes.ask(
+                code, question, AskOptions(lecture_no=lecture_no, use_web_search=use_web_search)
+            )
+            return json.dumps(res, ensure_ascii=False, indent=2)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
 
 def _register_qa_read_tools(mcp: MCPServer, qa_notes: QANotesService) -> None:
@@ -22,24 +54,7 @@ def _register_qa_read_tools(mcp: MCPServer, qa_notes: QANotesService) -> None:
         mcp: FastMCP server instance.
         qa_notes: Configured QANotesService.
     """
-
-    @mcp.tool()
-    async def ask_notebook_question(code: str, question: str, lecture_no: int | None = None) -> str:
-        """Ask a question grounded in a course's Gemini Notebook (all or one lecture).
-
-        Args:
-            code: Course code.
-            question: Question text.
-            lecture_no: Optional lecture sequence number.
-
-        Returns:
-            JSON string with `answer`, `conversation_id`, and `references`.
-        """
-        try:
-            res = await qa_notes.ask(code, question, lecture_no=lecture_no)
-            return json.dumps(res, ensure_ascii=False, indent=2)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    _register_qa_ask_tool(mcp, qa_notes)
 
     @mcp.tool()
     def list_course_notes(code: str, tag: str | None = None) -> str:

@@ -16,7 +16,7 @@ from notebooklm_batch_studio.entrypoints.schemas import (
     SaveQANoteRequest,
     SummarizeQARequest,
 )
-from notebooklm_batch_studio.services.qa_notes_service import QANotesService
+from notebooklm_batch_studio.services.qa_notes_service import AskOptions, QANotesService
 
 logger = logging.getLogger(__name__)
 qa_notes_router = APIRouter()
@@ -47,7 +47,12 @@ async def ask_qa_endpoint(code: str, req: AskQARequest, request: Request) -> dic
         Dictionary with `answer`, `conversation_id`, and `references`.
     """
     try:
-        return await _qa_service(request).ask(code, req.question, req.lecture_no, req.conversation_id)
+        opts = AskOptions(
+            lecture_no=req.lecture_no,
+            conversation_id=req.conversation_id,
+            use_web_search=req.use_web_search,
+        )
+        return await _qa_service(request).ask(code, req.question, opts)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

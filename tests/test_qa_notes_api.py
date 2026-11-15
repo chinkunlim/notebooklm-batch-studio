@@ -142,6 +142,29 @@ class TestQANotesAPIAndMCP(unittest.TestCase):
         self.assertTrue(approved["confirmed"])
         self.assertTrue(approved["is_uploaded_as_source"])
 
+    def test_qa_ask_with_web_search_supplements_references(self) -> None:
+        """When use_web_search=True, QANotesService attaches supplemental web_references."""
+
+        async def _fake_web_search(query: str) -> list[dict[str, str]]:
+            return [{"title": f"Web: {query}", "url": "https://example.com", "snippet": "Supplemental"}]
+
+        self.qa_notes.web_search_fn = _fake_web_search
+        off_res = self.http.post(
+            "/api/courses/BIO101/qa/ask",
+            json={"question": "細胞膜組成", "lecture_no": 1, "use_web_search": False},
+        )
+        self.assertEqual(off_res.status_code, 200)
+        self.assertEqual(off_res.json()["web_references"], [])
+
+        on_res = self.http.post(
+            "/api/courses/BIO101/qa/ask",
+            json={"question": "細胞膜組成", "lecture_no": 1, "use_web_search": True},
+        )
+        self.assertEqual(on_res.status_code, 200)
+        web_refs = on_res.json()["web_references"]
+        self.assertEqual(len(web_refs), 1)
+        self.assertEqual(web_refs[0]["url"], "https://example.com")
+
 
 if __name__ == "__main__":
     unittest.main()

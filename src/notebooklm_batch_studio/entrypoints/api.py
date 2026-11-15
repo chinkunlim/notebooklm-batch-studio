@@ -31,6 +31,7 @@ from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
+from notebooklm_batch_studio.adapters.web_search import search_web_snippets
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
@@ -338,12 +339,14 @@ def _build_qa_notes(service: BatchStudioService, cfg: AppConfig, engine: Engine 
     session = _request_scoped(
         sessionmaker(bind=engine or create_db_engine(cfg.database_url), expire_on_commit=False)
     )
-    return QANotesService(
+    qa = QANotesService(
         course_repo=service.course_repo,
         notes_repo=QANoteRepository(cast(Session, session)),
         notebooklm_client=service.notebooklm_client,
         config=cfg,
     )
+    qa.web_search_fn = search_web_snippets
+    return qa
 
 
 def _configure_app_state(

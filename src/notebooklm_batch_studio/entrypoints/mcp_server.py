@@ -24,6 +24,7 @@ from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
+from notebooklm_batch_studio.adapters.web_search import search_web_snippets
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.entrypoints.mcp_course_settings import register_course_settings_tools
@@ -403,16 +404,15 @@ def _resolve_mcp_services(
     engine = create_db_engine(cfg.database_url)
     with session_scope(engine) as session:
         c_repo, q_repo, s_repo = CourseRepository(session), QueueRepository(session), StudyRepository(session)
-        adapter = NotebookLMAdapter(cfg)
-        ollama = OllamaClient(config=cfg)
+        adapter, ollama = NotebookLMAdapter(cfg), OllamaClient(config=cfg)
         active_service = service or BatchStudioService(c_repo, q_repo, adapter, cfg, ollama_client=ollama)
         active_study = study_service or StudyTrackerService(study_repo=s_repo, config=cfg)
-        plan = overrides.get("study_plan") or StudyPlanService(
-            StudyPlanDeps(c_repo, q_repo, s_repo, ReviewRepository(session), adapter)
-        )
+        deps = StudyPlanDeps(c_repo, q_repo, s_repo, ReviewRepository(session), adapter)
+        plan = overrides.get("study_plan") or StudyPlanService(deps)
         learn = overrides.get("learning") or LearningService(c_repo, LearningRepository(session), adapter)
         prefs = overrides.get("preferences") or PreferencesService(PreferencesRepository(session))
         qa = overrides.get("qa_notes") or QANotesService(c_repo, QANoteRepository(session), adapter, cfg)
+        qa.web_search_fn = qa.web_search_fn or search_web_snippets
     return {
         "service": active_service,
         "study_service": active_study,

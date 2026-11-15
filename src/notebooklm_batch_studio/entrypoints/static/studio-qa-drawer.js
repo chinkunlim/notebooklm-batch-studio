@@ -161,18 +161,54 @@ function resetQaConversation() {
 }
 
 /**
+ * Toggle web search supplementation in the Q&A drawer and persist the preference.
+ * @param {boolean} on Whether web search is enabled
+ */
+function toggleQaWebSearch(on) {
+  try { localStorage.setItem('v05.qaWebSearch', on ? '1' : '0'); } catch (e) { /* ignore */ }
+}
+
+/**
+ * Initialize the Q&A web-search toggle from saved user preferences.
+ */
+function initQaWebSearchToggle() {
+  const el = document.getElementById('qaWebSearchToggle');
+  if (!el) return;
+  const raw = localStorage.getItem('v05.qaWebSearch');
+  if (raw !== null) { el.checked = raw === '1'; return; }
+  const prefs = typeof loadMultiPrefs === 'function' ? loadMultiPrefs() : { aiPrefs: [] };
+  el.checked = (prefs.aiPrefs || []).includes('web_search');
+}
+
+/**
+ * Build the question string with any user-selected AI answer style hints.
+ * @param {string} question Raw user question
+ * @returns {string} Question with optional style instruction
+ */
+function buildStyledQuestion(question) {
+  const prefs = typeof loadMultiPrefs === 'function' ? loadMultiPrefs() : { aiPrefs: [] };
+  const hints = [];
+  if (prefs.aiPrefs.includes('bullets')) hints.push('以條列重點整理');
+  if (prefs.aiPrefs.includes('examples')) hints.push('附白話生活舉例');
+  if (prefs.aiPrefs.includes('exam')) hints.push('標註常見考點');
+  return hints.length ? `${question}\n（請${hints.join('、')}）` : question;
+}
+
+/**
  * Post a single Q&A question to the backend and return parsed response JSON.
  * @param {string} question User question text
  * @returns {Promise<object>} Backend answer payload
  */
 async function postQaAsk(question) {
+  const useWeb = !!document.getElementById('qaWebSearchToggle')?.checked;
   const res = await fetch(`/api/courses/${currentStudyCourse.code}/qa/ask`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      question,
+      question: buildStyledQuestion(question),
       lecture_no: selectedQaLectureNo(),
       conversation_id: qaState.conversationId,
+      use_web_search: useWeb,
     }),
   });
   const data = await res.json();
@@ -200,7 +236,11 @@ async function sendQaQuestion() {
     const data = await postQaAsk(question);
     qaState.conversationId = data.conversation_id || qaState.conversationId;
     qaState.messages.push({
-      role: 'ai', question, text: data.answer || '', references: data.references || [],
+      role: 'ai',
+      question,
+      text: data.answer || '',
+      references: data.references || [],
+      web_references: data.web_references || [],
     });
     if (typeof window.registerQaCitations === 'function') window.registerQaCitations(data.references || []);
   } catch (err) {
@@ -242,8 +282,11 @@ function renderOneQaMessage(msg, idx) {
   const cites = (msg.references || []).map((r, rIdx) => (
     `<button type="button" class="qa-cite" onclick="jumpToQaCitation(${idx}, ${rIdx})" title="${escHtml(r.cited_text || '')}">[${r.citation_number || rIdx + 1}] 引用片段</button>`
   )).join('');
+  const webRefs = (msg.web_references || []).map(w => (
+    `<a class="qa-web-ref" href="${escHtml(w.url || '#')}" target="_blank" rel="noopener">🌐 ${escHtml(w.title || w.url || '網路來源')}${w.snippet ? `<small>${escHtml(w.snippet)}</small>` : ''}</a>`
+  )).join('');
   const saveBtn = msg.error ? '' : `<button type="button" class="btn btn-soft btn-sm" onclick="saveSingleQaMessage(${idx})">💾 存為筆記</button>`;
-  return `<div class="qa-msg ai"><div>${escHtml(msg.text).replace(/\n/g, '<br>')}</div>${cites ? `<div class="qa-cites">${cites}</div>` : ''}${saveBtn ? `<div class="qa-msg-actions">${saveBtn}</div>` : ''}</div>`;
+  return `<div class="qa-msg ai"><div>${escHtml(msg.text).replace(/\n/g, '<br>')}</div>${cites ? `<div class="qa-cites">${cites}</div>` : ''}${webRefs ? `<div class="qa-web-refs"><span class="small muted">網路補充參考</span>${webRefs}</div>` : ''}${saveBtn ? `<div class="qa-msg-actions">${saveBtn}</div>` : ''}</div>`;
 }
 
 /**
@@ -432,3 +475,4 @@ document.getElementById('qaQuestionInput')?.addEventListener('keydown', e => {
     sendQaQuestion();
   }
 });
+initQaWebSearchToggle();

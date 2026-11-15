@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -34,8 +37,25 @@ from notebooklm_batch_studio.services.qa_notes_formatter import (
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class AskOptions:
+    """Optional parameters for a scoped Q&A query.
+
+    Attributes:
+        lecture_no: Optional lecture sequence number to focus on.
+        conversation_id: Existing conversation ID to continue, or None.
+        use_web_search: Whether to also run web search for supplemental references.
+    """
+
+    lecture_no: int | None = None
+    conversation_id: str | None = None
+    use_web_search: bool = False
+
+
 class QANotesService:
     """Service coordinating NotebookLM Q&A sessions, Markdown notes, tags, and source pushing."""
+
+    web_search_fn: Callable[[str], Awaitable[list[dict[str, str]]]] | None = None
 
     def __init__(
         self,
@@ -120,28 +140,41 @@ class QANotesService:
         self,
         course_code: str,
         question: str,
+        options: AskOptions | None = None,
         lecture_no: int | None = None,
-        conversation_id: str | None = None,
     ) -> dict[str, Any]:
         """Ask Gemini Notebook a question scoped to all or one lecture source.
 
         Args:
             course_code: Course identifier.
             question: Question text.
-            lecture_no: Optional lecture number to focus on.
-            conversation_id: Existing conversation ID to continue, or None.
+            options: Optional lecture scope, conversation ID, and web search toggle.
+            lecture_no: Legacy lecture number keyword argument (used when options is None).
 
         Returns:
-            Dictionary containing `answer`, `conversation_id`, and `references`.
+            Dictionary containing `answer`, `conversation_id`, `references`, and `web_references`.
         """
+        opts = options or AskOptions(lecture_no=lecture_no)
         course = self._require_course(course_code)
         if not course.notebook_id:
             raise ValueError(f"Course {course_code} has no linked Gemini Notebook")
-        source_ids = self._resolve_source_ids(course, lecture_no)
-        logger.info("Q&A ask for %s (lecture=%s, conv=%s)", course_code, lecture_no, conversation_id)
-        return await self.notebooklm_client.ask_qa(
-            course.notebook_id, question, source_ids=source_ids, conversation_id=conversation_id
+        source_ids = self._resolve_source_ids(course, opts.lecture_no)
+        logger.info(
+            "Q&A ask for %s (lecture=%s, conv=%s, web=%s)",
+            course_code,
+            opts.lecture_no,
+            opts.conversation_id,
+            opts.use_web_search,
         )
+        qa_coro = self.notebooklm_client.ask_qa(
+            course.notebook_id, question, source_ids=source_ids, conversation_id=opts.conversation_id
+        )
+        if opts.use_web_search and self.web_search_fn is not None:
+            res, web_refs = await asyncio.gather(qa_coro, self.web_search_fn(question))
+        else:
+            res = await qa_coro
+            web_refs = []
+        return {**res, "web_references": web_refs}
 
     async def summarize_and_format(
         self,

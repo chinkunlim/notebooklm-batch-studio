@@ -214,6 +214,7 @@ class AskQARequest(BaseModel):
     question: str = Field(..., min_length=1, description="Question text")
     lecture_no: int | None = Field(default=None, description="Optional lecture number filter")
     conversation_id: str | None = Field(default=None, description="Existing conversation ID")
+    use_web_search: bool = Field(default=False, description="Include supplemental web search results")
 
 
 class SummarizeQARequest(BaseModel):

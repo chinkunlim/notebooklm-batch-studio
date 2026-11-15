@@ -509,6 +509,18 @@
             <div><h2 class="h2">預設值</h2><p class="small muted">目前的設計就是預設。你在任何地方的調整（配色、版面、欄寬、排序、釘選、倍速…）都會記住，隨時可以一鍵還原；自訂的配色會保留。</p></div>
             <button class="btn btn-soft" id="btnReset">全部恢復預設</button>
           </article>
+          <article class="card" id="habitStarterCard" style="grid-column:1/-1">
+            <div class="card-head">
+              <h2 class="h2">還沒有固定學習習慣？先選一個起始情境</h2>
+              <span class="eyebrow">單選 · 會幫你先套好一組順手的預設，之後都能微調</span>
+            </div>
+            <div class="opt-cards" id="habitStarterCards" role="radiogroup" aria-label="起始學習情境">
+              <button type="button" class="opt-card on" data-starter="starter"><b>🌱 新手引導（預設）</b><span>25 分鐘專注、手動下一題、開啟全部工具</span></button>
+              <button type="button" class="opt-card" data-starter="commute"><b>🎧 通勤聽讀型</b><span>15 分鐘短節奏、1.25× 聽課、精簡顯示音訊與學習卡</span></button>
+              <button type="button" class="opt-card" data-starter="sprint"><b>🎯 考前刷題衝刺</b><span>45 分鐘專注、自動跳下一題、考前極簡心智圖</span></button>
+              <button type="button" class="opt-card" data-starter="deep"><b>📝 深度精讀筆記</b><span>50 分鐘專注、雙欄對照、暖陽筆記與 AI 條列舉例</span></button>
+            </div>
+          </article>
           <article class="card">
             <div class="card-head"><h2 class="h2">頭像</h2></div>
             <div class="avatar-edit">
@@ -595,6 +607,18 @@
               <div id="mmPreviewBox" class="mm-preview-box" aria-label="心智圖樣式即時預覽"></div>
               <div id="mmCustomControls"></div>
             </div>
+          </article>
+
+          <article class="card" id="multiPrefsCard" style="grid-column:1/-1">
+            <div class="card-head">
+              <h2 class="h2">研讀工具與 AI 回答偏好</h2>
+              <span class="eyebrow">多選 · 可同時勾選多個項目</span>
+            </div>
+            <div class="small muted" style="margin-bottom:8px">顯示在研讀右側的工具（取消勾選可精簡介面）：</div>
+            <div class="multi-check-grid" id="benchToolChecks"></div>
+            <div class="divider"></div>
+            <div class="small muted" style="margin-bottom:8px">探索提問回答偏好（自動帶入每次發問）：</div>
+            <div class="multi-check-grid" id="aiStyleChecks"></div>
           </article>
 
           <article class="card" id="habitCard">
@@ -892,6 +916,10 @@
         <option value="shorter">精簡回答</option>
         <option value="longer">詳細深入</option>
       </select>
+      <label class="qa-web-toggle" title="同時搜尋網路資料作為補充參考">
+        <input type="checkbox" id="qaWebSearchToggle" onchange="toggleQaWebSearch(this.checked)">
+        <span>🌐 補充網路搜尋</span>
+      </label>
     </div>
     <input type="text" id="qaChatCustomPrompt" class="qa-field" placeholder="輸入自訂角色提示詞…" style="display:none" onchange="configureQaChatStyle()">
   </div>
@@ -928,6 +956,7 @@
 <script src="/static/studio-bench.js"></script>
 <script src="/static/studio-fonts.js"></script>
 <script src="/static/studio-hl-colors.js"></script>
+<script src="/static/studio-habit-presets.js"></script>
 <script src="/static/studio-focus.js"></script>
 <script src="/static/studio-start.js"></script>
 <script src="/static/studio-reader-notes.js"></script>
