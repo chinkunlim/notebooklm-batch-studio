@@ -26,7 +26,7 @@
   position: absolute; left: 0; top: calc(100% + 6px); z-index: 65; min-width: 210px; max-height: 260px;
   overflow: auto; overscroll-behavior: contain; background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius-m); box-shadow: 0 18px 44px rgba(0,0,0,.18); padding: 6px;
-  opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .15s ease, transform .15s ease;
+  opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity var(--dur-hover) var(--ease), transform var(--dur-hover) var(--ease);
 }
 .bm-pick.open .bm-pop { opacity: 1; transform: none; pointer-events: auto; }
 .bm-pop-row { display: flex; align-items: center; gap: 4px; border-radius: var(--radius-s); }

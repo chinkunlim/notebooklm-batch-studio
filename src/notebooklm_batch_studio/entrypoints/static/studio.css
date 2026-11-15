@@ -67,7 +67,7 @@ a { color: var(--primary); }
 /* the icon turns light as the sliding circle arrives under it */
 .dock-btn > i { transition: color .3s var(--ease); }
 .dock-btn.on > i { transition: color .35s var(--ease) calc(var(--pill-dur, .62s) * .45); }
-.dock .label { position: absolute; left: 60px; top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .18s var(--ease); }
+.dock .label { position: absolute; left: 60px; top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity var(--dur-hover) var(--ease); }
 .dock-head .label { left: 58px; color: #fff; font-weight: 700; }
 .dock-btn.on .label { color: var(--primary); font-weight: 700; }
 .dock-btn .tip {
@@ -1021,7 +1021,7 @@ img, iframe, video, audio { max-width: 100%; }
 
 /* Dialogs used by the feature scripts (same look as <dialog>) */
 .modal-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 1000; background: rgba(10, 14, 12, .45); backdrop-filter: blur(3px); }
-.modal { position: relative; background: var(--surface); color: var(--ink); border-radius: var(--radius-l); width: min(820px, 100%); max-height: 90vh; overflow-y: auto; padding: var(--s5); display: flex; flex-direction: column; gap: var(--s4); box-shadow: 0 30px 80px rgba(0,0,0,.35); animation: viewIn .5s var(--ease); }
+.modal { position: relative; background: var(--surface); color: var(--ink); border-radius: var(--radius-l); width: min(820px, 100%); max-height: 90vh; overflow-y: auto; padding: var(--s5); display: flex; flex-direction: column; gap: var(--s4); box-shadow: 0 30px 80px rgba(0,0,0,.35); animation: viewIn var(--dur-slide) var(--ease); }
 .modal.narrow { width: min(640px, 100%); }
 .modal h3 { font-family: var(--font-head); font-size: 18px; padding-right: 44px; }
 .modal .desc { font-size: 13.5px; color: var(--muted); }
@@ -1053,11 +1053,11 @@ img, iframe, video, audio { max-width: 100%; }
 
 /* Confirm dialog, toasts, offline banner */
 #confirmOverlay { position: fixed; inset: 0; background: rgba(10, 14, 12, .45); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 2500; padding: 16px; }
-#confirmBox { background: var(--surface); color: var(--ink); border-radius: var(--radius-l); padding: var(--s5); max-width: 460px; width: 100%; box-shadow: 0 30px 80px rgba(0,0,0,.35); animation: viewIn .4s var(--ease); }
+#confirmBox { background: var(--surface); color: var(--ink); border-radius: var(--radius-l); padding: var(--s5); max-width: 460px; width: 100%; box-shadow: 0 30px 80px rgba(0,0,0,.35); animation: viewIn var(--dur-slide) var(--ease); }
 #confirmText { white-space: pre-line; line-height: 1.7; margin-bottom: var(--s4); }
 #confirmBox .actions { display: flex; justify-content: flex-end; gap: var(--s2); }
 #toastStack { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 3000; width: min(460px, calc(100vw - 32px)); pointer-events: none; }
-.note { background: var(--surface); color: var(--ink); border-radius: var(--radius-l); padding: 12px 20px; box-shadow: 0 20px 50px rgba(0,0,0,.22); font-size: 14px; line-height: 1.6; white-space: pre-line; display: flex; align-items: center; gap: 12px; pointer-events: auto; animation: viewIn .4s var(--ease); }
+.note { background: var(--surface); color: var(--ink); border-radius: var(--radius-l); padding: 12px 20px; box-shadow: 0 20px 50px rgba(0,0,0,.22); font-size: 14px; line-height: 1.6; white-space: pre-line; display: flex; align-items: center; gap: 12px; pointer-events: auto; animation: viewIn var(--dur-slide) var(--ease); }
 .note::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
 .note.warning::before { background: var(--warn); }
 .note.error::before { background: var(--danger); }
@@ -1276,7 +1276,7 @@ img, iframe, video, audio { max-width: 100%; }
 .qa-note-card { padding: 14px; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--surface); margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
 .qa-note-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .qa-note-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-muted, #666); }
-[data-tool][data-status="missing"] { opacity: .46; filter: grayscale(.85); transition: opacity .15s ease; }
+[data-tool][data-status="missing"] { opacity: .46; filter: grayscale(.85); transition: opacity var(--dur-hover) var(--ease), filter var(--dur-hover) var(--ease); }
 [data-tool][data-status="missing"]:hover { opacity: .78; }
 .study-lec-switch { display: inline-flex; align-items: center; gap: 6px; }
 .lec-step-btn {
@@ -1315,15 +1315,15 @@ img, iframe, video, audio { max-width: 100%; }
   display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 8px 0 12px;
   border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--ink);
   font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap;
-  transition: background-color .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease), box-shadow .2s var(--ease);
+  transition: background-color var(--dur-hover) var(--ease), color var(--dur-hover) var(--ease), border-color var(--dur-hover) var(--ease), box-shadow var(--dur-hover) var(--ease);
 }
 .cram-toggle-btn:hover { border-color: color-mix(in srgb, var(--h-quiz) 60%, var(--line)); }
-.cram-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; transition: background-color .2s ease; }
+.cram-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; transition: background-color var(--dur-hover) var(--ease); }
 .cram-state {
   display: inline-grid; place-items: center; width: 34px; height: 20px; flex: none;
   font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .04em;
   border-radius: 999px; background: var(--surface-2); color: var(--muted);
-  transition: background-color .2s ease, color .2s ease;
+  transition: background-color var(--dur-hover) var(--ease), color var(--dur-hover) var(--ease);
 }
 .cram-toggle-btn.is-active { background: var(--h-quiz); border-color: var(--h-quiz); color: #fff; box-shadow: 0 4px 12px color-mix(in srgb, var(--h-quiz) 28%, transparent); }
 .cram-toggle-btn.is-active .cram-dot { background: #fff; }
@@ -1339,6 +1339,12 @@ img, iframe, video, audio { max-width: 100%; }
 .subbar-group .seg { background: transparent; padding: 0; border: 0; }
 .subbar-group .seg button { height: 30px; padding: 0 11px; font-size: 13px; }
 .cram-panel { margin-bottom: var(--s5); }
+.cram-panel:not([hidden]),
+#paneCourses:not([hidden]),
+#paneStudy:not([hidden]),
+#addLocalPane,
+#addRemotePane,
+#remoteNotebookPreview { animation: viewIn var(--dur-slide) var(--ease); }
 
 /* Right column arrow collapse/expand + split-mode viewport-fit equal height & card collapse */
 .study[data-layout="split"] {
@@ -1405,9 +1411,11 @@ img, iframe, video, audio { max-width: 100%; }
   position: absolute; top: 50px; left: 0; z-index: 60; width: min(440px, 100%);
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m);
   box-shadow: 0 18px 44px rgba(0, 0, 0, .16); padding: 12px 14px;
-  display: none; flex-direction: column; gap: 10px;
+  display: flex; flex-direction: column; gap: 10px;
+  opacity: 0; transform: translateY(-6px); pointer-events: none;
+  transition: opacity var(--dur-hover) var(--ease), transform var(--dur-hover) var(--ease);
 }
-.mm-style-pop.open { display: flex; }
+.mm-style-pop.open { opacity: 1; transform: none; pointer-events: auto; }
 .mm-pop-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
 .mm-pop-row > span { font-size: 12px; font-weight: 600; color: var(--muted); }
 .mm-pop-row > div { display: flex; flex-wrap: wrap; gap: 5px; }
