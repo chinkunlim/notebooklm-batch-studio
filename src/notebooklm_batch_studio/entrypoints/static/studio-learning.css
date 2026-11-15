@@ -151,10 +151,17 @@
 .tutor-input { display: flex; gap: var(--s2); align-items: flex-end; }
 .tutor-input textarea { flex: 1; min-width: 0; }
 
-/* ---------- Small screens ---------- */
+/* ---------- Small screens & narrow reader panes (tablet split / mobile) ---------- */
+@container reader (max-width: 700px) {
+  .reader-layout { grid-template-columns: minmax(0, 1fr); }
+  .reader-splitter { display: none; }
+  .kp-list { position: static; min-height: 0; max-height: 200px; overflow-y: auto; }
+  .reader-legend { flex-wrap: wrap; white-space: normal; }
+}
 @container app (max-width: 900px) {
   .reader-layout { grid-template-columns: minmax(0, 1fr); }
-  .kp-list { position: static; }
+  .reader-splitter { display: none; }
+  .kp-list { position: static; min-height: 0; max-height: 200px; overflow-y: auto; }
 }
 @container app (max-width: 640px) {
   .mem-row { grid-template-columns: 40px minmax(0, 1fr); }

@@ -1515,9 +1515,9 @@ img, iframe, video, audio { max-width: 100%; }
 /* Reader sticky bar & scroll stop */
 /* Reader header & bar alignment */
 #readerCard { position: relative; scroll-margin-top: 24px; }
+#readerContainer { container-type: inline-size; container-name: reader; width: 100%; }
 #readerContent > .card-head { min-height: 32px; display: flex; align-items: center; padding: 0 44px 0 0; margin-bottom: var(--s3); }
-.reader-bar { flex: none; height: 46px; min-height: 46px; overflow-x: auto; scrollbar-width: none; background: transparent; padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); display: flex; align-items: center; }
-.reader-bar::-webkit-scrollbar { display: none; }
+.reader-bar { flex: none; height: auto; min-height: 46px; overflow: visible; background: transparent; padding: 6px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: var(--s3); display: flex; align-items: center; }
 
 /* Layout Debug Guides (Cmd+Shift+G / 參考線按鈕) */
 .app.layout-guides .topbar { outline: 2px dashed #e11d48; outline-offset: -2px; }

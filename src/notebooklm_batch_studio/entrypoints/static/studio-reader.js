@@ -228,7 +228,7 @@ async function layoutPages(token) {
   }, { root: pages, rootMargin: '600px 0px' });
   pages.querySelectorAll('.reader-page').forEach(el => reader.observer.observe(el));
   if (typeof initReaderPencilLayers === 'function' && currentStudyCourse) {
-    initReaderPencilLayers(currentStudyCourse, currentStudyLectureNo || 1);
+    initReaderPencilLayers(currentStudyCourse.code, activeStudyLectureNo || 1);
   }
   if (typeof syncActivePageComments === 'function' && !pages._scrollHooked) {
     pages._scrollHooked = true;
