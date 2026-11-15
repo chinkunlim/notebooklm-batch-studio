@@ -368,38 +368,7 @@ async function runPdfSelectionAction(act, ctx, pageNo, text) {
  * @param {function(): {code: string, no: number}|null} getCtx Context getter
  * @returns {void}
  */
-function hookPdfSelectionHighlight(getCtx) {
-  const pages = document.getElementById('readerPages');
-  if (!pages) return;
-  pages.addEventListener('mouseup', () => {
-    const sel = window.getSelection();
-    const text = sel ? sel.toString().trim() : '';
-    let pop = document.getElementById('readerSelPop');
-    if (text.length < 3) { if (pop) pop.hidden = true; return; }
-    const anchor = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
-    const pageEl = anchor && anchor.closest('.reader-page');
-    const ctx = getCtx();
-    if (!pageEl || !ctx) return;
-    if (!pop) {
-      pop = document.createElement('div');
-      pop.id = 'readerSelPop';
-      pop.className = 'reader-sel-pop';
-      pop.innerHTML = '<button type="button" data-act="hl">️ 標記</button><button type="button" data-act="ask">問這段</button><button type="button" data-act="note">存筆記</button>';
-      document.body.appendChild(pop);
-    }
-    const rect = sel.getRangeAt(0).getBoundingClientRect();
-    pop.style.left = `${Math.max(12, rect.left + rect.width / 2 - 110)}px`;
-    pop.style.top = `${Math.max(12, rect.top - 40)}px`;
-    pop.hidden = false;
-    pop.onclick = async e => {
-      const act = e.target.closest('button')?.dataset?.act;
-      if (!act) return;
-      pop.hidden = true;
-      sel.removeAllRanges();
-      await runPdfSelectionAction(act, ctx, Number(pageEl.dataset.page || 1), text);
-    };
-  });
-}
+// PDF selection highlight handler moved to studio-pencil.js for touch/pen parity and file size balance.
 
 /**
  * Register Q&A citation snippets so rendered lecture PDF pages highlight them in the citation color.

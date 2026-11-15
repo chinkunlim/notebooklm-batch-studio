@@ -574,6 +574,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-mindmap-designer.js
 │       │   │   ├── studio-nav.js
 │       │   │   ├── studio-notes-tab.js
+│       │   │   ├── studio-pencil.js
 │       │   │   ├── studio-player.js
 │       │   │   ├── studio-qa-drawer.js
 │       │   │   ├── studio-queue.js

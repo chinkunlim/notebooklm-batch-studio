@@ -56,6 +56,8 @@ function renderReaderShell(box, code, no, pdfUrl) {
         <button type="button" class="reader-pill-btn" id="readerToggleCommentsBtn" onclick="toggleReaderComments('${escHtml(code)}',${no})">收合重點</button>
         <button type="button" class="reader-pill-btn${localStorage.getItem('v05.readerNight') === '1' ? ' on' : ''}" id="readerNightBtn" onclick="toggleReaderNightMode()" title="反色護眼閱讀模式">護眼</button>
         <button type="button" class="reader-pill-btn" id="readerFilterBtn" onclick="toggleReaderFilterImportant()" title="只顯示有重點、書籤或標記的頁面">只看重點頁</button>
+        <button type="button" class="reader-pill-btn" id="readerPencilBtn" onclick="toggleReaderPencilMode()" title="切換手寫畫筆（iPad 使用 Apple Pencil 可直接落筆）">手寫畫筆</button>
+        <button type="button" class="reader-pill-btn" onclick="clearVisiblePagePencil()" title="清除目前頁面的手寫筆跡">清除筆跡</button>
       </div>
       <div class="reader-legend">
         <span class="kp-dot kp-i3"></span>必考核心 <span class="kp-dot kp-i2"></span>重要概念 <span class="kp-dot kp-i1"></span>補充 <span class="kp-dot kp-i4"></span>個人標記 <span class="kp-dot kp-i5"></span>提問引用
@@ -71,34 +73,7 @@ function renderReaderShell(box, code, no, pdfUrl) {
   if (typeof hookPdfSelectionHighlight === 'function') hookPdfSelectionHighlight(() => ({ code, no }));
   const pagesEl = document.getElementById('readerPages');
   if (pagesEl && localStorage.getItem('v05.readerNight') === '1') pagesEl.classList.add('night-mode');
-  hookReaderPinchZoom(pagesEl);
-}
-
-/**
- * Enable two-finger pinch-to-zoom inside the PDF reader without zooming the whole browser page.
- * @param {HTMLElement | null} pagesEl Scrollable PDF pages container
- * @returns {void}
- */
-function hookReaderPinchZoom(pagesEl) {
-  if (!pagesEl || pagesEl.dataset.pinchHooked) return;
-  pagesEl.dataset.pinchHooked = '1';
-  let d0 = 0, ratio = 1;
-  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => pagesEl.addEventListener(ev, e => e.preventDefault(), { passive: false }));
-  pagesEl.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = dist(e.touches); ratio = 1; } }, { passive: true });
-  pagesEl.addEventListener('touchmove', e => {
-    if (e.touches.length !== 2 || !d0) return;
-    e.preventDefault();
-    ratio = Math.min(2.2, Math.max(0.6, dist(e.touches) / d0));
-    pagesEl.style.transformOrigin = 'center top';
-    pagesEl.style.transform = `scale(${ratio})`;
-  }, { passive: false });
-  ['touchend', 'touchcancel'].forEach(ev => pagesEl.addEventListener(ev, () => {
-    if (!d0) return;
-    pagesEl.style.transform = '';
-    const delta = Math.round(reader.scale * ratio * 20) / 20 - reader.scale;
-    d0 = 0; ratio = 1; if (Math.abs(delta) >= 0.05) readerZoom(delta);
-  }, { passive: true }));
+  if (typeof hookReaderPinchZoom === 'function') hookReaderPinchZoom(pagesEl, () => reader.scale, readerZoom);
 }
 
 /**
@@ -252,6 +227,9 @@ async function layoutPages(token) {
     });
   }, { root: pages, rootMargin: '600px 0px' });
   pages.querySelectorAll('.reader-page').forEach(el => reader.observer.observe(el));
+  if (typeof initReaderPencilLayers === 'function' && currentStudyCourse) {
+    initReaderPencilLayers(currentStudyCourse, currentStudyLectureNo || 1);
+  }
   if (typeof syncActivePageComments === 'function' && !pages._scrollHooked) {
     pages._scrollHooked = true;
     pages.addEventListener('scroll', () => requestAnimationFrame(() => syncActivePageComments()), { passive: true });

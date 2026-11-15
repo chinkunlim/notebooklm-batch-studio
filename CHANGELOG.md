@@ -71,6 +71,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat: add starter habit presets, multi-select tool/AI prefs, and optional web search in Q&A (by `@antigravity`)
 - feat: add optional reverse import from Gemini Notebook and full local file download (by `@antigravity`)
 - feat(ui): add full-path breadcrumb layout guides, WYSIWYG layout tune mode, and template feedback (by `@antigravity`)
+- feat(ui): add iPad Apple Pencil PDF ink annotations and tablet/mobile touch parity (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
