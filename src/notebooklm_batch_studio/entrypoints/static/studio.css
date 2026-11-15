@@ -1371,62 +1371,57 @@ img, iframe, video, audio { max-width: 100%; }
 .study[data-layout="split"] #readerContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .study[data-layout="split"] #splitStage:not([hidden]) { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: transparent; border-top: 0; padding: 0; }
 .split-stage-head { min-height: 32px; display: flex; align-items: center; padding: 0 44px 0 0; margin-bottom: var(--s3); flex: none; }
-.study[data-layout="split"] #splitStage > .panel,
-.study[data-layout="split"] #splitStage > #panelReports,
-.study[data-layout="split"] #splitStage > #panelQuiz,
-.study[data-layout="split"] #splitStage > #panelFlash,
-.study[data-layout="split"] #splitStage > #panelTutor,
-.study[data-layout="split"] #splitStage > #panelQaNotes { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
-.study[data-layout="split"] #splitStage > #panelReports,
-.study[data-layout="split"] #splitStage > #panelQuiz,
-.study[data-layout="split"] #splitStage > #panelFlash,
-.study[data-layout="split"] #splitStage > #panelTutor,
-.study[data-layout="split"] #splitStage > #panelQaNotes { overflow: hidden; }
-.study[data-layout="split"] #splitStage .panel-head {
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) > .panel,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) > #panelReports,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) > #panelQuiz,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) > #panelFlash,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) > #panelTutor,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) > #panelQaNotes { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head {
   height: 46px; min-height: 46px; padding: 6px 0 10px; border-bottom: 1px solid var(--line);
   margin-bottom: var(--s3); flex: none; display: flex; align-items: center;
   justify-content: space-between; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none;
 }
-.study[data-layout="split"] #splitStage .panel-head::-webkit-scrollbar { display: none; }
-.study[data-layout="split"] #splitStage .panel-head .chips { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-.study[data-layout="split"] #splitStage .panel-head .hide-toggle { font-size: 12px; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; cursor: pointer; }
-.study[data-layout="split"] #splitStage .panel-head .chips,
-.study[data-layout="split"] #splitStage .panel-head .panel-note { flex-wrap: nowrap; white-space: nowrap; }
-.study[data-layout="split"] #splitStage .panel-head .panel-note { overflow: hidden; text-overflow: ellipsis; }
-.study[data-layout="split"] #splitStage .panel-head .qa-notes-toolbar {
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head::-webkit-scrollbar { display: none; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .chips { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .hide-toggle { font-size: 12px; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; cursor: pointer; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .chips,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .panel-note { flex-wrap: nowrap; white-space: nowrap; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .panel-note { overflow: hidden; text-overflow: ellipsis; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .qa-notes-toolbar {
   display: flex; align-items: center; gap: 6px; width: 100%; flex-wrap: nowrap; margin: 0;
 }
-.study[data-layout="split"] #splitStage .panel-head .qa-notes-toolbar .text-input {
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .qa-notes-toolbar .text-input {
   height: 32px; padding: 0 10px; font-size: 12px; border-radius: 999px; width: auto; min-width: 140px;
 }
-.study[data-layout="split"] #splitStage .panel-head .qa-notes-toolbar #qaNotesSearchInput { flex: 1; min-width: 160px; }
-.study[data-layout="split"] #splitStage .panel-head .qa-notes-toolbar .qa-cross-label {
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .qa-notes-toolbar #qaNotesSearchInput { flex: 1; min-width: 160px; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .qa-notes-toolbar .qa-cross-label {
   font-size: 12px; color: var(--muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
 }
 .report-meta-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: nowrap; flex: none; }
 .report-meta-bar a.reader-pill-btn { text-decoration: none; white-space: nowrap; }
-.study[data-layout="split"] #splitStage #reportContentContainer,
-.study[data-layout="split"] #splitStage #flashcardsViewerContainer,
-.study[data-layout="split"] #splitStage #qaNotesContainer,
-.study[data-layout="split"] #splitStage #tutorContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.study[data-layout="split"] #splitStage #reportContentContainer .report-frame { flex: 1; min-height: 0; height: 100%; width: 100%; border-radius: var(--radius-m); overflow: hidden; }
-.study[data-layout="split"] #splitStage #flashcardsViewerContainer .flash-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.study[data-layout="split"] #splitStage #flashcardsViewerContainer .flashcard { flex: 1; min-height: 220px; height: auto; }
-.study[data-layout="split"] #splitStage #qaNotesList { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
-.study[data-layout="split"] #splitStage #quizContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
-.study[data-layout="split"] #splitStage #quizActionBar {
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #reportContentContainer,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #flashcardsViewerContainer,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #qaNotesContainer,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #tutorContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #reportContentContainer .report-frame { flex: 1; min-height: 0; height: 100%; width: 100%; border-radius: var(--radius-m); overflow: hidden; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #flashcardsViewerContainer .flash-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #flashcardsViewerContainer .flashcard { flex: 1; min-height: 220px; height: auto; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #qaNotesList { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #quizContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #quizActionBar {
   position: static; flex: none; margin: var(--s3) 0 0; padding: 0;
   background: transparent; border: 0; box-shadow: none; border-radius: 0; min-height: 38px;
 }
-.study[data-layout="split"] #splitStage #quizActionBar .btn-primary,
-.study[data-layout="split"] #splitStage #flashcardsViewerContainer .btn-primary,
-.study[data-layout="split"] #splitStage #tutorContainer .btn-primary { min-height: 38px; }
-.study[data-layout="split"] #splitStage .empty-state {
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #quizActionBar .btn-primary,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #flashcardsViewerContainer .btn-primary,
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #tutorContainer .btn-primary { min-height: 38px; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .empty-state {
   flex: 1; min-height: 380px; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 10px;
 }
-.study[data-layout="split"] #splitStage #tutorContainer .tutor-box { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.study[data-layout="split"] #splitStage #tutorLog { flex: 1; min-height: 0; max-height: none; overflow-y: auto; margin: 0 0 var(--s3); }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #tutorContainer .tutor-box { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+:is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) #tutorLog { flex: 1; min-height: 0; max-height: none; overflow-y: auto; margin: 0 0 var(--s3); }
 .quiz-pager { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-top: auto; padding: var(--s3) 0 var(--s3); flex: none; }
 .quiz-pager-meta { font-size: 13px; font-weight: 600; color: var(--muted); }
 .study[data-layout="split"] #benchStage { display: none; }
@@ -1443,12 +1438,25 @@ img, iframe, video, audio { max-width: 100%; }
   height: var(--study-h, calc(100dvh - 24px)); min-height: 460px; display: flex; flex-direction: column; overflow: hidden;
   position: sticky; top: 12px; margin-bottom: 0; scroll-margin-top: 12px;
 }
-.study[data-layout="stack"] #bench .bench-stage > .panel { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.study[data-layout="stack"] #bench .bench-stage > .panel { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .study[data-layout="stack"] #bench #panelNotes { overflow: hidden; }
 .study[data-layout="stack"] #bench #readerHome,
 .study[data-layout="stack"] #bench #readerContent,
 .study[data-layout="stack"] #bench #readerContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .app:has(#paneStudy[data-layout="stack"]:not([hidden])) .views { padding-bottom: 12px; }
+@container app (max-width: 1000px) {
+  .study[data-layout="split"] { height: auto; position: static; }
+  .study[data-layout="split"] .study-main { height: var(--study-h, calc(100dvh - 36px)); min-height: 460px; }
+  .study[data-layout="split"] #readerCard .side-collapse-btn,
+  .study[data-layout="split"] #readerCard .side-expand-btn { display: none; }
+  .split-stage-head, #readerContent > .card-head { padding-right: 0; }
+}
+@container app (max-width: 640px) {
+  .study[data-layout="split"] .study-main,
+  .study[data-layout="stack"] #bench:not(.is-collapsed) .bench-stage { height: calc(100dvh - 104px - env(safe-area-inset-bottom)); min-height: 420px; }
+  :is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .empty-state { min-height: 260px; }
+  :is(.study[data-layout="split"] #splitStage, .study[data-layout="stack"] #benchStage) .panel-head .qa-notes-toolbar #qaNotesSearchInput { min-width: 120px; }
+}
 .study[data-layout="split"] .study-side .card.is-collapsed { flex: 0 0 auto !important; min-height: 0 !important; }
 .card-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); width: 100%; min-height: 32px; }
 #myCoursesCard .card-title-row { width: auto; flex: 1 1 auto; }
