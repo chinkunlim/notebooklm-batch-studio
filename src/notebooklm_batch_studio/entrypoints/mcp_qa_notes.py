@@ -156,7 +156,133 @@ def register_remote_artifact_tools(mcp: MCPServer, service: Any) -> None:
         service: BatchStudioService instance.
     """
     _register_remote_list_delete(mcp, service)
+    _register_reverse_import_tools(mcp, service)
     register_remote_extra_tools(mcp, service)
+
+
+def _reverse_import_service(service: Any) -> Any:
+    """Build ReverseImportService from BatchStudioService.
+
+    Args:
+        service: BatchStudioService instance.
+
+    Returns:
+        Configured ReverseImportService instance.
+    """
+    from notebooklm_batch_studio.services.reverse_import import ReverseImportService
+
+    return ReverseImportService(
+        notebooklm_client=service.notebooklm_client,
+        course_repo=service.course_repo,
+        queue_repo=service.queue_repo,
+        output_base_dir=service.config.output_dir,
+    )
+
+
+def _register_reverse_import_tools(mcp: MCPServer, service: Any) -> None:
+    """Register list_remote_notebooks, import_remote_notebook, and download_course_files_locally MCP tools.
+
+    Args:
+        mcp: FastMCP server instance.
+        service: BatchStudioService instance.
+    """
+    _register_list_notebooks_tool(mcp, service)
+    _register_import_notebook_tool(mcp, service)
+    _register_download_course_files_tool(mcp, service)
+
+
+def _register_list_notebooks_tool(mcp: MCPServer, service: Any) -> None:
+    """Register the read-only list_remote_notebooks MCP tool.
+
+    Args:
+        mcp: FastMCP server instance.
+        service: BatchStudioService instance.
+    """
+
+    @mcp.tool()
+    async def list_remote_notebooks() -> str:
+        """List all remote Gemini Notebooks and show which ones are linked locally.
+
+        Returns:
+            JSON string listing remote notebooks and their linked course codes.
+        """
+        svc = _reverse_import_service(service)
+        return json.dumps(await svc.list_remote_notebooks(), ensure_ascii=False, indent=2)
+
+
+def _register_import_notebook_tool(mcp: MCPServer, service: Any) -> None:
+    """Register the import_remote_notebook MCP tool with confirm guard.
+
+    Args:
+        mcp: FastMCP server instance.
+        service: BatchStudioService instance.
+    """
+
+    @mcp.tool()
+    async def import_remote_notebook(
+        notebook_id: str,
+        course_code: str = "",
+        download_sources: bool = True,
+        confirm: bool = False,
+    ) -> str:
+        """Reverse-import an existing Gemini Notebook as a local course (requires confirm=True).
+
+        Args:
+            notebook_id: Remote Gemini Notebook identifier.
+            course_code: Optional local course code (auto-derived if empty).
+            download_sources: Whether to download remote source fulltext as Markdown.
+            confirm: Must be set to True to create the local course and download files.
+
+        Returns:
+            JSON string with imported course summary or confirmation prompt.
+        """
+        if not confirm:
+            return json.dumps({"requires_confirmation": True, "notebook_id": notebook_id}, ensure_ascii=False)
+        from notebooklm_batch_studio.services.reverse_import import ReverseImportOptions
+
+        svc = _reverse_import_service(service)
+        opts = ReverseImportOptions(
+            notebook_id=notebook_id,
+            course_code=course_code.strip() or None,
+            download_sources=download_sources,
+            download_artifacts=True,
+        )
+        return json.dumps(await svc.import_remote_notebook(opts), ensure_ascii=False, indent=2)
+
+
+def _register_download_course_files_tool(mcp: MCPServer, service: Any) -> None:
+    """Register the download_course_files_locally MCP tool with confirm guard.
+
+    Args:
+        mcp: FastMCP server instance.
+        service: BatchStudioService instance.
+    """
+
+    @mcp.tool()
+    async def download_course_files_locally(
+        course_code: str,
+        include_sources: bool = True,
+        include_artifacts: bool = True,
+        confirm: bool = False,
+    ) -> str:
+        """Download all remote sources and artifacts of a linked course to DATA_DIR (requires confirm=True).
+
+        Args:
+            course_code: Existing local course code.
+            include_sources: Whether to download remote source fulltext as Markdown.
+            include_artifacts: Whether to download remote generated artifacts.
+            confirm: Must be set to True to download files locally.
+
+        Returns:
+            JSON string with downloaded counts and local folder paths.
+        """
+        if not confirm:
+            return json.dumps({"requires_confirmation": True, "course_code": course_code}, ensure_ascii=False)
+        svc = _reverse_import_service(service)
+        res = await svc.download_course_files_locally(
+            course_code, include_sources=include_sources, include_artifacts=include_artifacts
+        )
+        return json.dumps(res, ensure_ascii=False, indent=2)
 
 
 def _register_remote_list_delete(mcp: MCPServer, service: Any) -> None:

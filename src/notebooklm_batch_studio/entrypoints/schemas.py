@@ -348,3 +348,22 @@ class GenerateScopedArtifactRequest(BaseModel):
     kind: str = Field(min_length=1)
     source_ids: list[str] | None = None
     instructions: str = ""
+
+
+class ReverseImportRequest(BaseModel):
+    """Payload to optionally reverse-import an existing remote Gemini Notebook locally."""
+
+    course_code: str | None = None
+    course_name: str | None = None
+    language: str = "zh-TW"
+    download_sources: bool = True
+    download_artifacts: bool = True
+    source_ids: list[str] | None = None
+    artifact_ids: list[str] | None = None
+
+
+class DownloadAllLocalRequest(BaseModel):
+    """Payload to download all remote sources and artifacts for a linked course locally."""
+
+    include_sources: bool = True
+    include_artifacts: bool = True

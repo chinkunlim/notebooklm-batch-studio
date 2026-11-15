@@ -161,6 +161,41 @@ class DummyStudioClient(NotebookLMClientProtocol):
         """
         return [dict(s) for s in self._sources.get(notebook_id, [])]
 
+    async def list_notebooks(self) -> list[dict[str, Any]]:
+        """List all dummy notebooks currently configured in memory.
+
+        Returns:
+            List of dummy notebook summary dictionaries.
+        """
+        return list(getattr(self, "_notebooks", []))
+
+    async def get_source_fulltext(
+        self, notebook_id: str, source_id: str, output_format: str = "markdown"
+    ) -> dict[str, Any]:
+        """Return dummy fulltext content for a given source.
+
+        Args:
+            notebook_id: Notebook identifier.
+            source_id: Source identifier.
+            output_format: Output format ('markdown' or 'text').
+
+        Returns:
+            Dictionary with source_id, title, content, url, and char_count.
+        """
+        sources = self._sources.get(notebook_id, [])
+        src = next((s for s in sources if s.get("id") == source_id), {})
+        content = (
+            src.get("content")
+            or f"# {src.get('title', source_id)}\n\nDummy source content ({output_format})."
+        )
+        return {
+            "source_id": source_id,
+            "title": str(src.get("title", source_id)),
+            "content": content,
+            "url": src.get("url"),
+            "char_count": len(content),
+        }
+
     async def delete_source(self, notebook_id: str, source_id: str) -> None:
         """Record source deletion and remove matching source from dummy storage.
 
@@ -384,8 +419,8 @@ class DummyStudioClient(NotebookLMClientProtocol):
         self.calls.append(f"rename_mind_map:{note_id}:{title}")
 
     async def list_artifacts(self, notebook_id: str) -> list[dict[str, Any]]:
-        """Return empty remote artifact list for sync calls."""
-        return []
+        """Return configured remote artifact list for sync calls."""
+        return list(getattr(self, "_artifacts", {}).get(notebook_id, []))
 
     async def delete_artifact(self, notebook_id: str, artifact_id: str) -> None:
         """Record remote artifact deletion for offline tests."""

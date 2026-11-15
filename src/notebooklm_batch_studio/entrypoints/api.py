@@ -43,6 +43,7 @@ from notebooklm_batch_studio.entrypoints.http.plan import plan_router
 from notebooklm_batch_studio.entrypoints.http.preferences import preferences_router
 from notebooklm_batch_studio.entrypoints.http.qa_notes import qa_notes_router
 from notebooklm_batch_studio.entrypoints.http.queue import queue_router
+from notebooklm_batch_studio.entrypoints.http.reverse_import import reverse_import_router
 from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
@@ -386,6 +387,7 @@ _API_ROUTERS = (
     preferences_router,
     qa_notes_router,
     fonts_router,
+    reverse_import_router,
 )
 
 

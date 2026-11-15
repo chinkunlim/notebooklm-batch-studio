@@ -34,6 +34,7 @@ function remoteArtifactsToolbarHtml(code) {
   return `<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center">
     <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseRemoteArtifacts('${c}')">重新整理雲端清單</button>
     <button type="button" class="btn btn-primary btn-sm" onclick="syncRemoteArtifactsNow('${c}')">同步回網頁</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="downloadAllCourseFilesNow('${c}')">📥 下載全部來源與產出到本地</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="suggestRemoteReportsUi('${c}')">💡 AI 建議報告</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="generateCustomReportUi('${c}')">📝 自訂報告</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="generateCinematicVideoUi('${c}')">🎬 生成電影感影片</button>
@@ -93,6 +94,33 @@ async function syncRemoteArtifactsNow(code) {
     if (typeof loadCourseDetails === 'function') loadCourseDetails(code, true);
   } catch (err) {
     showToast(`同步失敗：${err.message}`, 'error');
+  }
+}
+
+/**
+ * Download all remote sources (Markdown) and artifacts for a linked course into DATA_DIR.
+ * @param {string} code Course code
+ * @returns {Promise<void>} Resolves when local download completes
+ */
+async function downloadAllCourseFilesNow(code) {
+  showToast('正在下載遠端來源全文與產出物到本地…', 'info', 2000);
+  try {
+    const res = await fetch(`/api/courses/${code}/download-all`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ include_sources: true, include_artifacts: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    showToast(
+      `已下載 ${data.downloaded_sources_count || 0} 份來源與 ${data.synced_artifacts_count || 0} 件產出至本地`,
+      'success',
+      3500
+    );
+    await loadCourseRemoteArtifacts(code);
+    if (typeof loadCourseDetails === 'function') loadCourseDetails(code, true);
+  } catch (err) {
+    showToast(`本地下載失敗：${err.message}`, 'error');
   }
 }
 

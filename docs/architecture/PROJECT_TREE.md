@@ -312,6 +312,7 @@ notebooklm-batch-studio/
 │       │   │   ├── preferences.py
 │       │   │   ├── qa_notes.py
 │       │   │   ├── queue.py
+│       │   │   ├── reverse_import.py
 │       │   │   ├── settings.py
 │       │   │   ├── study.py
 │       │   │   └── system.py
@@ -578,6 +579,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-reader-notes.js
 │       │   │   ├── studio-reader.js
 │       │   │   ├── studio-remote-artifacts.js
+│       │   │   ├── studio-reverse-import.js
 │       │   │   ├── studio-settings.js
 │       │   │   ├── studio-shell.js
 │       │   │   ├── studio-start.js
@@ -637,6 +639,7 @@ notebooklm-batch-studio/
 │       │   ├── quota_planner.py
 │       │   ├── remote_admin_service.py
 │       │   ├── reporter.py
+│       │   ├── reverse_import.py
 │       │   ├── source_manager.py
 │       │   ├── study_plan_service.py
 │       │   ├── study_service.py
@@ -677,6 +680,7 @@ notebooklm-batch-studio/
 │   ├── test_remaining_fixes.py
 │   ├── test_remote_artifacts.py
 │   ├── test_rename.py
+│   ├── test_reverse_import.py
 │   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py
 │   ├── test_study_plan.py

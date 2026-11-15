@@ -271,3 +271,26 @@ class NotebookLMRemoteAdminProtocol(Protocol):
             Applied configuration dictionary.
         """
         ...
+
+    async def list_notebooks(self) -> list[dict[str, Any]]:
+        """List all remote Gemini Notebooks accessible to the signed-in user.
+
+        Returns:
+            List of dictionaries with id, title, sources_count, created_at, modified_at, is_owner.
+        """
+        ...
+
+    async def get_source_fulltext(
+        self, notebook_id: str, source_id: str, output_format: str = "markdown"
+    ) -> dict[str, Any]:
+        """Fetch full text content of a remote source for local download.
+
+        Args:
+            notebook_id: Notebook identifier.
+            source_id: Source identifier.
+            output_format: Output format ('markdown' or 'text').
+
+        Returns:
+            Dictionary with source_id, title, content, url, and char_count.
+        """
+        ...

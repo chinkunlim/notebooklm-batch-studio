@@ -712,20 +712,35 @@
     <h3>加入課程</h3>
     <div id="wizardSteps" class="wizard-steps"></div>
     <div data-step="1" class="stack">
-      <p class="desc">點選資料夾瀏覽，找到放講義 PDF 的課程資料夾後按「選這個資料夾」。可以選好幾門課。</p>
-      <div class="folder-box">
-        <div class="folder-bar">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="browseFolder(null)">開始位置</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="btnFolderUp" onclick="browseFolder(currentBrowseParent)">上一層</button>
-          <span class="path-now" id="folderCurrent"></span>
-          <button type="button" class="btn btn-primary btn-sm" id="btnPickFolder" onclick="pickCurrentFolder()">選這個資料夾</button>
-        </div>
-        <div id="folderList" class="folder-list"></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button type="button" id="tabAddLocal" class="btn btn-primary btn-sm" onclick="switchAddMode('local')">📁 從本機資料夾建立課程</button>
+        <button type="button" id="tabAddRemote" class="btn btn-ghost btn-sm" onclick="switchAddMode('remote')">☁️ 從現有 Gemini Notebook 反向匯入（可選）</button>
       </div>
-      <div>
-        <span class="field-label">已選的課程資料夾</span>
-        <div id="pickedFolders" class="picked"><span class="muted small">（還沒選）</span></div>
-        <textarea id="folderPaths" hidden></textarea>
+      <div id="addLocalPane" class="stack">
+        <p class="desc">點選資料夾瀏覽，找到放講義 PDF 的課程資料夾後按「選這個資料夾」。可以選好幾門課。</p>
+        <div class="folder-box">
+          <div class="folder-bar">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="browseFolder(null)">開始位置</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btnFolderUp" onclick="browseFolder(currentBrowseParent)">上一層</button>
+            <span class="path-now" id="folderCurrent"></span>
+            <button type="button" class="btn btn-primary btn-sm" id="btnPickFolder" onclick="pickCurrentFolder()">選這個資料夾</button>
+          </div>
+          <div id="folderList" class="folder-list"></div>
+        </div>
+        <div>
+          <span class="field-label">已選的課程資料夾</span>
+          <div id="pickedFolders" class="picked"><span class="muted small">（還沒選）</span></div>
+          <textarea id="folderPaths" hidden></textarea>
+        </div>
+      </div>
+      <div id="addRemotePane" class="stack" style="display:none">
+        <p class="desc">若你先前已在 Gemini Notebook 建立過筆記本，可選擇是否要匯入為本地課程，並把所有來源全文與產出物下載到本機（<code>DATA_DIR</code>）。</p>
+        <div class="row" style="gap:8px;align-items:center">
+          <button type="button" class="btn btn-soft btn-sm" onclick="loadRemoteNotebooksList()">🔄 重新整理遠端筆記本</button>
+          <span id="remoteNotebooksStatus" class="small muted"></span>
+        </div>
+        <div id="remoteNotebooksList" class="stack"></div>
+        <div id="remoteNotebookPreview" class="stack" style="display:none;border-top:1px solid var(--border);padding-top:12px"></div>
       </div>
     </div>
     <div data-step="2" class="stack">
@@ -950,6 +965,7 @@
 <script src="/static/studio-qa-drawer.js"></script>
 <script src="/static/studio-notes-tab.js"></script>
 <script src="/static/studio-remote-artifacts.js"></script>
+<script src="/static/studio-reverse-import.js"></script>
 <script src="/static/studio-shell.js"></script>
 <script src="/static/studio-nav.js"></script>
 <script src="/static/studio-player.js"></script>

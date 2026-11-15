@@ -206,6 +206,56 @@ class NotebookLMAdapter(ArtifactOperationsMixin, ArtifactDownloadsMixin, Noteboo
         return str(match.id) if match else None
 
     @_translate_errors
+    async def list_notebooks(self) -> list[dict[str, Any]]:
+        """List all remote Gemini Notebooks accessible to the signed-in user.
+
+        Returns:
+            List of normalized notebook summary dictionaries.
+        """
+        async with self._client() as client:
+            notebooks = await client.notebooks.list()
+        items: list[dict[str, Any]] = []
+        for nb in notebooks:
+            created = getattr(nb, "created_at", None)
+            modified = getattr(nb, "modified_at", None)
+            items.append(
+                {
+                    "id": str(nb.id),
+                    "title": str(getattr(nb, "title", "") or ""),
+                    "sources_count": int(getattr(nb, "sources_count", 0) or 0),
+                    "is_owner": bool(getattr(nb, "is_owner", True)),
+                    "created_at": created.isoformat() if isinstance(created, datetime) else None,
+                    "modified_at": modified.isoformat() if isinstance(modified, datetime) else None,
+                }
+            )
+        return items
+
+    @_translate_errors
+    async def get_source_fulltext(
+        self, notebook_id: str, source_id: str, output_format: str = "markdown"
+    ) -> dict[str, Any]:
+        """Fetch the full text of a remote source in markdown or plain text format.
+
+        Args:
+            notebook_id: Notebook identifier.
+            source_id: Source identifier.
+            output_format: Desired format ('markdown' or 'text').
+
+        Returns:
+            Dictionary with source_id, title, content, url, and char_count.
+        """
+        fmt = "markdown" if output_format == "markdown" else "text"
+        async with self._client() as client:
+            ft = await client.sources.get_fulltext(notebook_id, source_id, output_format=fmt)
+        return {
+            "source_id": str(getattr(ft, "source_id", source_id)),
+            "title": str(getattr(ft, "title", "") or ""),
+            "content": str(getattr(ft, "content", "") or ""),
+            "url": getattr(ft, "url", None),
+            "char_count": int(getattr(ft, "char_count", 0) or 0),
+        }
+
+    @_translate_errors
     async def list_ready_sources(self, notebook_id: str) -> dict[str, str]:
         """Map the titles of a notebook's ready sources (the uploaded PDF file names) to their ids.
 
