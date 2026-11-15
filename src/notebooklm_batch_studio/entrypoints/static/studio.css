@@ -1414,7 +1414,13 @@ img, iframe, video, audio { max-width: 100%; }
 .study[data-layout="split"] #splitStage #flashcardsViewerContainer .flashcard { flex: 1; min-height: 220px; height: auto; }
 .study[data-layout="split"] #splitStage #qaNotesList { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 .study[data-layout="split"] #splitStage #quizContainer { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
-.study[data-layout="split"] #splitStage #quizActionBar { position: static; flex: none; margin: var(--s4) 0 0; }
+.study[data-layout="split"] #splitStage #quizActionBar {
+  position: static; flex: none; margin: var(--s3) 0 0; padding: 0;
+  background: transparent; border: 0; box-shadow: none; border-radius: 0; min-height: 38px;
+}
+.study[data-layout="split"] #splitStage #quizActionBar .btn-primary,
+.study[data-layout="split"] #splitStage #flashcardsViewerContainer .btn-primary,
+.study[data-layout="split"] #splitStage #tutorContainer .btn-primary { min-height: 38px; }
 .study[data-layout="split"] #splitStage .empty-state {
   flex: 1; min-height: 380px; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 10px;
