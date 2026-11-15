@@ -383,6 +383,7 @@ function renderQuizQuestions(quiz, variant) {
       <div class="q-explain" id="explanation-${qIdx}" style="display:none">
         <div class="answer">正確答案：${String.fromCharCode(65 + q.answer_index)}</div>
         <div>${escHtml(q.explanation || '暫無解析')}</div>
+        ${q.explanation ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" data-cite="${escHtml(q.explanation.slice(0, 180))}" onclick="if(typeof highlightQaCitationInPdf==='function') highlightQaCitationInPdf(this.dataset.cite)">📖 在講義中標記出處</button>` : ''}
       </div>`;
     container.appendChild(card);
   });

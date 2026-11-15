@@ -580,6 +580,21 @@
               <label class="hl-color-item"><span><i class="kp-dot kp-i4"></i> 個人標記</span><input type="color" id="hlColor-i4" data-hl-key="i4" value="#e11d48" aria-label="個人標記螢光筆顏色"></label>
               <label class="hl-color-item"><span><i class="kp-dot kp-i5"></i> 提問引用</span><input type="color" id="hlColor-i5" data-hl-key="i5" value="#0284c7" aria-label="提問引用螢光筆顏色"></label>
             </div>
+            <div class="hl-preview-box" aria-label="螢光筆顏色預覽">
+              預覽效果：<span class="kp-hl kp-i3">必考核心定義</span>需搭配 <span class="kp-hl kp-i2">重要概念機制</span> 理解，可參考 <span class="kp-hl kp-i1">補充案例</span>、自己的 <span class="kp-hl kp-i4">個人標記</span> 與 <span class="kp-hl kp-i5">AI 提問引用段落</span>。
+            </div>
+          </article>
+
+          <article class="card" id="mmDesignerCard" style="grid-column:1/-1">
+            <div class="card-head">
+              <h2 class="h2">心智圖預設樣式</h2>
+              <button type="button" class="btn btn-soft btn-sm" onclick="resetMindmapStyle()">恢復預設</button>
+            </div>
+            <p class="hint" style="margin-bottom:12px">先在這裡挑選或微調你喜歡的風格並即時預覽；進到「研讀工作室 → 心智圖」會直接套用，也能隨時切換風格模板。</p>
+            <div class="mm-designer-layout">
+              <div id="mmPreviewBox" class="mm-preview-box" aria-label="心智圖樣式即時預覽"></div>
+              <div id="mmCustomControls"></div>
+            </div>
           </article>
 
           <article class="card" id="habitCard">

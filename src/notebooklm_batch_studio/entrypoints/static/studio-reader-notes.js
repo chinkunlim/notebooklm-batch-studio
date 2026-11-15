@@ -295,7 +295,76 @@ function deleteUserPdfHighlight(code, no, id) {
 }
 
 /**
- * Listen for text selection inside #readerPages to show a quick highlight + comment button.
+ * Toggle inverted night-reading mode on the PDF canvas and persist the preference.
+ * @returns {void}
+ */
+function toggleReaderNightMode() {
+  const pages = document.getElementById('readerPages');
+  const btn = document.getElementById('readerNightBtn');
+  if (!pages) return;
+  const on = pages.classList.toggle('night-mode');
+  if (btn) btn.classList.toggle('on', on);
+  try { localStorage.setItem('v05.readerNight', on ? '1' : '0'); } catch (e) { /* ignore */ }
+}
+
+/**
+ * Toggle showing only PDF pages that have highlights, bookmarks, or Q&A citations.
+ * @returns {void}
+ */
+function toggleReaderFilterImportant() {
+  const btn = document.getElementById('readerFilterBtn');
+  const pages = [...document.querySelectorAll('#readerPages .reader-page')];
+  if (!pages.length) return;
+  const active = btn ? btn.classList.toggle('on') : false;
+  if (!active) {
+    pages.forEach(p => p.classList.remove('is-filtered-out'));
+    return;
+  }
+  const st = typeof currentStudyCourse !== 'undefined' && currentStudyCourse
+    ? loadReaderLocal(currentStudyCourse.code, activeStudyLectureNo) : { bookmarks: [] };
+  const bmSet = new Set(st.bookmarks || []);
+  let shown = 0;
+  pages.forEach(p => {
+    const pgNo = Number(p.dataset.page || 0);
+    const hasHit = bmSet.has(pgNo) || !!p.querySelector('.kp-hl');
+    p.classList.toggle('is-filtered-out', !hasHit);
+    if (hasHit) shown += 1;
+  });
+  if (!shown) {
+    pages.forEach(p => p.classList.remove('is-filtered-out'));
+    if (btn) btn.classList.remove('on');
+    if (typeof showToast === 'function') showToast('目前已載入的頁面尚無標記或書籤', 'info', 2400);
+  }
+}
+
+/**
+ * Execute one quick action from the PDF text-selection popover.
+ * @param {string} act Action name ('hl' | 'ask' | 'note')
+ * @param {{code: string, no: number}} ctx Active course and lecture context
+ * @param {number} pageNo 1-based page number
+ * @param {string} text Selected PDF text
+ * @returns {Promise<void>}
+ */
+async function runPdfSelectionAction(act, ctx, pageNo, text) {
+  if (act === 'hl') {
+    saveUserPdfHighlight(ctx.code, ctx.no, pageNo, text);
+  } else if (act === 'ask') {
+    if (typeof toggleQaDrawer === 'function') toggleQaDrawer(true);
+    const inp = document.getElementById('qaQuestionInput');
+    if (inp) { inp.value = `請用白話與重點解釋講義這段：\n「${text.slice(0, 400)}」`; inp.focus(); }
+  } else if (act === 'note' && typeof persistQaNote === 'function') {
+    await persistQaNote({
+      title: `講義摘錄 p.${pageNo}`,
+      content_markdown: `> ${text}`,
+      lecture_no: ctx.no,
+      tags: ['講義摘錄'],
+      source_scene: 'pdf_selection',
+    });
+  }
+}
+
+/**
+ * Listen for text selection inside #readerPages to show quick actions (highlight, ask AI, save note).
  * @param {function(): {code: string, no: number}|null} getCtx Context getter
  * @returns {void}
  */
@@ -312,21 +381,22 @@ function hookPdfSelectionHighlight(getCtx) {
     const ctx = getCtx();
     if (!pageEl || !ctx) return;
     if (!pop) {
-      pop = document.createElement('button');
+      pop = document.createElement('div');
       pop.id = 'readerSelPop';
-      pop.type = 'button';
       pop.className = 'reader-sel-pop';
-      pop.textContent = '🖍️ 標記並加備註';
+      pop.innerHTML = '<button type="button" data-act="hl">🖍️ 標記</button><button type="button" data-act="ask">💬 問這段</button><button type="button" data-act="note">💾 存筆記</button>';
       document.body.appendChild(pop);
     }
     const rect = sel.getRangeAt(0).getBoundingClientRect();
-    pop.style.left = `${Math.max(12, rect.left + rect.width / 2 - 64)}px`;
-    pop.style.top = `${Math.max(12, rect.top - 38)}px`;
+    pop.style.left = `${Math.max(12, rect.left + rect.width / 2 - 110)}px`;
+    pop.style.top = `${Math.max(12, rect.top - 40)}px`;
     pop.hidden = false;
-    pop.onclick = () => {
+    pop.onclick = async e => {
+      const act = e.target.closest('button')?.dataset?.act;
+      if (!act) return;
       pop.hidden = true;
       sel.removeAllRanges();
-      saveUserPdfHighlight(ctx.code, ctx.no, Number(pageEl.dataset.page || 1), text);
+      await runPdfSelectionAction(act, ctx, Number(pageEl.dataset.page || 1), text);
     };
   });
 }
@@ -416,4 +486,6 @@ Object.assign(window, {
   hookPdfSelectionHighlight,
   registerQaCitations,
   highlightQaCitationInPdf,
+  toggleReaderNightMode,
+  toggleReaderFilterImportant,
 });

@@ -9,7 +9,8 @@ import * as pdfjsLib from '/static/vendor/pdfjs/pdf.min.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/vendor/pdfjs/pdf.worker.min.mjs';
 
 /** State of the open document; replaced each time a lecture is opened. */
-let reader = { doc: null, scale: 1.25, points: [], observer: null, pageObserver: null, token: 0, autoTried: new Set() };
+const savedScale = Number(localStorage.getItem('v05.readerScale') || 1.25);
+let reader = { doc: null, scale: savedScale >= 1.25 && savedScale <= 2.0 ? savedScale : 1.25, points: [], observer: null, pageObserver: null, token: 0, autoTried: new Set() };
 
 /**
  * Lower-case, drop punctuation and collapse whitespace, so a quote is found regardless of line breaks,
@@ -53,6 +54,8 @@ function renderReaderShell(box, code, no, pdfUrl) {
           <div class="bm-pop" id="bmPop" role="listbox" aria-label="書籤列表"></div>
         </div>
         <button type="button" class="reader-pill-btn" id="readerToggleCommentsBtn" onclick="toggleReaderComments('${escHtml(code)}',${no})">收合重點</button>
+        <button type="button" class="reader-pill-btn${localStorage.getItem('v05.readerNight') === '1' ? ' on' : ''}" id="readerNightBtn" onclick="toggleReaderNightMode()" title="反色護眼閱讀模式">🌙 護眼</button>
+        <button type="button" class="reader-pill-btn" id="readerFilterBtn" onclick="toggleReaderFilterImportant()" title="只顯示有重點、書籤或標記的頁面">✨ 只看重點頁</button>
       </div>
       <div class="reader-legend">
         <span class="kp-dot kp-i3"></span>必考核心 <span class="kp-dot kp-i2"></span>重要概念 <span class="kp-dot kp-i1"></span>補充 <span class="kp-dot kp-i4"></span>個人標記 <span class="kp-dot kp-i5"></span>提問引用
@@ -66,7 +69,9 @@ function renderReaderShell(box, code, no, pdfUrl) {
   if (typeof initReaderSplitter === 'function') initReaderSplitter(code, no);
   if (typeof renderReaderBookmarks === 'function') renderReaderBookmarks(code, no);
   if (typeof hookPdfSelectionHighlight === 'function') hookPdfSelectionHighlight(() => ({ code, no }));
-  hookReaderPinchZoom(document.getElementById('readerPages'));
+  const pagesEl = document.getElementById('readerPages');
+  if (pagesEl && localStorage.getItem('v05.readerNight') === '1') pagesEl.classList.add('night-mode');
+  hookReaderPinchZoom(pagesEl);
 }
 
 /**
@@ -92,8 +97,7 @@ function hookReaderPinchZoom(pagesEl) {
     if (!d0) return;
     pagesEl.style.transform = '';
     const delta = Math.round(reader.scale * ratio * 20) / 20 - reader.scale;
-    d0 = 0; ratio = 1;
-    if (Math.abs(delta) >= 0.05) readerZoom(delta);
+    d0 = 0; ratio = 1; if (Math.abs(delta) >= 0.05) readerZoom(delta);
   }, { passive: true }));
 }
 
@@ -464,11 +468,12 @@ async function jumpToPoint(i) {
 }
 
 /**
- * Change the zoom level and lay the pages out again.
- * @param {number} delta Change in scale (e.g. 0.15)
+ * Apply a new PDF zoom scale, persist it, and re-layout pages.
+ * @param {number} next Target scale (clamped to 1.25..2.0)
  */
-function readerZoom(delta) {
-  reader.scale = Math.min(2.0, Math.max(1.25, Number((reader.scale + delta).toFixed(2))));
+function applyReaderScale(next) {
+  reader.scale = Math.min(2.0, Math.max(1.25, Number(next.toFixed(2))));
+  try { localStorage.setItem('v05.readerScale', String(reader.scale)); } catch (e) { /* ignore */ }
   document.getElementById('readerZoomLabel').textContent = `${Math.round(reader.scale * 100)}%`;
   if (!reader.doc) return;
   stopReader();
@@ -476,23 +481,18 @@ function readerZoom(delta) {
 }
 
 /**
- * Cycle PDF zoom between Small (125%), Medium ((125+200)/2 = 163%), and Large (200%).
+ * Change the zoom level and lay the pages out again.
+ * @param {number} delta Change in scale (e.g. 0.15)
+ */
+function readerZoom(delta) { applyReaderScale(reader.scale + delta); }
+
+/**
+ * Cycle PDF zoom between Small (125%), Medium (163%), and Large (200%).
  * @returns {void}
  */
 function cycleReaderZoom() {
-  const minS = 1.25;
-  const maxS = 2.0;
-  const midS = Number(((minS + maxS) / 2).toFixed(2));
-  const cur = reader.scale;
-  reader.scale = cur < midS - 0.05 ? midS : (cur < maxS - 0.05 ? maxS : minS);
-  document.getElementById('readerZoomLabel').textContent = `${Math.round(reader.scale * 100)}%`;
-  if (!reader.doc) return;
-  stopReader();
-  layoutPages(reader.token);
+  const minS = 1.25, maxS = 2.0, midS = 1.63, cur = reader.scale;
+  applyReaderScale(cur < midS - 0.05 ? midS : (cur < maxS - 0.05 ? maxS : minS));
 }
 
-Object.assign(window, {
-  loadReader, stopReader, generateKeyPoints, jumpToPoint, readerZoom,
-  cycleReaderZoom, renderKeyPointList, highlightPage,
-  getReaderDoc: () => reader.doc, normPdfText: norm,
-});
+Object.assign(window, { loadReader, stopReader, generateKeyPoints, jumpToPoint, readerZoom, cycleReaderZoom, renderKeyPointList, highlightPage, getReaderDoc: () => reader.doc, normPdfText: norm });

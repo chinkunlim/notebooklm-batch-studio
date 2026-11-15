@@ -67,6 +67,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(ui): add customizable mindmap designer with themes, shapes, connectors, and SVG export (by `@antigravity`)
 - feat(ui): sync user-configured body and heading fonts to mindmap renderer (by `@antigravity`)
 - feat(ui): highlight Q&A citations in lecture PDF and allow customizing all 5 highlight colors (by `@antigravity`)
+- feat(ui): add mindmap preset preview, highlight preview, PDF night/filter modes, and selection/source actions (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

@@ -68,7 +68,11 @@
 .kp-item.is-off-page:hover { opacity: 1; }
 .kp-del { margin-left: auto; font-size: 12px; color: var(--muted); padding: 2px 4px; cursor: pointer; }
 .kp-del:hover { color: var(--danger); }
-.reader-sel-pop { position: fixed; z-index: 95; padding: 6px 12px; border-radius: 999px; background: var(--primary); color: var(--primary-ink); font-size: 12.5px; font-weight: 600; box-shadow: 0 10px 26px rgba(0,0,0,.22); cursor: pointer; }
+.reader-sel-pop { position: fixed; z-index: 95; display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px; border-radius: 999px; background: var(--primary); color: var(--primary-ink); font-size: 12.5px; font-weight: 600; box-shadow: 0 10px 26px rgba(0,0,0,.22); }
+.reader-sel-pop button { padding: 4px 9px; border-radius: 999px; color: inherit; cursor: pointer; white-space: nowrap; }
+.reader-sel-pop button:hover { background: rgba(255,255,255,.18); }
+.reader-pages.night-mode .reader-canvas { filter: invert(.88) hue-rotate(180deg); }
+.reader-page.is-filtered-out { display: none; }
 .kp-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 14px; }
 .kp-title { display: inline-flex; flex-wrap: nowrap; align-items: baseline; gap: 0 4px; line-height: 1.25; }
 .kp-nowrap { white-space: nowrap; }
