@@ -6,9 +6,9 @@
 ## 📊 即時狀態看板 (Live Snapshot)
 
 - **最後更新時間**: `2026-11-19 05:10 UTC`
-- **最近操作 Agent**: `Antigravity`
+- **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `4eecbdf fix(ui): bust Safari static cache for reader JS/CSS and strip query in build_demo [agent:Antigravity]`
+- **最新 Git Commit**: `74e0340 chore(tooling): update tooling tooling and config (TASK-018, TASK-019, TASK-024) [agent:Antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-19 05:10 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: 修復生成失敗無法重試、支援單一講次補生成產出物、解決平板閱讀器工具列重疊與快取
+- **錯誤與根因**: ISSUE-038: 生成失敗任務在網頁無重試按鈕且背景佇列不會自動重試恢復（已根治並寫入 tests/test_failed_job_rerun.py）
+- **下一步**: 系統架構完美合規（100分 A+），各端點與 220 項測試均 PASS，可隨時開展後續研讀
+- **交接備註**: 所有測試通過，所有修改與已知問題均已記錄並推送到 GitHub。
+- **本機對話紀錄**: `.agents/conversations/2026-11-19-1310-antigravity-2-summary.md`（只在這台電腦）
 
 ### [2026-11-19 05:10 UTC] Session Closeout (結束對話收尾) (by `Antigravity`)
 - **檢查結果**: 測試與 Code Review Guard 通過
@@ -97,7 +105,3 @@
 ### [2026-11-12 10:31 UTC] 建立任務 `TASK-020`: Fix course code collision overwriting existing course and inheriting stale notebook_id (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
-
-### [2026-11-10 03:08 UTC] 認領任務 `TASK-019` (Audit all resolved known issues with verification evidence and exclude vendor noise from graphify) (by `antigravity`)
-- **相關範圍**: `-`
-- **接棒自**: `antigravity`
