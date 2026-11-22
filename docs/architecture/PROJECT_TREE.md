@@ -138,6 +138,7 @@ notebooklm-batch-studio/
 │   │   ├── 007-study-studio-visual-tiering-and-agency-architecture.md
 │   │   ├── 008-v05-study-studio-shell.md
 │   │   ├── 009-local-preferences-and-offline-fonts.md
+│   │   ├── 010-notebook-qa-notes-and-tag-system.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]

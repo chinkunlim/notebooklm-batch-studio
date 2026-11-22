@@ -1,6 +1,6 @@
 # SPEC-011：Gemini Notebook 探索提問、問答筆記庫與階層標籤系統
 
-- **狀態**：Draft <!-- Draft | Approved | Implemented | Deprecated -->
+- **狀態**：Implemented <!-- Draft | Approved | Implemented | Deprecated -->
 - **日期**：2026-11-14
 - **相關任務 / ADR**：TASK-024 / ADR-010
 

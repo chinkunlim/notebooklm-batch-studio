@@ -20,4 +20,4 @@
 | [008-learning-aids](008-learning-aids.md) | Implemented | 學習輔助：課件重點標示、遺忘曲線記憶強度、信心評分、混合複習、家教、番茄鐘 | TASK-009, ADR-006 |
 | [009-study-studio-ui-redesign](009-study-studio-ui-redesign.md) | Implemented | 研讀工作室與學生工作台介面重構（v05）：側欄四頁、真實音檔唱盤與迷你播放器、免分頁工作台、配色與自訂、全設備 RWD | TASK-011, ADR-007, ADR-008 |
 | [010-user-end-to-end-workflow](010-user-end-to-end-workflow.md) | Approved | 使用者端到端完整工作流程規格書：從建立課程、設定、排程產出到研讀與下載之各步驟細緻操作與判定流程 | TASK-010 ~ TASK-017 |
-| [011-notebook-qa-notes-and-tag-system](011-notebook-qa-notes-and-tag-system.md) | Draft | Gemini Notebook 探索提問、問答筆記庫與階層標籤系統（隨身抽屜、大頁面、格式化總結、來源回灌與測驗整合） | TASK-024, ADR-010 |
+| [011-notebook-qa-notes-and-tag-system](011-notebook-qa-notes-and-tag-system.md) | Implemented | Gemini Notebook 探索提問、問答筆記庫與階層標籤系統（隨身抽屜、大頁面、格式化總結、來源回灌與測驗整合） | TASK-024, ADR-010 |

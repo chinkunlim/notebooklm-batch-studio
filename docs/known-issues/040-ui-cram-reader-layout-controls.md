@@ -42,8 +42,14 @@
 
 ## 3. 修正或規避方式
 
-待實作（預計與 `ISSUE-039` 一併規劃並逐項修復，完成後標註 `Refs: ISSUE-039, ISSUE-040`）。
+已於 commit `5d69525` 與 `ISSUE-039` 一併修復並同步更新 `docs/demo/index.html`（`Refs: ISSUE-039, ISSUE-040`）：
+1. 統一 `#cramPanel` 與 `#bench` 容器寬度規範，並使頂欄 `.focus-exit` 與 `#qaDrawerToggle` 共用 `.course-pill` 等高膠囊設計。
+2. 將 `#studyLectureSelect` 原生 `<select>` 替換為符合紙感視覺的自訂風格化下拉選單 Popover。
+3. 將 `#studyPrevLecBtn` / `#studyNextLecBtn` 改為高對比圓形 Icon 按鈕，並為 `#cramModeBtn` 補上清晰的 `.is-active` 雙態配色與切換動畫。
+4. 於 `studio-reader.js` 與 `studio-reader-notes.js` 實作進入講義自動產生重點、閱讀進度 `last_position` 續讀、書籤（Bookmarks）工具列與大／中／小三段式點擊縮放切換。
+5. 雙欄模式右側欄頂部新增常駐「收合 / 展開」控制，且右側各 `.card` 區塊支援獨立折疊收合；修正全版型 `scroll-margin-top` 停靠。
+6. 整合 `.subbar` 右側 `#btnPomodoro` 與切換膠囊為一體化等高控制列，並為 `.cp-btn` 與 `.cp-pop` 加上 `user-select: none` 消除點擊反白問題。
 
 ## 4. 防回歸
 
-待補：靜態資源檢查（`test_button_routes.py`、`test_rename.py`）與 `docs/demo/index.html` 重建驗證。
+已通過靜態資源與路由檢查（`tests/test_button_routes.py`、`tests/test_rename.py`）以及全套 220 項離線單元／整合測試，並完成 `docs/demo/index.html` 重建與靜態驗證。

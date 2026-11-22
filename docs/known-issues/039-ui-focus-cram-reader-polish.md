@@ -30,8 +30,12 @@
 
 ## 3. 修正或規避方式
 
-待實作（預計一併修正以上 5 項並更新 `docs/demo/index.html` 與對應測試，完成後將標註 `Refs: ISSUE-039`）。
+已於 commit `5d69525` 一併修復並同步更新 `docs/demo/index.html`（`Refs: ISSUE-039, ISSUE-040`）：
+1. 專注模式實作左側邊緣 hover／滑動呼出 `.dock` 抽屜，將 `#focusExit` 移至左上角並改為純 Lucide icon，避免與右側「探索提問」按鈕重疊。
+2. `#cramPanel` 標題調整為「🔥 考前急救包」，加入明確關閉按鈕與下方卡片間距。
+3. 實作 PDF 閱讀器依 `.reader-pages` 容器寬度自動適配（Fit-to-Width）、可拖曳寬度、隨捲動頁面同步展開/收合的行邊批註（`studio-reader-notes.js`），以及第 4 種使用者自訂 Highlight 與個人備忘持久化。
+4. 配合頂部留白調整講義區塊 `scroll-margin-top` 與 sticky 停靠位置，防止捲動裁切頂部工具列。
 
 ## 4. 防回歸
 
-待補：靜態資源檢查（`test_button_routes.py`、`test_rename.py`）與閱讀器/急救模式 UI 驗證。
+已通過靜態資源與路由檢查（`tests/test_button_routes.py`、`tests/test_rename.py`）以及全套 220 項離線單元／整合測試，並同步透過 `scripts/demo/build_demo.py` 更新靜態展示檔。
