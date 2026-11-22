@@ -237,3 +237,7 @@
 ### [2026-11-10 03:08 UTC] 認領任務 `TASK-019` (Audit all resolved known issues with verification evidence and exclude vendor noise from graphify) (by `antigravity`)
 - **相關範圍**: `-`
 - **接棒自**: `antigravity`
+
+### [2026-11-12 10:31 UTC] 建立任務 `TASK-020`: Fix course code collision overwriting existing course and inheriting stale notebook_id (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
