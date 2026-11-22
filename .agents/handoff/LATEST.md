@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-22 13:29 UTC`
+- **最後更新時間**: `2026-11-22 16:04 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `668d70b chore(framework): update to v3.6.0, resolve conflicts, and align compliance [agent:antigravity]`
+- **最新 Git Commit**: `36fd363 chore(tooling): update tooling tooling and config (ADR-010, ISSUE-039, TASK-018, TASK-019, TASK-020, TASK-024) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,22 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-22 16:04 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: Complete literature-fetch integration, unified study folder hierarchy, Gemini Literature Library & Review generation, and Literature UI polish (inline PDF.js pr
+- **錯誤與根因**: 1) Inline PDF iframe triggered download due to attachment headers -> replaced with PDF.js canvas rendering via /api/literature/items/{key}/pdf. 2) Topbar course
+- **下一步**: 1) Retire standalone literature-fetch repo if no longer needed. 2) Test Literature Collection Excel-style filtering, PDF preview, and Gemini Literature Review g
+- **交接備註**: literature-fetch fully integrated & UI polished; all tests & checks pass, pushed to origin/main.
+- **本機對話紀錄**: `.agents/conversations/2026-11-23-0004-antigravity-summary.md`（只在這台電腦）
+
+### [2026-11-22 14:27 UTC] 完成任務 `TASK-025` — Integrate literature-fetch and unified study folder hierarchy (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Integrated literature-fetch (APA/DOI/Crossref/OpenAlex/Airiti/EBSCO/OpenAthens + interactive mode + APA 7 export + course import), unified <term>/<subject>/<category> study hierarchy, Web UI sidebar page, HTTP/MCP parity, and migrated existing DATA_DIR courses.
+
+### [2026-11-22 14:11 UTC] 建立任務 `TASK-025`: Integrate literature-fetch and unified study folder hierarchy (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-22 13:29 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
 - **檢查結果**: 測試與 Code Review Guard 通過
@@ -97,15 +113,3 @@
 ### [2026-11-14 04:36 UTC] 完成任務 `TASK-014` — Fix incomplete course deletion cleanup (DB tables, preferences, and study UI state) (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
-
-### [2026-11-14 04:36 UTC] 完成任務 `TASK-013` — Apply one course's settings to other courses (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
-
-### [2026-11-14 04:36 UTC] 完成任務 `TASK-012` — Course filter in 課程目錄: all / in progress / finished (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
-
-### [2026-11-12 16:03 UTC] 完成任務 `TASK-020` — Fix course code collision overwriting existing course and inheriting stale notebook_id (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: (無)

@@ -17,6 +17,10 @@ from notebooklm_batch_studio.domain.models import (
     Lecture,
     ProfileName,
 )
+from notebooklm_batch_studio.domain.study_hierarchy import (
+    resolve_course_output_root,
+    resolve_lecture_pdf_path,
+)
 from notebooklm_batch_studio.domain.study_plan import compute_course_study_state
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.job_views import (
@@ -157,7 +161,7 @@ class CourseOnboardingMixin:
             )
             return
 
-        pdf_file = Path(course.source_dir) / lec.filename
+        pdf_file = resolve_lecture_pdf_path(course.source_dir, lec.filename, lec.relative_path)
         if not pdf_file.exists():
             self.course_repo.update_lecture_upload_status(
                 course.code, lec.no, "failed", error_message=f"File not found: {lec.filename}"
@@ -299,7 +303,9 @@ class CourseOnboardingMixin:
         counts = self.queue_repo.count_by_status(course_code=course_code)
         raw_counts = {st.value: counts.get(st, 0) for st in JobStatus}
         total_jobs, done_jobs, progress_percent = self._calc_progress(raw_counts)
-        course_dir = (self.config.courses_output_dir / course.code).resolve()
+        course_dir = resolve_course_output_root(
+            self.config.courses_output_dir, course.code, course.study_dir
+        ).resolve()
         notebook_url = (
             f"https://notebook.google.com/notebook/{course.notebook_id}" if course.notebook_id else None
         )
@@ -462,7 +468,9 @@ class CourseOnboardingMixin:
         Returns:
             List of file metadata records including filename, relative path, and byte size.
         """
-        course_out = self.config.courses_output_dir / course_code
+        course = self.course_repo.get_course(course_code)
+        study_dir = course.study_dir if course else ""
+        course_out = resolve_course_output_root(self.config.courses_output_dir, course_code, study_dir)
         if not course_out.exists():
             return []
 

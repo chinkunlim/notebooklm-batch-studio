@@ -19,6 +19,8 @@ dependencies = [
     "starlette>=1.9.0",
     "Pillow>=13.0.0",
     "markdown>=3.11.2",
+    "httpx>=0.28.1",
+    "playwright>=1.64.0",
 ]  # add with `uv add <package>` (never `pip install`)
 
 [project.scripts]

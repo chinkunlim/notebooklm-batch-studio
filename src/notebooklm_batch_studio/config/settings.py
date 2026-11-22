@@ -11,9 +11,12 @@ from the current working directory), so the project and its data can be moved to
 
 from __future__ import annotations
 
+import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_DIR = "../../projects-data/notebooklm-batch-studio"
@@ -75,6 +78,11 @@ class AppConfig:
         notebooklm_home: Folder holding Gemini Notebook credentials and session states.
         auto_start_queue: Start the job queue when the web service starts (`AUTO_START_QUEUE`,
             default true in `.env`; off for configs built directly, e.g. in tests).
+        study_root_dir_override: Optional custom root for `<term>/<subject>/<category>` study folders.
+        library_email: University e-mail for OpenAthens sign-in (`USER_EMAIL`).
+        library_password: Password for OpenAthens sign-in (`USER_PASSWORD`); hidden from repr.
+        openathens_domain: OpenAthens organisation domain; empty uses plain DOI links.
+        ebsco_profile: Library EBSCO Discovery profile id; empty skips EBSCO.
     """
 
     app_env: str = "development"
@@ -91,6 +99,11 @@ class AppConfig:
     http_allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost")
     http_allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8768", "http://127.0.0.1:8080")
     auto_start_queue: bool = False
+    study_root_dir_override: Path | None = None
+    library_email: str = ""
+    library_password: str = field(default="", repr=False)
+    openathens_domain: str = "ndhu.edu.tw"
+    ebsco_profile: str = "3pnjf3"
 
     @property
     def input_dir(self) -> Path:
@@ -173,6 +186,42 @@ class AppConfig:
         """
         return self.output_dir / "courses"
 
+    @property
+    def study_root_dir(self) -> Path:
+        """Root folder for unified `<term>/<subject>/<category>` study directories.
+
+        Returns:
+            `STUDY_ROOT_DIR` when configured, otherwise `<data_dir>/study`.
+        """
+        return self.study_root_dir_override or (self.data_dir / "study")
+
+    @property
+    def scratch_dir(self) -> Path:
+        """Folder for unprocessed user files (`<data_dir>/scratch`).
+
+        Returns:
+            `<data_dir>/scratch`.
+        """
+        return self.data_dir / "scratch"
+
+    @property
+    def literature_dir(self) -> Path:
+        """Staging folder for unarchived literature PDFs (`<data_dir>/scratch/literature`).
+
+        Returns:
+            `<data_dir>/scratch/literature`.
+        """
+        return self.scratch_dir / "literature"
+
+    @property
+    def literature_browser_profile_dir(self) -> Path:
+        """Persistent Chrome profile used for OpenAthens / publisher access.
+
+        Returns:
+            `<data_dir>/state/literature_browser_profile`.
+        """
+        return self.state_dir / "literature_browser_profile"
+
 
 def _csv(value: str) -> tuple[str, ...]:
     """Split a comma-separated setting.
@@ -213,6 +262,8 @@ def load_config() -> AppConfig:
         os.environ.get("NOTEBOOKLM_HOME", "~/.config/notebooklm-batch-studio")
     ).expanduser()
     os.environ["NOTEBOOKLM_HOME"] = str(notebooklm_home)
+    study_root_raw = os.environ.get("STUDY_ROOT_DIR", "").strip()
+    study_root_override = resolve_data_dir(study_root_raw) if study_root_raw else None
     return AppConfig(
         app_env=os.environ.get("APP_ENV", "development").strip(),
         log_level=os.environ.get("LOG_LEVEL", "INFO").strip().upper(),
@@ -230,4 +281,9 @@ def load_config() -> AppConfig:
             os.environ.get("HTTP_ALLOWED_ORIGINS", "http://127.0.0.1:8768, http://127.0.0.1:8080")
         ),
         auto_start_queue=_flag(os.environ.get("AUTO_START_QUEUE", "true")),
+        study_root_dir_override=study_root_override,
+        library_email=os.environ.get("USER_EMAIL", "").strip(),
+        library_password=os.environ.get("USER_PASSWORD", "").strip(),
+        openathens_domain=os.environ.get("OPENATHENS_DOMAIN", "ndhu.edu.tw").strip(),
+        ebsco_profile=os.environ.get("EBSCO_PROFILE", "3pnjf3").strip(),
     )

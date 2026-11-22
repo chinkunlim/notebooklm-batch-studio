@@ -248,7 +248,10 @@ class CourseSourceMixin:
         lec = next((item for item in course.lectures if item.no == lecture_no), None)
         if lec is None:
             raise ValueError(f"Lecture {lecture_no} not found in course {course.code}")
-        pdf_file = Path(course.source_dir) / lec.filename
+        rel = lec.relative_path or lec.filename
+        pdf_file = Path(course.source_dir) / rel
+        if not pdf_file.exists():
+            pdf_file = Path(course.source_dir) / lec.filename
         if not pdf_file.exists():
             self.course_repo.update_lecture_upload_status(
                 course.code, lec.no, "failed", error_message=f"File not found: {lec.filename}"

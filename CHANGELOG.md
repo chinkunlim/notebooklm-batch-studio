@@ -6,6 +6,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 ## [Unreleased]
 
 ### Added
+- feat(literature,hierarchy): integrate full `literature-fetch` workflow (APA/DOI/Crossref/OpenAlex/Airiti/EBSCO/OpenAthens + interactive verification mode + selective APA 7 export + VoR refresh + legacy DB import), unified `<term>/<subject>/<category>` study folder hierarchy, inline PDF.js preview with zoom controls, Excel-style multi-column sort & filter headers (with live keyword filter on APA 7th), and Gemini `Literature Library` notebook sync, Q&A search, and 7-section Literature Review generation with quota-wait auto-resume (TASK-025, ADR-011, SPEC-012) (by `@antigravity`)
 - docs(specs): add SPEC-009 for Study Studio UI Redesign, 9-tool matrix, dedicated customize tab, luxury turntable, and avatar customization (ADR-007) (by `@antigravity`)
 - feat(skills): add design-psychology-master cognitive audit tool (by `@antigravity`)
 - docs(archive): preserve Version 1 through Version 4 standalone prototypes and index map in docs/design/ (copied from the Antigravity workspace into the repo) (by `@antigravity`)
@@ -72,6 +73,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat: add optional reverse import from Gemini Notebook and full local file download (by `@antigravity`)
 - feat(ui): add full-path breadcrumb layout guides, WYSIWYG layout tune mode, and template feedback (by `@antigravity`)
 - feat(ui): add iPad Apple Pencil PDF ink annotations and tablet/mobile touch parity (by `@antigravity`)
+- feat(adr/docs): add adr/docs module (ADR-007, ADR-008, ADR-009, ADR-010, ADR-011, ISSUE-020, ISSUE-039, TASK-010, TASK-011, TASK-012, TASK-013, TASK-014, TASK-017, TASK-018, TASK-019, TASK-020, TASK-021, TASK-022, TASK-023, TASK-024, TASK-025) (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

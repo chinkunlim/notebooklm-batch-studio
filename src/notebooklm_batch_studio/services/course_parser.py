@@ -11,6 +11,11 @@ from typing import Any
 import tomli
 
 from notebooklm_batch_studio.domain.models import Course, Lecture, ProfileName
+from notebooklm_batch_studio.domain.study_hierarchy import (
+    INPUT_SOURCE_CATEGORIES,
+    STUDY_CATEGORIES,
+    parse_term_subject,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +84,49 @@ def compute_pdf_sha256(pdf_path: Path) -> str:
     return hasher.hexdigest()
 
 
+def _is_visible_pdf(path: Path) -> bool:
+    """Return True when `path` is a non-hidden PDF file.
+
+    Args:
+        path: Candidate filesystem path.
+
+    Returns:
+        True for visible `.pdf` files.
+    """
+    return path.is_file() and path.suffix.lower() == ".pdf" and not path.name.startswith(".")
+
+
+def _find_candidate_pdfs(course_dir: Path) -> list[tuple[Path, str, str]]:
+    """Find candidate PDF files in a course directory (supporting study hierarchy).
+
+    When the directory uses the 5-category study layout (`01 Material`, `02 Handout`, ...),
+    recursively scans `01 Material` and `02 Handout` (plus top-level PDFs) while ignoring
+    `03 Notes`, `04 Homework`, and `05 Assignments`. Otherwise scans top-level PDFs.
+
+    Args:
+        course_dir: Root directory of the course.
+
+    Returns:
+        Sorted list of `(pdf_path, category, relative_path)` tuples.
+    """
+    has_study_layout = any((course_dir / cat).is_dir() for cat in STUDY_CATEGORIES)
+    top_level = [(p, "", p.name) for p in course_dir.iterdir() if _is_visible_pdf(p)]
+    if not has_study_layout:
+        return sorted(top_level, key=lambda item: item[2].lower())
+
+    candidates = list(top_level)
+    for cat in INPUT_SOURCE_CATEGORIES:
+        cat_dir = course_dir / cat
+        if not cat_dir.is_dir():
+            continue
+        for p in cat_dir.rglob("*"):
+            if _is_visible_pdf(p):
+                rel = str(p.relative_to(course_dir)).replace("\\", "/")
+                candidates.append((p, cat, rel))
+    candidates.sort(key=lambda item: item[2].lower())
+    return candidates
+
+
 def _collect_unique_lectures(course_dir: Path) -> list[Lecture]:
     """Scan and deduplicate PDF files in a course directory.
 
@@ -88,19 +136,11 @@ def _collect_unique_lectures(course_dir: Path) -> list[Lecture]:
     Returns:
         List of deduplicated Lecture domain objects.
     """
-    pdf_files = sorted(
-        [
-            p
-            for p in course_dir.iterdir()
-            if p.is_file() and p.suffix.lower() == ".pdf" and not p.name.startswith(".")
-        ],
-        key=lambda p: p.name.lower(),
-    )
-
+    candidates = _find_candidate_pdfs(course_dir)
     lectures: list[Lecture] = []
     seen_hashes: set[str] = set()
 
-    for idx, pdf_path in enumerate(pdf_files, start=1):
+    for idx, (pdf_path, category, rel_path) in enumerate(candidates, start=1):
         sha256_hash = compute_pdf_sha256(pdf_path)
         if sha256_hash in seen_hashes:
             logger.warning("Duplicate PDF detected (same content): %s, skipping.", pdf_path.name)
@@ -114,6 +154,8 @@ def _collect_unique_lectures(course_dir: Path) -> list[Lecture]:
                 topic=topic,
                 filename=pdf_path.name,
                 sha256=sha256_hash,
+                category=category,
+                relative_path=rel_path,
             )
         )
 
@@ -140,6 +182,11 @@ def scan_course_directory(course_dir: Path, custom_code: str | None = None) -> C
     inferred_code, inferred_name = parse_course_folder_name(course_dir.name)
     code = custom_code or inferred_code
     lectures = _collect_unique_lectures(course_dir)
+    term, subject = parse_term_subject(course_dir.name)
+    if re.match(r"^\d{2,4}[-_]\d{1,2}$", course_dir.parent.name):
+        term = course_dir.parent.name.replace("_", "-")
+        subject = course_dir.name
+    has_study_layout = any((course_dir / cat).is_dir() for cat in STUDY_CATEGORIES)
 
     logger.info("Scanned course %s (%s): found %d lecture PDFs", code, inferred_name, len(lectures))
     return Course(
@@ -149,6 +196,9 @@ def scan_course_directory(course_dir: Path, custom_code: str | None = None) -> C
         profile=ProfileName.FULL,
         language="zh-TW",
         lectures=lectures,
+        term=term,
+        subject=subject,
+        study_dir=str(course_dir.resolve()) if has_study_layout else "",
     )
 
 

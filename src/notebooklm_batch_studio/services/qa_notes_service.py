@@ -115,9 +115,13 @@ class QANotesService:
             course_code: Course identifier.
 
         Returns:
-            Directory path under DATA_DIR.
+            Directory path under study directory or DATA_DIR.
         """
-        path = self.config.courses_output_dir / course_code / "notes"
+        course = self.course_repo.get_course(course_code)
+        if course and course.study_dir:
+            path = Path(course.study_dir) / "03 Notes" / "QA_Notes"
+        else:
+            path = self.config.courses_output_dir / course_code / "notes"
         path.mkdir(parents=True, exist_ok=True)
         return path
 

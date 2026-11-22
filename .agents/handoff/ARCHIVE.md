@@ -241,3 +241,15 @@
 ### [2026-11-12 10:31 UTC] 建立任務 `TASK-020`: Fix course code collision overwriting existing course and inheriting stale notebook_id (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-12 16:03 UTC] 完成任務 `TASK-020` — Fix course code collision overwriting existing course and inheriting stale notebook_id (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: (無)
+
+### [2026-11-14 04:36 UTC] 完成任務 `TASK-012` — Course filter in 課程目錄: all / in progress / finished (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
+
+### [2026-11-14 04:36 UTC] 完成任務 `TASK-013` — Apply one course's settings to other courses (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations

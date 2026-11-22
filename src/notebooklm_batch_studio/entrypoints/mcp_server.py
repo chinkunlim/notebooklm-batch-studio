@@ -10,11 +10,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from contextlib import contextmanager
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
+from sqlalchemy.orm import sessionmaker
 
 from notebooklm_batch_studio.adapters.db.learning_repository import LearningRepository
+from notebooklm_batch_studio.adapters.db.literature_repository import LiteratureRepository
 from notebooklm_batch_studio.adapters.db.notes_repository import QANoteRepository
 from notebooklm_batch_studio.adapters.db.preferences_repository import PreferencesRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
@@ -22,6 +25,7 @@ from notebooklm_batch_studio.adapters.db.review_repository import ReviewReposito
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
+from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.adapters.web_search import search_web_snippets
@@ -31,6 +35,7 @@ from notebooklm_batch_studio.entrypoints.mcp_course_settings import register_cou
 from notebooklm_batch_studio.entrypoints.mcp_fonts import register_font_tools
 from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
 from notebooklm_batch_studio.entrypoints.mcp_learning import register_learning_tools
+from notebooklm_batch_studio.entrypoints.mcp_literature import LiteratureToolDeps, register_literature_tools
 from notebooklm_batch_studio.entrypoints.mcp_preferences import register_preferences_tools
 from notebooklm_batch_studio.entrypoints.mcp_qa_notes import (
     register_qa_notes_tools,
@@ -40,6 +45,8 @@ from notebooklm_batch_studio.entrypoints.mcp_studio_tools import register_settin
 from notebooklm_batch_studio.entrypoints.mcp_study_plan import register_study_plan_tools
 from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
+from notebooklm_batch_studio.services.literature.jobs import LiteratureJobRunner
+from notebooklm_batch_studio.services.literature.manager import LiteratureManager
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.preferences_service import PreferencesService
 from notebooklm_batch_studio.services.qa_notes_service import QANotesService
@@ -474,6 +481,29 @@ def build_mcp_server(service: BatchStudioService | None = None, **services: Any)
         register_qa_notes_tools(mcp, resolved["qa_notes"])
     register_remote_artifact_tools(mcp, active_service)
     register_font_tools(mcp, resolved.get("fonts") or FontService(cfg.fonts_dir, GoogleFontsClient()))
+    lit_factory = resolved.get("session_factory") or sessionmaker(
+        bind=create_db_engine(cfg.database_url), expire_on_commit=False
+    )
+
+    @contextmanager
+    def _lit_scope() -> Any:
+        """Yield a scoped `LiteratureManager`."""
+        with lit_factory() as session:
+            yield LiteratureManager(
+                cfg, LiteratureRepository(session), CourseRepository(session), AdapterLiteratureRuntime(cfg)
+            )
+
+    lit_runner = resolved.get("literature_jobs") or LiteratureJobRunner(_lit_scope)
+    register_literature_tools(
+        mcp,
+        LiteratureToolDeps(
+            service=active_service,
+            config=cfg,
+            runner=lit_runner,
+            session_factory=lit_factory,
+            preferences=resolved.get("preferences"),
+        ),
+    )
     return mcp
 
 

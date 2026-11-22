@@ -91,7 +91,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-021-fix-failed-artifact-job-manual-r.json
 │   │   ├── TASK-022-support-adding-missing-artifacts.json
 │   │   ├── TASK-023-add-notebook-source-listing-uplo.json
-│   │   └── TASK-024-spec-011-gemini-notebook-explora.json
+│   │   ├── TASK-024-spec-011-gemini-notebook-explora.json
+│   │   └── TASK-025-integrate-literature-fetch-and-u.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -127,7 +128,9 @@ notebooklm-batch-studio/
 │   │   ├── 20261101_d21a28b5d5a0_add_course_paused_and_reuse_notebook_.py
 │   │   ├── 20261101_d6e896ae4e2c_add_job_version_artifact_ids_and_course_.py
 │   │   ├── 20261102_89158d42494d_add_ui_preferences.py
-│   │   └── 20261114_393ba6cc4afd_add_course_qa_notes_table.py
+│   │   ├── 20261114_393ba6cc4afd_add_course_qa_notes_table.py
+│   │   ├── 20261122_85aedf6f2f6f_add_review_markdown_to_literature_items.py
+│   │   └── 20261122_8f8dfcf0509e_add_study_hierarchy_and_literature_.py
 │   ├── DB.md
 │   ├── env.py
 │   └── script.py.mako
@@ -143,6 +146,7 @@ notebooklm-batch-studio/
 │   │   ├── 008-v05-study-studio-shell.md
 │   │   ├── 009-local-preferences-and-offline-fonts.md
 │   │   ├── 010-notebook-qa-notes-and-tag-system.md
+│   │   ├── 011-unified-study-hierarchy-and-literature-fetch.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -214,6 +218,7 @@ notebooklm-batch-studio/
 │   │   ├── 009-study-studio-ui-redesign.md
 │   │   ├── 010-user-end-to-end-workflow.md
 │   │   ├── 011-notebook-qa-notes-and-tag-system.md
+│   │   ├── 012-literature-fetch-and-study-hierarchy.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -264,6 +269,7 @@ notebooklm-batch-studio/
 │       │   │   ├── __init__.py
 │       │   │   ├── base.py
 │       │   │   ├── learning_repository.py
+│       │   │   ├── literature_repository.py
 │       │   │   ├── mappers.py
 │       │   │   ├── models.py
 │       │   │   ├── notes_repository.py
@@ -272,10 +278,27 @@ notebooklm-batch-studio/
 │       │   │   ├── repository.py
 │       │   │   ├── review_repository.py
 │       │   │   ├── session.py
+│       │   │   ├── study_migration_repo.py
 │       │   │   └── study_repository.py
 │       │   ├── fonts/
 │       │   │   ├── __init__.py
 │       │   │   └── google_fonts.py
+│       │   ├── literature/
+│       │   │   ├── __init__.py
+│       │   │   ├── airiti.py
+│       │   │   ├── browser.py
+│       │   │   ├── crossref.py
+│       │   │   ├── ebsco.py
+│       │   │   ├── factory.py
+│       │   │   ├── files.py
+│       │   │   ├── http_pdf.py
+│       │   │   ├── legacy_import.py
+│       │   │   ├── metadata.py
+│       │   │   ├── openalex.py
+│       │   │   ├── openlibrary.py
+│       │   │   ├── pdf_text.py
+│       │   │   ├── report_md.py
+│       │   │   └── tracker_md.py
 │       │   ├── notebooklm/
 │       │   │   ├── __init__.py
 │       │   │   ├── client.py
@@ -295,6 +318,12 @@ notebooklm-batch-studio/
 │       │   ├── logging_setup.py
 │       │   └── settings.py
 │       ├── domain/
+│       │   ├── literature/
+│       │   │   ├── __init__.py
+│       │   │   ├── apa.py
+│       │   │   ├── apa_format.py
+│       │   │   ├── literature.py
+│       │   │   └── tracker.py
 │       │   ├── __init__.py
 │       │   ├── exceptions.py
 │       │   ├── generation_options.py
@@ -304,6 +333,7 @@ notebooklm-batch-studio/
 │       │   ├── notebooklm_protocol.py
 │       │   ├── qa_notes.py
 │       │   ├── repositories.py
+│       │   ├── study_hierarchy.py
 │       │   ├── study_plan.py
 │       │   └── usage_guide.py
 │       ├── entrypoints/
@@ -313,6 +343,8 @@ notebooklm-batch-studio/
 │       │   │   ├── courses.py
 │       │   │   ├── fonts.py
 │       │   │   ├── learning.py
+│       │   │   ├── literature.py
+│       │   │   ├── literature_notebook.py
 │       │   │   ├── plan.py
 │       │   │   ├── preferences.py
 │       │   │   ├── qa_notes.py
@@ -576,6 +608,8 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-layout-tune.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js
+│       │   │   ├── studio-literature-ui.js
+│       │   │   ├── studio-literature.js
 │       │   │   ├── studio-mindmap-designer.js
 │       │   │   ├── studio-nav.js
 │       │   │   ├── studio-notes-tab.js
@@ -599,10 +633,12 @@ notebooklm-batch-studio/
 │       │   ├── __init__.py
 │       │   ├── api.py
 │       │   ├── cli.py
+│       │   ├── cli_literature.py
 │       │   ├── mcp_course_settings.py
 │       │   ├── mcp_fonts.py
 │       │   ├── mcp_job_prompts.py
 │       │   ├── mcp_learning.py
+│       │   ├── mcp_literature.py
 │       │   ├── mcp_preferences.py
 │       │   ├── mcp_qa_notes.py
 │       │   ├── mcp_remote_admin.py
@@ -624,6 +660,14 @@ notebooklm-batch-studio/
 │       │   │   ├── quiz_converter.py
 │       │   │   ├── quiz_formatter.py
 │       │   │   └── report_converter.py
+│       │   ├── literature/
+│       │   │   ├── __init__.py
+│       │   │   ├── jobs.py
+│       │   │   ├── literature.py
+│       │   │   ├── manager.py
+│       │   │   ├── notebook_service.py
+│       │   │   ├── protocols.py
+│       │   │   └── reference_builder.py
 │       │   ├── __init__.py
 │       │   ├── artifact_runner.py
 │       │   ├── course_onboarding.py
@@ -648,6 +692,7 @@ notebooklm-batch-studio/
 │       │   ├── reporter.py
 │       │   ├── reverse_import.py
 │       │   ├── source_manager.py
+│       │   ├── study_migration.py
 │       │   ├── study_plan_service.py
 │       │   ├── study_service.py
 │       │   ├── sync_service.py
@@ -675,6 +720,7 @@ notebooklm-batch-studio/
 │   ├── test_guides_and_reports.py
 │   ├── test_job_settings.py
 │   ├── test_learning.py
+│   ├── test_literature_and_hierarchy.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py

@@ -256,9 +256,12 @@ class LearningService:
         """
         course, lecture = self._lecture(code, lecture_no)
         folder = Path(course.source_dir).resolve()
-        path = (folder / lecture.filename).resolve()
+        rel = lecture.relative_path or lecture.filename
+        path = (folder / rel).resolve()
         if not path.is_relative_to(folder):
             raise PermissionError(f"Lecture file is outside the course folder: {lecture.filename}")
+        if not path.is_file():
+            path = (folder / lecture.filename).resolve()
         if not path.is_file():
             raise FileNotFoundError(f"Lecture PDF not found: {path.name}")
         return path

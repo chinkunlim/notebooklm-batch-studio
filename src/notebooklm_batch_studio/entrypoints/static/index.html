@@ -48,6 +48,7 @@
       <button class="dock-btn on" data-view="overview" aria-label="研讀總覽"><i class="icon-house"></i><span class="label">研讀總覽</span><span class="tip">研讀總覽</span></button>
       <button class="dock-btn" data-view="studio" aria-label="研讀工作室"><i class="icon-book-open"></i><span class="label">研讀工作室</span><span class="tip">研讀工作室</span></button>
       <button class="dock-btn" data-view="review" aria-label="弱點複習"><i class="icon-circle-help"></i><span class="label">弱點複習</span><span class="tip">弱點複習</span></button>
+      <button class="dock-btn" data-view="literature" aria-label="文獻收集"><i class="icon-file-text"></i><span class="label">文獻收集</span><span class="tip">文獻收集</span></button>
       <button class="dock-btn" data-view="queue" aria-label="批次排程"><i class="icon-clock"></i><span class="label">批次排程</span><span class="tip">批次排程</span></button>
     </nav>
     <div class="dock-disc-wrap" id="discWrap">
@@ -498,6 +499,111 @@
             </div>
             <ul class="jobs section-gap" id="activeJobs"></ul>
           </div>
+        </div>
+      </section>
+
+      <!-- ============ 文獻收集 ============ -->
+      <section class="view lg" id="view-literature">
+        <div class="subbar">
+          <div>
+            <h1 class="h1">文獻收集</h1>
+            <p class="muted small">貼上 APA、作者＋標題或 DOI → Crossref / OpenAlex 核對 → OA / 華藝 / EBSCO / OpenAthens 下載 PDF 並歸檔至課程資料夾</p>
+          </div>
+        </div>
+        <div class="card section-gap" style="padding:16px">
+          <div class="lit-controls">
+            <div class="small">歸檔／關聯科目
+              <div class="lit-select" id="litCourseSelectWrap" data-value="">
+                <button type="button" class="lit-select-btn" id="litCourseBtn"><span class="lit-sel-txt">（不綁定 · 暫存 scratch）</span><i class="icon-chevron-down"></i></button>
+                <div class="lit-select-menu" id="litCourseMenu"></div>
+              </div>
+            </div>
+            <div class="small">目標分類
+              <div class="lit-select" id="litCategorySelectWrap" data-value="01 Material">
+                <button type="button" class="lit-select-btn" id="litCategoryBtn"><span class="lit-sel-txt">01 Material（課本 / 文獻）</span><i class="icon-chevron-down"></i></button>
+                <div class="lit-select-menu" id="litCategoryMenu">
+                  <button type="button" class="lit-select-opt on" data-val="01 Material">01 Material（課本 / 文獻）</button>
+                  <button type="button" class="lit-select-opt" data-val="02 Handout">02 Handout（老師教材）</button>
+                  <button type="button" class="lit-select-opt" data-val="03 Notes">03 Notes（個人筆記）</button>
+                  <button type="button" class="lit-select-opt" data-val="04 Homework">04 Homework（作業檔案）</button>
+                  <button type="button" class="lit-select-opt" data-val="05 Assignments">05 Assignments（期中 / 期末報告）</button>
+                </div>
+              </div>
+            </div>
+            <label class="small">子資料夾 (Subfolder)
+              <input id="litSubfolderInput" class="input" type="text" value="Literature_Review" />
+            </label>
+            <div class="small">顯示篩選
+              <div class="lit-select" id="litFilterSelectWrap" data-value="all">
+                <button type="button" class="lit-select-btn" id="litFilterBtn"><span class="lit-sel-txt">全部文獻</span><i class="icon-chevron-down"></i></button>
+                <div class="lit-select-menu" id="litFilterMenu">
+                  <button type="button" class="lit-select-opt on" data-val="all">全部文獻</button>
+                  <button type="button" class="lit-select-opt" data-val="unarchived">僅看未歸檔</button>
+                  <button type="button" class="lit-select-opt" data-val="archived">僅看已歸檔</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <textarea id="litInputText" class="input" rows="4" style="width:100%;resize:vertical" placeholder="每行一筆：可貼上 APA 參考文獻、DOI、或作者＋標題（中英文皆可）"></textarea>
+          <div class="lit-toolbar" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px">
+            <button class="btn btn-primary" id="litStartBtn">加入並開始下載</button>
+            <button class="btn btn-soft" id="litIdentifyBtn">僅辨識 APA / DOI</button>
+            <button class="btn btn-soft" id="litLookupMissingBtn">補查未識別來源</button>
+            <label class="small" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="litInteractiveCheck" />
+              人工處理模式（遇驗證或登入時開啟 Chrome 等候）
+            </label>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <button class="btn btn-soft" id="litCopyApaBtn">複製 APA 7 清單</button>
+              <button class="btn btn-soft" id="litReportBtn">下載 report.md</button>
+            </div>
+          </div>
+          <div id="litJobBanner" class="small muted" style="display:none;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--bg-soft)"></div>
+          <div id="litApaPreviewBox" class="lit-apa-preview" style="display:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <strong class="small" id="litApaPreviewTitle">APA 7 參考文獻清單</strong>
+              <button class="icon-btn" id="litApaPreviewClose" aria-label="關閉清單" title="關閉"><i class="icon-x"></i></button>
+            </div>
+            <div id="litApaPreviewBody" class="lit-apa-preview-body"></div>
+          </div>
+          <div id="litUnarchivedInfo" class="small muted" style="margin-top:8px">未歸檔文獻暫存區（<code>scratch/literature</code>）：<code id="litUnarchivedDir">讀取中…</code>（放入此處的自備或老師提供 PDF 會自動補入系統並查找來源）</div>
+        </div>
+        <div class="card section-gap" style="padding:16px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div>
+              <strong class="small">Gemini 文獻總庫 &amp; Literature Review</strong>
+              <span class="small muted" id="litNbStatus" style="margin-left:10px">載入中…</span>
+            </div>
+            <div class="lit-toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+              <button class="btn btn-soft" id="litNbSyncBtn">同步 PDF 至 Gemini</button>
+              <button class="btn btn-soft" id="litBatchReviewBtn">批次生成 Literature Review</button>
+              <a class="btn btn-soft" id="litNbOpenLink" href="#" target="_blank" style="display:none">開啟 Gemini Notebook</a>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="litNbQueryInput" class="input" type="text" style="flex:1;height:38px" placeholder="向 Gemini 查詢文獻（例如：有哪些文獻討論自我抽離或情緒調節？請列出作者與重點）" />
+            <button class="btn btn-primary" id="litNbQueryBtn" style="height:38px;padding:0 18px">查詢文獻</button>
+          </div>
+          <div id="litNbAnswerBox" class="lit-apa-preview" style="display:none">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <strong class="small">Gemini 查詢結果</strong>
+              <button class="icon-btn" id="litNbAnswerClose" aria-label="關閉"><i class="icon-x"></i></button>
+            </div>
+            <div id="litNbAnswerBody" class="small" style="white-space:pre-wrap;line-height:1.6"></div>
+          </div>
+        </div>
+        <div class="card section-gap" style="padding:16px;overflow:visible">
+          <table class="table lit-table">
+            <thead>
+              <tr>
+                <th class="lit-col-seq"><div class="lit-check-head"><input type="checkbox" id="litSelectAll" aria-label="全選" /><div class="lit-th-wrap" data-lit-th="seq"><button type="button" class="lit-th-btn" data-lit-excel="seq">序</button></div></div></th>
+                <th class="lit-col-status"><div class="lit-th-wrap" data-lit-th="status"><button type="button" class="lit-th-btn" data-lit-excel="status">狀態</button></div></th>
+                <th class="lit-col-main"><div class="lit-th-wrap" data-lit-th="apa"><button type="button" class="lit-th-btn" data-lit-excel="apa">APA 7th 格式名稱 / 操作</button></div></th>
+                <th class="lit-col-target"><div class="lit-th-wrap" data-lit-th="target"><button type="button" class="lit-th-btn" data-lit-excel="target">歸檔位置</button></div></th>
+              </tr>
+            </thead>
+            <tbody id="litItemsBody"></tbody>
+          </table>
         </div>
       </section>
 
@@ -968,6 +1074,8 @@
 <script src="/static/studio-remote-artifacts.js"></script>
 <script src="/static/studio-reverse-import.js"></script>
 <script src="/static/studio-shell.js"></script>
+<script src="/static/studio-literature-ui.js"></script>
+<script src="/static/studio-literature.js"></script>
 <script src="/static/studio-nav.js"></script>
 <script src="/static/studio-player.js"></script>
 <script src="/static/studio-bench.js"></script>

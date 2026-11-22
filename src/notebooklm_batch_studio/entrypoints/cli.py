@@ -288,6 +288,10 @@ def _dispatch_command(args: argparse.Namespace, config: AppConfig) -> int:
         return _handle_web(config)
     if args.command == "mcp":
         return _handle_mcp(config)
+    if args.command == "literature":
+        from notebooklm_batch_studio.entrypoints.cli_literature import handle_literature_cli
+
+        return handle_literature_cli(config, args)
     return 0
 
 
@@ -354,6 +358,9 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("watch", help="啟動資料夾監控守護")
     subparsers.add_parser("web", help="啟動本機網頁管理伺服器 (127.0.0.1:8768)")
     subparsers.add_parser("mcp", help="啟動 MCP stdio 伺服器")
+    from notebooklm_batch_studio.entrypoints.cli_literature import add_literature_subparser
+
+    add_literature_subparser(subparsers)
     return parser
 
 

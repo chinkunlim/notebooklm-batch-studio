@@ -72,6 +72,8 @@ class CourseRepository:
                     source_id=lecture.source_id,
                     upload_status=lecture.upload_status,
                     error_message=lecture.error_message,
+                    category=lecture.category,
+                    relative_path=lecture.relative_path,
                 )
             )
 
@@ -119,6 +121,9 @@ class CourseRepository:
             generation_options=json.dumps(dataclasses.asdict(course.generation_options)),
             paused=course.paused,
             reuse_notebook=course.reuse_notebook,
+            term=course.term,
+            subject=course.subject,
+            study_dir=course.study_dir,
         )
         self.session.add(record)
         return record
@@ -151,6 +156,12 @@ class CourseRepository:
             existing.exam_date = course.exam_date
         existing.watch = course.watch
         existing.mock_exam_questions = course.mock_exam_questions
+        if course.term:
+            existing.term = course.term
+        if course.subject:
+            existing.subject = course.subject
+        if course.study_dir:
+            existing.study_dir = course.study_dir
         existing.updated_at = utc_now()
 
     def save_course(self, course: Course) -> None:

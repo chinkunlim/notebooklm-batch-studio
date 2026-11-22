@@ -57,6 +57,9 @@ class CourseRecord(Base):
     selected_course_artifacts: Mapped[str | None] = mapped_column(Text, nullable=True)
     paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     reuse_notebook: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
+    term: Mapped[str] = mapped_column(String(40), nullable=False, default="", server_default="")
+    subject: Mapped[str] = mapped_column(String(255), nullable=False, default="", server_default="")
+    study_dir: Mapped[str] = mapped_column(String(1024), nullable=False, default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
@@ -87,6 +90,8 @@ class LectureRecord(Base):
     source_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     upload_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str] = mapped_column(String(60), nullable=False, default="", server_default="")
+    relative_path: Mapped[str] = mapped_column(String(1024), nullable=False, default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 
@@ -389,3 +394,103 @@ class CourseQANoteRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
     )
+
+
+class LiteratureItemRecord(Base):
+    """Database record for a tracked academic reference and its downloaded PDF (SPEC-012).
+
+    Attributes:
+        key: Unique literature key (filename stem, primary key).
+        position: Display order index.
+        input_text: Original user input (APA, DOI, or title).
+        apa: Formatted APA 7 reference string.
+        status: Current fetch status (`pending`, `downloaded`, `needs_review`, etc.).
+        kind: Work kind (`article`, `book`, `chapter`, etc.).
+        doi: Resolved DOI string.
+        authors: JSON or semicolon-separated author list.
+        year: Publication year.
+        title: Work title.
+        journal: Journal or container name.
+        volume: Journal volume.
+        issue: Journal issue.
+        pages: Page range.
+        publisher: Publisher name.
+        file: Saved PDF filename relative to target directory.
+        note: Download status or manual action note.
+        source: URL where PDF was downloaded.
+        check_note: Identification verification note.
+        course_code: Optional linked course code (`courses.code`).
+        target_category: Study category (default `01 Material`).
+        target_subfolder: Subfolder under category (default `Literature_Review`).
+        imported_to_course: Whether the PDF has been imported into the course's NotebookLM sources.
+        source_id: Remote Gemini Notebook source ID if uploaded.
+        review_markdown: Generated Literature Review Markdown text.
+        created_at: Creation timestamp (UTC).
+        updated_at: Last update timestamp (UTC).
+    """
+
+    __tablename__ = "literature_items"
+
+    key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    input_text: Mapped[str] = mapped_column(Text, nullable=False)
+    apa: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending", index=True)
+    kind: Mapped[str] = mapped_column(String(30), nullable=False, default="article")
+    doi: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    authors: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    year: Mapped[str] = mapped_column(String(20), nullable=False, default="")
+    title: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    journal: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    volume: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    issue: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    pages: Mapped[str] = mapped_column(String(60), nullable=False, default="")
+    publisher: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    file: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    check_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    course_code: Mapped[str | None] = mapped_column(
+        String(50), ForeignKey("courses.code", ondelete="SET NULL"), nullable=True, index=True
+    )
+    target_category: Mapped[str] = mapped_column(
+        String(60), nullable=False, default="01 Material", server_default="01 Material"
+    )
+    target_subfolder: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="Literature_Review", server_default="Literature_Review"
+    )
+    imported_to_course: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    source_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    review_markdown: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
+    )
+
+
+class LiteratureJobRecord(Base):
+    """Database record for a background literature fetch job (SPEC-012).
+
+    Attributes:
+        id: Auto-increment job ID.
+        kind: Job kind (`download`, `identify`, `interactive`).
+        state: Current state (`running`, `done`, `failed`).
+        total: Total items in batch.
+        done: Processed items count.
+        message: Current status message.
+        started_at: Start timestamp ISO string.
+        finished_at: Completion timestamp ISO string or None.
+    """
+
+    __tablename__ = "literature_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    state: Mapped[str] = mapped_column(String(20), nullable=False, default="running")
+    total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    done: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    message: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    started_at: Mapped[str] = mapped_column(String(64), nullable=False)
+    finished_at: Mapped[str | None] = mapped_column(String(64), nullable=True)

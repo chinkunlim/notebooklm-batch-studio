@@ -190,6 +190,10 @@ class Lecture:
         filename: Name of the PDF file.
         sha256: SHA-256 hash of the PDF content for deduplication.
         source_id: Associated Gemini Notebook source ID once uploaded.
+        upload_status: Upload status (`pending`, `uploaded`, `failed`).
+        error_message: Upload error message if failed.
+        category: Optional study folder category (e.g. `01 Material`, `02 Handout`).
+        relative_path: Relative path of the PDF inside the course directory.
     """
 
     no: int
@@ -199,6 +203,8 @@ class Lecture:
     source_id: str | None = None
     upload_status: str = "pending"
     error_message: str | None = None
+    category: str = ""
+    relative_path: str = ""
 
 
 @dataclass(frozen=True)
@@ -219,6 +225,9 @@ class Course:
         generation_options: Gemini Notebook generation settings for this course.
         paused: When true, the queue does not start this course's jobs (set it up first).
         reuse_notebook: Reuse an existing Gemini Notebook notebook with the same title and its PDFs.
+        term: Academic term (e.g. `115-1`).
+        subject: Subject name (e.g. `心理學研究法`).
+        study_dir: Unified study directory path (`<study_root>/<term>/<subject>`).
     """
 
     code: str
@@ -236,6 +245,9 @@ class Course:
     generation_options: GenerationOptions = field(default_factory=GenerationOptions)
     paused: bool = False
     reuse_notebook: bool = True
+    term: str = ""
+    subject: str = ""
+    study_dir: str = ""
 
 
 def get_lecture_prefix(filename: str, fallback_no: int) -> str:

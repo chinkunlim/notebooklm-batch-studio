@@ -54,6 +54,8 @@ def to_domain_lecture(record: LectureRecord) -> Lecture:
         source_id=record.source_id,
         upload_status=getattr(record, "upload_status", "pending") or "pending",
         error_message=getattr(record, "error_message", None),
+        category=getattr(record, "category", "") or "",
+        relative_path=getattr(record, "relative_path", "") or "",
     )
 
 
@@ -87,6 +89,9 @@ def to_domain_course(record: CourseRecord, lectures: list[Lecture]) -> Course:
         selected_course_artifacts=json.loads(record.selected_course_artifacts or "[]"),
         paused=bool(getattr(record, "paused", False)),
         reuse_notebook=bool(getattr(record, "reuse_notebook", True)),
+        term=getattr(record, "term", "") or "",
+        subject=getattr(record, "subject", "") or "",
+        study_dir=getattr(record, "study_dir", "") or "",
     )
 
 

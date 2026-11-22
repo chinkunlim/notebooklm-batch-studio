@@ -31,6 +31,7 @@ from notebooklm_batch_studio.domain.repositories import (
     OllamaClientProtocol,
     QueueRepositoryProtocol,
 )
+from notebooklm_batch_studio.domain.study_hierarchy import resolve_course_output_root
 from notebooklm_batch_studio.services.artifact_runner import ArtifactRunner, JobTarget
 from notebooklm_batch_studio.services.course_onboarding import CourseOnboardingMixin
 from notebooklm_batch_studio.services.course_settings import CourseSettingsService, apply_job_settings
@@ -135,14 +136,17 @@ class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
             Tuple of (configured_job, narrowed_course, JobTarget).
         """
         run_job, run_course = apply_job_settings(job, course)  # SPEC-006 (may narrow lectures)
+        course_out_root = resolve_course_output_root(
+            self.config.courses_output_dir, course.code, course.study_dir
+        )
         if job.lecture_no is not None:
             lec = next((item for item in course.lectures if item.no == job.lecture_no), None)
             source_ids = [lec.source_id] if (lec and lec.source_id) else []
             lec_dir_name = f"{job.lecture_no:02d}_{lec.topic if lec else 'lecture'}"
-            out_dir = self.config.courses_output_dir / course.code / lec_dir_name
+            out_dir = course_out_root / lec_dir_name
         else:
             source_ids = [item.source_id for item in run_course.lectures if item.source_id]
-            out_dir = self.config.courses_output_dir / course.code / "_course_synthesis"
+            out_dir = course_out_root / "_course_synthesis"
 
         out_dir.mkdir(parents=True, exist_ok=True)
         return run_job, run_course, JobTarget(nb_id=nb_id, source_ids=source_ids, out_dir=out_dir)

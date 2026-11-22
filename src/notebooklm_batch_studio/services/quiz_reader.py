@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from notebooklm_batch_studio.domain.models import Course
+from notebooklm_batch_studio.domain.study_hierarchy import resolve_course_output_root
 
 
 def _resolve_quiz_dir(courses_output_dir: Path, course: Course, lecture_no: int) -> Path:
@@ -20,11 +21,12 @@ def _resolve_quiz_dir(courses_output_dir: Path, course: Course, lecture_no: int)
     Returns:
         Target directory Path for quiz lookup.
     """
+    course_root = resolve_course_output_root(courses_output_dir, course.code, course.study_dir)
     if lecture_no == 0:
-        return courses_output_dir / course.code / "_course_synthesis"
+        return course_root / "_course_synthesis"
     lec = next((item for item in course.lectures if item.no == lecture_no), None)
     lec_topic = lec.topic if lec else "lecture"
-    return courses_output_dir / course.code / f"{lecture_no:02d}_{lec_topic}"
+    return course_root / f"{lecture_no:02d}_{lec_topic}"
 
 
 def _find_variant_file(quiz_dir: Path, variant: str, suffix: str, fallback: str) -> Path:
