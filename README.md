@@ -14,8 +14,9 @@
 - 🧠 **學習心理學輔助**（SPEC-008）：內建離線 PDF.js 講義閱讀器並色彩對應核心重點（支援點擊重點單次精準跳頁、視窗縮放即時重繪標記位置、自適應單行/雙行標題按鈕與雙欄視窗吸頂固定）、艾賓浩斯遺忘曲線記憶強度評估、連續天數熱圖、作答信心比對（sure-but-wrong 盲點警示）、跨講混合複習、蘇格拉底式引導家教與 25 分鐘番茄鐘。
 - 📅 **學生研讀計畫**（SPEC-007）：動態規劃今日研讀「Today」清單、考前倒數天數、AI 詳解自動快取與間隔複習排程。
 - ⚙️ **產出細部自訂**（SPEC-006）：支援個別產出覆寫題目數、難度、語言、圖表風格與投影片格式（PDF/PPTX），三層設定自動繼承。
-- 🎨 **研讀工作室與外觀自訂**（SPEC-009 / ADR-008 / ADR-009）：黑膠擬態與多視覺唱盤（支持迷你浮動與曲線飛行動畫）、雙欄研讀可於右側原地切換「課程目錄 / 研讀工具」、工作台統一檢視 9 大產出物、側欄四頁與獨立「設計與自訂」分頁、雙軌 RWD 及資料庫持久化介面偏好與離線字型。
-- 🌐 **三大操作入口**：完整 CLI 指令集、FastAPI 本機儀表板（`127.0.0.1:8768`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器集群與 OpenAPI 路由。
+- 🎨 **研讀工作室與外觀自訂**（SPEC-009 / ADR-008 / ADR-009）：黑膠擬態與多視覺唱盤（支持迷你浮動與曲線飛行動畫）、雙欄研讀可於右側原地切換「課程目錄 / 研讀工具」、工作台統一檢視 9 大產出物、側欄分頁與獨立「設計與自訂」分頁、雙軌 RWD 及資料庫持久化介面偏好與離線字型。
+- 📖 **學術文獻收集與 Gemini 文獻總庫**（SPEC-012 / ADR-011）：完整整合 `literature-fetch`，支援 APA/DOI/自由文字核對（Crossref / OpenAlex / OpenLibrary / 華藝）、OA / EBSCO / OpenAthens 授權下載、人工驗證模式、`scratch/literature/` 暫存與統一學習目錄（`<term>/<subject>/01 Material..05 Assignments`）歸檔、PDF.js 內嵌預覽、Excel 式多欄排序篩選、APA 7 清單匯出，以及自動同步至 Gemini `Literature Library` 跨文獻問答與 7 段式 Literature Review 生成（含配額等待自動續傳）。
+- 🌐 **三大操作入口**：完整 CLI 指令集（含 `literature` 與 `migrate-study-layout`）、FastAPI 本機儀表板（`127.0.0.1:8768`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器集群與 OpenAPI 路由。
 
 ## 快速開始
 

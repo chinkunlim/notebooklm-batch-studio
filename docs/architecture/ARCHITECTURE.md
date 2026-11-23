@@ -18,6 +18,7 @@
 - **蘇格拉底式引導家教 (Socratic Tutor)**：連貫對話情境，引導思考而非直接餵答案。
 - **作答前信心評分**：比對「確定卻答錯」的認知盲點，提供深度警示與 AI 詳解。
 - **今日計畫與間隔複習**：動態排程「Today」研讀進度、考前倒數計時與 25 分鐘專注番茄鐘。
+- **統一學習目錄與學術文獻收集**（SPEC-012 / ADR-011）：以 `<STUDY_ROOT_DIR>/<term>/<subject>/01 Material .. 05 Assignments` 統一管理教材、文獻、Gemini Notebook 產出與 QA 筆記；整合 `literature-fetch` 核對與下載管線（Crossref / OpenAlex / OpenLibrary / 華藝 / EBSCO / OpenAthens Chrome）、`scratch/literature/` 暫存自動匯入、PDF.js 內嵌預覽、Excel 式多欄排序篩選，以及 Gemini `Literature Library` 總庫問答與 7 段式 Literature Review 自動續傳。
 
 系統嚴格遵循單向五層架構（`entrypoints ➔ adapters ➔ services ➔ domain ➔ config`），所有資料與程式碼嚴格分離（儲存於 `DATA_DIR`），並提供三大操作入口：
 1. **CLI 命令列介面**：用於批次排程、目錄監看、狀態檢視與身分登入。

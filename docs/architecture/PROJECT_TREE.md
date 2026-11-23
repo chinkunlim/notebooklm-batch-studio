@@ -204,6 +204,10 @@ notebooklm-batch-studio/
 │   │   ├── 038-failed-job-no-rerun-and-auto-retry.md
 │   │   ├── 039-ui-focus-cram-reader-polish.md
 │   │   ├── 040-ui-cram-reader-layout-controls.md
+│   │   ├── 041-literature-playwright-request-blocked.md
+│   │   ├── 042-literature-openalex-wrong-paper.md
+│   │   ├── 043-literature-cloudflare-loop.md
+│   │   ├── 044-literature-refresh-loses-or-downgrades-pdf.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -701,9 +705,22 @@ notebooklm-batch-studio/
 │       └── __init__.py
 ├── tests/                                  # 【測試層】單元與整合測試
 │   ├── fixtures/
+│   │   ├── apa_list.md
+│   │   ├── crossref_search.json
+│   │   ├── openalex_work.json
 │   │   ├── sample_flashcards.json
 │   │   ├── sample_mindmap.json
 │   │   └── sample_quiz.json
+│   ├── literature/
+│   │   ├── __init__.py
+│   │   ├── test_airiti.py
+│   │   ├── test_apa.py
+│   │   ├── test_apa_format.py
+│   │   ├── test_books.py
+│   │   ├── test_chinese.py
+│   │   ├── test_free_text.py
+│   │   ├── test_literature.py
+│   │   └── test_tracker.py
 │   ├── __init__.py
 │   ├── dummy_client.py
 │   ├── test_api_and_mcp.py

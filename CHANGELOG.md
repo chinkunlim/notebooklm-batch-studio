@@ -181,6 +181,9 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs: resolve ISSUE-037 and complete TASK-020 (by `@antigravity`)
 - docs: document Study Studio reader, scrolling, and UI fixes in README and CHANGELOG (by `@antigravity`)
 
+### Testing
+- test(literature): port literature-fetch unit tests, fixtures, known issues (ISSUE-041..044), and docs (by `@antigravity`)
+
 ### Chore
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)
 - chore(deps): upgrade notebooklm-py to 0.8.6; docs: per-artifact settings design, known issues 016-017, README web features (by `@claude-code`)
