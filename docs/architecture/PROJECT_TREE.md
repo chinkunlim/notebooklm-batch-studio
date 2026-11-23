@@ -92,7 +92,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-022-support-adding-missing-artifacts.json
 │   │   ├── TASK-023-add-notebook-source-listing-uplo.json
 │   │   ├── TASK-024-spec-011-gemini-notebook-explora.json
-│   │   └── TASK-025-integrate-literature-fetch-and-u.json
+│   │   ├── TASK-025-integrate-literature-fetch-and-u.json
+│   │   └── TASK-026-integrate-note-studio-phase-1-mo.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -134,6 +135,18 @@ notebooklm-batch-studio/
 │   ├── DB.md
 │   ├── env.py
 │   └── script.py.mako
+├── assets/
+│   └── prompts/
+│       └── modular_specs/
+│           ├── 01_mindmap_spec.md
+│           ├── 02_outline_spec.md
+│           ├── 03_qec_spec.md
+│           ├── 04_cornell_spec.md
+│           ├── 05_matrix_spec.md
+│           ├── 06_feynman_spec.md
+│           ├── 07_quiz_spec.md
+│           ├── 08_supplement_spec.md
+│           └── README.md
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
 │   │   ├── 001-notebooklm-access.md
@@ -147,6 +160,7 @@ notebooklm-batch-studio/
 │   │   ├── 009-local-preferences-and-offline-fonts.md
 │   │   ├── 010-notebook-qa-notes-and-tag-system.md
 │   │   ├── 011-unified-study-hierarchy-and-literature-fetch.md
+│   │   ├── 012-note-studio-phase1-markdown-pipeline.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -287,6 +301,15 @@ notebooklm-batch-studio/
 │       │   ├── fonts/
 │       │   │   ├── __init__.py
 │       │   │   └── google_fonts.py
+│       │   ├── gemini/
+│       │   │   ├── __init__.py
+│       │   │   ├── browser_session.py
+│       │   │   ├── chat_actions.py
+│       │   │   ├── chrome_session.py
+│       │   │   ├── model_controls.py
+│       │   │   ├── response_reader.py
+│       │   │   ├── selectors.py
+│       │   │   └── web_driver.py
 │       │   ├── literature/
 │       │   │   ├── __init__.py
 │       │   │   ├── airiti.py
@@ -311,11 +334,13 @@ notebooklm-batch-studio/
 │       │   │   ├── downloads.py
 │       │   │   ├── errors.py
 │       │   │   ├── generation.py
+│       │   │   ├── note_driver.py
 │       │   │   └── quota.py
 │       │   ├── ollama/
 │       │   │   ├── __init__.py
 │       │   │   └── client.py
 │       │   ├── __init__.py
+│       │   ├── note_driver_factory.py
 │       │   └── web_search.py
 │       ├── config/
 │       │   ├── __init__.py
@@ -334,8 +359,10 @@ notebooklm-batch-studio/
 │       │   ├── memory_model.py
 │       │   ├── models.py
 │       │   ├── naming.py
+│       │   ├── note_pipeline.py
 │       │   ├── notebooklm_protocol.py
 │       │   ├── qa_notes.py
+│       │   ├── quota_parser.py
 │       │   ├── repositories.py
 │       │   ├── study_hierarchy.py
 │       │   ├── study_plan.py
@@ -349,6 +376,7 @@ notebooklm-batch-studio/
 │       │   │   ├── learning.py
 │       │   │   ├── literature.py
 │       │   │   ├── literature_notebook.py
+│       │   │   ├── notes.py
 │       │   │   ├── plan.py
 │       │   │   ├── preferences.py
 │       │   │   ├── qa_notes.py
@@ -616,6 +644,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-literature.js
 │       │   │   ├── studio-mindmap-designer.js
 │       │   │   ├── studio-nav.js
+│       │   │   ├── studio-notes-gen.js
 │       │   │   ├── studio-notes-tab.js
 │       │   │   ├── studio-pencil.js
 │       │   │   ├── studio-player.js
@@ -643,6 +672,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_job_prompts.py
 │       │   ├── mcp_learning.py
 │       │   ├── mcp_literature.py
+│       │   ├── mcp_notes.py
 │       │   ├── mcp_preferences.py
 │       │   ├── mcp_qa_notes.py
 │       │   ├── mcp_remote_admin.py
@@ -672,6 +702,14 @@ notebooklm-batch-studio/
 │       │   │   ├── notebook_service.py
 │       │   │   ├── protocols.py
 │       │   │   └── reference_builder.py
+│       │   ├── notes/
+│       │   │   ├── __init__.py
+│       │   │   ├── chapter_normalizer.py
+│       │   │   ├── module_composer.py
+│       │   │   ├── module_prompts.py
+│       │   │   ├── note_pipeline_service.py
+│       │   │   ├── state_manager.py
+│       │   │   └── step_validator.py
 │       │   ├── __init__.py
 │       │   ├── artifact_runner.py
 │       │   ├── course_onboarding.py
@@ -739,6 +777,7 @@ notebooklm-batch-studio/
 │   ├── test_learning.py
 │   ├── test_literature_and_hierarchy.py
 │   ├── test_needs_review_and_ollama.py
+│   ├── test_note_pipeline_phase1.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
 │   ├── test_port_check.py

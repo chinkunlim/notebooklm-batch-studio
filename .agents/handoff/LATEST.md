@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-23 03:42 UTC`
+- **最後更新時間**: `2026-11-23 07:40 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `e57a452 test(literature): port literature-fetch unit tests, fixtures, known issues (ISSUE-041..044), and docs [agent:antigravity]`
+- **最新 Git Commit**: `cd3e4c1 chore(tooling): update tooling tooling and config (ADR-010, ISSUE-039, ISSUE-041, TASK-013, TASK-014, TASK-015, TASK-018, TASK-019, TASK-020, TASK-024) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-23 07:40 UTC] 完成任務 `TASK-026` — Integrate note-studio Phase 1: modular markdown note generation pipeline (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Integrated note-studio Phase 1 dual-backend markdown pipeline under <study_dir>/03 Notes/NoteStudio (ADR-012)
+
+### [2026-11-23 06:42 UTC] 建立任務 `TASK-026`: Integrate note-studio Phase 1: modular markdown note generation pipeline (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-23 03:42 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
 - **檢查結果**: 測試與 Code Review Guard 通過
@@ -107,13 +115,5 @@
 - **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
 
 ### [2026-11-14 04:36 UTC] 完成任務 `TASK-017` — Dummy-mode end-to-end chaos & foolproof test suite (simulate naive user exploring all features with mock files) (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
-
-### [2026-11-14 04:36 UTC] 完成任務 `TASK-016` — Fix course overall output progress not updating and exclude skipped jobs from progress_percent (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
-
-### [2026-11-14 04:36 UTC] 完成任務 `TASK-015` — Fix WorkerPool blocked_quota_types permanent stall on resume and empty quota_wait (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations

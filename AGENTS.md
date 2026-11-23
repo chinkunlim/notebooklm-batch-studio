@@ -117,6 +117,8 @@ notebooklm-batch-studio/
 │   └── tasks/                              # [任務卡] 建立、接手、交接、完成 (agentctl task)
 ├── alembic/
 │   └── versions/
+├── assets/
+│   └── prompts/
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
 │   ├── architecture/                       # [系統架構與資料模型]

@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -26,6 +27,7 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
+from notebooklm_batch_studio.adapters.note_driver_factory import build_note_driver_factory
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.adapters.web_search import search_web_snippets
@@ -36,6 +38,7 @@ from notebooklm_batch_studio.entrypoints.mcp_fonts import register_font_tools
 from notebooklm_batch_studio.entrypoints.mcp_job_prompts import register_job_prompt_tools
 from notebooklm_batch_studio.entrypoints.mcp_learning import register_learning_tools
 from notebooklm_batch_studio.entrypoints.mcp_literature import LiteratureToolDeps, register_literature_tools
+from notebooklm_batch_studio.entrypoints.mcp_notes import register_note_pipeline_tools
 from notebooklm_batch_studio.entrypoints.mcp_preferences import register_preferences_tools
 from notebooklm_batch_studio.entrypoints.mcp_qa_notes import (
     register_qa_notes_tools,
@@ -47,6 +50,7 @@ from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.literature.jobs import LiteratureJobRunner
 from notebooklm_batch_studio.services.literature.manager import LiteratureManager
+from notebooklm_batch_studio.services.notes.note_pipeline_service import NotePipelineService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.preferences_service import PreferencesService
 from notebooklm_batch_studio.services.qa_notes_service import QANotesService
@@ -447,6 +451,45 @@ def _register_study_aid_tools(
         register_learning_tools(mcp, learning)
 
 
+def _register_note_tools_with_session(
+    mcp: MCPServer,
+    cfg: AppConfig,
+    lit_factory: Any,
+    override: Any,
+) -> None:
+    """Register Phase 1 note pipeline MCP tools with CourseRepository study_dir lookup.
+
+    Args:
+        mcp: MCPServer instance.
+        cfg: Application configuration.
+        lit_factory: SQLAlchemy session factory.
+        override: Optional pre-configured NotePipelineService.
+    """
+
+    def _resolve_note_study_dir(course_key: str) -> Path | None:
+        """Resolve `study_dir` for a course code from CourseRepository.
+
+        Args:
+            course_key: Course code / identifier.
+
+        Returns:
+            Path to course study directory, or None if not registered.
+        """
+        with lit_factory() as session:
+            course = CourseRepository(session).get_course(course_key)
+            return Path(course.study_dir) if course and course.study_dir else None
+
+    register_note_pipeline_tools(
+        mcp,
+        override
+        or NotePipelineService(
+            cfg,
+            driver_factory=build_note_driver_factory(cfg),
+            study_dir_resolver=_resolve_note_study_dir,
+        ),
+    )
+
+
 def build_mcp_server(service: BatchStudioService | None = None, **services: Any) -> MCPServer:
     """Build and configure the MCPServer instance with all batch studio tools.
 
@@ -504,6 +547,8 @@ def build_mcp_server(service: BatchStudioService | None = None, **services: Any)
             preferences=resolved.get("preferences"),
         ),
     )
+
+    _register_note_tools_with_session(mcp, cfg, lit_factory, resolved.get("notes"))
     return mcp
 
 

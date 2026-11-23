@@ -49,6 +49,7 @@
       <button class="dock-btn" data-view="studio" aria-label="研讀工作室"><i class="icon-book-open"></i><span class="label">研讀工作室</span><span class="tip">研讀工作室</span></button>
       <button class="dock-btn" data-view="review" aria-label="弱點複習"><i class="icon-circle-help"></i><span class="label">弱點複習</span><span class="tip">弱點複習</span></button>
       <button class="dock-btn" data-view="literature" aria-label="文獻收集"><i class="icon-file-text"></i><span class="label">文獻收集</span><span class="tip">文獻收集</span></button>
+      <button class="dock-btn" data-view="notesgen" aria-label="筆記生成"><i class="icon-sparkles"></i><span class="label">筆記生成</span><span class="tip">筆記生成</span></button>
       <button class="dock-btn" data-view="queue" aria-label="批次排程"><i class="icon-clock"></i><span class="label">批次排程</span><span class="tip">批次排程</span></button>
     </nav>
     <div class="dock-disc-wrap" id="discWrap">
@@ -438,6 +439,54 @@
             <div class="card-head"><h2 class="h2">複習盒</h2><span class="eyebrow">間隔重複</span></div>
             <div class="leitner" style="height:140px" id="reviewLeitner"></div>
             <p class="small muted section-gap">記得的卡片會移到下一格，間隔越來越長（1、3、7、14、30 天）；忘記的卡片回到第一格，10 分鐘後再出現。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 筆記生成 (Note Studio 階段一) ============ -->
+      <section class="view lg" id="view-notesgen">
+        <div class="subbar">
+          <div><h1 class="h1">結構化筆記生成 (Phase 1)</h1><p class="muted small">獨立 .md 提示詞 · 雙後端支援（Gemini 網頁版為主、Gemini Notebook 備用）· 輸出保留完整語意 Tag 的單章 .md</p></div>
+          <div class="row" style="flex-wrap:wrap">
+            <button class="btn btn-primary" id="btnNoteGenStart" onclick="startNoteChapterGeneration()">生成章節 .md</button>
+            <button class="btn btn-soft" id="btnNoteGenPause" onclick="pauseNoteGeneration()">暫停</button>
+            <button class="btn btn-soft" id="btnNoteGenRefresh" onclick="refreshNoteGenStatus()">重新整理</button>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
+            <div><label class="small muted">課程代碼</label><br><input id="ngCourseKey" class="input" placeholder="例如 PSY201" style="width:140px"></div>
+            <div><label class="small muted">課程名稱</label><br><input id="ngCourseName" class="input" placeholder="例如 心理學研究法" style="width:180px"></div>
+            <div><label class="small muted">章節代號</label><br><input id="ngChapterId" class="input" value="ch01" style="width:90px"></div>
+            <div><label class="small muted">章節標題</label><br><input id="ngChapterTitle" class="input" placeholder="例如 科學研究導論" style="width:200px"></div>
+            <div><label class="small muted">生成後端</label><br><select id="ngBackend" class="input"><option value="gemini_web">Gemini 網頁版 (預設)</option><option value="notebooklm">Gemini Notebook (備用)</option></select></div>
+            <div><label class="small muted">模型</label><br><input id="ngModel" class="input" value="4 Argon" style="width:120px"></div>
+          </div>
+          <div class="row" style="gap:12px;flex-wrap:wrap;margin-top:10px">
+            <div><label class="small muted">章節 PDF 路徑 (Gemini 網頁版用)</label><br><input id="ngPdfPath" class="input" placeholder="選填：本機 PDF 路徑" style="width:320px"></div>
+            <div><label class="small muted">Notebook ID (備用後端用)</label><br><input id="ngNotebookId" class="input" placeholder="選填：Gemini Notebook ID" style="width:220px"></div>
+            <div><label class="small muted">Source IDs (逗號分隔)</label><br><input id="ngSourceIds" class="input" placeholder="選填：單章 source_id" style="width:200px"></div>
+          </div>
+          <p id="ngStatusBanner" class="small muted" style="margin-top:10px">尚未載入狀態</p>
+        </div>
+        <div class="grid2" style="gap:16px">
+          <div class="card">
+            <div class="card-head"><h2 class="h2">提示詞預覽與手動測試</h2><span class="eyebrow">assets/prompts/modular_specs/*.md</span></div>
+            <div class="row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap">
+              <select id="ngPromptStep" class="input" onchange="previewNotePrompt()"></select>
+              <button class="btn btn-soft" onclick="previewNotePrompt()">填入章節資料</button>
+              <button class="btn btn-soft" onclick="copyNotePrompt()">複製提示詞</button>
+            </div>
+            <p id="ngPromptPath" class="small muted" style="margin-bottom:6px"></p>
+            <textarea id="ngPromptPreview" class="input" rows="14" style="width:100%;font-family:monospace;font-size:12px" readonly></textarea>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2 class="h2">縫合後單章 .md 原稿</h2><span class="eyebrow">保留完整語意 Tag</span></div>
+            <div class="row" style="gap:8px;margin-bottom:8px">
+              <button class="btn btn-soft" onclick="loadStitchedNoteContent()">讀取章節 .md</button>
+              <span id="ngNoteFilePath" class="small muted"></span>
+            </div>
+            <textarea id="ngNoteContent" class="input" rows="16" style="width:100%;font-family:monospace;font-size:12px" readonly placeholder="生成完成後可在此預覽縫合後的 .md 原稿..."></textarea>
           </div>
         </div>
       </section>
@@ -1076,6 +1125,7 @@
 <script src="/static/studio-shell.js"></script>
 <script src="/static/studio-literature-ui.js"></script>
 <script src="/static/studio-literature.js"></script>
+<script src="/static/studio-notes-gen.js"></script>
 <script src="/static/studio-nav.js"></script>
 <script src="/static/studio-player.js"></script>
 <script src="/static/studio-bench.js"></script>

@@ -24,6 +24,7 @@ DEFAULT_LITERATURE_CATEGORY = "01 Material"
 DEFAULT_LITERATURE_SUBFOLDER = "Literature_Review"
 NOTEBOOKLM_NOTES_SUBFOLDER = "NotebookLM"
 QA_NOTES_SUBFOLDER = "QA_Notes"
+NOTE_STUDIO_SUBFOLDER = "NoteStudio"
 
 _TERM_SUBJECT_RE = re.compile(r"^\s*(\d{2,4}[-_]\d{1,2})\s+(.+?)\s*$")
 _UNSAFE_SEGMENT_RE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
@@ -141,6 +142,18 @@ def resolve_qa_notes_dir(course_dir: Path) -> Path:
         Directory path for saved Q&A markdown notes.
     """
     return resolve_category_dir(course_dir, "03 Notes", QA_NOTES_SUBFOLDER)
+
+
+def resolve_note_studio_dir(course_dir: Path) -> Path:
+    """Resolve `<course_dir>/03 Notes/NoteStudio` for modular Markdown notes.
+
+    Args:
+        course_dir: Course study directory.
+
+    Returns:
+        Directory path for modular `.md` notes, modules, and version archives.
+    """
+    return resolve_category_dir(course_dir, "03 Notes", NOTE_STUDIO_SUBFOLDER)
 
 
 def ensure_course_study_tree(course_dir: Path) -> None:

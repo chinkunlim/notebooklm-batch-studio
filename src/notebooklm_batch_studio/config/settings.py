@@ -104,6 +104,9 @@ class AppConfig:
     library_password: str = field(default="", repr=False)
     openathens_domain: str = "ndhu.edu.tw"
     ebsco_profile: str = "3pnjf3"
+    chrome_path: str = ""
+    playwright_startup_timeout_seconds: int = 60
+    gemini_outline_timeout_seconds: int = 900
 
     @property
     def input_dir(self) -> Path:
@@ -286,4 +289,7 @@ def load_config() -> AppConfig:
         library_password=os.environ.get("USER_PASSWORD", "").strip(),
         openathens_domain=os.environ.get("OPENATHENS_DOMAIN", "ndhu.edu.tw").strip(),
         ebsco_profile=os.environ.get("EBSCO_PROFILE", "3pnjf3").strip(),
+        chrome_path=os.environ.get("CHROME_PATH", "").strip(),
+        playwright_startup_timeout_seconds=int(os.environ.get("PLAYWRIGHT_STARTUP_TIMEOUT_SECONDS", "60")),
+        gemini_outline_timeout_seconds=int(os.environ.get("GEMINI_OUTLINE_TIMEOUT_SECONDS", "900")),
     )
