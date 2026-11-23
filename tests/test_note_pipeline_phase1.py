@@ -186,6 +186,7 @@ class NotePipelinePhase1Tests(unittest.TestCase):
         self.assertEqual(out["status"], "done")
         self.assertEqual(out["backend"], "notebooklm")
         self.assertEqual(mock_client.ask_in_conversation.await_count, 7)
+        self.assertEqual(Path(out["stitched_path"]).parent, self.data_dir / "scratch" / "notes" / "PSY201")
 
     def test_http_and_mcp_routes_registered(self) -> None:
         app = create_app(config=self.cfg)

@@ -120,19 +120,19 @@ class NotePipelineService:
         self.override_prompt_dir = config.data_dir / "prompts" / "modular_specs"
 
     def _notes_course_dir(self, course_key: str, study_dir: Path | None = None) -> Path:
-        """Return `<study_dir>/03 Notes/NoteStudio` for a course's Markdown notes.
+        """Return `<study_dir>/03 Notes/NoteStudio`, or `<scratch_dir>/notes/<course_key>` if unlinked.
 
         Args:
             course_key: Course identifier.
             study_dir: Optional explicit course study directory.
 
         Returns:
-            Path inside the course's `03 Notes/NoteStudio` folder.
+            Path inside `03 Notes/NoteStudio`, or `scratch/notes/<course_key>` when no study_dir exists.
         """
         resolved = study_dir or (self._study_dir_resolver(course_key) if self._study_dir_resolver else None)
-        if resolved is None:
-            resolved = self.config.study_root_dir / "unsorted" / course_key
-        return resolve_note_studio_dir(resolved)
+        if resolved is not None:
+            return resolve_note_studio_dir(resolved)
+        return self.config.scratch_dir / "notes" / course_key
 
     def _stitched_note_path(self, request: ChapterNoteRequest) -> Path:
         """Return the canonical stitched `.md` path for a chapter.
