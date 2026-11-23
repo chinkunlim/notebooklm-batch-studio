@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-22 16:04 UTC`
+- **最後更新時間**: `2026-11-23 03:42 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `36fd363 chore(tooling): update tooling tooling and config (ADR-010, ISSUE-039, TASK-018, TASK-019, TASK-020, TASK-024) [agent:antigravity]`
+- **最新 Git Commit**: `e57a452 test(literature): port literature-fetch unit tests, fixtures, known issues (ISSUE-041..044), and docs [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-23 03:42 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: Port all literature-fetch unit tests (108 tests + 3 fixtures), known issues (ISSUE-041..044), design principles (SPEC-012), and README/ARCHITECTURE documentatio
+- **錯誤與根因**: Ported historical literature-fetch issues ISSUE-041..044 (Playwright 403, OpenAlex mismatch, Cloudflare loop, refresh PDF protection) into docs/known-issues/ an
+- **下一步**: 1) Retire standalone literature-fetch repo. 2) Continue live testing or new features in notebooklm-batch-studio.
+- **交接備註**: All literature-fetch tests (108 unit + 5 integration = 333 total), known issues, and docs integrated and pushed to origin/main.
+- **本機對話紀錄**: `.agents/conversations/2026-11-23-1142-antigravity-summary.md`（只在這台電腦）
 
 ### [2026-11-22 16:04 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
 - **檢查結果**: 測試與 Code Review Guard 通過
@@ -107,9 +115,5 @@
 - **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
 
 ### [2026-11-14 04:36 UTC] 完成任務 `TASK-015` — Fix WorkerPool blocked_quota_types permanent stall on resume and empty quota_wait (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
-
-### [2026-11-14 04:36 UTC] 完成任務 `TASK-014` — Fix incomplete course deletion cleanup (DB tables, preferences, and study UI state) (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations

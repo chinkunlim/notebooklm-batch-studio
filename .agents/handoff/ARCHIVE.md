@@ -253,3 +253,7 @@
 ### [2026-11-14 04:36 UTC] 完成任務 `TASK-013` — Apply one course's settings to other courses (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
+
+### [2026-11-14 04:36 UTC] 完成任務 `TASK-014` — Fix incomplete course deletion cleanup (DB tables, preferences, and study UI state) (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
