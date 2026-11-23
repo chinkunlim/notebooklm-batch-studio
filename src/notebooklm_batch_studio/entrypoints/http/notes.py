@@ -10,7 +10,10 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
-from notebooklm_batch_studio.adapters.note_driver_factory import build_note_driver_factory
+from notebooklm_batch_studio.adapters.note_driver_factory import (
+    build_note_driver_factory,
+    build_note_upload_fn,
+)
 from notebooklm_batch_studio.domain.note_pipeline import NoteBackend
 from notebooklm_batch_studio.services.notes.module_prompts import (
     ModulePromptError,
@@ -231,3 +234,103 @@ def read_stitched_note_content(
         Dictionary with `exists`, `path`, and `content`.
     """
     return _service(request).read_stitched_note(course_key, chapter_id)
+
+
+class PushNoteSourceRequest(BaseModel):
+    """Request body for pushing a stitched chapter `.md` note to Gemini Notebook.
+
+    Attributes:
+        course_key: Course identifier.
+        chapter_id: Chapter identifier (e.g. `ch01`).
+        notebook_id: Optional explicit Gemini Notebook ID (defaults to course's notebook).
+    """
+
+    course_key: str = Field(..., min_length=1)
+    chapter_id: str = Field(..., min_length=1)
+    notebook_id: str = ""
+
+
+class ImportLegacyNotesRequest(BaseModel):
+    """Request body for importing standalone `note-studio` `.md` files.
+
+    Attributes:
+        source_dir: Local folder containing `.md` notes.
+        course_key: Target course identifier.
+        overwrite: Whether to overwrite existing files.
+    """
+
+    source_dir: str = Field(..., min_length=1)
+    course_key: str = Field(..., min_length=1)
+    overwrite: bool = False
+
+
+def _resolve_course_notebook_id(request: Request, course_key: str) -> str:
+    """Look up `notebook_id` from `CourseRepository` for `course_key`.
+
+    Args:
+        request: Incoming HTTP request.
+        course_key: Course identifier.
+
+    Returns:
+        Notebook ID string or empty string.
+    """
+    factory = getattr(request.app.state, "session_factory", None)
+    if factory is None:
+        return ""
+    with factory() as session:
+        course = CourseRepository(session).get_course(course_key)
+        return (course.notebook_id or "") if course else ""
+
+
+@notes_router.get("/chapters/{course_key}")
+def list_note_chapters(course_key: str, request: Request) -> dict[str, Any]:
+    """List stitched chapter `.md` notes for a course.
+
+    Args:
+        course_key: Course identifier.
+        request: Incoming HTTP request.
+
+    Returns:
+        Dictionary containing `chapters` list.
+    """
+    return {"chapters": _service(request).list_chapters(course_key)}
+
+
+@notes_router.post("/push_to_source")
+def push_note_to_source_endpoint(body: PushNoteSourceRequest, request: Request) -> dict[str, Any]:
+    """Render a chapter `.md` note to PDF and upload it to Gemini Notebook.
+
+    Args:
+        body: Push request parameters.
+        request: Incoming HTTP request.
+
+    Returns:
+        Upload result dictionary with `source_id`.
+    """
+    notebook_id = body.notebook_id.strip() or _resolve_course_notebook_id(request, body.course_key)
+    upload_fn = getattr(request.app.state, "note_upload_fn", None) or build_note_upload_fn(
+        request.app.state.config
+    )
+    try:
+        return _service(request).push_to_source(body.course_key, body.chapter_id, notebook_id, upload_fn)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@notes_router.post("/import_legacy")
+def import_legacy_notes_endpoint(body: ImportLegacyNotesRequest, request: Request) -> dict[str, Any]:
+    """Import `.md` notes from a standalone `note-studio` folder into `03 Notes/NoteStudio`.
+
+    Args:
+        body: Import request parameters.
+        request: Incoming HTTP request.
+
+    Returns:
+        Import summary dictionary.
+    """
+    try:
+        return _service(request).import_legacy(
+            Path(body.source_dir), body.course_key, overwrite=body.overwrite
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

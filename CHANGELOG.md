@@ -75,6 +75,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(ui): add iPad Apple Pencil PDF ink annotations and tablet/mobile touch parity (by `@antigravity`)
 - feat(adr/docs): add adr/docs module (ADR-007, ADR-008, ADR-009, ADR-010, ADR-011, ISSUE-020, ISSUE-039, TASK-010, TASK-011, TASK-012, TASK-013, TASK-014, TASK-017, TASK-018, TASK-019, TASK-020, TASK-021, TASK-022, TASK-023, TASK-024, TASK-025) (by `@antigravity`)
 - feat(notes): integrate note-studio Phase 1 modular markdown pipeline under 03 Notes (ADR-012, TASK-026) (by `@antigravity`)
+- feat(notes): integrate note-studio Phase 2 course auto-fill, push-to-source, and legacy import (TASK-027) (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

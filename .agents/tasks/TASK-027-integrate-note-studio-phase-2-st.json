@@ -1,0 +1,28 @@
+{
+  "id": "TASK-027",
+  "title": "Integrate note-studio Phase 2: study studio integration, course auto-fill, and notebook push-back",
+  "status": "done",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Integrated note-studio Phase 2: course/lecture auto-fill, chapter listing, PDF push-to-source, and legacy note import",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-23 07:44 UTC",
+  "updated_at": "2026-11-23 07:47 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-23 07:44 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-23 07:47 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Integrated note-studio Phase 2: course/lecture auto-fill, chapter listing, PDF push-to-source, and legacy note import"
+    }
+  ],
+  "summary": "Integrated note-studio Phase 2: course/lecture auto-fill, chapter listing, PDF push-to-source, and legacy note import"
+}

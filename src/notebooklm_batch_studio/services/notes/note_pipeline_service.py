@@ -32,6 +32,11 @@ from notebooklm_batch_studio.services.notes.module_prompts import (
     list_module_prompt_specs,
     load_module_prompt,
 )
+from notebooklm_batch_studio.services.notes.note_sync import (
+    import_legacy_notes,
+    list_chapter_notes,
+    push_chapter_note_to_source,
+)
 from notebooklm_batch_studio.services.notes.state_manager import NoteStateManager
 from notebooklm_batch_studio.services.notes.step_validator import validate_step_output
 
@@ -408,3 +413,59 @@ class NotePipelineService:
             return {"exists": False, "path": "", "content": ""}
         target = matches[0]
         return {"exists": True, "path": str(target), "content": target.read_text(encoding="utf-8")}
+
+    def list_chapters(self, course_key: str, study_dir: Path | None = None) -> list[dict[str, Any]]:
+        """List stitched chapter `.md` notes for a course.
+
+        Args:
+            course_key: Course identifier.
+            study_dir: Optional explicit course study directory.
+
+        Returns:
+            List of chapter note metadata dicts.
+        """
+        return list_chapter_notes(self._notes_course_dir(course_key, study_dir))
+
+    def push_to_source(
+        self,
+        course_key: str,
+        chapter_id: str,
+        notebook_id: str,
+        upload_fn: Callable[[str, str], str],
+    ) -> dict[str, Any]:
+        """Render a chapter `.md` note to PDF and upload it to Gemini Notebook.
+
+        Args:
+            course_key: Course identifier.
+            chapter_id: Chapter identifier (e.g. `ch01`).
+            notebook_id: Target Gemini Notebook ID.
+            upload_fn: Synchronous upload callback `(notebook_id, pdf_path) -> source_id`.
+
+        Returns:
+            Upload result dictionary with `source_id`.
+        """
+        return push_chapter_note_to_source(
+            self._notes_course_dir(course_key), chapter_id, notebook_id, upload_fn
+        )
+
+    def import_legacy(
+        self,
+        source_dir: Path,
+        course_key: str,
+        overwrite: bool = False,
+        study_dir: Path | None = None,
+    ) -> dict[str, Any]:
+        """Import `.md` notes from a standalone `note-studio` folder into `03 Notes/NoteStudio`.
+
+        Args:
+            source_dir: Source folder containing `.md` files.
+            course_key: Target course identifier.
+            overwrite: Whether to overwrite existing files.
+            study_dir: Optional explicit course study directory.
+
+        Returns:
+            Import summary dictionary.
+        """
+        return import_legacy_notes(
+            source_dir, self._notes_course_dir(course_key, study_dir), overwrite=overwrite
+        )

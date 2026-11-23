@@ -93,7 +93,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-023-add-notebook-source-listing-uplo.json
 │   │   ├── TASK-024-spec-011-gemini-notebook-explora.json
 │   │   ├── TASK-025-integrate-literature-fetch-and-u.json
-│   │   └── TASK-026-integrate-note-studio-phase-1-mo.json
+│   │   ├── TASK-026-integrate-note-studio-phase-1-mo.json
+│   │   └── TASK-027-integrate-note-studio-phase-2-st.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -708,6 +709,7 @@ notebooklm-batch-studio/
 │       │   │   ├── module_composer.py
 │       │   │   ├── module_prompts.py
 │       │   │   ├── note_pipeline_service.py
+│       │   │   ├── note_sync.py
 │       │   │   ├── state_manager.py
 │       │   │   └── step_validator.py
 │       │   ├── __init__.py
@@ -778,6 +780,7 @@ notebooklm-batch-studio/
 │   ├── test_literature_and_hierarchy.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_note_pipeline_phase1.py
+│   ├── test_note_pipeline_phase2.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
 │   ├── test_port_check.py

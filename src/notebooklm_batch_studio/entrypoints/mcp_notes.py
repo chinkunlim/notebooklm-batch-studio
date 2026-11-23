@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Callable
 
 from mcp.server.mcpserver import MCPServer
 from pydantic import BaseModel, Field
@@ -120,6 +121,18 @@ def _register_status_tools(mcp: MCPServer, service: NotePipelineService) -> None
         """
         return json.dumps(service.read_stitched_note(course_key, chapter_id), ensure_ascii=False)
 
+    @mcp.tool()
+    def notes_list_chapters(course_key: str) -> str:
+        """List stitched chapter `.md` notes stored in `03 Notes/NoteStudio` or `scratch/notes`.
+
+        Args:
+            course_key: Course identifier.
+
+        Returns:
+            JSON string with `chapters` array.
+        """
+        return json.dumps({"chapters": service.list_chapters(course_key)}, ensure_ascii=False, indent=2)
+
 
 def _register_generate_tool(mcp: MCPServer, service: NotePipelineService) -> None:
     """Register the chapter note generation MCP tool.
@@ -188,15 +201,93 @@ def _register_pause_tool(mcp: MCPServer, service: NotePipelineService) -> None:
         return json.dumps(service.request_pause(course_key), ensure_ascii=False)
 
 
-def register_note_pipeline_tools(mcp: MCPServer, service: NotePipelineService) -> None:
-    """Register all Phase 1 note pipeline MCP tools on `mcp`.
+def _register_sync_tools(
+    mcp: MCPServer,
+    service: NotePipelineService,
+    upload_fn: Callable[[str, str], str] | None,
+) -> None:
+    """Register Phase 2 push-to-source and legacy import MCP tools.
 
     Args:
         mcp: MCPServer instance.
         service: NotePipelineService instance.
+        upload_fn: Optional callback `(notebook_id, pdf_path) -> source_id`.
+    """
+
+    @mcp.tool()
+    def notes_push_to_source(
+        course_key: str,
+        chapter_id: str,
+        notebook_id: str,
+        confirm: bool = False,
+    ) -> str:
+        """Render a chapter `.md` note to PDF and upload to Gemini Notebook (requires confirm=True).
+
+        Args:
+            course_key: Course identifier.
+            chapter_id: Chapter identifier (e.g. `ch01`).
+            notebook_id: Target Gemini Notebook ID.
+            confirm: Must be True to upload.
+
+        Returns:
+            JSON string with `source_id` or confirmation prompt.
+        """
+        if not confirm:
+            return json.dumps(
+                {"confirm": "Call again with confirm=True to upload chapter note PDF."},
+                ensure_ascii=False,
+            )
+        if upload_fn is None:
+            return json.dumps({"error": "Upload adapter not configured."}, ensure_ascii=False)
+        return json.dumps(
+            service.push_to_source(course_key, chapter_id, notebook_id, upload_fn),
+            ensure_ascii=False,
+        )
+
+    @mcp.tool()
+    def notes_import_legacy(
+        source_dir: str,
+        course_key: str,
+        overwrite: bool = False,
+        confirm: bool = False,
+    ) -> str:
+        """Import standalone `note-studio` `.md` notes into `03 Notes/NoteStudio` (requires confirm=True).
+
+        Args:
+            source_dir: Folder containing `.md` notes.
+            course_key: Target course identifier.
+            overwrite: Whether to overwrite existing files.
+            confirm: Must be True to copy files.
+
+        Returns:
+            JSON string of import summary or confirmation prompt.
+        """
+        if not confirm:
+            return json.dumps(
+                {"confirm": "Call again with confirm=True to import legacy notes."},
+                ensure_ascii=False,
+            )
+        return json.dumps(
+            service.import_legacy(Path(source_dir), course_key, overwrite=overwrite),
+            ensure_ascii=False,
+        )
+
+
+def register_note_pipeline_tools(
+    mcp: MCPServer,
+    service: NotePipelineService,
+    upload_fn: Callable[[str, str], str] | None = None,
+) -> None:
+    """Register all Phase 1 & Phase 2 note pipeline MCP tools on `mcp`.
+
+    Args:
+        mcp: MCPServer instance.
+        service: NotePipelineService instance.
+        upload_fn: Optional callback `(notebook_id, pdf_path) -> source_id`.
     """
     _register_prompt_tools(mcp, service)
     _register_status_tools(mcp, service)
     _register_generate_tool(mcp, service)
     _register_pause_tool(mcp, service)
-    logger.debug("Registered Phase 1 note pipeline MCP tools")
+    _register_sync_tools(mcp, service, upload_fn)
+    logger.debug("Registered Phase 1 & 2 note pipeline MCP tools")

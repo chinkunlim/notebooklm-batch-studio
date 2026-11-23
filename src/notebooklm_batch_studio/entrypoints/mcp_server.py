@@ -27,7 +27,10 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
-from notebooklm_batch_studio.adapters.note_driver_factory import build_note_driver_factory
+from notebooklm_batch_studio.adapters.note_driver_factory import (
+    build_note_driver_factory,
+    build_note_upload_fn,
+)
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.adapters.web_search import search_web_snippets
@@ -487,6 +490,7 @@ def _register_note_tools_with_session(
             driver_factory=build_note_driver_factory(cfg),
             study_dir_resolver=_resolve_note_study_dir,
         ),
+        upload_fn=build_note_upload_fn(cfg),
     )
 
 

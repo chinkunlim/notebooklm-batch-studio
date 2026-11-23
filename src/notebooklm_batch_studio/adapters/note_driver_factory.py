@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import contextmanager
 from typing import Any, Callable, Generator
@@ -55,3 +56,29 @@ def build_note_driver_factory(cfg: AppConfig) -> Callable[[Any], Any]:
             yield drv
 
     return _factory
+
+
+def build_note_upload_fn(cfg: AppConfig) -> Callable[[str, str], str]:
+    """Create a synchronous callback uploading a PDF source to Gemini Notebook.
+
+    Args:
+        cfg: Application configuration.
+
+    Returns:
+        Callable `(notebook_id, pdf_path) -> source_id`.
+    """
+
+    def _upload(notebook_id: str, pdf_path: str) -> str:
+        """Upload `pdf_path` to `notebook_id` via `NotebookLMAdapter`.
+
+        Args:
+            notebook_id: Target Gemini Notebook ID.
+            pdf_path: Local PDF file path.
+
+        Returns:
+            Remote source ID.
+        """
+        adapter = NotebookLMAdapter(config=cfg)
+        return str(asyncio.run(adapter.upload_source(notebook_id, pdf_path)))
+
+    return _upload

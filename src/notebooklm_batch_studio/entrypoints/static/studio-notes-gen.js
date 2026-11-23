@@ -1,11 +1,13 @@
 /**
- * Phase 1 modular Markdown note generation UI controller (Refs: ADR-012).
+ * Phase 1 & 2 modular Markdown note generation UI controller (Refs: ADR-012).
  */
 
 let _ngPromptsCache = [];
+let _ngCoursesCache = [];
+let _ngActiveCourseDetail = null;
 
 /**
- * Load standalone modular prompt template metadata and populate the step selector.
+ * Load standalone modular prompt template metadata and registered courses.
  * @returns {Promise<void>}
  */
 async function initNoteGenPanel() {
@@ -23,6 +25,92 @@ async function initNoteGenPanel() {
   } catch (err) {
     console.error('Failed to load note prompt specs:', err);
   }
+  await loadNoteGenCourses();
+}
+
+/**
+ * Fetch registered courses into `#ngCourseSelect` for one-click auto-fill.
+ * @returns {Promise<void>}
+ */
+async function loadNoteGenCourses() {
+  const sel = document.getElementById('ngCourseSelect');
+  if (!sel) return;
+  try {
+    const res = await fetch('/api/courses');
+    const data = await res.json();
+    _ngCoursesCache = data.courses || data || [];
+    const opts = ['<option value="">（手動填寫或暫存 scratch）</option>'].concat(
+      _ngCoursesCache.map((c) => `<option value="${c.code}">${c.code} — ${c.name}</option>`),
+    );
+    sel.innerHTML = opts.join('');
+  } catch (err) {
+    console.error('Failed to load courses for note generation:', err);
+  }
+}
+
+/**
+ * Auto-fill course fields and populate lecture selector when a course is chosen.
+ * @returns {Promise<void>}
+ */
+async function onNoteGenCourseSelect() {
+  const code = document.getElementById('ngCourseSelect')?.value || '';
+  const lecSel = document.getElementById('ngLectureSelect');
+  if (!code) {
+    _ngActiveCourseDetail = null;
+    if (lecSel) lecSel.innerHTML = '<option value="">（手動填寫章節）</option>';
+    return;
+  }
+  try {
+    const res = await fetch(`/api/courses/${encodeURIComponent(code)}`);
+    const detail = await res.json();
+    _ngActiveCourseDetail = detail;
+    const keyEl = document.getElementById('ngCourseKey');
+    const nameEl = document.getElementById('ngCourseName');
+    const nbEl = document.getElementById('ngNotebookId');
+    if (keyEl) keyEl.value = detail.code || code;
+    if (nameEl) nameEl.value = detail.name || code;
+    if (nbEl) nbEl.value = detail.notebook_id || '';
+    const lectures = detail.lectures || [];
+    if (lecSel) {
+      lecSel.innerHTML = ['<option value="">（手動填寫章節）</option>']
+        .concat(
+          lectures.map(
+            (l) => `<option value="${l.lecture_no}">${String(l.lecture_no).padStart(2, '0')} — ${l.filename}</option>`,
+          ),
+        )
+        .join('');
+    }
+    await previewNotePrompt();
+    await loadGeneratedChaptersList();
+  } catch (err) {
+    console.error('Failed to load course detail:', err);
+  }
+}
+
+/**
+ * Auto-fill chapter ID, title, PDF path, and source_id when a lecture is chosen.
+ * @returns {Promise<void>}
+ */
+async function onNoteGenLectureSelect() {
+  const lecNo = Number(document.getElementById('ngLectureSelect')?.value || 0);
+  if (!lecNo || !_ngActiveCourseDetail) return;
+  const lec = (_ngActiveCourseDetail.lectures || []).find((l) => l.lecture_no === lecNo);
+  if (!lec) return;
+  const chId = `ch${String(lec.lecture_no).padStart(2, '0')}`;
+  const stem = String(lec.filename || '').replace(/\.pdf$/i, '');
+  const chEl = document.getElementById('ngChapterId');
+  const titleEl = document.getElementById('ngChapterTitle');
+  const pdfEl = document.getElementById('ngPdfPath');
+  const srcEl = document.getElementById('ngSourceIds');
+  if (chEl) chEl.value = chId;
+  if (titleEl) titleEl.value = stem;
+  if (pdfEl && _ngActiveCourseDetail.source_dir) {
+    const rel = lec.relative_path || lec.filename;
+    pdfEl.value = `${_ngActiveCourseDetail.source_dir}/${rel}`;
+  }
+  if (srcEl) srcEl.value = lec.source_id || '';
+  await previewNotePrompt();
+  await loadStitchedNoteContent();
 }
 
 /**
@@ -103,6 +191,7 @@ async function startNoteChapterGeneration() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || '生成失敗');
     if (banner) banner.textContent = `狀態：${data.status}（${data.stitched_path || ''}）`;
+    await loadGeneratedChaptersList();
     await loadStitchedNoteContent();
   } catch (err) {
     if (banner) banner.textContent = `錯誤：${err.message}`;
@@ -134,6 +223,43 @@ async function refreshNoteGenStatus() {
     const count = Object.keys(data.chapters || {}).length;
     banner.textContent = `課程 ${courseKey}：已記錄 ${count} 章${data.paused ? '（已請求暫停）' : ''}`;
   }
+  await loadGeneratedChaptersList();
+}
+
+/**
+ * Load generated `.md` chapter pills for the active course.
+ * @returns {Promise<void>}
+ */
+async function loadGeneratedChaptersList() {
+  const courseKey = document.getElementById('ngCourseKey')?.value.trim();
+  const host = document.getElementById('ngChaptersList');
+  if (!courseKey || !host) return;
+  try {
+    const res = await fetch(`/api/notes/chapters/${encodeURIComponent(courseKey)}`);
+    const data = await res.json();
+    const chapters = data.chapters || [];
+    host.innerHTML = chapters.length
+      ? chapters
+          .map(
+            (ch) =>
+              `<button type="button" class="btn btn-soft btn-sm" onclick="selectGeneratedChapter('${ch.chapter_id}')">${ch.chapter_id} ${ch.title}</button>`,
+          )
+          .join('')
+      : '<span class="small muted">尚無已縫合筆記</span>';
+  } catch (err) {
+    console.error('Failed to list chapters:', err);
+  }
+}
+
+/**
+ * Select a generated chapter pill and display its stitched `.md` content.
+ * @param {string} chapterId Chapter identifier such as `ch01`.
+ * @returns {Promise<void>}
+ */
+async function selectGeneratedChapter(chapterId) {
+  const chEl = document.getElementById('ngChapterId');
+  if (chEl) chEl.value = chapterId;
+  await loadStitchedNoteContent();
 }
 
 /**
@@ -152,6 +278,31 @@ async function loadStitchedNoteContent() {
   const box = document.getElementById('ngNoteContent');
   if (pathEl) pathEl.textContent = data.exists ? data.path : '尚未產出';
   if (box) box.value = data.content || '';
+}
+
+/**
+ * Render the current chapter `.md` note to PDF and upload it to Gemini Notebook.
+ * @returns {Promise<void>}
+ */
+async function pushCurrentNoteToNotebook() {
+  const courseKey = document.getElementById('ngCourseKey')?.value.trim();
+  const chapterId = document.getElementById('ngChapterId')?.value.trim() || 'ch01';
+  const notebookId = document.getElementById('ngNotebookId')?.value.trim() || '';
+  if (!courseKey) return;
+  const banner = document.getElementById('ngStatusBanner');
+  if (banner) banner.textContent = `正在將 ${chapterId} 轉為 PDF 並推送至 Gemini Notebook...`;
+  try {
+    const res = await fetch('/api/notes/push_to_source', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ course_key: courseKey, chapter_id: chapterId, notebook_id: notebookId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '推送失敗');
+    if (banner) banner.textContent = `已推送至 Gemini Notebook（source_id: ${data.source_id}）`;
+  } catch (err) {
+    if (banner) banner.textContent = `推送錯誤：${err.message}`;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', initNoteGenPanel);

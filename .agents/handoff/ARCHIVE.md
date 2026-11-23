@@ -265,3 +265,11 @@
 ### [2026-11-14 04:36 UTC] 完成任務 `TASK-016` — Fix course overall output progress not updating and exclude skipped jobs from progress_percent (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
+
+### [2026-11-14 04:36 UTC] 完成任務 `TASK-017` — Dummy-mode end-to-end chaos & foolproof test suite (simulate naive user exploring all features with mock files) (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
+
+### [2026-11-14 04:36 UTC] 完成任務 `TASK-018` — Analyze graphify report and project workflow for code alignment and entanglement (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations
