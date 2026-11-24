@@ -66,8 +66,7 @@ notebooklm-batch-studio/
 │   │   │   ├── scripts/
 │   │   │   │   └── tdd_runner.py
 │   │   │   └── SKILL.md
-│   │   ├── catalog.json                    # [Skills 目錄] 各 skill 的分層 (core/stack/optional)、觸發時機與指令
-│   │   └── catalog.json.template
+│   │   └── catalog.json                    # [Skills 目錄] 各 skill 的分層 (core/stack/optional)、觸發時機與指令
 │   ├── tasks/                              # [任務卡] 建立、接手、交接、完成 (agentctl task)
 │   │   ├── TASK-001-phase-1a-notebooklm-technical-sp.json
 │   │   ├── TASK-002-phase-1b-domain-parallel-queue.json
@@ -864,7 +863,6 @@ notebooklm-batch-studio/
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取
 ├── .graphifyignore
-├── .graphifyignore.template
 ├── .mcp.json                               # [AI 工具] Claude Code 的專案 MCP 設定（uv run <名稱>-mcp）
 ├── .python-version                         # [Python 版本釘選] 供 uv / pyenv / mise 自動讀取
 ├── AGENTS.md                               # [AI 協作憲法・唯一規則來源] 所有 AI Agent 共用的開發原則與 Skills 路由

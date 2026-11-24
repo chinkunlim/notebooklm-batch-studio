@@ -84,6 +84,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - style(ui): refine course catalog typography and compact layout in split sidebar (by `@antigravity`)
 - style(ui): align new controls with DESIGN.md pure-text capsules and 8pt grid (by `@antigravity`)
 - style(ui): unify gentle animations across popovers, panels, and micro-interactions (by `@antigravity`)
+- refactor(mcp): unify `confirm=False` warning payload via `mcp_confirm.py` across all 57 mutating MCP tools and remove unused `calculate_outline_words` helper (`TASK-033`; commit `9d6ef12`) (by `@antigravity`)
 
 ### Fixed
 - fix(ui,reader): keep split-pane Study Studio sticky with 12px top/bottom framing across Safari/fullscreen, restore global wheel scrolling across all pages, style keypoint header actions as balanced 1-or-2 line pill buttons, switch `課程目錄`/`研讀` in the right column only, resolve exact PDF page & paragraph on first keypoint click, and re-layout PDF textLayer highlights on container resize (by `@antigravity`)
@@ -188,9 +189,10 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs: register ISSUE-037 and TASK-020 for course code collision (by `@antigravity`)
 - docs: resolve ISSUE-037 and complete TASK-020 (by `@antigravity`)
 - docs: document Study Studio reader, scrolling, and UI fixes in README and CHANGELOG (by `@antigravity`)
+- docs: complete evidence-backed audit of SPEC acceptance criteria, ADR/ISSUE/TASK/CHANGELOG traceability, cross-repo note-studio & literature-fetch mappings, and `StepValidator`/unported-test decisions (`TASK-033`; commit `8ab99cb`) (by `@antigravity`)
 
 ### Testing
-- test(literature): port literature-fetch unit tests, fixtures, known issues (ISSUE-041..044; commit `e57a452`), and docs (by `@antigravity`)
+- test(literature): port literature-fetch unit tests, fixtures, known issues (`ISSUE-041`, `ISSUE-042`, `ISSUE-043`, `ISSUE-044`; commit `e57a452`), and docs (by `@antigravity`)
 - test: port source-project tests, fix quiz key and notes lecture form, audit records (TASK-029, ISSUE-052, ISSUE-053, ISSUE-054, ISSUE-055, ISSUE-056) (by `@claude-code`)
 
 ### Chore
