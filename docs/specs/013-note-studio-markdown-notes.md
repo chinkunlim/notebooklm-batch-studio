@@ -27,7 +27,9 @@
   - **路徑安全（ISSUE-045、ADR-013）**：`course_key`、`chapter_id` 不可含 `/`、`\`、NUL、萬用字元，也不可以 `.` 開頭；`study_dir` 必須在 `DATA_DIR` 或 `STUDY_ROOT_DIR` 內；`pdf_path` 必須是 `.pdf`，而且在 `DATA_DIR`、`STUDY_ROOT_DIR` 或該課程登錄的 `source_dir` 內；`import_legacy` 的 `source_dir` 必須在 `DATA_DIR`、`STUDY_ROOT_DIR` 或 `.env` 的 `LEGACY_NOTE_STUDIO_DIR` 內。
   - 三入口一致：HTTP（`/api/notes/*`）、MCP（`notes_*`）、網頁面板呼叫同一個 `NotePipelineService`。
 - **可選 (Nice to have)**：`08_supplement_spec.md` 補充模組（目前不在標準 7 步內）。
-- **不做 (Out of scope)**：PDF 向量排版（Node/Chrome/ELK 渲染器）留到階段三。
+- **不做 (Out of scope)**：
+  - PDF 向量排版引擎（Node/Chrome/ELK、`compose_*`、`flowchart_syntax`、`tree_wrap`、`page_layout_js`、`golden_audit` 等階段三模組與其 ~84 支渲染/獨立殼層測試）不移植於階段一，詳見 [`ADR-012` §5](../adr/012-note-studio-phase1-markdown-pipeline.md#5-階段一刻意裁剪與不移植項目決策與證據)。
+  - 模組二動態字數契約（`note-studio ADR-020` / `calculate_outline_words`）與 `StepValidator` 課程專屬密度檢查（`density_checks.py`、`chat_renamer` / `batch_orchestrator` / `pipeline_coordinator` 獨立排程器）亦不在階段一範圍。
 
 ## 4. 介面 / API
 
@@ -42,6 +44,10 @@
 | `GET /api/notes/chapters/{course_key}` | `notes_list_chapters` | 列出已縫合章節 |
 | `POST /api/notes/push_to_source` | `notes_push_to_source(confirm)` | 轉 PDF 後上傳為 Gemini Notebook 來源 |
 | `POST /api/notes/import_legacy` | `notes_import_legacy(confirm)` | 從舊 `note-studio` 資料夾複製 `.md`（預設不覆蓋） |
+| `GET /api/notes/gemini/auth-status` | `notes_gemini_auth_status` | 檢查 `gemini_web` 真實 Chrome 登入狀態（ISSUE-053） |
+| `POST /api/notes/gemini/login` | `notes_gemini_login(confirm)` | 開啟真實 Chrome 登入視窗並儲存 `storage_state.json` |
+| `POST /api/notes/gemini/logout` | `notes_gemini_logout(confirm)` | 清除 Gemini Chrome Profile 與本機憑證 |
+| `POST /api/notes/gemini/retention` | `notes_set_gemini_retention(confirm)` | 設定憑證保留天數（預設 30 天） |
 
 生成請求範例：
 
@@ -60,6 +66,7 @@
 - [x] `gemini_web` 生成 7 模組並縫合、重跑時封存（`test_gemini_web_primary_generates_and_stitches_md_with_version_archive`）
 - [x] `notebooklm` 後端只用該章 `source_ids`（`test_notebooklm_fallback_backend_uses_source_ids`）
 - [x] 章節列表、推回來源、舊筆記匯入、HTTP/MCP 一致（`tests/test_note_pipeline_phase2.py`）
+- [x] `gemini_web` 真實 Chrome 登入狀態、登入/登出/保留天數三端入口與錯誤引導（`tests/gemini/test_gemini_auth.py`，ISSUE-053 / TASK-031）
 - [x] 路徑穿越與資料夾外 PDF 一律拒絕（`tests/test_security_hardening.py::NotePathTraversalTests`）
 
 ## 6. 未決問題

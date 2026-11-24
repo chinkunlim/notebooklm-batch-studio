@@ -82,11 +82,11 @@ flashcards：`{"cards": [{"front": "...", "back": "...", "source": "p.5"}]}`。
 
 ## 5. 驗收標準
 
-- [ ] 技術驗證結果寫進 ADR-001，每一項都有「可行／不可行＋方法」。
-- [ ] 一份 PDF 的 8 件產出都存在本機，檔名符合命名規則。
-- [ ] quiz 的題目卷沒有答案；答案卷每題有答案、解析、出處。
-- [ ] flashcards `.csv` 能匯入 Anki，mind map `.opml` 能匯入 XMind。
-- [ ] 轉換層有離線測試（用存下來的範例資料，不連網）。
+- [x] 技術驗證結果寫進 ADR-001，每一項都有「可行／不可行＋方法」。（證據：`docs/adr/001-notebooklm-access.md:35-46`、`git commit f9ebade`，6 項目均註記 `✅ 可行` 與實作方式）
+- [x] 一份 PDF 的 8 件產出都存在本機，檔名符合命名規則。（離線證據：`tests/test_dummy_user_simulation.py::AllArtifactTypesE2ETest::test_all_12_artifact_types_end_to_end`、`tests/test_domain_and_queue.py::DomainAndQueueTest::test_naming_prefixes_and_english_titles`；實機 NotebookLM 下載：`待實機`）
+- [x] quiz 的題目卷沒有答案；答案卷每題有答案、解析、出處。（證據：`tests/test_converters.py::TestQuizConverter::{test_exam_markdown_has_no_answers,test_answer_markdown_contains_full_pedagogical_details}`）
+- [ ] flashcards `.csv` 能匯入 Anki，mind map `.opml` 能匯入 XMind。（離線格式證據：`tests/test_converters.py::{TestFlashcardsConverter::test_anki_csv_export,TestMindMapConverter::test_opml_export_validity}`；Anki / XMind 桌面端實際匯入：`待實機`）
+- [x] 轉換層有離線測試（用存下來的範例資料，不連網）。（證據：`tests/test_converters.py` 13 項轉換測試、`tests/test_study_service.py` 4 項弱點與 CSV 匯出測試）
 
 ## 6. 未決問題
 

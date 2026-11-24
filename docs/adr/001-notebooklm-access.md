@@ -3,7 +3,7 @@
 - **狀態**：Accepted <!-- Proposed | Accepted | Superseded by ADR-NNN -->
 - **日期**：2026-10-21
 - **Agent**：`claude-code`
-- **任務**：`-`
+- **任務**：`TASK-001`（初稿建於任務卡前之 `818e488`，§5 實測驗證完成於 `f9ebade`）
 
 ## 1. 背景與問題
 

@@ -41,7 +41,7 @@
 - 登入狀態：顯示是否已登入；過期時提示使用者在跳出的瀏覽器重新登入（程式不輸入帳號密碼）。
 - 總覽頁連結：開啟 SPEC-001 的課程總覽頁。
 
-**OpenAPI / MCP 工具**（同一組 services；會改資料的 MCP 工具有 `confirm` 參數，`confirm=false` 時只回傳預覽）
+**OpenAPI / MCP 工具**（同一組 services；會改資料的 MCP 工具有 `confirm` 參數，`confirm=false` 時統一回傳 JSON `{"confirmed": false, "warning": "..."}` 並附加相關上下文欄位而不執行變更）
 
 | 工具 | 動作 | 會改資料 |
 |---|---|---|
@@ -60,7 +60,7 @@
 | 工具群 | 讀取（不需 confirm） | 會改資料（需 `confirm=True`） | 規格 |
 |---|---|---|---|
 | 文獻 | `list_literature`、`export_literature_apa`、`query_literature_notebook` | `add_literature`、`process_literature`、`refresh_literature`、`import_literature_to_course`、`unarchive_literature`、`delete_literature`、`migrate_study_layout`（`dry_run=False` 時）、`sync_literature_notebook`、`generate_literature_review` | SPEC-012 |
-| note-studio 筆記 | `notes_list_prompts`、`notes_preview_prompt`、`notes_get_status`、`notes_read_chapter`、`notes_list_chapters` | `notes_generate_chapter`、`notes_pause_course`、`notes_push_to_source`、`notes_import_legacy` | SPEC-013 |
+| note-studio 筆記 | `notes_list_prompts`、`notes_preview_prompt`、`notes_get_status`、`notes_read_chapter`、`notes_list_chapters`、`notes_gemini_auth_status` | `notes_generate_chapter`、`notes_pause_course`、`notes_push_to_source`、`notes_import_legacy`、`notes_gemini_login`、`notes_gemini_logout`、`notes_set_gemini_retention` | SPEC-013 |
 | 問答筆記 | `list_course_notes`、`ask_notebook_question` | `save_qa_note`、`push_note_to_source`、`delete_remote_artifact`、`import_remote_notebook` | SPEC-011 |
 
 - 新增功能時三個入口一起接。
@@ -92,11 +92,11 @@ HTTP 路由（OpenAPI 由 FastAPI 自動產生，給 Open WebUI 匯入）：
 
 ## 5. 驗收標準
 
-- [ ] 實作第一步：專案補上 `api` 與 `web`（FastAPI、`entrypoints/mcp_server.py`、各工具設定檔），服務在 `http://127.0.0.1:8768` 啟動。
-- [ ] 網頁加入一個資料夾 → 預覽 → 確認後自動完成全部產出並可下載。
-- [ ] 在 Open WebUI 問「BIO101 做到哪了？」能回答正確進度。
-- [ ] 在 Claude Code 透過 MCP `add_courses` 時，沒有 `confirm=true` 不會建立任何東西。
-- [ ] 服務只綁 `127.0.0.1`。
+- [x] 實作第一步：專案補上 `api` 與 `web`（FastAPI、`entrypoints/mcp_server.py`、各工具設定檔），服務在 `http://127.0.0.1:8768` 啟動。（證據：`entrypoints/api.py:4,444`、`entrypoints/mcp_server.py`、`config/settings.py:102-103`；測試：`tests/test_api_and_mcp.py::TestApiAndMcp::{test_get_dashboard_html,test_get_status_endpoint,test_mcp_server_tools}`）
+- [ ] 網頁加入一個資料夾 → 預覽 → 確認後自動完成全部產出並可下載。（離線證據：`TestApiAndMcp::{test_preview_and_add_courses_api,test_quiz_and_artifact_download}`、`AllArtifactTypesE2ETest::test_all_12_artifact_types_end_to_end`；實機瀏覽器＋真實 NotebookLM 端對端下載：`待實機`）
+- [ ] 在 Open WebUI 問「BIO101 做到哪了？」能回答正確進度。（離線 OpenAPI `/api/courses` 與 `/api/courses/{code}` 證據：`TestApiAndMcp::test_list_and_get_courses`；實際 Open WebUI 對話串接：`待實機`）
+- [x] 在 Claude Code 透過 MCP `add_courses` 時，沒有 `confirm=true` 不會建立任何東西。（證據：`tests/test_api_and_mcp.py::TestApiAndMcp::test_mcp_server_tools` 驗證 `add_courses(..., False)` 回傳 `{"confirmed": false, "warning": ...}` 且不建立課程；全 25 個變更類 MCP 工具已於 `TASK-033` 統一格式）
+- [x] 服務只綁 `127.0.0.1`。（證據：`config/settings.py:102,282` `http_host = "127.0.0.1"`、`entrypoints/api.py:4,444`、`entrypoints/cli.py:359`、`TestApiAndMcp::test_untrusted_host_rejection`）
 
 ## 6. 未決問題
 

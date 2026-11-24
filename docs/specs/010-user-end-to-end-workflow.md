@@ -1,6 +1,6 @@
 # SPEC-010：端到端使用者完整工作流程規格書 (End-to-End User Workflow & Journey)
 
-- **狀態**：Approved
+- **狀態**：Implemented
 - **日期**：2026-11-10（2026-11-14 更新）
 - **相關任務 / ADR**：TASK-001 ~ TASK-020 / ADR-001 ~ ADR-009 / ISSUE-034 ~ ISSUE-037
 
@@ -196,7 +196,7 @@ flowchart TD
 
 ## 4. 驗收標準 (Acceptance Criteria)
 
-- [ ] 完整遵循本規格書定義之 8 個主要階段，不跳步、不遺漏測定項目。
-- [ ] 所有輸入與選擇皆具備防呆機制：空資料夾提示無效、非法日期拒絕、配額不足優雅等待。
-- [ ] 刪除課程後，頂部選單、研讀工作室、總覽與弱點複習 100% 無舊資料殘留。
-- [ ] 配合 `TASK-017` 混沌與防呆測試，能在無網路／無真實 NotebookLM 環境下完成全流程模擬跑通。
+- [ ] 完整遵循本規格書定義之 8 個主要階段，不跳步、不遺漏測定項目。（離線證據：`tests/test_dummy_user_simulation.py::{AllArtifactTypesE2ETest::test_all_12_artifact_types_end_to_end,NaiveChaosUserJourneyTest::test_chaos_lifecycle_quiz_review_delete_and_reregister}`；完整 8 階段含真實瀏覽器＋NotebookLM 操作：`待實機`）
+- [x] 所有輸入與選擇皆具備防呆機制：空資料夾提示無效、非法日期拒絕、配額不足優雅等待。（證據：`tests/test_dummy_user_simulation.py::NaiveChaosUserJourneyTest::{test_chaos_empty_states_and_invalid_inputs,test_chaos_lifecycle_quiz_review_delete_and_reregister}`）
+- [x] 刪除課程後，頂部選單、研讀工作室、總覽與弱點複習 100% 無舊資料殘留。（證據：`tests/test_course_admin.py::DeleteCourseTest::{test_delete_moves_outputs_and_keeps_pdfs,test_delete_cleans_keypoints_tutor_and_preferences}`、`tests/test_dummy_user_simulation.py::{NaiveChaosUserJourneyTest::test_chaos_lifecycle_quiz_review_delete_and_reregister,UiAndStaticRegressionTest::test_ui_and_static_issue_regressions}`）
+- [x] 配合 `TASK-017` 混沌與防呆測試，能在無網路／無真實 NotebookLM 環境下完成全流程模擬跑通。（證據：`tests/test_dummy_user_simulation.py` 4 項測試全數離線通過）

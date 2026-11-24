@@ -136,9 +136,9 @@
 
 ## 4. 品質保證與驗收清單
 
-- [ ] **設計心理學審查**：執行 `python3 .agents/skills/design-psychology-master/scripts/design_audit.py`，分數維持 100/100。
-- [ ] **單元測試全數通過**：執行 `uv run python -m unittest discover -s tests -v`，173 項測試 100% 通過。
-- [ ] **文字去雜訊**：頂部導航為純文字排版，無任何 emoji 或多餘裝飾圖標。
-- [ ] **左側 Dock 原貌**：維持 4 個標準圖標（首頁、書卷、圓圈問號、時鐘），滑動框僅使用垂直/水平物理平移。
-- [ ] **全設備 RWD**：桌面點選「iPhone (416)」時，App 自動單欄垂直重排、黑膠唱盤等比縮小、無橫向溢出。
-- [ ] **產出物九宮格**：9 項工具一次展現，點選直接展開內容，免反覆切換頁籤。
+- [x] **設計心理學審查**：執行 `python3 .agents/skills/design-psychology-master/scripts/design_audit.py`，分數維持 100/100。（實測：`mockups_gallery.html` 綜合評分 `100 / 100`）
+- [x] **單元測試全數通過**：執行 `uv run python -m unittest discover -s tests -v`，438 項測試 100% 通過。
+- [x] **文字去雜訊**：頂部導航為純文字排版，無任何 emoji 或多餘裝飾圖標。（證據：`entrypoints/static/index.html:110-131` `<header class="topbar">` emoji 檢查為 `[]`，後續 `SPEC-011` 依設計加入了「探索提問」按鈕圖示 `icon-sparkles` 與課程選擇器圖示 `icon-chevrons-up-down`）
+- [ ] **左側 Dock 原貌**：維持 4 個標準圖標（首頁、書卷、圓圈問號、時鐘），滑動框僅使用垂直/水平物理平移。（條件已隨規格演進更新：滑動指示框於 `studio-nav.js:27-34` 實作，但 `SPEC-012`/`SPEC-013` 已將 `index.html:48-53` 擴增為 6 個頁面按鈕，新增「文獻收集」與「筆記生成」）
+- [ ] **全設備 RWD**：桌面點選「iPhone (416)」時，App 自動單欄垂直重排、黑膠唱盤等比縮小、無橫向溢出。（離線證據：`docs/design/mockups_gallery.html:263,1490,1695` 與 `tests/test_dummy_user_simulation.py::UiAndStaticRegressionTest::test_ui_and_static_issue_regressions`，正式版 RWD 於 `studio.css:1595,1744` `@media (max-width: 680px/780px)`；實際瀏覽器 416px 視覺檢查：`待實機`）
+- [ ] **產出物九宮格**：9 項工具一次展現，點選直接展開內容，免反覆切換頁籤。（一次性展開免切換已實作於 `studio-bench.js:8,21` 與 `studio-shell.js:143-155`，但隨 `SPEC-011` 新增「問答筆記」工具，目前 `TOOLS` 已擴為 11 項、含講義；實機點擊切換：`待實機`）

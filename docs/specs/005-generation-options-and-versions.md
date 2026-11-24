@@ -46,7 +46,7 @@
 - [x] 參數正確對應成 notebooklm-py enum；不合法的值被拒絕；重新註冊不覆蓋設定
 - [x] 額度等待到期後工作自動完成（`wait_for_quota`）
 - [x] web 啟動時自動開始佇列
-- [ ] 真機：v2 資訊圖表為直式、Gemini Notebook 標題正確
+- [ ] 真機：v2 資訊圖表為直式、Gemini Notebook 標題正確（`待實機`；離線已由 `tests/test_versions_and_options.py::RunnerVersionTest::test_v2_infographic_title_files_and_device_exports` 覆蓋；實機驗證步驟：對單講觸發 v2 重新生成並檢查本機直式輸出與遠端標題 `(v2)`）
 
 ## 6. 未決問題
 

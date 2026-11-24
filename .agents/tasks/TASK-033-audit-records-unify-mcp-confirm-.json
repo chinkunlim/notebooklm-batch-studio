@@ -1,21 +1,28 @@
 {
   "id": "TASK-033",
   "title": "Audit records, unify MCP confirm format, and document cross-repo decisions",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "",
+  "done_items": "Audited SPEC/ADR/ISSUE/TASK/CHANGELOG traceability with verifiable command/git/line evidence, mapped note-studio & literature-fetch cross-repo refs, documented StepValidator/calculate_outline_words/unported tests decisions, unified all 25 mutating MCP confirm=False payloads via mcp_confirm.py, and verified SPEC acceptance criteria.",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-24 08:04 UTC",
-  "updated_at": "2026-11-24 08:04 UTC",
+  "updated_at": "2026-11-24 08:18 UTC",
   "history": [
     {
       "timestamp": "2026-11-24 08:04 UTC",
       "action": "created_and_claimed",
       "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-24 08:18 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Audited SPEC/ADR/ISSUE/TASK/CHANGELOG traceability with verifiable command/git/line evidence, mapped note-studio & literature-fetch cross-repo refs, documented StepValidator/calculate_outline_words/unported tests decisions, unified all 25 mutating MCP confirm=False payloads via mcp_confirm.py, and verified SPEC acceptance criteria."
     }
-  ]
+  ],
+  "summary": "Audited SPEC/ADR/ISSUE/TASK/CHANGELOG traceability with verifiable command/git/line evidence, mapped note-studio & literature-fetch cross-repo refs, documented StepValidator/calculate_outline_words/unported tests decisions, unified all 25 mutating MCP confirm=False payloads via mcp_confirm.py, and verified SPEC acceptance criteria."
 }

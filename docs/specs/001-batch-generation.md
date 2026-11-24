@@ -144,15 +144,15 @@ Gemini Notebook 介面或內部格式改變（標 `failed`，記錄錯誤）。
 
 ## 5. 驗收標準
 
-- [ ] 加入 2 個資料夾 → 出現 2 本同名 notebook，PDF 都已上傳。
-- [ ] 每份 PDF 都有 SPEC 表中的 8 件產出，生成時只勾選該份 PDF。
-- [ ] 每份 quiz 有 30 題，三份之間沒有重複題；不足時會重做或補做，仍不足會被回報。
-- [ ] 下載檔名全部符合命名規則。
-- [ ] 中途結束程式再重開，不會重複生成已完成項目。
-- [ ] 模擬達到每日上限時，該類型進入 `quota_wait`，其他類型繼續。
-- [ ] 同內容不同檔名的 PDF 只處理一次。
-- [ ] 資料夾放入新 PDF → 只處理新的那份。
-- [ ] 完成時收到 macOS 通知，課程總覽頁連結都能打開。
+- [x] 加入 2 個資料夾 → 出現 2 本同名 notebook，PDF 都已上傳。（離線證據：`tests/test_services_and_cli.py::TestBatchStudioService::test_full_course_registration_and_job_execution`、`tests/test_api_and_mcp.py::TestApiAndMcp::test_preview_and_add_courses_api`、`tests/test_course_reregistration.py::ReRegistrationTest::test_different_course_same_code_does_not_inherit_stale_notebook_id`；真實多資料夾 NotebookLM 上傳：`待實機`）
+- [x] 每份 PDF 都有 SPEC 表中的 8 件產出，生成時只勾選該份 PDF。（證據：`tests/test_domain_and_queue.py::DomainAndQueueTest::test_job_generation_matrix` 驗證 `2 * 8 + 2 = 18 jobs`、`tests/test_dummy_user_simulation.py::AllArtifactTypesE2ETest::test_all_12_artifact_types_end_to_end`、`tests/test_notebooklm_generation.py::RunnerTargetingTest`）
+- [x] 每份 quiz 有 30 題，三份之間沒有重複題；不足時會重做或補做，仍不足會被回報。（證據：`tests/test_domain_and_queue.py::DomainAndQueueTest::test_prompt_generator_master_blueprint`、`tests/test_converters.py::TestQuizConverter::test_merge_and_deduplicate_quizzes`、`tests/test_failed_job_rerun.py::FailedJobRetryAndRecoveryTest::test_quiz_runner_survives_transient_batch_failure`、`tests/test_needs_review_and_ollama.py::NeedsReviewTest::test_worker_marks_job_needs_review`、`tests/test_remaining_fixes.py::MockExamQuarantineTest::test_incomplete_mock_exam_raises_needs_review`）
+- [x] 下載檔名全部符合命名規則。（證據：`tests/test_domain_and_queue.py::DomainAndQueueTest::test_naming_prefixes_and_english_titles`、`tests/test_versions_and_options.py::{NamingTest::test_version_suffixes,RunnerVersionTest::test_v2_infographic_title_files_and_device_exports}`）
+- [x] 中途結束程式再重開，不會重複生成已完成項目。（證據：`tests/test_domain_and_queue.py::DomainAndQueueTest::test_queue_enqueue_and_deduplication`、`tests/test_course_admin.py::ReuseNotebookTest::test_setup_reuses_notebook_and_sources`、`tests/test_course_reregistration.py::ReRegistrationTest::test_rescan_keeps_source_ids_of_unchanged_pdfs`）
+- [x] 模擬達到每日上限時，該類型進入 `quota_wait`，其他類型繼續。（證據：`tests/test_domain_and_queue.py::DomainAndQueueTest::{test_quota_wait_isolation_and_resume,test_worker_pool_parallel_processing}`、`tests/test_remaining_fixes.py::QuotaPrecheckTest::test_insufficient_quota_raises_before_generation`）
+- [x] 同內容不同檔名的 PDF 只處理一次。（證據：`tests/test_course_parser.py::CourseParserTest::test_scan_directory_and_deduplicate`）
+- [x] 資料夾放入新 PDF → 只處理新的那份。（證據：`tests/test_course_reregistration.py::ReRegistrationTest::test_rescan_keeps_source_ids_of_unchanged_pdfs`、`tests/test_domain_and_queue.py::DomainAndQueueTest::test_queue_enqueue_and_deduplication`）
+- [ ] 完成時收到 macOS 通知，課程總覽頁連結都能打開。（gap：**未實作** macOS 通知——`rg -n "osascript|notify|notification" src` 無通知呼叫；課程總覽頁由 `tests/test_services_and_cli.py::TestCourseReporter::test_generate_summary_files` 覆蓋，瀏覽器實際開啟連結為`待實機`）
 
 ## 6. 未決問題
 

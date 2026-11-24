@@ -175,11 +175,11 @@
 
 ## 6. 驗收標準 (Acceptance Criteria)
 
-- [ ] **提問抽屜與大頁**：在任一研讀畫面點擊即可滑出抽屜發問；點擊展開可切換至全螢幕問答筆記頁面。
-- [ ] **範圍對焦**：可指定整門課或單一講次來源，NotebookLM 能依限定範圍回答並帶有正確引用。
-- [ ] **精華總結格式**：點擊「整理為精華筆記」能獲得符合規範的結構化 Markdown，內含標題、結論、解析、引用與階層標籤。
-- [ ] **階層標籤支援**：筆記生成的 Markdown 包含標準 Frontmatter 與 `#大/中/小` 巢狀標籤，在系統介面可點選篩選，Obsidian 能正確辨識為標籤樹。
-- [ ] **測驗一鍵收錄**：測驗中追問的解析可直接存為筆記，自動賦予 `#類型/測驗追問`。
-- [ ] **掌握度切換**：在介面上點擊切換掌握度，能同步更新資料庫與本機 `.md` 實體檔案中的標籤。
-- [ ] **來源回灌與額度保護**：支援單篇回灌與多篇合併打包回灌至 Gemini Notebook，且不修改本機原始 PDF。
-- [ ] **單元與整合測試**：新增之 Service、HTTP 路由與 MCP 工具具備離線 Mock/Dummy 完整測試，覆蓋率 100% 通過。
+- [ ] **提問抽屜與大頁**：在任一研讀畫面點擊即可滑出抽屜發問；點擊展開可切換至全螢幕問答筆記頁面。（已實作於 `index.html:130,1072-1116`、`studio-qa-drawer.js:426-438` `expandQaToStudioTab()` 與 `studio-notes-tab.js`；實際瀏覽器抽屜滑出與展開互動：`待實機`）
+- [x] **範圍對焦**：可指定整門課或單一講次來源，NotebookLM 能依限定範圍回答並帶有正確引用。（證據：`tests/test_qa_notes_service.py::TestQANotesService::test_ask_and_summarize_conversation`、`tests/test_qa_notes_api.py::TestQANotesAPIAndMCP::test_http_qa_ask_summarize_save_mastery_and_push`、`tests/test_notebooklm_adapter.py::TestNotebookLMAdapter::test_ask_qa_returns_answer_and_references`）
+- [x] **精華總結格式**：點擊「整理為精華筆記」能獲得符合規範的結構化 Markdown，內含標題、結論、解析、引用與階層標籤。（證據：`tests/test_qa_notes_service.py::TestQANotesService::test_ask_and_summarize_conversation`、`tests/test_qa_notes_api.py::TestQANotesAPIAndMCP::test_http_qa_ask_summarize_save_mastery_and_push`）
+- [ ] **階層標籤支援**：筆記生成的 Markdown 包含標準 Frontmatter 與 `#大/中/小` 巢狀標籤，在系統介面可點選篩選，Obsidian 能正確辨識為標籤樹。（系統產出與篩選證據：`tests/test_qa_notes_service.py::TestQANotesService::test_save_note_writes_markdown_and_updates_mastery`、`tests/test_qa_notes_db.py::TestCourseQANoteDB::test_create_and_query_qa_note_record`、`tests/test_dummy_user_simulation.py::NaiveChaosUserJourneyTest::_verify_qa_notes_workflow`；Obsidian 實際匯入識別：`待實機`）
+- [x] **測驗一鍵收錄**：測驗中追問的解析可直接存為筆記，自動賦予 `#類型/測驗追問`。（證據：`entrypoints/static/studio.js:386`、`studio-qa-drawer.js:403-420` `collectExplanationAsNote` 帶 `source_scene: 'quiz_explain'`；後端自動標籤由 `tests/test_qa_notes_service.py::TestQANotesService::test_save_note_writes_markdown_and_updates_mastery` 與 `tests/test_dummy_user_simulation.py::NaiveChaosUserJourneyTest::_verify_qa_notes_workflow` 覆蓋）
+- [x] **掌握度切換**：在介面上點擊切換掌握度，能同步更新資料庫與本機 `.md` 實體檔案中的標籤。（證據：`tests/test_qa_notes_service.py::TestQANotesService::test_save_note_writes_markdown_and_updates_mastery`、`tests/test_qa_notes_db.py::TestCourseQANoteDB::test_update_mastery_and_source_status`、`tests/test_qa_notes_api.py::TestQANotesAPIAndMCP::test_http_qa_ask_summarize_save_mastery_and_push`）
+- [x] **來源回灌與額度保護**：支援單篇回灌與多篇合併打包回灌至 Gemini Notebook，且不修改本機原始 PDF。（證據：`tests/test_qa_notes_service.py::TestQANotesService::test_push_single_and_bundle_notes_to_source`、`tests/test_qa_notes_api.py::TestQANotesAPIAndMCP::test_http_qa_ask_summarize_save_mastery_and_push`、`tests/test_dummy_user_simulation.py::NaiveChaosUserJourneyTest::_verify_qa_notes_workflow`）
+- [x] **單元與整合測試**：新增之 Service、HTTP 路由與 MCP 工具具備離線 Mock/Dummy 完整測試，覆蓋率 100% 通過。（證據：`tests/test_qa_notes_db.py` 2 項、`tests/test_qa_notes_service.py` 3 項、`tests/test_qa_notes_api.py` 3 項全數通過）

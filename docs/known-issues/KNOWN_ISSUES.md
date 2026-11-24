@@ -69,3 +69,7 @@
 | [ISSUE-054](054-literature-job-stays-running-after-crash.md) | 🟢 已根治 (Resolved) | 伺服器中斷後文獻工作紀錄永遠停在 running | `LiteratureJobRunner` 啟動時透過 `close_stale_jobs()` 將殘留 `running` 工作標為 `failed`，且 `_run_worker()` 捕捉 `BaseException` 確保收尾。 | `services/literature/jobs.py`, `adapters/db/literature_repository.py`, `tests/literature/test_stale_jobs.py` |
 | [ISSUE-055](055-quiz-response-course-code-key.md) | 🟢 已根治 (Resolved) | 測驗 API 回傳欄位名稱打錯成 course.code | GET /api/courses/{code}/lectures/{no}/quiz/{variant} 與 MCP get_quiz 回傳 {"course.code": ...}，其他 API 都用 course_code；以欄位名稱取值的 Agent / Open WebUI 讀不到課程代號。實機 115-1 L1 quiz 回應可見此鍵。 | src/notebooklm_batch_studio/services/quiz_reader.py |
 | [ISSUE-056](056-notes-form-lecture-fields.md) | 🟢 已根治 (Resolved) | 筆記生成面板的講次選單顯示 undefined、選了也不會帶入 | TASK-027 的課程自動帶入：講次下拉選單每項顯示「undefined — 檔名」、value 為空，選擇講次不會填入章節 ID、標題、PDF 路徑與 source_id；即使填入，PDF 路徑也少了 02 Handout/ 子資料夾。 | src/notebooklm_batch_studio/entrypoints/static/studio-notes-gen.js, src/notebooklm_batch_studio/services/job_views.py |
+
+## 跨專案整合既有預防紀錄（不需重複建檔）
+
+- **原 `literature-fetch ISSUE-006`（系統環境已有 `DATA_DIR` 如 `~/open-webui-data` 時蓋過本專案 `.env`）**：本專案已透過框架層與 `config/settings.py:41` 的 `PROJECT_FILE_WINS = ("DATA_DIR",)` + `load_dotenv_file()`（`config/settings.py:60-61` 直接寫入 `os.environ[key] = value` 強制以專案 `.env` 為主）根治；`python3 scripts/agentctl.py doctor` 實測顯示 `✅ 已忽略終端機的 DATA_DIR=/Users/limchinkun/open-webui-data（例如 Open WebUI 設定的），使用專案 .env 的設定`。
