@@ -47,19 +47,11 @@ class GeminiWebDriver:
         Args:
             page: Playwright Page 物件。
             selectors: 自訂 DOM 選取器（若為 None 則採用 GEMINI_SELECTORS）。
-            diagnostic_dir: 診斷檔案儲存目錄（若為 None 則自全域設定 logs 目錄讀取）。
+            diagnostic_dir: 診斷檔案儲存目錄（若為 None 則停用 DOM 診斷傾印）。
         """
         self.page = page
         self.selectors = selectors or GEMINI_SELECTORS
-        if diagnostic_dir is not None:
-            self.diagnostic_dir: Path | None = diagnostic_dir
-        else:
-            try:
-                from notebooklm_batch_studio.config.settings import load_config
-
-                self.diagnostic_dir = load_config().data_dir / "logs"
-            except Exception:
-                self.diagnostic_dir = Path("logs")
+        self.diagnostic_dir: Path | None = diagnostic_dir
         self.was_dom_fallback: bool = False
         self.last_read_source: str = "button"
         self._last_sent_prompt: str = ""

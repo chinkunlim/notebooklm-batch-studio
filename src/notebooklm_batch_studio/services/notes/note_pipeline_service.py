@@ -94,8 +94,8 @@ class NotePipelineService:
         self.config = config
         self._driver_factory = driver_factory
         self.paths = NotePathResolver(config, study_dir_resolver, source_dir_resolver)
-        self.state = NoteStateManager(config.state_dir / "notes")
-        self.override_prompt_dir = config.data_dir / "prompts" / "modular_specs"
+        self.state = NoteStateManager(config.notes_state_dir)
+        self.override_prompt_dir = config.prompt_override_dir
 
     def list_prompts(self) -> list[dict[str, str]]:
         """List all standalone modular prompt `.md` templates.

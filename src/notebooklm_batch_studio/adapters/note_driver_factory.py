@@ -48,11 +48,7 @@ def build_note_driver_factory(cfg: AppConfig) -> Callable[[Any], Any]:
             yield NotebookLMNoteDriver(adapter, request.notebook_id, request.source_ids)
             return
 
-        mgr = BrowserSessionManager(
-            data_dir=cfg.data_dir,
-            chrome_path=cfg.chrome_path,
-            startup_timeout_seconds=cfg.playwright_startup_timeout_seconds,
-        )
+        mgr = BrowserSessionManager(config=cfg)
         opts = DriverOptions(headless=False, model=request.model, auto_close=False)
         with mgr.open_driver(options=opts) as drv:
             yield drv
@@ -95,6 +91,6 @@ def build_gemini_auth_service(cfg: AppConfig) -> GeminiAuthService:
     Returns:
         Configured `GeminiAuthService` instance.
     """
-    profile_dir = cfg.data_dir / "state" / "gemini_profile"
+    profile_dir = cfg.gemini_profile_dir
     runtime = ChromeGeminiLoginRuntime(profile_dir=profile_dir, chrome_path=cfg.chrome_path)
-    return GeminiAuthService(data_dir=cfg.data_dir, chrome_path=cfg.chrome_path, login_runtime=runtime)
+    return GeminiAuthService(config=cfg, login_runtime=runtime)

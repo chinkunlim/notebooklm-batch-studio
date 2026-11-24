@@ -28,7 +28,7 @@ from notebooklm_batch_studio.adapters.notebooklm.errors import (
     build_language_instruction as build_language_instruction,
 )
 from notebooklm_batch_studio.adapters.notebooklm.quota import retry_after_from_usage, usage_to_dict
-from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.config.settings import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -43,16 +43,16 @@ class NotebookLMAdapter(ArtifactOperationsMixin, ArtifactDownloadsMixin, Noteboo
 
     def __init__(
         self,
-        config: AppConfig | None = None,
+        config: AppConfig,
         storage_path: Path | None = None,
     ) -> None:
         """Initialize the Gemini Notebook adapter.
 
         Args:
-            config: Application configuration (defaults to global settings).
+            config: Application configuration.
             storage_path: Custom path to Playwright storage_state.json file.
         """
-        self.config = config or load_config()
+        self.config = config
         self.storage_path = storage_path or (
             self.config.notebooklm_home / "profiles" / "default" / "storage_state.json"
         )

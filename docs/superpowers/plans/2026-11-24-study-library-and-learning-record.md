@@ -260,9 +260,9 @@ def test_no_hardcoded_category_literals_left(self):
 
 **Interfaces — Produces（`AppConfig`）:** `gemini_profile_dir`、`diagnostics_dir`、`deleted_dir`、`prompt_override_dir`、`notes_state_dir`、`scratch_kind_dir(kind: str) -> Path`（`kind` 限五種，否則 `ValueError`）、`study_categories: str = ""`、`study_layout: StudyLayout`（屬性）
 
-- [ ] **Step 1: 失敗測試**：（1）所有新屬性 `is_relative_to(cfg.data_dir)`；（2）`scratch_kind_dir("../x")` 與 `("other")` 皆 `ValueError`；（3）`src/` 中 `config/` 以外沒有 `(data_dir|state_dir|scratch_dir|output_dir|input_dir)\s*/\s*"`；（4）`entrypoints/`、`config/` 以外沒有 `load_config()`；（5）`init-data` 在空資料夾建立 `study/` 與 `scratch/literature|notes|outputs|uploads|unarchived`，重跑不報錯。
-- [ ] **Step 2–4:** 失敗 → 實作（`load_config()` 只在 CLI、api、mcp_server 入口呼叫一次）→ `uv run python -m unittest discover -s tests` 通過（補上必填 config 的測試一律用 tmp `AppConfig`）
-- [ ] **Step 5:** Commit `-m "refactor(config): centralize data paths, drop implicit load_config, init study/scratch"`
+- [x] **Step 1: 失敗測試**：（1）所有新屬性 `is_relative_to(cfg.data_dir)`；（2）`scratch_kind_dir("../x")` 與 `("other")` 皆 `ValueError`；（3）`src/` 中 `config/` 以外沒有 `(data_dir|state_dir|scratch_dir|output_dir|input_dir)\s*/\s*"`；（4）`entrypoints/`、`config/` 以外沒有 `load_config()`；（5）`init-data` 在空資料夾建立 `study/` 與 `scratch/literature|notes|outputs|uploads|unarchived`，重跑不報錯。
+- [x] **Step 2–4:** 失敗 → 實作（`load_config()` 只在 CLI、api、mcp_server 入口呼叫一次）→ `uv run python -m unittest discover -s tests` 通過（補上必填 config 的測試一律用 tmp `AppConfig`）
+- [x] **Step 5:** Commit `-m "refactor(config): centralize data paths, drop implicit load_config, init study/scratch"`
 
 ### Task 5: 資料庫欄位、record-only、文獻分類預設
 

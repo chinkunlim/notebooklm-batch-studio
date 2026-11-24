@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from notebooklm_batch_studio.adapters.db.base import Base
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
+from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import QuotaExceededError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
@@ -763,7 +764,6 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
         mock_client.download_flashcards = AsyncMock(side_effect=fake_download_fc)
         mock_client.download_mind_map = AsyncMock(side_effect=fake_download_mm)
 
-        runner = ArtifactRunner(mock_client)
         course = Course(
             code="BIO101",
             name="General Biology",
@@ -774,6 +774,7 @@ class DomainAndQueueTest(unittest.IsolatedAsyncioTestCase):
         )
 
         with tempfile.TemporaryDirectory() as tmp_dir:
+            runner = ArtifactRunner(mock_client, AppConfig(data_dir=Path(tmp_dir), log_to_file=False))
             out_dir = Path(tmp_dir) / "01_Membranes"
             out_dir.mkdir(parents=True)
 

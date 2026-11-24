@@ -91,7 +91,7 @@ class NotePathResolver:
         resolved = study_dir or (self._study_dir_resolver(course_key) if self._study_dir_resolver else None)
         if resolved is not None:
             return resolve_note_studio_dir(resolved)
-        return self.config.scratch_dir / "notes" / course_key
+        return self.config.scratch_kind_dir("notes") / course_key
 
     def checked_study_dir(self, study_dir: Path) -> Path:
         """Require a caller-supplied study folder to sit inside `DATA_DIR` or `STUDY_ROOT_DIR`.

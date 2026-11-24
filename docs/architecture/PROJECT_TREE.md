@@ -385,7 +385,8 @@ notebooklm-batch-studio/
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── logging_setup.py
-│       │   └── settings.py
+│       │   ├── settings.py
+│       │   └── study_layout.py
 │       ├── domain/
 │       │   ├── literature/
 │       │   │   ├── __init__.py
@@ -870,6 +871,7 @@ notebooklm-batch-studio/
 │   ├── test_security_hardening.py
 │   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py
+│   ├── test_settings_paths.py
 │   ├── test_study_layout.py
 │   ├── test_study_plan.py
 │   ├── test_study_service.py

@@ -15,7 +15,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
@@ -62,7 +62,7 @@ class CourseSettingsService:
         self,
         course_repo: CourseRepositoryProtocol,
         queue_repo: QueueRepositoryProtocol,
-        config: AppConfig | None = None,
+        config: AppConfig,
     ) -> None:
         """Bind the service to its repositories.
 
@@ -73,7 +73,7 @@ class CourseSettingsService:
         """
         self.course_repo = course_repo
         self.queue_repo = queue_repo
-        self.config = config or load_config()
+        self.config = config
 
     def _course(self, code: str) -> Course:
         """Load a course or raise.
@@ -438,7 +438,7 @@ class CourseSettingsService:
         """
         self._course(code)
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        target = self.config.data_dir / "deleted" / f"{code}-{stamp}"
+        target = self.config.deleted_dir / f"{code}-{stamp}"
         moved: str | None = None
         sources = [self.config.courses_output_dir / code, *self.config.needs_review_dir.glob(f"{code}_*")]
         for folder in (f for f in sources if f.exists()):

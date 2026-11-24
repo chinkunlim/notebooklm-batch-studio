@@ -17,10 +17,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from notebooklm_batch_studio.config.study_layout import (
+    DEFAULT_LAYOUT,
+    StudyLayout,
+    layout_from_names,
+)
+
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_DIR = "../../projects-data/notebooklm-batch-studio"
+SCRATCH_KINDS: tuple[str, ...] = ("literature", "notes", "outputs", "uploads", "unarchived")
 
 
 def resolve_data_dir(raw: str) -> Path:
@@ -88,6 +95,7 @@ class AppConfig:
         openathens_domain: OpenAthens organisation domain; empty uses plain DOI links.
         ebsco_profile: Library EBSCO Discovery profile id; empty skips EBSCO.
         chrome_path: Google Chrome executable path (`CHROME_PATH`). Refs: ISSUE-053
+        study_categories: Optional comma-separated 5 study category names (`STUDY_CATEGORIES`).
     """
 
     app_env: str = "development"
@@ -113,6 +121,7 @@ class AppConfig:
     chrome_path: str = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     playwright_startup_timeout_seconds: int = 60
     gemini_outline_timeout_seconds: int = 900
+    study_categories: str = ""
 
     @property
     def input_dir(self) -> Path:
@@ -240,6 +249,97 @@ class AppConfig:
         """
         return self.state_dir / "literature_job.lock"
 
+    @property
+    def gemini_profile_dir(self) -> Path:
+        """Persistent Chrome user-data directory for Gemini Web automation.
+
+        Returns:
+            `<data_dir>/state/gemini_profile`.
+        """
+        return self.state_dir / "gemini_profile"
+
+    @property
+    def diagnostics_dir(self) -> Path:
+        """Directory where adapter diagnostic HTML/screenshots are stored.
+
+        Returns:
+            `<data_dir>/logs`.
+        """
+        return self.logs_dir
+
+    @property
+    def deleted_dir(self) -> Path:
+        """Recoverable trash folder for deleted course legacy artifacts.
+
+        Returns:
+            `<data_dir>/deleted`.
+        """
+        return self.data_dir / "deleted"
+
+    @property
+    def prompt_override_dir(self) -> Path:
+        """User override folder for NoteStudio modular `.md` prompt templates.
+
+        Returns:
+            `<data_dir>/prompts/modular_specs`.
+        """
+        return self.data_dir / "prompts" / "modular_specs"
+
+    @property
+    def notes_state_dir(self) -> Path:
+        """State directory for NoteStudio per-course checkpoints and pause flags.
+
+        Returns:
+            `<data_dir>/state/notes`.
+        """
+        return self.state_dir / "notes"
+
+    @property
+    def study_layout(self) -> StudyLayout:
+        """Configured study category layout (defaults to `DEFAULT_LAYOUT`).
+
+        Returns:
+            `StudyLayout` parsed from `study_categories`, or `DEFAULT_LAYOUT`.
+        """
+        if self.study_categories.strip():
+            return layout_from_names(self.study_categories)
+        return DEFAULT_LAYOUT
+
+    def scratch_kind_dir(self, kind: str) -> Path:
+        """Return `<scratch_dir>/<kind>` for one of the five fixed scratch categories.
+
+        Args:
+            kind: Scratch category (`literature`, `notes`, `outputs`, `uploads`, `unarchived`).
+
+        Returns:
+            Path inside `<data_dir>/scratch`.
+
+        Raises:
+            ValueError: When `kind` is not one of the allowed `SCRATCH_KINDS`.
+        """
+        if kind not in SCRATCH_KINDS:
+            raise ValueError(f"Unsupported scratch kind {kind!r}; expected one of {SCRATCH_KINDS}")
+        return self.scratch_dir / kind
+
+    def ensure_data_dirs(self) -> list[Path]:
+        """Create required `study/` and `scratch/<kind>/` data directories idempotently.
+
+        Returns:
+            List of created or verified directory paths.
+        """
+        targets = [
+            self.db_dir,
+            self.logs_dir,
+            self.state_dir,
+            self.needs_review_dir,
+            self.study_root_dir,
+            self.scratch_dir,
+            *(self.scratch_kind_dir(kind) for kind in SCRATCH_KINDS),
+        ]
+        for folder in targets:
+            folder.mkdir(parents=True, exist_ok=True)
+        return targets
+
 
 def _csv(value: str) -> tuple[str, ...]:
     """Split a comma-separated setting.
@@ -361,6 +461,7 @@ def load_config() -> AppConfig:
         notebooklm_home=notebooklm_home,
         study_root_dir_override=resolve_data_dir(study_root_raw) if study_root_raw else None,
         legacy_note_studio_dir=resolve_data_dir(legacy_notes_raw) if legacy_notes_raw else None,
+        study_categories=_env("STUDY_CATEGORIES"),
         **_core_settings(data_dir),
         **_http_settings(),
         **_literature_settings(),

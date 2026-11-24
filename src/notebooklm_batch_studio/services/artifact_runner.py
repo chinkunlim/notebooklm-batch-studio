@@ -11,7 +11,7 @@ import logging
 import tempfile
 from pathlib import Path
 
-from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
@@ -96,7 +96,7 @@ class ArtifactRunner:
     "the latest artifact", so parallel workers cannot mix up lectures. Refs: ADR-004
     """
 
-    def __init__(self, notebooklm_client: NotebookLMClientProtocol, config: AppConfig | None = None) -> None:
+    def __init__(self, notebooklm_client: NotebookLMClientProtocol, config: AppConfig) -> None:
         """Initialize the artifact runner.
 
         Args:
@@ -104,7 +104,7 @@ class ArtifactRunner:
             config: Application configuration settings.
         """
         self.notebooklm_client = notebooklm_client
-        self.config = config or load_config()
+        self.config = config
         self.quiz_runner = QuizRunner(
             notebooklm_client, self.config.needs_review_dir, self.rename_after_generation
         )

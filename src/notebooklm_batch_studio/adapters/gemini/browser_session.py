@@ -21,7 +21,7 @@ from typing import Any, Generator
 
 from notebooklm_batch_studio.adapters.gemini import chrome_session
 from notebooklm_batch_studio.adapters.private_dir import ensure_private_dir
-from notebooklm_batch_studio.config.settings import load_config
+from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.note_pipeline import PlaywrightStartupTimeoutError
 
 logger = logging.getLogger(__name__)
@@ -148,26 +148,25 @@ class BrowserSessionManager:
         data_dir: Path | None = None,
         startup_timeout_seconds: int | None = None,
         chrome_path: str | None = None,
+        config: AppConfig | None = None,
     ) -> None:
         """初始化會話管理器。
 
         Args:
-            data_dir: 專案 DATA_DIR 路徑；若為 None 則自全域設定讀取。
-            startup_timeout_seconds: Playwright 驅動程式啟動超時秒數；若為 None 則自設定讀取。
-            chrome_path: Chrome 可執行檔路徑；若為 None 則自設定讀取。
+            data_dir: 專案 DATA_DIR 路徑；若與 `config` 皆未提供則使用預設 `AppConfig`。
+            startup_timeout_seconds: Playwright 驅動程式啟動超時秒數；若為 None 則自 `config` 讀取。
+            chrome_path: Chrome 可執行檔路徑；若為 None 則自 `config` 讀取。
+            config: 應用程式設定物件；優先於個別路徑引數。
         """
-        config = (
-            load_config()
-            if (data_dir is None or startup_timeout_seconds is None or chrome_path is None)
-            else None
-        )
-        self.data_dir = data_dir if data_dir is not None else config.data_dir  # type: ignore[union-attr]
-        self.profile_dir = self.data_dir / "state" / "gemini_profile"
-        self.chrome_path = chrome_path if chrome_path is not None else config.chrome_path  # type: ignore[union-attr]
+        cfg = config or (AppConfig(data_dir=data_dir) if data_dir is not None else AppConfig())
+        self.config = cfg
+        self.data_dir = cfg.data_dir
+        self.profile_dir = cfg.gemini_profile_dir
+        self.chrome_path = chrome_path if chrome_path is not None else cfg.chrome_path
         self.startup_timeout_seconds = (
             startup_timeout_seconds
             if startup_timeout_seconds is not None
-            else config.playwright_startup_timeout_seconds  # type: ignore[union-attr]
+            else cfg.playwright_startup_timeout_seconds
         )
         logger.debug("BrowserSessionManager initialized with profile at %s", self.profile_dir)
 
@@ -362,7 +361,7 @@ class BrowserSessionManager:
         """
         from notebooklm_batch_studio.adapters.gemini.web_driver import GeminiWebDriver
 
-        driver = GeminiWebDriver(page=page, diagnostic_dir=self.data_dir / "logs")
+        driver = GeminiWebDriver(page=page, diagnostic_dir=self.config.diagnostics_dir)
         if opts.model:
             driver.select_model(opts.model, thinking_level=opts.thinking_level)
         return driver

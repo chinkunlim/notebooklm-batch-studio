@@ -11,7 +11,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.config.settings import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class OllamaClient:
             timeout_seconds: Request timeout in seconds.
             config: Optional application configuration.
         """
-        cfg = config or load_config()
+        cfg = config or AppConfig()
         self.base_url = (base_url or cfg.ollama_base_url).rstrip("/")
         self.model = model or cfg.ollama_model
         self.timeout_seconds = timeout_seconds

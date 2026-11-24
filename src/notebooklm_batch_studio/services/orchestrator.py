@@ -14,7 +14,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import (
     CourseNotFoundError,
     OllamaUnavailableError,
@@ -71,14 +71,14 @@ class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
         notebooklm_client: NotebookLMClientProtocol = (
             args[0] if len(args) >= 1 else options["notebooklm_client"]
         )
-        raw_config: AppConfig | None = args[1] if len(args) >= 2 else options.get("config")
+        raw_config: AppConfig = args[1] if len(args) >= 2 else options["config"]
         queue_provider: QueueSessionProvider | None = options.get("queue_provider")
         ollama_client: OllamaClientProtocol | None = options.get("ollama_client")
 
         self.course_repo = course_repo
         self.queue_repo = queue_repo
         self.notebooklm_client = notebooklm_client
-        self.config = raw_config or load_config()
+        self.config = raw_config
         self.reporter = CourseReporter(self.config.courses_output_dir)
         self.runner = ArtifactRunner(self.notebooklm_client, self.config)
         self.queue_provider: QueueSessionProvider = queue_provider or self._default_queue_provider

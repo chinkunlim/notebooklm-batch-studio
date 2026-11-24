@@ -17,7 +17,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Protocol
 
-from notebooklm_batch_studio.config.settings import load_config
+from notebooklm_batch_studio.config.settings import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -64,18 +64,21 @@ class GeminiAuthService:
         data_dir: Path | None = None,
         chrome_path: str | None = None,
         login_runtime: GeminiLoginRuntimeProtocol | None = None,
+        config: AppConfig | None = None,
     ) -> None:
         """Initialize GeminiAuthService.
 
         Args:
-            data_dir: Base data directory (defaults to `load_config().data_dir`).
-            chrome_path: Chrome executable path (defaults to `load_config().chrome_path`).
+            data_dir: Base data directory when `config` is omitted.
+            chrome_path: Chrome executable path override.
             login_runtime: Optional Chrome/Playwright adapter implementing `GeminiLoginRuntimeProtocol`.
+            config: Application configuration providing centralized paths.
         """
-        cfg = load_config() if (data_dir is None or chrome_path is None) else None
-        self.data_dir = data_dir if data_dir is not None else cfg.data_dir  # type: ignore[union-attr]
-        self.chrome_path = chrome_path if chrome_path is not None else cfg.chrome_path  # type: ignore[union-attr]
-        self.profile_dir = self.data_dir / "state" / "gemini_profile"
+        cfg = config or (AppConfig(data_dir=data_dir) if data_dir is not None else AppConfig())
+        self.config = cfg
+        self.data_dir = cfg.data_dir
+        self.chrome_path = chrome_path if chrome_path is not None else cfg.chrome_path
+        self.profile_dir = cfg.gemini_profile_dir
         self.storage_state_path = self.profile_dir / "storage_state.json"
         self.retention_config_path = self.profile_dir / "retention.json"
         self._login_runtime = login_runtime

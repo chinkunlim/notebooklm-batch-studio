@@ -87,6 +87,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - style(ui): align new controls with DESIGN.md pure-text capsules and 8pt grid (by `@antigravity`)
 - style(ui): unify gentle animations across popovers, panels, and micro-interactions (by `@antigravity`)
 - refactor(mcp): unify `confirm=False` warning payload via `mcp_confirm.py` across all 57 mutating MCP tools and remove unused `calculate_outline_words` helper (`TASK-033`; commit `9d6ef12`) (by `@antigravity`)
+- refactor(config): centralize data paths, drop implicit load_config, init study/scratch (by `@antigravity`)
 
 ### Fixed
 - fix(ui,reader): keep split-pane Study Studio sticky with 12px top/bottom framing across Safari/fullscreen, restore global wheel scrolling across all pages, style keypoint header actions as balanced 1-or-2 line pill buttons, switch `課程目錄`/`研讀` in the right column only, resolve exact PDF page & paragraph on first keypoint click, and re-layout PDF textLayer highlights on container resize (by `@antigravity`)
