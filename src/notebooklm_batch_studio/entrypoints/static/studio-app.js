@@ -19,18 +19,6 @@ let studyHistory = [];
 let studyMistakes = [];
 
 /**
- * Escape text for safe insertion into HTML.
- * @param {*} s Any value
- * @returns {string} Escaped text ('' for null / undefined)
- */
-function escHtml(s) {
-  if (s === null || s === undefined) return '';
-  const d = document.createElement('div');
-  d.textContent = String(s);
-  return d.innerHTML;
-}
-
-/**
  * Two-digit number, e.g. 3 -> "03".
  * @param {number} n Number
  * @returns {string} Padded text
@@ -174,7 +162,7 @@ function buildCourseDirectoryListHtml() {
     const stats = c.counts || {}, total = (c.total_jobs || 0) - (stats.skipped || 0);
     const pct = total > 0 ? Math.round(((stats.done || 0) / total) * 100) : 0;
     const on = currentStudyCourse && currentStudyCourse.code === c.code ? ' on' : '';
-    return `<button class="course${on}" onclick="pickStudyCourse('${escHtml(c.code)}')"><span class="course-cover" style="background:${courseColour(c.code)}">${escHtml(String(c.code).slice(0, 3))}</span>
+    return `<button class="course${on}" onclick="pickStudyCourse(${jsAttr(c.code)})"><span class="course-cover" style="background:${courseColour(c.code)}">${escHtml(String(c.code).slice(0, 3))}</span>
       <span style="min-width:0"><span class="course-name">${escHtml(c.name)}</span><span class="small muted">${c.lecture_count} 講　·　產出完成 ${pct}%</span><span class="bar"><i style="width:${pct}%"></i></span></span></button>`;
   }).join('');
 }
@@ -314,7 +302,7 @@ async function loadQuizForChapter(variant) {
   if (!variant || !kinds.some(k => k.variant === variant)) variant = kinds.length ? kinds[0].variant : null;
   activeQuizVariant = variant;
   document.getElementById('quizKindButtons').innerHTML = kinds.map(k =>
-    `<button type="button" class="reader-pill-btn${k.variant === variant ? ' on' : ''}" onclick="loadQuizForChapter('${k.variant}')">${k.label}${k.version > 1 ? ` v${k.version}` : ''}</button>`).join('');
+    `<button type="button" class="reader-pill-btn${k.variant === variant ? ' on' : ''}" onclick="loadQuizForChapter(${jsAttr(k.variant)})">${k.label}${k.version > 1 ? ` v${k.version}` : ''}</button>`).join('');
   const container = document.getElementById('quizContainer');
   document.getElementById('quizScoreHeader').textContent = '';
   document.getElementById('quizActionBar').style.display = 'none';

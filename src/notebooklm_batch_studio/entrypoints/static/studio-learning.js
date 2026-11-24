@@ -152,7 +152,7 @@ function addConfidenceButtons() {
     row.className = 'confidence-row';
     row.innerHTML = '<span>作答前，你有多確定？</span>' +
       [['sure', '很確定'], ['unsure', '不太確定'], ['guess', '用猜的']]
-        .map(([v, label]) => `<button type="button" data-v="${v}" onclick="setConfidence(${i}, '${v}', this)">${label}</button>`).join('');
+        .map(([v, label]) => `<button type="button" data-v="${v}" onclick="setConfidence(${i}, ${jsAttr(v)}, this)">${label}</button>`).join('');
     exp.before(row);
   });
 }
@@ -318,7 +318,7 @@ async function loadTutor() {
   box.innerHTML = `
     <div id="tutorLog" class="tutor-log">載入中…</div>
     <div class="tutor-suggest">
-      ${['考考我這一講最核心的概念', '我不懂這一講在說什麼，請從頭引導我', '幫我找出我可能誤解的地方'].map(t => `<button type="button" class="reader-pill-btn" onclick="sendTutor('${t}')">${t}</button>`).join('')}
+      ${['考考我這一講最核心的概念', '我不懂這一講在說什麼，請從頭引導我', '幫我找出我可能誤解的地方'].map(t => `<button type="button" class="reader-pill-btn" onclick="sendTutor(${jsAttr(t)})">${t}</button>`).join('')}
     </div>
     <form class="tutor-input" onsubmit="event.preventDefault(); sendTutor();">
       <textarea id="tutorText" class="text-area" rows="2" placeholder="輸入你的想法或問題（⌘↵ 送出）" onkeydown="if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); sendTutor(); }"></textarea>

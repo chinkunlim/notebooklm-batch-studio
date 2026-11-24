@@ -113,7 +113,7 @@ function renderCycle(p) {
   const steps = focus ? focus.steps.filter(st => st.available) : [];
   const dueCards = p.due.flashcards, dueMistakes = p.due.mistakes;
   document.getElementById('todaySteps').innerHTML = (focus ? `<li class="steps-head">${lectureName(focus.lecture_no)}　${escHtml(focus.topic)}</li>` : '') +
-    steps.map(st => `<li class="${st.done ? 'done' : ''}" style="cursor:pointer" onclick="goToStep(${focus.lecture_no}, '${st.step}')"><span class="check">${tick}</span><span class="step-text">${escHtml(plainLabel(st.label))}</span><span class="tag">${STEP_TAGS[st.step] || '提取'}</span></li>`).join('') +
+    steps.map(st => `<li class="${st.done ? 'done' : ''}" style="cursor:pointer" onclick="goToStep(${focus.lecture_no}, ${jsAttr(st.step)})"><span class="check">${tick}</span><span class="step-text">${escHtml(plainLabel(st.label))}</span><span class="tag">${STEP_TAGS[st.step] || '提取'}</span></li>`).join('') +
     `<li class="${dueCards ? '' : 'done'}" style="cursor:pointer" onclick="startReviewSession()"><span class="check">${tick}</span><span class="step-text">複習 ${dueCards} 張到期學習卡</span><span class="tag">間隔</span></li>` +
     (dueMistakes ? `<li style="cursor:pointer" onclick="switchStudyTab('mistakes')"><span class="check">${tick}</span><span class="step-text">看 ${dueMistakes} 題錯題</span><span class="tag warn">弱點</span></li>` : '') +
     (!steps.length && !p.next ? '<li class="small muted">這門課的步驟都完成了，做模擬考或複習錯題來檢查自己。</li>' : '');
@@ -222,7 +222,7 @@ function renderRoute(p) {
     const tag = l.percent >= 100 ? '<span class="tag good">完成</span>' : current ? '<span class="tag">研讀中</span>' : l.percent > 0 ? '<span class="tag warn">進行中</span>' : '<span class="tag">未開始</span>';
     const chips = l.steps.map(st => {
       const cls = !st.available ? 'na' : (st.done ? 'done' : 'todo');
-      const click = st.available ? `onclick="goToStep(${l.lecture_no}, '${st.step}')"` : 'disabled';
+      const click = st.available ? `onclick="goToStep(${l.lecture_no}, ${jsAttr(st.step)})"` : 'disabled';
       return `<button class="step-chip ${cls}" ${click} title="${st.available ? (st.done ? '已完成' : '還沒做') : '尚未生成'}">${st.done ? '✓ ' : ''}${escHtml(plainLabel(st.label))}</button>`;
     }).join('');
     return `<div class="route-row ${current ? 'current' : ''}">${ring(l.percent)}

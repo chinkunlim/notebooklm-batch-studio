@@ -79,7 +79,7 @@ function renderNotesTagCloud() {
   if (!counts.size) return '';
   const pills = [...counts.entries()].slice(0, 24).map(([tag, cnt]) => {
     const active = qaNotesState.tagFilter === tag ? ' on' : '';
-    return `<button type="button" class="qa-tag-pill${active}" onclick="selectNotesTagPill('${escHtml(tag)}')">${escHtml(tag)} (${cnt})</button>`;
+    return `<button type="button" class="qa-tag-pill${active}" onclick="selectNotesTagPill(${jsAttr(tag)})">${escHtml(tag)} (${cnt})</button>`;
   }).join('');
   return `<div class="qa-tag-pills">${pills}</div>`;
 }
@@ -95,26 +95,26 @@ function renderOneNoteCard(note) {
   const nextStatus = note.mastery_status === 'mastered' ? 'needs_review' : 'mastered';
   const masteryLabel = note.mastery_status === 'mastered' ? '已搞懂' : '待加強';
   const sourceBadge = note.is_uploaded_as_source ? '<span class="tag ok">已回灌來源</span>' : '';
-  const tagsHtml = (note.tags || []).map(t => `<button type="button" class="qa-tag-pill" onclick="selectNotesTagPill('${escHtml(t)}')">${escHtml(t)}</button>`).join('');
+  const tagsHtml = (note.tags || []).map(t => `<button type="button" class="qa-tag-pill" onclick="selectNotesTagPill(${jsAttr(t)})">${escHtml(t)}</button>`).join('');
   return `<article class="qa-note-card" data-note-id="${escHtml(note.id)}">
     <div class="qa-note-card-head">
       <label class="row" style="gap:8px;align-items:center">
-        <input type="checkbox" ${checked} onchange="toggleNoteSelection('${escHtml(note.id)}', this.checked)">
+        <input type="checkbox" ${checked} onchange="toggleNoteSelection(${jsAttr(note.id)}, this.checked)">
         <strong>${escHtml(note.title)}</strong>
         <span class="tag">${escHtml(note.course_code)} · ${lecLabel}</span>${sourceBadge}
       </label>
       <div class="row" style="gap:6px">
-        <button type="button" class="btn btn-soft btn-sm" onclick="toggleNoteMastery('${escHtml(note.course_code)}','${escHtml(note.id)}','${nextStatus}')">${masteryLabel}</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="copyNoteMarkdown('${escHtml(note.id)}')">複製 MD</button>
-        <button type="button" class="btn btn-soft btn-sm" onclick="pushSingleNoteToSource('${escHtml(note.course_code)}','${escHtml(note.id)}')">回灌來源</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="deleteCourseNote('${escHtml(note.course_code)}','${escHtml(note.id)}')">刪除</button>
+        <button type="button" class="btn btn-soft btn-sm" onclick="toggleNoteMastery(${jsAttr(note.course_code)},${jsAttr(note.id)},${jsAttr(nextStatus)})">${masteryLabel}</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="copyNoteMarkdown(${jsAttr(note.id)})">複製 MD</button>
+        <button type="button" class="btn btn-soft btn-sm" onclick="pushSingleNoteToSource(${jsAttr(note.course_code)},${jsAttr(note.id)})">回灌來源</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="deleteCourseNote(${jsAttr(note.course_code)},${jsAttr(note.id)})">刪除</button>
       </div>
     </div>
     <div class="qa-tag-pills">${tagsHtml}</div>
     <div class="small" style="white-space:pre-wrap;line-height:1.5">${escHtml(note.content_markdown || '')}</div>
     <div class="row" style="gap:8px;align-items:center">
       <input type="text" class="text-input" id="memo-${escHtml(note.id)}" value="${escHtml(note.personal_memo || '')}" placeholder="新增或編輯個人心得…" style="flex:1;font-size:13px">
-      <button type="button" class="btn btn-soft btn-sm" onclick="saveNoteMemo('${escHtml(note.course_code)}','${escHtml(note.id)}')">儲存心得</button>
+      <button type="button" class="btn btn-soft btn-sm" onclick="saveNoteMemo(${jsAttr(note.course_code)},${jsAttr(note.id)})">儲存心得</button>
     </div>
   </article>`;
 }

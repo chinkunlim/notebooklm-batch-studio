@@ -123,12 +123,19 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `system.py`：系統健康檢查、即時額度狀態、命名規則與研讀導引指南 (`/api/usage-guide`)。
   - `preferences.py`：網頁偏好讀寫與重設（`/api/preferences`，存在 SQLite `ui_preferences`，ADR-009）。
   - `fonts.py`：下載 Google Fonts 到 `DATA_DIR/fonts/` 並離線提供（`/api/fonts`，ADR-009）。
+  - `literature.py`、`literature_files.py`、`literature_notebook.py`：文獻新增／處理工作／歸檔，PDF 預覽、APA 7 與報告匯出、學習資料夾遷移，以及 `Literature Library` 筆記本同步、問答與 Literature Review（SPEC-012）。
+  - `notes.py`：note-studio 模組化筆記的提示詞預覽、生成、暫停、讀取、推回來源與舊筆記匯入（`/api/notes/*`，SPEC-013）。
+  - `qa_notes.py`、`reverse_import.py`：問答筆記（SPEC-011）與遠端筆記本反向匯入。
+- `http_middleware.py`：`HostValidationMiddleware`（只收 loopback Host，空 Host 也拒絕）、`SecurityHeadersMiddleware`（CSP、nosniff、no-referrer）與 `NoCacheStaticFiles`（ADR-013）。
 - `entrypoints/static/`：前端使用者介面（純原生 JS，無編譯負擔）：
   - `index.html`：v05 介面（SPEC-009、ADR-008）：側欄四頁（研讀總覽、研讀工作室、弱點複習、批次排程）、側欄底部工具（使用方法、專注模式、設計與自訂）與對話框。
   - `studio-theme.css`（配色 tokens）、`studio.css`（版面與元件）、`studio-learning.css`（閱讀器、記憶卡、家教）。
   - 功能層：`studio-core.js`（對話框、斷線提示、選項洗牌、`StudioBus`/`StudioStore`）、`studio-app.js` & `studio-study-panels.js`（研讀課程與講次、測驗、錯題、學習卡、報告檢視）、`studio-batch.js` & `studio-queue.js`（批次排程、工作清單與佇列控制）、`studio-settings.js` & `studio-wizard.js`（課程設定、產出內容、Prompt、加入課程精靈）、`studio.js` & `studio-study-extras.js`（研讀總覽、交卷回饋、解釋、間隔複習、模擬考計時、音檔續播）、`studio-learning.js`（記憶強度、信心評分、混合複習、家教）、`studio-reader.js`（講義 PDF 閱讀器與重點畫線）。
   - 外殼層：`studio-shell.js` & `studio-nav.js`（偏好、側欄、頁面切換與黑膠飛行動畫）、`studio-player.js`（播放真實語音摘要的唱盤與四種視覺）、`studio-bench.js`（工作台、三種版面、本講重點、今日學習卡）、`studio-start.js`（設計與自訂、欄寬、鍵盤與觸控、啟動）。
   - `studio-fonts.js`：設計與自訂的字型選擇與 Google Fonts 下載。
+  - `studio-escape.js`：最先載入的 `escHtml()` 與 `jsAttr()`；所有 inline handler 的字串參數一律用 `jsAttr()`（ISSUE-046）。
+  - 文獻頁：`studio-literature-ui.js`（下拉選單、PDF.js 預覽）、`studio-literature-rows.js`（表格列、歸檔選單、排序篩選）、`studio-literature-actions.js`（工作橫幅、Notebook 按鈕、新增與 APA 複製）、`studio-literature.js`（頁面狀態與事件）。
+  - 筆記頁：`studio-notes-gen.js`（note-studio 生成面板）、`studio-notes-tab.js`（問答筆記）。
   - `studio-focus.js`：番茄鐘（專注、短休息、長休息），計時收進側欄，習慣存在偏好。
   - 側欄是 `position: fixed` 貼齊視窗上下緣（ISSUE-031）；換頁是腳本控制的淡出 / 浮上（ISSUE-032）。
   - `vendor/pdfjs/`：內建 PDF.js 4.10.38 閱讀核心，完全離線運作。
@@ -142,8 +149,12 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `mcp_learning.py`：重點查詢、閱讀狀態與家教對話工具。
   - `mcp_study_plan.py`：研讀計畫與間隔複習工具。
   - `mcp_preferences.py` & `mcp_fonts.py`：網頁偏好讀寫重設與 Google Fonts 離線安裝工具。
+  - `mcp_extensions.py`：組裝文獻與筆記工具群，提供課程 `study_dir` / `source_dir` 查詢。
+  - `mcp_literature.py` & `mcp_literature_notebook.py`：文獻與 `Literature Library` 工具；會改資料者一律 `confirm=True`（ISSUE-048）。
+  - `mcp_notes.py`：note-studio 筆記工具（SPEC-013）。
+  - `mcp_qa_notes.py` & `mcp_remote_admin.py`：問答筆記、遠端產出與來源管理。
 - `port_check.py`：啟動前檢查埠號；被佔用時列出佔用程式並停止（與 uvicorn 一樣使用 `SO_REUSEADDR`，ISSUE-027）。全機埠號總表在 `00 init_dev_env/PORTS.md`。
-- `/static` 以 `NoCacheStaticFiles` 掛載（`Cache-Control: no-cache`），更新後瀏覽器不會沿用舊的 CSS／JS（ISSUE-028）。
+- `/static` 以 `NoCacheStaticFiles`（`http_middleware.py`）掛載（`Cache-Control: no-cache`），更新後瀏覽器不會沿用舊的 CSS／JS（ISSUE-028）。
 - 一鍵桌面啟動：
   - `scripts/build_mac_app.sh`：編譯 macOS 一鍵啟動 App。
   - `scripts/launch_app.sh`：自動啟動本機伺服器並以 Chrome `--app` 全螢幕專注視窗呈現。
@@ -163,6 +174,9 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `review_repository.py` (`ReviewRepository`)：管理研讀步驟進度 (`study_progress`)、艾賓浩斯間隔複習卡片 (`review_items`) 與 AI 題目詳解 (`explanations`)。
   - `preferences_repository.py` (`PreferencesRepository`)：持久化網頁介面偏好設定 (`ui_preferences`)。
 - `adapters/fonts/google_fonts.py` & `adapters/ollama/client.py`：Google Fonts 下載適配器與本機 Ollama 模型提示詞潤飾客戶端。
+- `adapters/literature/`：Crossref / OpenAlex / 華藝 / EBSCO / OpenAthens 來源、Playwright 下載與舊 `literature-fetch` 資料庫匯入（`legacy_import.py` 只接受不含資料夾的 `.pdf` 檔名，ISSUE-047）。
+- `adapters/gemini/`：以 Chrome 遠端除錯埠操作 Gemini 網頁版（note-studio 主要後端，ADR-012）。
+- `adapters/private_dir.py`：瀏覽器設定檔資料夾一律建立為 700（ADR-013）。
 - 檔案系統操作：資料夾監看與 PDF 寫入完成度偵測在 `services/watcher.py`，課程目錄掃描在 `services/course_parser.py`，下載路由與 PDF 閱讀器的路徑檢核在 `entrypoints/http/artifacts.py` 與 `learning.py`。
 
 ### 2.3 業務服務層 (`services`)
@@ -191,11 +205,15 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `anki_exporter.py`：匯出 Anki 專用 CSV 牌組格式，包含標籤與自訂欄位。
 - `reporter.py`：為每門課程產生整體的 `summary.md` 與可離線瀏覽的 `summary.html`。
 - `watcher.py`：監看檔案系統變更，當偵測到新上傳講義且寫入完成後自動加入排程。
+- `literature/`：`manager.py`（新增、辨識、下載）＋ `archive.py`（歸檔、退回、自動登錄 PDF）＋ `export.py`（APA 7、報告、序列化），共用 `manager_base.py`；`jobs.py` 背景工作；`notebook_service.py` 文獻筆記本與 Literature Review（SPEC-012）。
+- `notes/`：note-studio 管線（SPEC-013）：`note_pipeline_service.py`（步驟執行、縫合、封存）、`note_paths.py`（資料夾位置與路徑安全檢查，ISSUE-045）、`module_prompts.py`、`step_validator.py`、`chapter_normalizer.py`、`module_composer.py`、`note_sync.py`、`state_manager.py`。
+- `study_migration.py`：把舊課程搬到 `<STUDY_ROOT_DIR>/<term>/<subject>/<category>`（ADR-011）。
 
 ### 2.4 領域模型層 (`domain`)
 純 Python 商業物件，無任何外部第三方相依：
 - 實體與值物件：`models.py` (`Course`, `Lecture`, `ArtifactJob`, `Artifact`, `Quiz`, `Question`, `Flashcard`, `MindMapNode`, `QuizAttempt`, `QuizMistake`, `JobVersion`)、`generation_options.py`（三層繼承選項規格與驗證）、`repositories.py`（儲存庫介面協定）。
 - 學習與研讀模型：`memory_model.py`（艾賓浩斯記憶強度、半衰期衰減與掌握度等級計算）、`study_plan.py`（今日任務清單、考前倒數天數、間隔複習卡片）、`notebooklm_protocol.py`（定義 Gemini Notebook 通訊協定與資料介面）。
+- 路徑安全：`path_safety.py`（`validate_path_segment`、`ensure_within_roots`，ISSUE-045、ADR-013）；`study_hierarchy.py`（學習資料夾結構與 `resolve_course_output_root`）。
 - 輔助邏輯：`naming.py`（集中控管 Gemini Notebook 遠端標題與本機檔案命名法、版本號尾綴）、`usage_guide.py`（提供課程學習順序、複習規劃與配額解說）。
 - 業務列舉：`JobStatus`, `JobType`, `ArtifactType`, `DifficultyLevel`, `CourseProfile`。
 - 領域例外：`DomainError`, `NotebookLMError`, `QuotaExceededError`, `AuthExpiredError`。
@@ -276,5 +294,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 1. **憑證安全**：不讀取亦不儲存使用者 Google 密碼。使用者透過 `login` 指令開啟本機 Chromium 瀏覽器完成 OAuth 登入，登入狀態隔離儲存於 `~/.config/notebooklm-batch-studio`（權限 600）。
 2. **服務綁定**：FastAPI 與 MCP 本機伺服器嚴格僅綁定 `127.0.0.1:8768`，並具備 Host Header 檢查機制，禁止對外網暴露。
-3. **路徑穿越防護**：產出物下載與檢視都限制在該課程的輸出資料夾（或 `needs_review` 隔離區）內；講義 PDF 閱讀器只提供已註冊講次的檔案，並檢查解析後的路徑必須位於該課程的講義資料夾內（否則回 403），且只讀不改。
+3. **路徑穿越防護**：產出物下載與檢視都限制在該課程的輸出根目錄（有 `study_dir` 時為 `<study_dir>/03 Notes/NotebookLM`，ISSUE-050）或 `needs_review` 隔離區內，課程代號本身也要通過 `validate_path_segment`；講義 PDF 閱讀器只提供已註冊講次的檔案，並檢查解析後的路徑必須位於該課程的講義資料夾內（否則回 403），且只讀不改。筆記管線的識別碼與呼叫端路徑只能落在 `DATA_DIR`、`STUDY_ROOT_DIR` 或課程登錄資料夾（ISSUE-045）；文獻 PDF 只從文獻資料夾提供（ISSUE-047）。
 4. **資料隔離**：原始講義、中繼資料、產出物與紀錄檔案全數集中於專案目錄外的 `DATA_DIR`，避免程式碼倉庫污染或敏感講義外流。
+5. **不可信內容與提示注入（ADR-013、ISSUE-046）**：講義、文獻、網路研究來源與 Gemini 回覆一律視為資料。網頁端：原始 HTML 先跳脫、Markdown 連結只允許 http / https / mailto / 相對路徑、inline handler 參數用 `jsAttr()`、所有回應帶 Content-Security-Policy（`connect-src 'self'`、`object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'self'`）。MCP 端：會新增、搬移、上傳或花額度的工具一律需要 `confirm=True`。
+6. **瀏覽器設定檔與圖書館帳密（ADR-013）**：Chrome / Playwright 設定檔資料夾權限 700；Chrome 遠端除錯埠只綁 127.0.0.1。圖書館（OpenAthens）帳密只從 `.env` 的 `LIBRARY_EMAIL` / `LIBRARY_PASSWORD` 讀取（舊名 `USER_*` 相容），絕不存放 Google 密碼；學校網域 `OPENATHENS_DOMAIN` 與 `EBSCO_PROFILE` 由 `.env` 設定，程式碼不寫死。

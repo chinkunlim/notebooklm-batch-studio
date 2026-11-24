@@ -6,6 +6,8 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
+from pydantic import BaseModel
+
 from notebooklm_batch_studio.entrypoints.mcp_remote_admin import register_remote_extra_tools
 from notebooklm_batch_studio.services.qa_notes_service import AskOptions, QANotesService
 
@@ -13,6 +15,20 @@ if TYPE_CHECKING:
     from mcp.server.mcpserver import MCPServer
 
 logger = logging.getLogger(__name__)
+
+
+class QANoteInput(BaseModel):
+    """Content of a Q&A note to save.
+
+    Attributes:
+        title: Note heading title.
+        content_markdown: Markdown body text.
+        lecture_no: Optional lecture sequence number.
+    """
+
+    title: str
+    content_markdown: str
+    lecture_no: int | None = None
 
 
 def _register_qa_ask_tool(mcp: MCPServer, qa_notes: QANotesService) -> None:
@@ -79,25 +95,23 @@ def _register_save_note_tool(mcp: MCPServer, qa_notes: QANotesService) -> None:
     """
 
     @mcp.tool()
-    def save_qa_note(
-        code: str,
-        title: str,
-        content_markdown: str,
-        lecture_no: int | None = None,
-    ) -> str:
-        """Save a Q&A answer as a structured Markdown note with hierarchical tags.
+    def save_qa_note(code: str, note: QANoteInput, confirm: bool = False) -> str:
+        """Save a Q&A answer as a structured Markdown note with hierarchical tags (requires confirm=True).
 
         Args:
             code: Course code.
-            title: Note heading title.
-            content_markdown: Markdown body text.
-            lecture_no: Optional lecture sequence number.
+            note: Note title, Markdown body, and optional lecture number.
+            confirm: Must be True to write the note.
 
         Returns:
-            JSON string of the saved note.
+            JSON string of the saved note, or a confirmation warning.
         """
+        if not confirm:
+            return json.dumps(
+                {"error": "Confirmation required: pass confirm=True to save the note."}, ensure_ascii=False
+            )
         try:
-            res = qa_notes.save_note(code, title, content_markdown, lecture_no=lecture_no)
+            res = qa_notes.save_note(code, note.title, note.content_markdown, lecture_no=note.lecture_no)
             return json.dumps(res, ensure_ascii=False, indent=2)
         except Exception as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)

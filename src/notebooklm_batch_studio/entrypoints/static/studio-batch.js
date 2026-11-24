@@ -137,11 +137,11 @@ async function fetchCourses() {
         stats.needs_review ? `${stats.needs_review} 項需審查` : '',
         stats.failed ? `${stats.failed} 項失敗` : '',
       ].filter(Boolean).join('・');
-      return `<li><button class="${activeCourseCode === c.code ? 'on' : ''}" data-code="${escHtml(c.code)}" onclick="viewCourseDetail('${escHtml(c.code)}')">
+      return `<li><button class="${activeCourseCode === c.code ? 'on' : ''}" data-code="${escHtml(c.code)}" onclick="viewCourseDetail(${jsAttr(c.code)})">
           <span class="cr-name">${escHtml(c.name)}（${escHtml(c.code)}）</span><span class="cr-meta">${done} / ${total}　${pct}%</span>
           <span class="cr-meta" style="grid-column:1/-1">${c.lecture_count} 份 PDF${extra ? '・' + extra : ''}</span>
           <span class="meter"><span style="width:${pct}%"></span></span></button>
-        ${!hasNb ? `<button class="btn btn-soft btn-sm" style="margin:4px 12px 8px" onclick="setupCourse('${escHtml(c.code)}', event)">建立筆記本並上傳</button>` : ''}</li>`;
+        ${!hasNb ? `<button class="btn btn-soft btn-sm" style="margin:4px 12px 8px" onclick="setupCourse(${jsAttr(c.code)}, event)">建立筆記本並上傳</button>` : ''}</li>`;
     }).join('');
     renderCourseDirectory(); renderCoursePicker();
   } catch (e) {
@@ -186,7 +186,7 @@ function renderStatusBar(jobs, paused, code) {
   const chips = order.filter(k => counts[k]).map(k => `<span class="badge ${STATUS_LABELS[k].cls}">${STATUS_LABELS[k].text} ${counts[k]}</span>`).join('');
   const attnCount = (counts.failed || 0) + (counts.needs_review || 0);
   const retryAllBtn = attnCount && code
-    ? `<button class="btn btn-soft btn-sm" onclick="retryFailedJobs('${escHtml(code)}')">重試失敗／需審查項目（${attnCount}）</button>` : '';
+    ? `<button class="btn btn-soft btn-sm" onclick="retryFailedJobs(${jsAttr(code)})">重試失敗／需審查項目（${attnCount}）</button>` : '';
   const waits = activeJobs.filter(j => j.status === 'quota_wait' && j.cooldown_until).map(j => j.cooldown_until).sort();
   const notes = [];
   if (paused) notes.push('這門課暫停中，按上方「開始生成」才會繼續。');
@@ -228,7 +228,7 @@ function renderActiveJobs(jobs, code) {
     const st = STATUS_LABELS[j.status] || { text: j.status };
     const hue = j.status === 'failed' ? '--danger' : hueFor(j.artifact_type);
     const retryBtn = (j.status === 'failed' || j.status === 'needs_review')
-      ? `<button class="btn btn-ghost btn-sm" onclick="retryJob('${j.id}', '${escHtml(code)}')">重試</button>` : '';
+      ? `<button class="btn btn-ghost btn-sm" onclick="retryJob(${jsAttr(j.id)}, ${jsAttr(code)})">重試</button>` : '';
     return `<li style="--hue:var(${hue})"><div class="job-top"><span>${scope}　${escHtml(j.label || j.artifact_type)}</span><span>${st.text} ${retryBtn}</span></div><div class="bar hue"><i style="width:${width[j.status]}%"></i></div></li>`;
   }).join('') : `<li class="small muted">${escHtml(code)} 目前沒有進行中的工作。</li>`;
 }
@@ -255,12 +255,12 @@ function jobRowHtml(j, code, versionsBySlot) {
   else if ((j.status === 'needs_review' || j.status === 'failed') && j.error_message) statusExtra = `<div class="job-sub">${escHtml(j.error_message.slice(0, 80))}</div>`;
   const lecArg = j.lecture_no === null ? 'null' : j.lecture_no;
   const retryBtn = (j.status === 'failed' || j.status === 'needs_review')
-    ? `<button class="btn btn-primary btn-sm" onclick="retryJob('${j.id}', '${escHtml(code)}')">重試</button>` : '';
+    ? `<button class="btn btn-primary btn-sm" onclick="retryJob(${jsAttr(j.id)}, ${jsAttr(code)})">重試</button>` : '';
   const regenBtn = (j.status === 'done' || j.status === 'needs_review' || j.status === 'failed') && j.version === total
-    ? `<button class="btn btn-soft btn-sm" onclick="regenerateArtifact('${code}', ${lecArg}, '${j.artifact_type}', { label: '${escHtml(j.label || j.artifact_type)}', nextVersion: ${total + 1} })">重新生成</button>` : '';
+    ? `<button class="btn btn-soft btn-sm" onclick="regenerateArtifact(${jsAttr(code)}, ${lecArg}, ${jsAttr(j.artifact_type)}, { label: ${jsAttr(j.label || j.artifact_type)}, nextVersion: ${total + 1} })">重新生成</button>` : '';
   return `<tr><td><strong>${escHtml(j.label || j.artifact_type)}</strong><div class="job-sub"><code>${j.artifact_type}</code>　${scope}</div></td><td>${ver}</td>
     <td><span class="badge ${st.cls}">${st.text}</span>${statusExtra}</td>
-    <td><button class="btn btn-ghost btn-sm" onclick="openPromptEditor('${j.id}', '${scope} - ${j.artifact_type}')">Prompt</button><button class="btn btn-ghost btn-sm" onclick="openJobOptions('${j.id}')" title="只調整這一份產出的設定">設定${hasOwn}</button></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openPromptEditor(${jsAttr(j.id)}, ${jsAttr(`${scope} - ${j.artifact_type}`)})">Prompt</button><button class="btn btn-ghost btn-sm" onclick="openJobOptions(${jsAttr(j.id)})" title="只調整這一份產出的設定">設定${hasOwn}</button></td>
     <td>${dlLink}</td><td><div style="display:flex;gap:6px;flex-wrap:wrap">${retryBtn}${regenBtn}</div></td></tr>`;
 }
 
@@ -309,12 +309,12 @@ function jobGroupsHtml(data, code) {
  */
 function courseActionsHtml(code, paused) {
   return (paused
-    ? `<span class="badge badge-warning">暫停中</span><button class="btn btn-primary btn-sm" onclick="setCoursePaused('${code}', false)">開始生成</button>`
-    : `<button class="btn btn-soft btn-sm" onclick="setCoursePaused('${code}', true)">暫停這門課</button>`) +
+    ? `<span class="badge badge-warning">暫停中</span><button class="btn btn-primary btn-sm" onclick="setCoursePaused(${jsAttr(code)}, false)">開始生成</button>`
+    : `<button class="btn btn-soft btn-sm" onclick="setCoursePaused(${jsAttr(code)}, true)">暫停這門課</button>`) +
     `<details class="more-menu"><summary class="btn btn-ghost btn-sm">進階工具</summary><div class="menu">
-      <button class="btn btn-ghost" onclick="syncFromNotebookLM('${code}')">從 Gemini Notebook 同步網頁上做的產出</button>
-      <button class="btn btn-ghost" onclick="refinePrompts('${code}')">用本機模型潤飾 Prompt</button>
-      <button class="btn btn-ghost" onclick="deleteCourse('${code}')" style="color:var(--danger)">刪除課程</button></div></details>`;
+      <button class="btn btn-ghost" onclick="syncFromNotebookLM(${jsAttr(code)})">從 Gemini Notebook 同步網頁上做的產出</button>
+      <button class="btn btn-ghost" onclick="refinePrompts(${jsAttr(code)})">用本機模型潤飾 Prompt</button>
+      <button class="btn btn-ghost" onclick="deleteCourse(${jsAttr(code)})" style="color:var(--danger)">刪除課程</button></div></details>`;
 }
 
 /**

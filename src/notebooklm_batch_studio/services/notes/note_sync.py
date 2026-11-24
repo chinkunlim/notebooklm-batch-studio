@@ -46,6 +46,25 @@ def list_chapter_notes(notes_dir: Path) -> list[dict[str, Any]]:
     return items
 
 
+def find_chapter_note(notes_dir: Path, chapter_id: str) -> Path:
+    """Find the stitched `<chapter_id>_*_學習筆記.md` note for a chapter.
+
+    Args:
+        notes_dir: Course NoteStudio directory.
+        chapter_id: Chapter identifier such as `ch01`.
+
+    Returns:
+        Path of the first matching note.
+
+    Raises:
+        FileNotFoundError: When no stitched note matches `chapter_id`.
+    """
+    matches = sorted(notes_dir.glob(f"{chapter_id}_*_學習筆記.md")) if notes_dir.is_dir() else []
+    if not matches:
+        raise FileNotFoundError(f"找不到 {chapter_id} 的縫合筆記 .md 檔案（{notes_dir}）。")
+    return matches[0]
+
+
 def push_chapter_note_to_source(
     notes_dir: Path,
     chapter_id: str,
@@ -69,17 +88,11 @@ def push_chapter_note_to_source(
     """
     if not notebook_id:
         raise ValueError("缺少目標 Gemini Notebook ID，無法推送至筆記本來源。")
-    matches = sorted(notes_dir.glob(f"{chapter_id}_*_學習筆記.md")) if notes_dir.is_dir() else []
-    if not matches:
-        raise FileNotFoundError(f"找不到 {chapter_id} 的縫合筆記 .md 檔案（{notes_dir}）。")
-
-    md_path = matches[0]
-    md_text = md_path.read_text(encoding="utf-8")
+    md_path = find_chapter_note(notes_dir, chapter_id)
     pdf_dir = notes_dir / "_uploaded"
     pdf_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = pdf_dir / f"{md_path.stem}.pdf"
-    render_markdown_to_pdf(md_path.stem, md_text, pdf_path)
-
+    render_markdown_to_pdf(md_path.stem, md_path.read_text(encoding="utf-8"), pdf_path)
     source_id = upload_fn(notebook_id, str(pdf_path))
     logger.info("Pushed NoteStudio chapter %s to notebook=%s source=%s", chapter_id, notebook_id, source_id)
     return {

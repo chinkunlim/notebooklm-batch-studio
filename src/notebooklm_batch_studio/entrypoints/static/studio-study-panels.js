@@ -93,7 +93,7 @@ async function loadWeaknessNotebook(selectId) {
   list.innerHTML = keys.map(key => {
     const no = key === 'course' ? null : key;
     const label = no === null ? '整門課' : `${lectureName(no)}　${escHtml(lectureTopic(no))}`;
-    return `<li class="group-label">${label}</li>` + groups.get(key).map(m => `<li><button class="mq" data-mid="${escHtml(m.id)}" onclick="showMistake('${escHtml(m.id)}')">
+    return `<li class="group-label">${label}</li>` + groups.get(key).map(m => `<li><button class="mq" data-mid="${escHtml(m.id)}" onclick="showMistake(${jsAttr(m.id)})">
       <span class="mistake-q">${escHtml(m.question_text)}</span>${m.confidence === 'sure' ? '<span class="tag warn">很確定卻答錯</span>' : '<span class="tag">待複習</span>'}</button></li>`).join('');
   }).join('');
   const first = mistakes.find(m => m.id === selectId) || mistakes[0];
@@ -121,7 +121,7 @@ function showMistake(id) {
     <div class="explain"><b>解析</b><br>${escHtml(m.explanation || '暫無解析')}</div>
     ${explanationSlot(m.question_text, `explainMistake('${m.id}', this)`, `explainMistake('${m.id}', this, true)`)}
     <div class="row section-gap" style="flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="resolveMistake('${m.id}')">我已經會了</button>
+      <button class="btn btn-primary" onclick="resolveMistake(${jsAttr(m.id)})">我已經會了</button>
       <button class="btn btn-soft" onclick="practiseLecture(${lec === null ? 'null' : lec})">練習這一講</button>
       <button class="btn btn-ghost" onclick="askTutorAbout(${lec === null ? 'null' : lec})">問 AI 家教</button>
     </div>`;
@@ -357,7 +357,7 @@ async function loadReportInViewer(kind) {
   const group = currentReportGroup.includes(kind) ? currentReportGroup : [kind];
   const kindBox = document.getElementById('reportKindButtons');
   kindBox.innerHTML = group.length > 1 ? group.map(key =>
-    `<button type="button" class="reader-pill-btn${key === kind ? ' on' : ''}" onclick="loadReportInViewer('${key}')">${REPORT_KINDS[key].label}</button>`).join('') : '';
+    `<button type="button" class="reader-pill-btn${key === kind ? ' on' : ''}" onclick="loadReportInViewer(${jsAttr(key)})">${REPORT_KINDS[key].label}</button>`).join('') : '';
   const container = document.getElementById('reportContentContainer');
   const metaBar = document.getElementById('reportMetaBar');
   const spec = REPORT_KINDS[kind] || REPORT_KINDS.guide;

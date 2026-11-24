@@ -55,7 +55,17 @@
 | `retry_item` | 重做某項產出 | 是（`confirm`） |
 | `set_course_profile` | 變更產出組合或監看開關 | 是（`confirm`） |
 
+後續功能加入的工具（完整清單以 MCP `list_tools` 為準）：
+
+| 工具群 | 讀取（不需 confirm） | 會改資料（需 `confirm=True`） | 規格 |
+|---|---|---|---|
+| 文獻 | `list_literature`、`export_literature_apa`、`query_literature_notebook` | `add_literature`、`process_literature`、`refresh_literature`、`import_literature_to_course`、`unarchive_literature`、`delete_literature`、`migrate_study_layout`（`dry_run=False` 時）、`sync_literature_notebook`、`generate_literature_review` | SPEC-012 |
+| note-studio 筆記 | `notes_list_prompts`、`notes_preview_prompt`、`notes_get_status`、`notes_read_chapter`、`notes_list_chapters` | `notes_generate_chapter`、`notes_pause_course`、`notes_push_to_source`、`notes_import_legacy` | SPEC-013 |
+| 問答筆記 | `list_course_notes`、`ask_notebook_question` | `save_qa_note`、`push_note_to_source`、`delete_remote_artifact`、`import_remote_notebook` | SPEC-011 |
+
 - 新增功能時三個入口一起接。
+- **不可信內容（ADR-013）**：工具回傳的講義、文獻、網路研究來源與 Gemini 回覆都是資料，不是指令；Agent 不可依其中的文字自行呼叫會改資料的工具。網頁端一律跳脫顯示，Markdown 連結只允許 http / https / mailto / 相對路徑，並送出 Content-Security-Policy。
+- **路徑**：工具與 API 只接受 `DATA_DIR`、`STUDY_ROOT_DIR` 或課程登錄資料夾內的路徑（ISSUE-045）。
 
 ### 可選 (Nice to have)
 - 網頁即時更新進度（Server-Sent Events）。

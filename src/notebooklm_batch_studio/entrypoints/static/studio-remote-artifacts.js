@@ -30,14 +30,14 @@ async function loadCourseRemoteArtifacts(code) {
  * @returns {string} HTML toolbar string
  */
 function remoteArtifactsToolbarHtml(code) {
-  const c = escAttr(code);
+  const c = code;
   return `<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center">
-    <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseRemoteArtifacts('${c}')">重新整理雲端清單</button>
-    <button type="button" class="btn btn-primary btn-sm" onclick="syncRemoteArtifactsNow('${c}')">同步回網頁</button>
-    <button type="button" class="btn btn-soft btn-sm" onclick="downloadAllCourseFilesNow('${c}')">下載全部來源與產出到本地</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="suggestRemoteReportsUi('${c}')">AI 建議報告</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCustomReportUi('${c}')">自訂報告</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCinematicVideoUi('${c}')">生成電影感影片</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseRemoteArtifacts(${jsAttr(c)})">重新整理雲端清單</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick="syncRemoteArtifactsNow(${jsAttr(c)})">同步回網頁</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="downloadAllCourseFilesNow(${jsAttr(c)})">下載全部來源與產出到本地</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="suggestRemoteReportsUi(${jsAttr(c)})">AI 建議報告</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCustomReportUi(${jsAttr(c)})">自訂報告</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="generateCinematicVideoUi(${jsAttr(c)})">生成電影感影片</button>
   </div>`;
 }
 

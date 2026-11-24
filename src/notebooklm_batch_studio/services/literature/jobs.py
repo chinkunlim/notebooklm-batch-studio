@@ -130,6 +130,40 @@ class LiteratureJobRunner:
             self._live = _LiveProgress(job_id=job_id, current_key=key, stage=stage, done=done, total=total)
         lit_repo.update_job(job_id, done=done, message=label)
 
+    def _batch_options(
+        self, manager: LiteratureManager, job_id: int, opts: JobRunOptions
+    ) -> ProcessBatchOptions:
+        """Translate job options into manager batch options that report progress to this job.
+
+        Args:
+            manager: Active `LiteratureManager`.
+            job_id: Persisted job ID.
+            opts: Execution options.
+
+        Returns:
+            Batch options with a progress callback bound to `job_id`.
+        """
+
+        def _progress(done: int, _total: int, key: str, stage: str) -> None:
+            """Forward one progress update to the job record.
+
+            Args:
+                done: Completed item count.
+                _total: Total item count (tracked separately).
+                key: Current item key.
+                stage: Current stage label.
+            """
+            self._record_progress(manager.lit_repo, job_id, done, f"{key}：{stage}")
+
+        return ProcessBatchOptions(
+            keys=opts.keys,
+            refresh_keys=opts.refresh_keys,
+            interactive=opts.interactive,
+            identify_only=opts.identify_only,
+            no_browser=opts.no_browser,
+            progress_cb=_progress,
+        )
+
     def _run_worker(self, job_id: int, opts: JobRunOptions) -> None:
         """Execute the literature batch inside a worker thread.
 
@@ -139,17 +173,7 @@ class LiteratureJobRunner:
         """
         try:
             with self._manager_scope() as manager:
-                batch_opts = ProcessBatchOptions(
-                    keys=opts.keys,
-                    refresh_keys=opts.refresh_keys,
-                    interactive=opts.interactive,
-                    identify_only=opts.identify_only,
-                    no_browser=opts.no_browser,
-                    progress_cb=lambda d, _t, k, s: self._record_progress(
-                        manager.lit_repo, job_id, d, f"{k}：{s}"
-                    ),
-                )
-                processed = manager.process_items(batch_opts)
+                processed = manager.process_items(self._batch_options(manager, job_id, opts))
                 manager.lit_repo.finish_job(job_id, JobState.DONE, f"已完成 {len(processed)} 筆文獻")
         except Exception as exc:
             logger.exception("Literature background job %d failed: %s", job_id, exc)

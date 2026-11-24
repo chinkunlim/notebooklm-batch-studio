@@ -64,6 +64,44 @@ def _print_status(mgr: LiteratureManager, course: str | None) -> None:
             print(f"  {STATUS_LABELS.get(st, st.value)}：{counts[st]}")
 
 
+def _apply_list_edits(mgr: LiteratureManager, args: argparse.Namespace) -> None:
+    """Apply `--delete`, `--add`, and `--retry` edits to the tracked literature list.
+
+    Args:
+        mgr: Configured LiteratureManager.
+        args: Parsed CLI arguments.
+    """
+    lit_repo = mgr.lit_repo
+    for del_key in _split_csv(args.delete):
+        lit_repo.delete_item(del_key)
+    for entry in args.add:
+        mgr.add_entries(entry, course_code=args.course)
+    for retry_key in _split_csv(args.retry):
+        existing = lit_repo.get_item(retry_key)
+        if existing is not None:
+            lit_repo.upsert_item(replace(existing, status=ItemStatus.PENDING, note=""))
+
+
+def _batch_options(args: argparse.Namespace) -> ProcessBatchOptions:
+    """Build the processing options from `--retry`, `--refresh`, and mode flags.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        Options for `LiteratureManager.process_items`.
+    """
+    refresh_keys = frozenset(_split_csv(args.refresh))
+    retry_keys = _split_csv(args.retry)
+    return ProcessBatchOptions(
+        keys=retry_keys or (sorted(refresh_keys) if refresh_keys else None),
+        refresh_keys=refresh_keys,
+        interactive=args.interactive,
+        identify_only=args.identify_only,
+        no_browser=args.no_browser,
+    )
+
+
 def handle_literature_cli(config: AppConfig, args: argparse.Namespace) -> int:
     """Execute the `literature` CLI subcommand.
 
@@ -76,35 +114,16 @@ def handle_literature_cli(config: AppConfig, args: argparse.Namespace) -> int:
     """
     engine = create_db_engine(config.database_url)
     with make_session_factory(engine)() as session:
-        lit_repo = LiteratureRepository(session)
-        mgr = LiteratureManager(config, lit_repo, CourseRepository(session), AdapterLiteratureRuntime(config))
+        mgr = LiteratureManager(
+            config, LiteratureRepository(session), CourseRepository(session), AdapterLiteratureRuntime(config)
+        )
         mgr.sync_untracked_pdfs()
-
-        for del_key in _split_csv(args.delete):
-            lit_repo.delete_item(del_key)
-        for entry in args.add:
-            mgr.add_entries(entry, course_code=args.course)
-        for retry_key in _split_csv(args.retry):
-            existing = lit_repo.get_item(retry_key)
-            if existing is not None:
-                lit_repo.upsert_item(replace(existing, status=ItemStatus.PENDING, note=""))
-
+        _apply_list_edits(mgr, args)
         if args.status:
             _print_status(mgr, args.course)
             return 0
-
-        refresh_keys = frozenset(_split_csv(args.refresh))
-        retry_keys = _split_csv(args.retry)
-        target_keys = retry_keys or (sorted(refresh_keys) if refresh_keys else None)
-        processed = mgr.process_items(
-            ProcessBatchOptions(
-                keys=target_keys,
-                refresh_keys=refresh_keys,
-                interactive=args.interactive,
-                identify_only=args.identify_only,
-                no_browser=args.no_browser,
-            )
-        )
+        processed = mgr.process_items(_batch_options(args))
+        logger.info("Literature CLI processed %d items", len(processed))
         print(f"已處理 {len(processed)} 筆文獻")
         _print_status(mgr, args.course)
     return 0

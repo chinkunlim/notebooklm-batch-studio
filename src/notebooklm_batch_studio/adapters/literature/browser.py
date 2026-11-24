@@ -20,6 +20,7 @@ from urllib.parse import quote, urlparse
 from playwright.sync_api import BrowserContext, Page, Playwright, sync_playwright
 from playwright.sync_api import Error as PlaywrightError
 
+from notebooklm_batch_studio.adapters.private_dir import ensure_private_dir
 from notebooklm_batch_studio.domain.literature.literature import (
     NeedsUserError,
     Reference,
@@ -148,7 +149,7 @@ class BrowserPublisherFetcher:
         Returns:
             This fetcher.
         """
-        self._profile_dir.mkdir(parents=True, exist_ok=True)
+        ensure_private_dir(self._profile_dir)
         self._pw = sync_playwright().start()
         self._ctx = self._pw.chromium.launch_persistent_context(
             str(self._profile_dir), channel="chrome", headless=False, accept_downloads=True

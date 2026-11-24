@@ -1,0 +1,28 @@
+{
+  "id": "TASK-028",
+  "title": "Security hardening and code-review zero-violation cleanup",
+  "status": "done",
+  "agent": "claude-code",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Security hardening (path traversal, prompt-injection XSS, CSP, MCP confirm, browser profile perms, library credentials), artifact study_dir 404 fix, zero code-review warnings, SPEC-013, ADR-013, ISSUE-045..051",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-24 01:49 UTC",
+  "updated_at": "2026-11-24 02:13 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-24 01:49 UTC",
+      "action": "created_and_claimed",
+      "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-24 02:13 UTC",
+      "action": "done",
+      "agent": "claude-code",
+      "summary": "Security hardening (path traversal, prompt-injection XSS, CSP, MCP confirm, browser profile perms, library credentials), artifact study_dir 404 fix, zero code-review warnings, SPEC-013, ADR-013, ISSUE-045..051"
+    }
+  ],
+  "summary": "Security hardening (path traversal, prompt-injection XSS, CSP, MCP confirm, browser profile perms, library credentials), artifact study_dir 404 fix, zero code-review warnings, SPEC-013, ADR-013, ISSUE-045..051"
+}

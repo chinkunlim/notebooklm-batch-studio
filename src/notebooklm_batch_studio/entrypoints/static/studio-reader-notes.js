@@ -116,7 +116,7 @@ function renderReaderBookmarks(code, no) {
   }
   pop.innerHTML = bookmarks.map(b =>
     `<div class="bm-pop-row"><button type="button" class="bm-pop-go" onclick="jumpToReaderPage(${b.page});document.getElementById('bmPick')?.classList.remove('open')">${escHtml(b.label)}</button>` +
-    `<button type="button" class="bm-del" aria-label="移除書籤" onclick="removeReaderBookmark(event,'${escHtml(code)}',${no},${b.page})">×</button></div>`
+    `<button type="button" class="bm-del" aria-label="移除書籤" onclick="removeReaderBookmark(event,${jsAttr(code)},${no},${b.page})">×</button></div>`
   ).join('');
 }
 
@@ -452,7 +452,7 @@ Object.assign(window, {
   syncActivePageComments,
   initReaderSplitter,
   deleteUserPdfHighlight,
-  hookPdfSelectionHighlight,
+  // hookPdfSelectionHighlight is defined (and global) in studio-pencil.js, loaded after this file. Refs: ISSUE-051
   registerQaCitations,
   highlightQaCitationInPdf,
   toggleReaderNightMode,

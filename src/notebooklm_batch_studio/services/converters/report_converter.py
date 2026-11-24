@@ -1,15 +1,27 @@
 """Render a Gemini Notebook report (Markdown) as a readable standalone HTML page.
 
 The report text comes from Gemini Notebook, so raw HTML in it is escaped before Markdown rendering;
-only Markdown formatting (headings, lists, tables, bold, quotes) becomes HTML.
-Refs: ISSUE-013
+only Markdown formatting (headings, lists, tables, bold, quotes) becomes HTML. Link and image
+URLs are then limited to safe schemes, because a prompt-injected source can make the model emit
+`[x](javascript:...)` (Refs: ISSUE-013, ISSUE-046).
 """
 
 from __future__ import annotations
 
 import html
+import logging
+import re
 
 import markdown
+
+logger = logging.getLogger(__name__)
+
+# Markdown-generated attributes that carry URLs (always double-quoted by Python-Markdown).
+_URL_ATTR = re.compile(r'\b(href|src)="([^"]*)"')
+# URL schemes allowed in rendered reports; anything else (javascript:, data:, vbscript:, ...) is dropped.
+_SAFE_SCHEMES = ("http", "https", "mailto")
+# Leading scheme of a URL, after control characters and whitespace are removed.
+_SCHEME = re.compile(r"^([a-z][a-z0-9+.-]*):")
 
 _STYLE = (
     "html{background:#0f172a;scrollbar-width:none;-ms-overflow-style:none;}"
@@ -40,7 +52,39 @@ def markdown_fragment(markdown_text: str) -> str:
         HTML fragment (no page wrapper).
     """
     safe_source = markdown_text.replace("&", "&amp;").replace("<", "&lt;")
-    return markdown.markdown(safe_source, extensions=["tables", "sane_lists"])
+    rendered = markdown.markdown(safe_source, extensions=["tables", "sane_lists"])
+    return _URL_ATTR.sub(_neutralize_url_attr, rendered)
+
+
+def is_safe_url(raw_url: str) -> bool:
+    """Tell whether a rendered link / image URL is relative or uses an allowed scheme.
+
+    Args:
+        raw_url: Attribute value as written in the HTML (may contain entities).
+
+    Returns:
+        True for relative URLs, fragments, and http / https / mailto URLs.
+    """
+    decoded = html.unescape(raw_url)
+    compact = "".join(ch for ch in decoded if ch > " " and ch != "\x7f").lower()
+    match = _SCHEME.match(compact)
+    return match is None or match.group(1) in _SAFE_SCHEMES
+
+
+def _neutralize_url_attr(match: re.Match[str]) -> str:
+    """Replace an unsafe `href` / `src` value with `#`.
+
+    Args:
+        match: Regex match of one URL attribute.
+
+    Returns:
+        The original attribute, or the attribute pointing at `#` when its scheme is unsafe.
+    """
+    attr, value = match.group(1), match.group(2)
+    if is_safe_url(value):
+        return match.group(0)
+    logger.warning("Dropped unsafe %s URL scheme in rendered Markdown", attr)
+    return f'{attr}="#"'
 
 
 def report_to_html(title: str, markdown_text: str) -> str:

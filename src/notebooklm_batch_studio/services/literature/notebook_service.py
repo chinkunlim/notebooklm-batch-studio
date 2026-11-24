@@ -17,6 +17,9 @@ from notebooklm_batch_studio.services.preferences_service import PreferencesServ
 
 logger = logging.getLogger(__name__)
 
+# Marker returned by `_try_review` when Gemini reports a quota / rate limit.
+_QUOTA = "__quota__"
+
 LITERATURE_NOTEBOOK_TITLE = "Literature Library (文獻總庫)"
 PREF_KEY_NOTEBOOK_ID = "literature.notebook_id"
 
@@ -219,6 +222,28 @@ class LiteratureNotebookService:
         logger.info("Generated Western Literature Review for %s", key)
         return updated
 
+    async def _try_review(self, key: str) -> str | None:
+        """Generate one Literature Review, classifying quota limits separately from other failures.
+
+        Args:
+            key: Literature item key.
+
+        Returns:
+            None on success, `_QUOTA` when the call hit a quota / rate limit, or the error text.
+        """
+        try:
+            await self.generate_review(key)
+        except QuotaExceededError as exc:
+            logger.warning("Gemini quota exhausted during %s: %s", key, exc)
+            return _QUOTA
+        except Exception as exc:
+            if "quota" in str(exc).lower() or "429" in str(exc):
+                logger.warning("Rate/quota limit during %s: %s", key, exc)
+                return _QUOTA
+            logger.warning("Failed review for %s: %s", key, exc)
+            return str(exc)
+        return None
+
     async def generate_missing_reviews(
         self,
         quota_wait_seconds: float = 300.0,
@@ -233,36 +258,23 @@ class LiteratureNotebookService:
         Returns:
             Summary dictionary with `generated` and `errors` lists.
         """
+        report = progress_cb or (lambda _msg: None)
         await self.sync_pdfs()
         pending = [i for i in self.manager.lit_repo.list_items() if i.file and not i.review_markdown]
         generated: list[str] = []
         errors: list[dict[str, str]] = []
         idx = 0
         while idx < len(pending):
-            item = pending[idx]
-            if progress_cb:
-                progress_cb(f"生成 Literature Review ({idx + 1}/{len(pending)})：{item.key}")
-            try:
-                await self.generate_review(item.key)
-                generated.append(item.key)
-                idx += 1
-            except QuotaExceededError as exc:
-                logger.warning(
-                    "Gemini quota exhausted during %s; waiting %.0fs: %s", item.key, quota_wait_seconds, exc
-                )
-                if progress_cb:
-                    progress_cb(f"額度已達上限，等待恢復後自動繼續 ({idx}/{len(pending)})…")
+            key = pending[idx].key
+            report(f"生成 Literature Review ({idx + 1}/{len(pending)})：{key}")
+            outcome = await self._try_review(key)
+            if outcome == _QUOTA:
+                report(f"額度已達上限，等待恢復後自動繼續 ({idx}/{len(pending)})…")
                 await asyncio.sleep(quota_wait_seconds)
-            except Exception as exc:
-                if "quota" in str(exc).lower() or "429" in str(exc):
-                    logger.warning(
-                        "Rate/quota limit during %s; waiting %.0fs: %s", item.key, quota_wait_seconds, exc
-                    )
-                    if progress_cb:
-                        progress_cb(f"額度暫時受限，等待恢復後自動繼續 ({idx}/{len(pending)})…")
-                    await asyncio.sleep(quota_wait_seconds)
-                    continue
-                logger.warning("Failed review for %s: %s", item.key, exc)
-                errors.append({"key": item.key, "error": str(exc)})
-                idx += 1
+                continue
+            if outcome is None:
+                generated.append(key)
+            else:
+                errors.append({"key": key, "error": outcome})
+            idx += 1
         return {"generated": generated, "errors": errors, **self.get_status()}

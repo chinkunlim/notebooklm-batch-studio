@@ -89,7 +89,7 @@ def _register_prompt_tools(mcp: MCPServer, service: NotePipelineService) -> None
 
 
 def _register_status_tools(mcp: MCPServer, service: NotePipelineService) -> None:
-    """Register status and stitched-note reading MCP tools.
+    """Register the note generation status MCP tool.
 
     Args:
         mcp: MCPServer instance.
@@ -107,6 +107,15 @@ def _register_status_tools(mcp: MCPServer, service: NotePipelineService) -> None
             JSON string of course state.
         """
         return json.dumps(service.get_status(course_key), ensure_ascii=False, indent=2)
+
+
+def _register_chapter_read_tools(mcp: MCPServer, service: NotePipelineService) -> None:
+    """Register stitched-note reading and chapter listing MCP tools.
+
+    Args:
+        mcp: MCPServer instance.
+        service: NotePipelineService instance.
+    """
 
     @mcp.tool()
     def notes_read_chapter(course_key: str, chapter_id: str) -> str:
@@ -201,12 +210,24 @@ def _register_pause_tool(mcp: MCPServer, service: NotePipelineService) -> None:
         return json.dumps(service.request_pause(course_key), ensure_ascii=False)
 
 
-def _register_sync_tools(
+def _confirm_prompt(message: str) -> str:
+    """Build the JSON reply asking the caller to repeat the call with `confirm=True`.
+
+    Args:
+        message: What to tell the caller.
+
+    Returns:
+        JSON string with a `confirm` key.
+    """
+    return json.dumps({"confirm": message}, ensure_ascii=False)
+
+
+def _register_push_tool(
     mcp: MCPServer,
     service: NotePipelineService,
     upload_fn: Callable[[str, str], str] | None,
 ) -> None:
-    """Register Phase 2 push-to-source and legacy import MCP tools.
+    """Register the Phase 2 push-to-source MCP tool.
 
     Args:
         mcp: MCPServer instance.
@@ -233,16 +254,22 @@ def _register_sync_tools(
             JSON string with `source_id` or confirmation prompt.
         """
         if not confirm:
-            return json.dumps(
-                {"confirm": "Call again with confirm=True to upload chapter note PDF."},
-                ensure_ascii=False,
-            )
+            return _confirm_prompt("Call again with confirm=True to upload chapter note PDF.")
         if upload_fn is None:
             return json.dumps({"error": "Upload adapter not configured."}, ensure_ascii=False)
         return json.dumps(
             service.push_to_source(course_key, chapter_id, notebook_id, upload_fn),
             ensure_ascii=False,
         )
+
+
+def _register_legacy_import_tool(mcp: MCPServer, service: NotePipelineService) -> None:
+    """Register the Phase 2 legacy note import MCP tool.
+
+    Args:
+        mcp: MCPServer instance.
+        service: NotePipelineService instance.
+    """
 
     @mcp.tool()
     def notes_import_legacy(
@@ -263,10 +290,7 @@ def _register_sync_tools(
             JSON string of import summary or confirmation prompt.
         """
         if not confirm:
-            return json.dumps(
-                {"confirm": "Call again with confirm=True to import legacy notes."},
-                ensure_ascii=False,
-            )
+            return _confirm_prompt("Call again with confirm=True to import legacy notes.")
         return json.dumps(
             service.import_legacy(Path(source_dir), course_key, overwrite=overwrite),
             ensure_ascii=False,
@@ -287,7 +311,9 @@ def register_note_pipeline_tools(
     """
     _register_prompt_tools(mcp, service)
     _register_status_tools(mcp, service)
+    _register_chapter_read_tools(mcp, service)
     _register_generate_tool(mcp, service)
     _register_pause_tool(mcp, service)
-    _register_sync_tools(mcp, service, upload_fn)
+    _register_push_tool(mcp, service, upload_fn)
+    _register_legacy_import_tool(mcp, service)
     logger.debug("Registered Phase 1 & 2 note pipeline MCP tools")

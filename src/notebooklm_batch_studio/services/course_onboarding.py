@@ -24,6 +24,7 @@ from notebooklm_batch_studio.domain.study_hierarchy import (
 from notebooklm_batch_studio.domain.study_plan import compute_course_study_state
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.job_views import (
+    calc_job_progress,
     format_jobs_data,
     lecture_to_dict,
     preview_job_types,
@@ -211,23 +212,6 @@ class CourseOnboardingMixin:
                 f"account allows {limit} sources per notebook; split the course folder"
             )
 
-    @staticmethod
-    def _calc_progress(raw_counts: dict[str, int]) -> tuple[int, int, float]:
-        """Compute total jobs, completed jobs, and progress percentage excluding skipped jobs.
-
-        Args:
-            raw_counts: Mapping of JobStatus value strings to task counts.
-
-        Returns:
-            Tuple of (total_jobs, done_jobs, progress_percent).
-        """
-        total_jobs = sum(raw_counts.values())
-        done_jobs = raw_counts.get(JobStatus.DONE.value, 0)
-        skipped_jobs = raw_counts.get(JobStatus.SKIPPED.value, 0)
-        active_total = max(0, total_jobs - skipped_jobs)
-        progress = round((done_jobs / active_total * 100), 1) if active_total > 0 else 0.0
-        return total_jobs, done_jobs, progress
-
     def _course_study_state(self, course: Course) -> str:
         """Compute study progress classification ('not_started', 'in_progress', 'finished').
 
@@ -258,7 +242,7 @@ class CourseOnboardingMixin:
         """
         counts = self.queue_repo.count_by_status(course_code=c.code)
         raw_counts = {st.value: counts.get(st, 0) for st in JobStatus}
-        total_jobs, done_jobs, progress_percent = self._calc_progress(raw_counts)
+        total_jobs, done_jobs, progress_percent = calc_job_progress(raw_counts)
         notebook_url = f"https://notebook.google.com/notebook/{c.notebook_id}" if c.notebook_id else None
         return {
             "code": c.code,
@@ -283,6 +267,25 @@ class CourseOnboardingMixin:
         """
         return [self._build_course_summary_row(c) for c in self.course_repo.list_courses()]
 
+    def _job_progress(self, course_code: str) -> dict[str, Any]:
+        """Summarize a course's job counts and completion percentage.
+
+        Args:
+            course_code: Course identifier.
+
+        Returns:
+            Dictionary with `total_jobs`, `done_jobs`, `progress_percent`, and per-status `counts`.
+        """
+        counts = self.queue_repo.count_by_status(course_code=course_code)
+        raw_counts = {st.value: counts.get(st, 0) for st in JobStatus}
+        total_jobs, done_jobs, progress_percent = calc_job_progress(raw_counts)
+        return {
+            "total_jobs": total_jobs,
+            "done_jobs": done_jobs,
+            "progress_percent": progress_percent,
+            "counts": raw_counts,
+        }
+
     def get_course_detail(self, course_code: str) -> dict[str, Any]:
         """Retrieve detailed progress, lectures, and artifact job records for a course.
 
@@ -300,9 +303,6 @@ class CourseOnboardingMixin:
             raise CourseNotFoundError(f"Course not found: {course_code}")
 
         jobs = self.queue_repo.list_jobs(course_code=course_code)
-        counts = self.queue_repo.count_by_status(course_code=course_code)
-        raw_counts = {st.value: counts.get(st, 0) for st in JobStatus}
-        total_jobs, done_jobs, progress_percent = self._calc_progress(raw_counts)
         course_dir = resolve_course_output_root(
             self.config.courses_output_dir, course.code, course.study_dir
         ).resolve()
@@ -317,10 +317,7 @@ class CourseOnboardingMixin:
             "notebook_url": notebook_url,
             "source_dir": course.source_dir,
             "mock_exam_questions": course.mock_exam_questions,
-            "total_jobs": total_jobs,
-            "done_jobs": done_jobs,
-            "progress_percent": progress_percent,
-            "counts": raw_counts,
+            **self._job_progress(course_code),
             "paused": course.paused,
             "lectures": [lecture_to_dict(lec) for lec in course.lectures],
             "jobs": format_jobs_data(jobs, course_dir, self.config.needs_review_dir),

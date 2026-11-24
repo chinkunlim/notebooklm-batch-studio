@@ -73,24 +73,24 @@ class ChapterGenerateRequest(BaseModel):
     study_dir: str = ""
 
 
-def _resolve_course_study_dir(request: Request, course_key: str) -> Path | None:
-    """Look up `study_dir` from `CourseRepository` for `course_key`, if registered.
+def _resolve_course_dir(request: Request, course_key: str, attr: str) -> Path | None:
+    """Look up a registered course folder (`study_dir` or `source_dir`) from `CourseRepository`.
 
     Args:
         request: Incoming HTTP request carrying `session_factory`.
         course_key: Course code / identifier.
+        attr: Course record attribute name, `study_dir` or `source_dir`.
 
     Returns:
-        Path to course study directory, or None if not registered.
+        Path to the folder, or None if the course or folder is not registered.
     """
     factory = getattr(request.app.state, "session_factory", None)
     if factory is None:
         return None
     with factory() as session:
         course = CourseRepository(session).get_course(course_key)
-        if course and course.study_dir:
-            return Path(course.study_dir)
-    return None
+        value = getattr(course, attr, None) if course else None
+    return Path(value) if value else None
 
 
 def _service(request: Request) -> NotePipelineService:
@@ -109,7 +109,8 @@ def _service(request: Request) -> NotePipelineService:
     return NotePipelineService(
         cfg,
         driver_factory=build_note_driver_factory(cfg),
-        study_dir_resolver=lambda code: _resolve_course_study_dir(request, code),
+        study_dir_resolver=lambda code: _resolve_course_dir(request, code, "study_dir"),
+        source_dir_resolver=lambda code: _resolve_course_dir(request, code, "source_dir"),
     )
 
 

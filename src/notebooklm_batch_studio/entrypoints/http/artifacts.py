@@ -11,6 +11,8 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
+from notebooklm_batch_studio.domain.path_safety import PathSafetyError, validate_path_segment
+from notebooklm_batch_studio.domain.study_hierarchy import resolve_course_output_root
 from notebooklm_batch_studio.entrypoints.schemas import (
     CinematicVideoRequest,
     ExportArtifactRequest,
@@ -97,11 +99,52 @@ INLINE_SUFFIXES = {".html", ".png", ".jpg", ".pdf", ".m4a", ".mp4", ".json", ".m
 MEDIA_TYPES = {".m4a": "audio/mp4", ".md": "text/markdown; charset=utf-8"}
 
 
-def _resolve_artifact_path(config: AppConfig, code: str, file_path: str) -> Path:
-    """Map a course-relative path (or `_needs_review/...`) to a real file, refusing traversal.
+def _course_output_root(request: Request, code: str) -> Path:
+    """Return a course's output root: `<study_dir>/03 Notes/NotebookLM`, or `output/courses/<code>`.
+
+    Args:
+        request: Incoming HTTP request (provides config and the course repository).
+        code: Validated course identifier.
+
+    Returns:
+        Resolved output root directory (Refs: ISSUE-050).
+    """
+    config: AppConfig = request.app.state.config
+    service: BatchStudioService = request.app.state.service
+    course = service.course_repo.get_course(code)
+    study_dir = course.study_dir if course is not None else ""
+    return resolve_course_output_root(config.courses_output_dir, code, study_dir).resolve()
+
+
+def _resolve_review_path(config: AppConfig, code: str, rel_path: str) -> Path:
+    """Map `_needs_review/<code>_.../<file>` to a quarantined file of this course, refusing traversal.
 
     Args:
         config: Application configuration.
+        code: Validated course identifier.
+        rel_path: Path below the needs-review folder.
+
+    Returns:
+        The resolved file path.
+
+    Raises:
+        HTTPException: 403 on traversal attempt, 404 if the file is missing or belongs to another course.
+    """
+    review_root = config.needs_review_dir.resolve()
+    target_path = (review_root / rel_path).resolve()
+    if not target_path.is_relative_to(review_root):
+        raise HTTPException(status_code=403, detail="Access denied: path traversal detected")
+    top = target_path.relative_to(review_root).parts[0]
+    if not top.startswith(f"{code}_") or not target_path.is_file():
+        raise HTTPException(status_code=404, detail="Requested file not found")
+    return target_path
+
+
+def _resolve_artifact_path(request: Request, code: str, file_path: str) -> Path:
+    """Map a course-relative path (or `_needs_review/...`) to a real file, refusing traversal.
+
+    Args:
+        request: Incoming HTTP request (provides config and the course repository).
         code: Course identifier.
         file_path: Path inside the course output folder, or `_needs_review/<code>_.../<file>`.
 
@@ -111,28 +154,24 @@ def _resolve_artifact_path(config: AppConfig, code: str, file_path: str) -> Path
     Raises:
         HTTPException: 403 on traversal attempt, 404 if the file is missing.
     """
+    try:
+        validate_path_segment(code, "code")
+    except PathSafetyError as exc:
+        raise HTTPException(status_code=404, detail="Requested file not found") from exc
     review_prefix = f"{NEEDS_REVIEW_PREFIX}/"
     if file_path.startswith(review_prefix):  # Refs: ISSUE-010
-        review_root = config.needs_review_dir.resolve()
-        target_path = (review_root / file_path.removeprefix(review_prefix)).resolve()
-        if not target_path.is_relative_to(review_root):
-            raise HTTPException(status_code=403, detail="Access denied: path traversal detected")
-        top = target_path.relative_to(review_root).parts[0]
-        if not top.startswith(f"{code}_") or not target_path.is_file():
-            raise HTTPException(status_code=404, detail="Requested file not found")
-        return target_path
-
-    course_dir = (config.courses_output_dir / code).resolve()
+        return _resolve_review_path(request.app.state.config, code, file_path.removeprefix(review_prefix))
+    course_dir = _course_output_root(request, code)
     target_path = (course_dir / file_path).resolve()
     if not target_path.is_relative_to(course_dir):
         raise HTTPException(status_code=403, detail="Access denied: path traversal detected")
-    if not target_path.is_file():
-        # Fallback: search recursively inside course_dir for file_path's filename
-        candidates = [c for c in course_dir.rglob(target_path.name) if c.is_file()]
-        if not candidates:
-            raise HTTPException(status_code=404, detail="Requested file not found")
-        target_path = candidates[0]
-    return target_path
+    if target_path.is_file():
+        return target_path
+    # Fallback: search recursively inside course_dir for file_path's filename
+    candidates = [c for c in course_dir.rglob(target_path.name) if c.is_file()]
+    if not candidates:
+        raise HTTPException(status_code=404, detail="Requested file not found")
+    return candidates[0]
 
 
 # HEAD lets the page check whether an optional file (e.g. the A4 infographic) exists.
@@ -157,7 +196,7 @@ def download_artifact(code: str, file_path: str, request: Request) -> FileRespon
     Raises:
         HTTPException: 403 on traversal attempt, 404 if file missing.
     """
-    target_path = _resolve_artifact_path(request.app.state.config, code, file_path)
+    target_path = _resolve_artifact_path(request, code, file_path)
     suffix = target_path.suffix.lower()
     # Python guesses audio/mp4a-latm for .m4a, which browsers' <audio> may refuse. Refs: ISSUE-007
     return FileResponse(
@@ -190,7 +229,7 @@ def view_artifact(code: str, file_path: str, request: Request) -> str:
     Raises:
         HTTPException: 403 on traversal, 404 if missing, 415 for a type that cannot be rendered.
     """
-    target_path = _resolve_artifact_path(request.app.state.config, code, file_path)
+    target_path = _resolve_artifact_path(request, code, file_path)
     if target_path.suffix.lower() in {".opml", ".json"}:
         json_path = target_path.with_suffix(".json")
         if json_path.is_file():

@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Generator
 
 from notebooklm_batch_studio.adapters.gemini import chrome_session
+from notebooklm_batch_studio.adapters.private_dir import ensure_private_dir
 from notebooklm_batch_studio.config.settings import load_config
 from notebooklm_batch_studio.domain.note_pipeline import PlaywrightStartupTimeoutError
 
@@ -176,7 +177,7 @@ class BrowserSessionManager:
         Returns:
             Profile 資料夾之絕對路徑。
         """
-        self.profile_dir.mkdir(parents=True, exist_ok=True)
+        ensure_private_dir(self.profile_dir)
         return self.profile_dir
 
     def get_launch_args(self, headless: bool = True) -> dict[str, Any]:

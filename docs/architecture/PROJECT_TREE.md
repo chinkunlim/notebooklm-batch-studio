@@ -94,7 +94,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-024-spec-011-gemini-notebook-explora.json
 │   │   ├── TASK-025-integrate-literature-fetch-and-u.json
 │   │   ├── TASK-026-integrate-note-studio-phase-1-mo.json
-│   │   └── TASK-027-integrate-note-studio-phase-2-st.json
+│   │   ├── TASK-027-integrate-note-studio-phase-2-st.json
+│   │   └── TASK-028-security-hardening-and-code-revi.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -147,7 +148,7 @@ notebooklm-batch-studio/
 │           ├── 06_feynman_spec.md
 │           ├── 07_quiz_spec.md
 │           ├── 08_supplement_spec.md
-│           └── README.md
+│           └── MODULAR_SPECS.md
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
 │   │   ├── 001-notebooklm-access.md
@@ -162,6 +163,7 @@ notebooklm-batch-studio/
 │   │   ├── 010-notebook-qa-notes-and-tag-system.md
 │   │   ├── 011-unified-study-hierarchy-and-literature-fetch.md
 │   │   ├── 012-note-studio-phase1-markdown-pipeline.md
+│   │   ├── 013-local-security-model.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -223,6 +225,13 @@ notebooklm-batch-studio/
 │   │   ├── 042-literature-openalex-wrong-paper.md
 │   │   ├── 043-literature-cloudflare-loop.md
 │   │   ├── 044-literature-refresh-loses-or-downgrades-pdf.md
+│   │   ├── 045-note-pipeline-path-traversal.md
+│   │   ├── 046-prompt-injection-xss.md
+│   │   ├── 047-literature-pdf-path-traversal.md
+│   │   ├── 048-literature-mcp-missing-confirm.md
+│   │   ├── 049-http-host-and-artifact-code.md
+│   │   ├── 050-artifact-view-ignores-study-dir.md
+│   │   ├── 051-reader-notes-premature-export.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -238,6 +247,7 @@ notebooklm-batch-studio/
 │   │   ├── 010-user-end-to-end-workflow.md
 │   │   ├── 011-notebook-qa-notes-and-tag-system.md
 │   │   ├── 012-literature-fetch-and-study-hierarchy.md
+│   │   ├── 013-note-studio-markdown-notes.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -342,6 +352,7 @@ notebooklm-batch-studio/
 │       │   │   └── client.py
 │       │   ├── __init__.py
 │       │   ├── note_driver_factory.py
+│       │   ├── private_dir.py
 │       │   └── web_search.py
 │       ├── config/
 │       │   ├── __init__.py
@@ -362,6 +373,7 @@ notebooklm-batch-studio/
 │       │   ├── naming.py
 │       │   ├── note_pipeline.py
 │       │   ├── notebooklm_protocol.py
+│       │   ├── path_safety.py
 │       │   ├── qa_notes.py
 │       │   ├── quota_parser.py
 │       │   ├── repositories.py
@@ -376,6 +388,7 @@ notebooklm-batch-studio/
 │       │   │   ├── fonts.py
 │       │   │   ├── learning.py
 │       │   │   ├── literature.py
+│       │   │   ├── literature_files.py
 │       │   │   ├── literature_notebook.py
 │       │   │   ├── notes.py
 │       │   │   ├── plan.py
@@ -634,6 +647,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-bench.js
 │       │   │   ├── studio-core.js
 │       │   │   ├── studio-cram.js
+│       │   │   ├── studio-escape.js
 │       │   │   ├── studio-focus.js
 │       │   │   ├── studio-fonts.js
 │       │   │   ├── studio-habit-presets.js
@@ -641,6 +655,8 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-layout-tune.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js
+│       │   │   ├── studio-literature-actions.js
+│       │   │   ├── studio-literature-rows.js
 │       │   │   ├── studio-literature-ui.js
 │       │   │   ├── studio-literature.js
 │       │   │   ├── studio-mindmap-designer.js
@@ -668,11 +684,14 @@ notebooklm-batch-studio/
 │       │   ├── api.py
 │       │   ├── cli.py
 │       │   ├── cli_literature.py
+│       │   ├── http_middleware.py
 │       │   ├── mcp_course_settings.py
+│       │   ├── mcp_extensions.py
 │       │   ├── mcp_fonts.py
 │       │   ├── mcp_job_prompts.py
 │       │   ├── mcp_learning.py
 │       │   ├── mcp_literature.py
+│       │   ├── mcp_literature_notebook.py
 │       │   ├── mcp_notes.py
 │       │   ├── mcp_preferences.py
 │       │   ├── mcp_qa_notes.py
@@ -697,9 +716,12 @@ notebooklm-batch-studio/
 │       │   │   └── report_converter.py
 │       │   ├── literature/
 │       │   │   ├── __init__.py
+│       │   │   ├── archive.py
+│       │   │   ├── export.py
 │       │   │   ├── jobs.py
 │       │   │   ├── literature.py
 │       │   │   ├── manager.py
+│       │   │   ├── manager_base.py
 │       │   │   ├── notebook_service.py
 │       │   │   ├── protocols.py
 │       │   │   └── reference_builder.py
@@ -708,6 +730,7 @@ notebooklm-batch-studio/
 │       │   │   ├── chapter_normalizer.py
 │       │   │   ├── module_composer.py
 │       │   │   ├── module_prompts.py
+│       │   │   ├── note_paths.py
 │       │   │   ├── note_pipeline_service.py
 │       │   │   ├── note_sync.py
 │       │   │   ├── state_manager.py
@@ -793,6 +816,7 @@ notebooklm-batch-studio/
 │   ├── test_remote_artifacts.py
 │   ├── test_rename.py
 │   ├── test_reverse_import.py
+│   ├── test_security_hardening.py
 │   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py
 │   ├── test_study_plan.py

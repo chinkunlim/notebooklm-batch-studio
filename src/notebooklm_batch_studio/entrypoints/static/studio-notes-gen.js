@@ -18,7 +18,7 @@ async function initNoteGenPanel() {
     const sel = document.getElementById('ngPromptStep');
     if (sel && _ngPromptsCache.length) {
       sel.innerHTML = _ngPromptsCache
-        .map((p) => `<option value="${p.step_id}">${p.step_id} — ${p.title}</option>`)
+        .map((p) => `<option value="${escHtml(p.step_id)}">${escHtml(p.step_id)} — ${escHtml(p.title)}</option>`)
         .join('');
       await previewNotePrompt();
     }
@@ -40,7 +40,7 @@ async function loadNoteGenCourses() {
     const data = await res.json();
     _ngCoursesCache = data.courses || data || [];
     const opts = ['<option value="">（手動填寫或暫存 scratch）</option>'].concat(
-      _ngCoursesCache.map((c) => `<option value="${c.code}">${c.code} — ${c.name}</option>`),
+      _ngCoursesCache.map((c) => `<option value="${escHtml(c.code)}">${escHtml(c.code)} — ${escHtml(c.name)}</option>`),
     );
     sel.innerHTML = opts.join('');
   } catch (err) {
@@ -75,7 +75,7 @@ async function onNoteGenCourseSelect() {
       lecSel.innerHTML = ['<option value="">（手動填寫章節）</option>']
         .concat(
           lectures.map(
-            (l) => `<option value="${l.lecture_no}">${String(l.lecture_no).padStart(2, '0')} — ${l.filename}</option>`,
+            (l) => `<option value="${escHtml(l.lecture_no)}">${String(l.lecture_no).padStart(2, '0')} — ${escHtml(l.filename)}</option>`,
           ),
         )
         .join('');
@@ -242,7 +242,7 @@ async function loadGeneratedChaptersList() {
       ? chapters
           .map(
             (ch) =>
-              `<button type="button" class="btn btn-soft btn-sm" onclick="selectGeneratedChapter('${ch.chapter_id}')">${ch.chapter_id} ${ch.title}</button>`,
+              `<button type="button" class="btn btn-soft btn-sm" onclick="selectGeneratedChapter(${jsAttr(ch.chapter_id)})">${escHtml(ch.chapter_id)} ${escHtml(ch.title)}</button>`,
           )
           .join('')
       : '<span class="small muted">尚無已縫合筆記</span>';

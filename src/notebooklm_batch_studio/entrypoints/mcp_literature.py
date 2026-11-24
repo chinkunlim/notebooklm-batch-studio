@@ -1,4 +1,8 @@
-"""MCP tools for literature fetching, APA 7 export, course import, and study migration (SPEC-012)."""
+"""MCP tools for literature fetching, APA 7 export, course import, and study migration (SPEC-012).
+
+Every tool that changes data, files, or the remote Literature Notebook requires `confirm=True`
+(core rule 13; Refs: ISSUE-048), so an agent steered by injected text cannot act silently.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +10,8 @@ import json
 import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel
 
 from notebooklm_batch_studio.adapters.db.literature_repository import LiteratureRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
@@ -18,13 +24,26 @@ from notebooklm_batch_studio.domain.study_hierarchy import (
 )
 from notebooklm_batch_studio.services.literature.jobs import JobRunOptions, LiteratureJobRunner
 from notebooklm_batch_studio.services.literature.manager import LiteratureManager
-from notebooklm_batch_studio.services.literature.notebook_service import LiteratureNotebookService
 from notebooklm_batch_studio.services.study_migration import migrate_courses_to_study_hierarchy
 
 if TYPE_CHECKING:
     from mcp.server.mcpserver import MCPServer
 
 logger = logging.getLogger(__name__)
+
+
+class LiteratureTarget(BaseModel):
+    """Where newly added literature should be filed.
+
+    Attributes:
+        course_code: Optional linked course code.
+        category: Study category (default `01 Material`).
+        subfolder: Subfolder under the category (default `Literature_Review`).
+    """
+
+    course_code: str | None = None
+    category: str = DEFAULT_LITERATURE_CATEGORY
+    subfolder: str = DEFAULT_LITERATURE_SUBFOLDER
 
 
 @dataclass(frozen=True)
@@ -36,6 +55,7 @@ class LiteratureToolDeps:
         config: Application configuration.
         runner: Shared `LiteratureJobRunner`.
         session_factory: SQLAlchemy session factory.
+        preferences: Optional preferences service (enables Literature Notebook tools).
     """
 
     service: Any
@@ -45,7 +65,7 @@ class LiteratureToolDeps:
     preferences: Any = None
 
 
-def _make_manager(deps: LiteratureToolDeps, session: Any) -> LiteratureManager:
+def make_manager(deps: LiteratureToolDeps, session: Any) -> LiteratureManager:
     """Construct a `LiteratureManager` bound to `session`.
 
     Args:
@@ -61,6 +81,49 @@ def _make_manager(deps: LiteratureToolDeps, session: Any) -> LiteratureManager:
         CourseRepository(session),
         AdapterLiteratureRuntime(deps.config),
     )
+
+
+def confirm_required(action: str) -> str:
+    """Build the standard JSON error returned when a mutating tool is called without `confirm=True`.
+
+    Args:
+        action: Short description of what the call would do.
+
+    Returns:
+        JSON string with an `error` message.
+    """
+    logger.info("MCP literature tool refused without confirm: %s", action)
+    return json.dumps({"error": f"Confirmation required: pass confirm=True to {action}."}, ensure_ascii=False)
+
+
+def _to_json(payload: Any) -> str:
+    """Serialize a tool result as pretty JSON.
+
+    Args:
+        payload: JSON-serializable value.
+
+    Returns:
+        JSON string.
+    """
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def _start_job(deps: LiteratureToolDeps, kind: str, opts: JobRunOptions) -> str:
+    """Start a background literature job and report it as JSON.
+
+    Args:
+        deps: Bundled literature dependencies.
+        kind: Job kind (`identify`, `download`, `interactive`, `refresh`).
+        opts: Job options.
+
+    Returns:
+        JSON string with the job, or an error when another job is running.
+    """
+    try:
+        job = deps.runner.start(kind=kind, opts=opts)
+    except AlreadyRunningError as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    return _to_json({"job": job.__dict__})
 
 
 def _register_list_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
@@ -82,9 +145,9 @@ def _register_list_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
             JSON string with tracked items.
         """
         with deps.session_factory() as session:
-            mgr = _make_manager(deps, session)
+            mgr = make_manager(deps, session)
             items = [mgr.serialize_item(item) for item in mgr.lit_repo.list_items(course_code=course_code)]
-            return json.dumps({"items": items}, ensure_ascii=False, indent=2)
+            return _to_json({"items": items})
 
     @mcp.tool()
     def export_literature_apa(course_code: str | None = None) -> str:
@@ -97,13 +160,11 @@ def _register_list_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
             JSON string with `count`, `plain`, and `html`.
         """
         with deps.session_factory() as session:
-            return json.dumps(
-                _make_manager(deps, session).export_apa_list(course_code), ensure_ascii=False, indent=2
-            )
+            return _to_json(make_manager(deps, session).export_apa_list(course_code))
 
 
 def _register_add_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
-    """Register `add_literature` MCP tool.
+    """Register `add_literature` MCP tool guarded by `confirm=True`.
 
     Args:
         mcp: FastMCP server instance.
@@ -111,32 +172,29 @@ def _register_add_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
     """
 
     @mcp.tool()
-    def add_literature(
-        text: str,
-        course_code: str | None = None,
-        category: str = DEFAULT_LITERATURE_CATEGORY,
-        subfolder: str = DEFAULT_LITERATURE_SUBFOLDER,
-    ) -> str:
-        """Add APA, DOI, or title entries to the literature fetch queue.
+    def add_literature(text: str, target: LiteratureTarget | None = None, confirm: bool = False) -> str:
+        """Add APA, DOI, or title entries to the literature fetch queue (requires `confirm=True`).
 
         Args:
             text: Newline-separated references.
-            course_code: Optional linked course code.
-            category: Study category (default `01 Material`).
-            subfolder: Subfolder under category (default `Literature_Review`).
+            target: Optional course / category / subfolder the PDFs should be filed under.
+            confirm: Must be True to add the entries.
 
         Returns:
             JSON string with added count and keys.
         """
+        if not confirm:
+            return confirm_required("add literature entries")
+        where = target or LiteratureTarget()
         with deps.session_factory() as session:
-            added = _make_manager(deps, session).add_entries(
-                text, course_code=course_code, category=category, subfolder=subfolder
+            added = make_manager(deps, session).add_entries(
+                text, course_code=where.course_code, category=where.category, subfolder=where.subfolder
             )
             return json.dumps({"added": len(added), "keys": [i.key for i in added]}, ensure_ascii=False)
 
 
 def _register_process_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
-    """Register `process_literature` MCP tool.
+    """Register `process_literature` MCP tool guarded by `confirm=True`.
 
     Args:
         mcp: FastMCP server instance.
@@ -145,53 +203,31 @@ def _register_process_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
 
     @mcp.tool()
     def process_literature(
-        interactive: bool = False, identify_only: bool = False, no_browser: bool = False
+        interactive: bool = False,
+        identify_only: bool = False,
+        no_browser: bool = False,
+        confirm: bool = False,
     ) -> str:
-        """Start a background job to identify and download pending literature PDFs.
+        """Start a background job to identify and download pending literature PDFs (requires `confirm=True`).
 
         Args:
             interactive: Launch visible Chrome for manual CAPTCHA/OpenAthens login.
             identify_only: Only resolve metadata and APA 7 without downloading PDFs.
             no_browser: Only try open-access HTTP sources.
+            confirm: Must be True to start the job.
 
         Returns:
             JSON string with started job metadata.
         """
+        if not confirm:
+            return confirm_required("start the literature download job")
         kind = "identify" if identify_only else ("interactive" if interactive else "download")
-        try:
-            job = deps.runner.start(
-                kind=kind,
-                opts=JobRunOptions(
-                    interactive=interactive, identify_only=identify_only, no_browser=no_browser
-                ),
-            )
-            return json.dumps({"job": job.__dict__}, ensure_ascii=False, indent=2)
-        except AlreadyRunningError as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
-
-    @mcp.tool()
-    def refresh_literature(key: str, interactive: bool = False) -> str:
-        """Try to upgrade an author-copy PDF to the publisher's version of record.
-
-        Args:
-            key: Literature item key.
-            interactive: Launch visible Chrome for manual CAPTCHA/OpenAthens login.
-
-        Returns:
-            JSON string with started job metadata.
-        """
-        try:
-            job = deps.runner.start(
-                kind="refresh",
-                opts=JobRunOptions(keys=[key], refresh_keys=frozenset({key}), interactive=interactive),
-            )
-            return json.dumps({"job": job.__dict__}, ensure_ascii=False, indent=2)
-        except AlreadyRunningError as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        opts = JobRunOptions(interactive=interactive, identify_only=identify_only, no_browser=no_browser)
+        return _start_job(deps, kind, opts)
 
 
-def _register_import_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
-    """Register `import_literature_to_course` MCP tool.
+def _register_refresh_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
+    """Register `refresh_literature` MCP tool guarded by `confirm=True`.
 
     Args:
         mcp: FastMCP server instance.
@@ -199,44 +235,99 @@ def _register_import_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
     """
 
     @mcp.tool()
-    def import_literature_to_course(key: str, course_code: str | None = None) -> str:
-        """Import a downloaded literature PDF into its linked course folder and rescan lectures.
+    def refresh_literature(key: str, interactive: bool = False, confirm: bool = False) -> str:
+        """Try to upgrade an author-copy PDF to the publisher's version of record (requires `confirm=True`).
+
+        Args:
+            key: Literature item key.
+            interactive: Launch visible Chrome for manual CAPTCHA/OpenAthens login.
+            confirm: Must be True to start the refresh job.
+
+        Returns:
+            JSON string with started job metadata.
+        """
+        if not confirm:
+            return confirm_required("refresh the literature PDF")
+        opts = JobRunOptions(keys=[key], refresh_keys=frozenset({key}), interactive=interactive)
+        return _start_job(deps, "refresh", opts)
+
+
+def _import_one(deps: LiteratureToolDeps, key: str, course_code: str | None) -> str:
+    """Import one literature PDF into its course folder and rescan the course.
+
+    Args:
+        deps: Bundled literature dependencies.
+        key: Literature item key.
+        course_code: Optional course code override.
+
+    Returns:
+        JSON string with the updated item, or an error.
+    """
+    with deps.session_factory() as session:
+        mgr = make_manager(deps, session)
+        try:
+            saved = mgr.import_to_course(key, course_code=course_code)
+        except ValueError as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        course = mgr.course_repo.get_course(saved.course_code) if saved.course_code else None
+        if course is not None:
+            deps.service.register_course(course.source_dir, custom_code=course.code)
+        return _to_json({"item": mgr.serialize_item(saved)})
+
+
+def _register_import_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
+    """Register the `import_literature_to_course` MCP tool.
+
+    Args:
+        mcp: FastMCP server instance.
+        deps: Bundled literature dependencies.
+    """
+
+    @mcp.tool()
+    def import_literature_to_course(key: str, course_code: str | None = None, confirm: bool = False) -> str:
+        """Import a downloaded literature PDF into its linked course folder (requires `confirm=True`).
 
         Args:
             key: Literature item key.
             course_code: Optional course code override.
+            confirm: Must be True to copy the PDF and rescan lectures.
 
         Returns:
             JSON string with updated literature item.
         """
-        with deps.session_factory() as session:
-            mgr = _make_manager(deps, session)
-            try:
-                saved = mgr.import_to_course(key, course_code=course_code)
-            except ValueError as exc:
-                return json.dumps({"error": str(exc)}, ensure_ascii=False)
-            course = mgr.course_repo.get_course(saved.course_code) if saved.course_code else None
-            if course is not None:
-                deps.service.register_course(course.source_dir, custom_code=course.code)
-            return json.dumps({"item": mgr.serialize_item(saved)}, ensure_ascii=False, indent=2)
+        if not confirm:
+            return confirm_required("import the PDF into the course folder")
+        return _import_one(deps, key, course_code)
+
+
+def _register_unarchive_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
+    """Register the `unarchive_literature` MCP tool.
+
+    Args:
+        mcp: FastMCP server instance.
+        deps: Bundled literature dependencies.
+    """
 
     @mcp.tool()
-    def unarchive_literature(key: str) -> str:
-        """Move an archived literature PDF back to the unarchived folder.
+    def unarchive_literature(key: str, confirm: bool = False) -> str:
+        """Move an archived literature PDF back to the unarchived folder (requires `confirm=True`).
 
         Args:
             key: Literature item key.
+            confirm: Must be True to move the file.
 
         Returns:
             JSON string with updated literature item.
         """
+        if not confirm:
+            return confirm_required("move the PDF back to the unarchived folder")
         with deps.session_factory() as session:
-            mgr = _make_manager(deps, session)
+            mgr = make_manager(deps, session)
             try:
                 saved = mgr.unarchive_item(key)
             except ValueError as exc:
                 return json.dumps({"error": str(exc)}, ensure_ascii=False)
-            return json.dumps({"item": mgr.serialize_item(saved)}, ensure_ascii=False, indent=2)
+            return _to_json({"item": mgr.serialize_item(saved)})
 
 
 def _register_delete_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
@@ -259,10 +350,7 @@ def _register_delete_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
             JSON string confirming deletion or requesting confirmation.
         """
         if not confirm:
-            return json.dumps(
-                {"error": "Confirmation required: pass confirm=True to delete literature item."},
-                ensure_ascii=False,
-            )
+            return confirm_required("delete literature item")
         with deps.session_factory() as session:
             deleted = LiteratureRepository(session).delete_item(key)
             return json.dumps({"deleted": deleted, "key": key}, ensure_ascii=False)
@@ -288,77 +376,16 @@ def _register_migrate_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
             JSON string with migration plan or results.
         """
         if not dry_run and not confirm:
-            return json.dumps(
-                {"error": "Confirmation required: pass confirm=True when dry_run=False."},
-                ensure_ascii=False,
-            )
+            return confirm_required("migrate when dry_run=False")
         with deps.session_factory() as session:
             res = migrate_courses_to_study_hierarchy(
                 StudyMigrationRepository(session), deps.config, dry_run=dry_run
             )
-            return json.dumps(res, ensure_ascii=False, indent=2)
-
-
-def _register_notebook_tools(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
-    """Register Gemini Literature Notebook sync, search, and Literature Review MCP tools.
-
-    Args:
-        mcp: FastMCP server instance.
-        deps: Bundled literature dependencies.
-    """
-
-    @mcp.tool()
-    async def sync_literature_notebook() -> str:
-        """Create/reuse the Gemini Literature Notebook and upload downloaded PDFs.
-
-        Returns:
-            JSON string with notebook ID, URL, and upload count.
-        """
-        with deps.session_factory() as session:
-            svc = LiteratureNotebookService(
-                deps.service.notebooklm_client, _make_manager(deps, session), deps.preferences
-            )
-            return json.dumps(await svc.sync_pdfs(), ensure_ascii=False, indent=2)
-
-    @mcp.tool()
-    async def query_literature_notebook(question: str) -> str:
-        """Query the Gemini Literature Notebook to find relevant papers and insights.
-
-        Args:
-            question: Search or synthesis question.
-
-        Returns:
-            JSON string with `answer` and `references`.
-        """
-        with deps.session_factory() as session:
-            svc = LiteratureNotebookService(
-                deps.service.notebooklm_client, _make_manager(deps, session), deps.preferences
-            )
-            return json.dumps(await svc.query(question), ensure_ascii=False, indent=2)
-
-    @mcp.tool()
-    async def generate_literature_review(key: str, force: bool = False) -> str:
-        """Generate a Western-university-format Literature Review for one paper via Gemini Notebook.
-
-        Args:
-            key: Literature item key.
-            force: Regenerate even if a review already exists.
-
-        Returns:
-            JSON string with `key` and `review_markdown`.
-        """
-        with deps.session_factory() as session:
-            svc = LiteratureNotebookService(
-                deps.service.notebooklm_client, _make_manager(deps, session), deps.preferences
-            )
-            updated = await svc.generate_review(key, force=force)
-            return json.dumps(
-                {"key": updated.key, "review_markdown": updated.review_markdown}, ensure_ascii=False, indent=2
-            )
+            return _to_json(res)
 
 
 def register_literature_tools(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
-    """Register all literature and study-hierarchy MCP tools on `mcp`.
+    """Register literature and study-hierarchy MCP tools (Notebook tools live in `mcp_literature_notebook`).
 
     Args:
         mcp: FastMCP server instance.
@@ -367,8 +394,8 @@ def register_literature_tools(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
     _register_list_tool(mcp, deps)
     _register_add_tool(mcp, deps)
     _register_process_tool(mcp, deps)
+    _register_refresh_tool(mcp, deps)
     _register_import_tool(mcp, deps)
+    _register_unarchive_tool(mcp, deps)
     _register_delete_tool(mcp, deps)
     _register_migrate_tool(mcp, deps)
-    if deps.preferences is not None:
-        _register_notebook_tools(mcp, deps)

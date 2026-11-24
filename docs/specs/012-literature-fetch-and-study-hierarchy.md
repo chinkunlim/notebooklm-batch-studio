@@ -1,6 +1,6 @@
 # SPEC-012: 整合 literature-fetch 與統一學習目錄結構
 
-- **狀態**：Approved
+- **狀態**：Implemented
 - **任務卡**：TASK-025
 - **架構決策**：[ADR-011](../adr/011-unified-study-hierarchy-and-literature-fetch.md)
 

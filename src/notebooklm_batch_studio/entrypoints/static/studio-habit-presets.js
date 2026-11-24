@@ -125,13 +125,13 @@ function applyMultiPrefs() {
   const toolBox = document.getElementById('benchToolChecks');
   if (toolBox && tools.length) {
     toolBox.innerHTML = tools.map(t => (
-      `<label class="multi-chip"><input type="checkbox" ${hiddenSet.has(t.id) ? '' : 'checked'} onchange="toggleMultiPref('tools','${t.id}',this.checked)"><span>${t.name}</span></label>`
+      `<label class="multi-chip"><input type="checkbox" ${hiddenSet.has(t.id) ? '' : 'checked'} onchange="toggleMultiPref('tools',${jsAttr(t.id)},this.checked)"><span>${t.name}</span></label>`
     )).join('');
   }
   const aiBox = document.getElementById('aiStyleChecks');
   if (aiBox) {
     aiBox.innerHTML = AI_STYLE_OPTIONS.map(o => (
-      `<label class="multi-chip"><input type="checkbox" ${aiSet.has(o.id) ? 'checked' : ''} onchange="toggleMultiPref('ai','${o.id}',this.checked)"><span>${o.label}</span></label>`
+      `<label class="multi-chip"><input type="checkbox" ${aiSet.has(o.id) ? 'checked' : ''} onchange="toggleMultiPref('ai',${jsAttr(o.id)},this.checked)"><span>${o.label}</span></label>`
     )).join('');
   }
   document.querySelectorAll('#benchTiles .tile[data-tool]').forEach(el => {

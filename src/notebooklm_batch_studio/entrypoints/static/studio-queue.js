@@ -247,7 +247,7 @@ function addArtifactBarHtml(code, key, list) {
   const lecArg = key === 'course' ? 'null' : key;
   return `<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">
     <select class="select" id="addArt_${escHtml(code)}_${key}" aria-label="選擇要補生成的產出">${opts}</select>
-    <button type="button" class="btn btn-soft btn-sm" onclick="addSingleArtifact('${escHtml(code)}', ${lecArg})">＋ 新增並生成</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="addSingleArtifact(${jsAttr(code)}, ${lecArg})">＋ 新增並生成</button>
   </div>`;
 }
 
@@ -312,13 +312,13 @@ function sourceToolbarHtml(data, code) {
     : '<span class="badge badge-warning">尚未建立遠端筆記本</span>';
   return `<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center">
     ${link}
-    <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseSources('${escAttr(code)}')">重新整理來源</button>
-    <button type="button" class="btn btn-soft btn-sm" onclick="setupCourse('${escAttr(code)}', event)">補傳未上傳講義</button>
-    <label class="btn btn-primary btn-sm" style="cursor:pointer">＋ 上傳 PDF 到筆記本<input type="file" accept=".pdf,application/pdf" hidden onchange="uploadCustomSourcePdf('${escAttr(code)}', this)"></label>
-    <button type="button" class="btn btn-soft btn-sm" onclick="addUrlSourceUi('${escAttr(code)}')">網址 / YouTube</button>
-    <button type="button" class="btn btn-soft btn-sm" onclick="addTextSourceUi('${escAttr(code)}')">貼上文字</button>
-    <button type="button" class="btn btn-soft btn-sm" onclick="researchSourcesUi('${escAttr(code)}')">網路研究搜來源</button>
-    <button type="button" class="btn btn-primary btn-sm" onclick="generateFromSelectedSourcesUi('${escAttr(code)}')">依勾選來源生成</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="loadCourseSources(${jsAttr(code)})">重新整理來源</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="setupCourse(${jsAttr(code)}, event)">補傳未上傳講義</button>
+    <label class="btn btn-primary btn-sm" style="cursor:pointer">＋ 上傳 PDF 到筆記本<input type="file" accept=".pdf,application/pdf" hidden onchange="uploadCustomSourcePdf(${jsAttr(code)}, this)"></label>
+    <button type="button" class="btn btn-soft btn-sm" onclick="addUrlSourceUi(${jsAttr(code)})">網址 / YouTube</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="addTextSourceUi(${jsAttr(code)})">貼上文字</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="researchSourcesUi(${jsAttr(code)})">網路研究搜來源</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick="generateFromSelectedSourcesUi(${jsAttr(code)})">依勾選來源生成</button>
   </div>`;
 }
 
@@ -366,7 +366,7 @@ function courseLecturesSourcesHtml(data, code) {
     const rmBtn = l.source_id
       ? `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger)" data-code="${escAttr(code)}" data-source-id="${escAttr(l.source_id)}" data-title="${escAttr(l.filename)}" onclick="deleteNotebookSource(this.dataset.code, this.dataset.sourceId, this.dataset.title)">移除遠端</button>` : '';
     return `<tr><td>L${pad2(l.no)}</td><td>${escHtml(l.topic)}</td><td><code>${escHtml(l.filename)}</code></td><td>${sourceStatusBadge(l.upload_status)}</td><td><code>${escHtml(l.source_id || '—')}</code></td>
-      <td><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-soft btn-sm" onclick="uploadLectureSource('${escAttr(code)}', ${l.no})">${upLabel}</button>${rmBtn}</div></td></tr>`;
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-soft btn-sm" onclick="uploadLectureSource(${jsAttr(code)}, ${l.no})">${upLabel}</button>${rmBtn}</div></td></tr>`;
   }).join('');
   return `<table><thead><tr><th>講次</th><th>主題</th><th>檔名</th><th>狀態</th><th>來源 ID</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
 }

@@ -11,6 +11,7 @@ from typing import Any, Protocol
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.study_hierarchy import (
     STUDY_CATEGORIES,
+    CourseMigrationTarget,
     ensure_course_study_tree,
     parse_term_subject,
     resolve_course_study_dir,
@@ -39,17 +40,11 @@ class StudyMigrationRepoProtocol(Protocol):
         """Return all courses eligible for migration."""
         ...
 
-    def apply_course_migration(
-        self, code: str, term: str, subject: str, study_dir: Path, new_notes_dir: Path
-    ) -> None:
+    def apply_course_migration(self, target: CourseMigrationTarget) -> None:
         """Update database paths for one migrated course.
 
         Args:
-            code: Course code.
-            term: Resolved academic term.
-            subject: Resolved subject name.
-            study_dir: New unified study directory.
-            new_notes_dir: New `<study_dir>/03 Notes/NotebookLM` directory.
+            target: Course code with its resolved term, subject, study folder, and notes folder.
         """
         ...
 
@@ -150,6 +145,41 @@ def _move_legacy_outputs(legacy_out: Path, study_dir: Path, dry_run: bool) -> in
     return moved
 
 
+def _relocate_course_files(
+    src_dir: Path, study_dir: Path, legacy_out: Path, dry_run: bool
+) -> tuple[int, int]:
+    """Move a course's PDFs into `02 Handout` and its legacy outputs into `03 Notes`.
+
+    Args:
+        src_dir: Previous course input directory.
+        study_dir: Target unified course study directory.
+        legacy_out: Legacy `<data_dir>/output/courses/<code>` directory.
+        dry_run: Preview mode flag.
+
+    Returns:
+        Tuple of `(moved_pdfs, moved_outputs)`.
+    """
+    if not dry_run:
+        ensure_course_study_tree(study_dir)
+        if (src_dir / "course.toml").is_file() and not (study_dir / "course.toml").is_file():
+            shutil.move(str(src_dir / "course.toml"), str(study_dir / "course.toml"))
+    skip = set(STUDY_CATEGORIES) | {"course.toml"}
+    moved_pdfs = _move_children(src_dir, study_dir / "02 Handout", skip, dry_run)
+    return moved_pdfs, _move_legacy_outputs(legacy_out, study_dir, dry_run=dry_run)
+
+
+def _remove_if_empty(folder: Path, keep: Path) -> None:
+    """Remove a now-empty legacy folder (never `keep`).
+
+    Args:
+        folder: Folder that may be empty after migration.
+        keep: Folder that must never be removed.
+    """
+    if folder.is_dir() and folder != keep and not any(folder.iterdir()):
+        folder.rmdir()
+        logger.info("Removed empty legacy folder %s", folder)
+
+
 def _migrate_one_course(
     repo: StudyMigrationRepoProtocol,
     config: AppConfig,
@@ -170,42 +200,18 @@ def _migrate_one_course(
     term, subject, study_dir = _resolve_target(config, course)
     src_dir = Path(course.source_dir) if course.source_dir else (config.courses_input_dir / course.code)
     legacy_out = config.courses_output_dir / course.code
+    summary = (course.code, course.name, term, subject, str(src_dir), str(study_dir))
 
     if bool(course.study_dir) and Path(course.study_dir) == study_dir and src_dir == study_dir:
-        return CourseMigrationItem(
-            course.code, course.name, term, subject, str(src_dir), str(study_dir), 0, 0, "already_migrated"
-        )
+        return CourseMigrationItem(*summary, 0, 0, "already_migrated")
 
+    moved_pdfs, moved_outputs = _relocate_course_files(src_dir, study_dir, legacy_out, dry_run)
     if not dry_run:
-        ensure_course_study_tree(study_dir)
-        if (src_dir / "course.toml").is_file() and not (study_dir / "course.toml").is_file():
-            shutil.move(str(src_dir / "course.toml"), str(study_dir / "course.toml"))
-
-    moved_pdfs = _move_children(
-        src_dir, study_dir / "02 Handout", set(STUDY_CATEGORIES) | {"course.toml"}, dry_run
-    )
-    moved_outputs = _move_legacy_outputs(legacy_out, study_dir, dry_run=dry_run)
-
-    if not dry_run:
-        repo.apply_course_migration(
-            course.code, term, subject, study_dir, resolve_notebooklm_notes_dir(study_dir)
-        )
-        if src_dir.is_dir() and src_dir != study_dir and not any(src_dir.iterdir()):
-            src_dir.rmdir()
-        if legacy_out.is_dir() and not any(legacy_out.iterdir()):
-            legacy_out.rmdir()
-
-    return CourseMigrationItem(
-        code=course.code,
-        name=course.name,
-        term=term,
-        subject=subject,
-        old_source_dir=str(src_dir),
-        new_study_dir=str(study_dir),
-        moved_pdfs=moved_pdfs,
-        moved_outputs=moved_outputs,
-        status="planned" if dry_run else "migrated",
-    )
+        notes_dir = resolve_notebooklm_notes_dir(study_dir)
+        repo.apply_course_migration(CourseMigrationTarget(course.code, term, subject, study_dir, notes_dir))
+        _remove_if_empty(src_dir, keep=study_dir)
+        _remove_if_empty(legacy_out, keep=study_dir)
+    return CourseMigrationItem(*summary, moved_pdfs, moved_outputs, "planned" if dry_run else "migrated")
 
 
 def migrate_courses_to_study_hierarchy(

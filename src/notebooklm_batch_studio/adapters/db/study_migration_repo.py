@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from notebooklm_batch_studio.adapters.db.models import ArtifactJobRecord, CourseRecord, LectureRecord
+from notebooklm_batch_studio.domain.study_hierarchy import CourseMigrationTarget
 
 logger = logging.getLogger(__name__)
 
@@ -65,18 +66,14 @@ class StudyMigrationRepository:
             for r in rows
         ]
 
-    def apply_course_migration(
-        self, code: str, term: str, subject: str, study_dir: Path, new_notes_dir: Path
-    ) -> None:
+    def apply_course_migration(self, target: CourseMigrationTarget) -> None:
         """Update `courses`, `lectures`, and `artifact_jobs` paths for one migrated course.
 
         Args:
-            code: Course code.
-            term: Resolved academic term.
-            subject: Resolved subject name.
-            study_dir: New unified study directory.
-            new_notes_dir: New `<study_dir>/03 Notes/NotebookLM` directory.
+            target: Course code with its resolved term, subject, study folder, and notes folder.
         """
+        code, study_dir, new_notes_dir = target.code, target.study_dir, target.notes_dir
+        term, subject = target.term, target.subject
         record = self.session.get(CourseRecord, code)
         if record is None:
             return

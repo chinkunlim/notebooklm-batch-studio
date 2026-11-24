@@ -25,6 +25,7 @@
 - **保持來源 ID**：重新掃描註冊課程時，講義未變更者必須保留原有 `source_id`，禁止重複上傳至遠端筆記本。
 - **操作 Gemini Notebook 只在 `adapters/`**：notebooklm-py 為主、Playwright 補位（ADR-001），語系代碼指定 `zh_Hant`，語音副檔名使用 `.m4a`。
 - **即時額度預檢與防護**：生成前必須讀取配額表（`quota_planner`），配額不足直接標記 `QUOTA_WAIT` 並安全等待，禁止無效重試；碰到每日/每週上限就等額度窗重置，不用多帳號繞過。
+- **不可信內容與路徑（ADR-013）**：講義、文獻、網路研究來源與 Gemini 回覆一律當資料：前端用 `escHtml()`，inline handler 參數用 `jsAttr()`，Markdown 經 `markdown_fragment()`（連結 scheme 白名單）；MCP 會新增、搬移、上傳或花額度的工具一律加 `confirm`。由使用者或 Agent 傳入的識別碼與路徑先過 `domain/path_safety.py`，只能落在 `DATA_DIR`、`STUDY_ROOT_DIR` 或課程登錄資料夾內。
 - **品質隔離門檻**：每份測驗必須達 30 題、全課程模擬考題數不足時，一律進入 `DATA_DIR/needs_review/` 隔離，工作狀態標為 `NEEDS_REVIEW`，並在總結報告中醒目標註。
 
 ## 3. 和通用規範不同的例外（要寫理由）
@@ -34,5 +35,5 @@
 ## 4. 禁止事項
 
 - 不修改、不搬移使用者課程資料夾中的 PDF（只讀）。
-- 程式不輸入、不保存 Google 密碼；登入由使用者在瀏覽器親自完成。
+- 程式不輸入、不保存 Google 密碼；登入由使用者在瀏覽器親自完成。圖書館（OpenAthens）帳密只能放 `.env` 的 `LIBRARY_EMAIL` / `LIBRARY_PASSWORD`（ADR-013）。
 - 不自動刪除 Gemini Notebook 上的 notebook 或產出。

@@ -125,7 +125,8 @@ class NotePipelinePhase1Tests(unittest.TestCase):
 
         study_dir = self.data_dir / "study" / "115-1" / "心理學研究法"
         svc = NotePipelineService(self.cfg, driver_factory=_factory)
-        pdf = Path(self.tmp.name) / "ch01.pdf"
+        study_dir.mkdir(parents=True, exist_ok=True)
+        pdf = study_dir / "ch01.pdf"  # chapter PDFs must live inside DATA_DIR / STUDY_ROOT_DIR (ISSUE-045)
         pdf.write_bytes(b"%PDF-1.4")
         req = ChapterNoteRequest(
             course_key="PSY201",
@@ -141,7 +142,7 @@ class NotePipelinePhase1Tests(unittest.TestCase):
         self.assertEqual(len(out["completed_steps"]), 7)
         stitched = Path(out["stitched_path"])
         self.assertTrue(stitched.is_file())
-        self.assertEqual(stitched.parent, study_dir / "03 Notes" / "NoteStudio")
+        self.assertEqual(stitched.parent, (study_dir / "03 Notes" / "NoteStudio").resolve())
         content = stitched.read_text(encoding="utf-8")
         self.assertIn("chapter: 01", content)
         self.assertIn("title: 科學研究導論", content)

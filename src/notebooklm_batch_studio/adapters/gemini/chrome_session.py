@@ -31,6 +31,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generator
 
+from notebooklm_batch_studio.adapters.private_dir import ensure_private_dir
+
 logger = logging.getLogger(__name__)
 
 GEMINI_APP_URL = "https://gemini.google.com/app"
@@ -229,7 +231,7 @@ def _launch_chrome_process(launch: ChromeLaunch, port: int) -> None:
         launch: Chrome 啟動設定。
         port: 預先分配之除錯埠號。
     """
-    launch.user_data_dir.mkdir(parents=True, exist_ok=True)
+    ensure_private_dir(launch.user_data_dir)
     stale_file = launch.user_data_dir / _PORT_FILE
     if stale_file.exists():
         try:

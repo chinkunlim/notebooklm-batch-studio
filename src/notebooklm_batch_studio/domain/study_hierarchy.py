@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -205,3 +206,22 @@ def resolve_course_output_root(
     if study_dir:
         return resolve_notebooklm_notes_dir(Path(study_dir))
     return default_courses_output_dir / course_code
+
+
+@dataclass(frozen=True)
+class CourseMigrationTarget:
+    """Where one course lands after migrating into `<study_root>/<term>/<subject>`.
+
+    Attributes:
+        code: Course code.
+        term: Resolved academic term.
+        subject: Resolved subject name.
+        study_dir: New unified study directory.
+        notes_dir: New `<study_dir>/03 Notes/NotebookLM` directory.
+    """
+
+    code: str
+    term: str
+    subject: str
+    study_dir: Path
+    notes_dir: Path

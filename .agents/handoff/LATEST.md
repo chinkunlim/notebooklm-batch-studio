@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-23 07:47 UTC`
-- **最近操作 Agent**: `antigravity`
+- **最後更新時間**: `2026-11-24 02:13 UTC`
+- **最近操作 Agent**: `claude-code`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `52e2ebb fix(notes): fallback unlinked note outputs to scratch/notes instead of study unsorted [agent:antigravity]`
+- **最新 Git Commit**: `fc19a68 feat(notes): integrate note-studio Phase 2 course auto-fill, push-to-source, and legacy import (TASK-027) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-24 02:13 UTC] 完成任務 `TASK-028` — Security hardening and code-review zero-violation cleanup (by `claude-code`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Security hardening (path traversal, prompt-injection XSS, CSP, MCP confirm, browser profile perms, library credentials), artifact study_dir 404 fix, zero code-review warnings, SPEC-013, ADR-013, ISSUE-045..051
+
+### [2026-11-24 01:49 UTC] 建立任務 `TASK-028`: Security hardening and code-review zero-violation cleanup (by `claude-code`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-23 07:47 UTC] 完成任務 `TASK-027` — Integrate note-studio Phase 2: study studio integration, course auto-fill, and notebook push-back (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -109,11 +117,3 @@
 ### [2026-11-14 05:18 UTC] 完成任務 `TASK-021` — Fix failed artifact job manual rerun and automatic retry recovery (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Enable manual UI/HTTP/MCP rerun and automatic cooldown/orphan recovery for failed artifact jobs (ISSUE-038)
-
-### [2026-11-14 05:12 UTC] 建立任務 `TASK-021`: Fix failed artifact job manual rerun and automatic retry recovery (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-11-14 04:36 UTC] 完成任務 `TASK-019` — Audit all resolved known issues with verification evidence and exclude vendor noise from graphify (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Resolved and verified with unit/integration tests and zero review_guard violations

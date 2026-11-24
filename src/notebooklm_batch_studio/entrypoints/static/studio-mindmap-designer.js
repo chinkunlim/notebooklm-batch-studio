@@ -104,7 +104,7 @@ function resetMindmapStyle() {
  */
 function mmStyleRowHtml(key, items, cfg) {
   return items.map(([v, label, swatch]) =>
-    `<button type="button" class="reader-pill-btn${cfg[key] === v ? ' on' : ''}" onclick="setMindmapStyleOption('${key}','${v}')">${swatch ? `<span class="mm-swatch" style="background:${swatch}"></span>` : ''}${label}</button>`
+    `<button type="button" class="reader-pill-btn${cfg[key] === v ? ' on' : ''}" onclick="setMindmapStyleOption(${jsAttr(key)},${jsAttr(v)})">${swatch ? `<span class="mm-swatch" style="background:${swatch}"></span>` : ''}${label}</button>`
   ).join('');
 }
 
@@ -117,7 +117,7 @@ function mmStyleRowHtml(key, items, cfg) {
 function mmDesignerRowsHtml(cfg, includeLayout) {
   const presetBtns = MM_PRESETS.map(p => {
     const active = Object.entries(p.cfg).every(([k, v]) => cfg[k] === v);
-    return `<button type="button" class="reader-pill-btn${active ? ' on' : ''}" onclick="applyMindmapPreset('${p.id}')">${p.label}</button>`;
+    return `<button type="button" class="reader-pill-btn${active ? ' on' : ''}" onclick="applyMindmapPreset(${jsAttr(p.id)})">${p.label}</button>`;
   }).join('');
   const layoutRow = includeLayout
     ? `<div class="mm-pop-row"><span>版型</span><div>${mmStyleRowHtml('layout', [['tree-right', '橫向樹狀'], ['tree-bilateral', '雙向放射'], ['org-down', '由上而下']], cfg)}</div></div>`

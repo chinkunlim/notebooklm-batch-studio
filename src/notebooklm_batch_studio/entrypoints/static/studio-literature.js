@@ -21,8 +21,6 @@
   let sortRules = [{ col: 'seq', dir: 'asc' }];
   const {
     litApi,
-    statusBadgeClass,
-    shortStatusLabel,
     escapeHtml,
     getSelectVal,
     setSelectVal,
@@ -30,10 +28,11 @@
     getLitScale,
     mountInlinePdf,
     applyLitScale,
-    renderExpandRowHtml,
     renderExcelColPopoverHtml,
     caretSvg,
   } = window.LitUi;
+  const { courseOptionsHtml, renderItemRow, sortItems, getColFilterVal, sortBadgeHtml } = window.LitRows;
+  const { renderJobBanner, renderNotebookStatus, handleAddAndProcess, handleCopyApa, bindNotebookEvents } = window.LitActions;
 
   /**
    * Look up an element by its DOM id.
@@ -45,21 +44,6 @@
   }
 
   /**
-   * Build custom `.lit-select-opt` buttons for the available courses.
-   * @param {string} selectedCode Currently selected course code.
-   * @param {string} emptyLabel Label for the empty option.
-   * @returns {string} HTML options string.
-   */
-  function courseOptionsHtml(selectedCode, emptyLabel) {
-    const base = `<button type="button" class="lit-select-opt${selectedCode ? '' : ' on'}" data-val="">${escapeHtml(emptyLabel)}</button>`;
-    return base + cachedCourses.map(c => {
-      const prefix = c.term ? `[${c.term}] ` : '';
-      const on = c.code === selectedCode ? ' on' : '';
-      return `<button type="button" class="lit-select-opt${on}" data-val="${escapeHtml(c.code)}">${escapeHtml(prefix + c.name + ' (' + c.code + ')')}</button>`;
-    }).join('');
-  }
-
-  /**
    * Populate the top custom course dropdown with registered courses.
    * @param {Array<object>} courses Course list from `/api/courses`.
    */
@@ -68,85 +52,8 @@
     const menu = litEl('litCourseMenu');
     if (!menu) return;
     const prev = getSelectVal('litCourseSelectWrap');
-    menu.innerHTML = courseOptionsHtml(prev, '（不綁定 · 暫存 scratch）');
+    menu.innerHTML = courseOptionsHtml(cachedCourses, prev, '（不綁定 · 暫存 scratch）');
     setSelectVal('litCourseSelectWrap', prev);
-  }
-
-  /**
-   * Render the active or latest literature job status banner.
-   * @param {object} data Response payload from `/api/literature`.
-   */
-  function renderJobBanner(data) {
-    const banner = litEl('litJobBanner');
-    if (!banner) return;
-    const job = data.job;
-    if (data.running && job) {
-      banner.style.display = 'flex';
-      banner.innerHTML = `<span>處理中 (${job.done || 0}/${job.total || 0})：${escapeHtml(job.message || '')}</span>`;
-      return;
-    }
-    if (job && job.message) {
-      banner.style.display = 'flex';
-      banner.innerHTML = `<span>最近執行：${escapeHtml(job.message)}</span>`;
-      return;
-    }
-    banner.style.display = 'none';
-  }
-
-  /**
-   * Render the inline archive popover menu inside the `歸檔位置` cell when open.
-   * @param {object} item Serialized literature item.
-   * @returns {string} HTML markup for the archive menu, or empty string.
-   */
-  function renderArchiveMenu(item) {
-    if (openArchiveKey !== item.key) return '';
-    const defCourse = item.course_code || getSelectVal('litCourseSelectWrap') || '';
-    const defCat = item.target_category || getSelectVal('litCategorySelectWrap') || '01 Material';
-    const defSub = item.target_subfolder || litEl('litSubfolderInput')?.value || 'Literature_Review';
-    const courseObj = cachedCourses.find(c => c.code === defCourse);
-    const courseLabel = courseObj ? `${courseObj.term ? `[${courseObj.term}] ` : ''}${courseObj.name} (${courseObj.code})` : '請選擇科目…';
-    const cats = ['01 Material', '02 Handout', '03 Notes', '04 Homework', '05 Assignments'];
-    const catOpts = cats.map(c => `<button type="button" class="lit-select-opt${c === defCat ? ' on' : ''}" data-val="${c}">${c}</button>`).join('');
-    return `
-      <div class="lit-archive-menu">
-        <div class="lit-select" data-lit-menu-course="${escapeHtml(item.key)}" data-value="${escapeHtml(defCourse)}">
-          <button type="button" class="lit-select-btn"><span class="lit-sel-txt">${escapeHtml(courseLabel)}</span><i class="icon-chevron-down"></i></button>
-          <div class="lit-select-menu">${courseOptionsHtml(defCourse, '請選擇科目…')}</div>
-        </div>
-        <div class="lit-select" data-lit-menu-cat="${escapeHtml(item.key)}" data-value="${escapeHtml(defCat)}">
-          <button type="button" class="lit-select-btn"><span class="lit-sel-txt">${escapeHtml(defCat)}</span><i class="icon-chevron-down"></i></button>
-          <div class="lit-select-menu">${catOpts}</div>
-        </div>
-        <input class="input" type="text" value="${escapeHtml(defSub)}" data-lit-menu-sub="${escapeHtml(item.key)}" placeholder="子資料夾" />
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-xs btn-primary" data-lit-confirm-archive="${escapeHtml(item.key)}">確認歸檔</button>
-          <button class="btn btn-xs btn-soft" data-lit-cancel-archive="${escapeHtml(item.key)}">取消</button>
-        </div>
-      </div>`;
-  }
-
-  /**
-   * Render the right-hand `歸檔位置` cell with inline archive/re-archive controls.
-   * @param {object} item Serialized literature item.
-   * @returns {string} HTML `<td>` content.
-   */
-  function renderTargetCell(item) {
-    const label = item.course_code
-      ? `${escapeHtml(item.course_code)} → ${escapeHtml(item.target_category)}/${escapeHtml(item.target_subfolder)}`
-      : '未歸檔（暫存區）';
-    let btns = '';
-    if (item.file) {
-      btns = item.imported_to_course
-        ? `<button class="btn btn-xs btn-soft" data-lit-toggle-archive="${escapeHtml(item.key)}">改歸檔</button>
-           <button class="btn btn-xs btn-soft" data-lit-unarchive="${escapeHtml(item.key)}">退回未歸檔</button>`
-        : `<button class="btn btn-xs btn-primary" data-lit-toggle-archive="${escapeHtml(item.key)}">歸檔到課程</button>`;
-    }
-    return `
-      <div class="lit-target-wrap">
-        <div class="small muted">${label}</div>
-        <div class="lit-target-actions">${btns}</div>
-        ${renderArchiveMenu(item)}
-      </div>`;
   }
 
   /**
@@ -165,108 +72,6 @@
   }
 
   /**
-   * Render one table row (plus optional expanded PDF row) for a tracked literature item.
-   * @param {object} item Serialized literature item.
-   * @returns {string} HTML `<tr>` markup.
-   */
-  function renderItemRow(item) {
-    const isOpen = expandedPdfKey === item.key;
-    const checked = selectedKeys.has(item.key) ? ' checked' : '';
-    const pdfBtn = item.file_url
-      ? `<button class="btn btn-xs ${isOpen ? 'btn-primary' : 'btn-soft'}" data-lit-view="${escapeHtml(item.key)}">${isOpen ? '收合 PDF' : '查看 PDF'}</button>`
-      : '';
-    const refreshBtn = item.status === 'downloaded_copy'
-      ? `<button class="btn btn-xs btn-soft" data-lit-refresh="${escapeHtml(item.key)}" title="嘗試從出版社下載正式版，找不到時保留原檔">試抓正式版</button>`
-      : '';
-    const isRevOpen = expandedReviewKey === item.key;
-    const reviewBtn = item.file
-      ? `<button class="btn btn-xs ${isRevOpen ? 'btn-primary' : 'btn-soft'}" data-lit-review="${escapeHtml(item.key)}">${item.has_review ? (isRevOpen ? '收合 Review' : '查看 Review') : '生成 Review'}</button>`
-      : '';
-    const stageText = item.stage ? `<div class="small muted" style="margin-top:4px">目前步驟：${escapeHtml(item.stage)}</div>` : '';
-    const notesText = item.notes ? `<div class="small muted" style="margin-top:4px">${escapeHtml(item.notes)}</div>` : '';
-    return `
-      <tr class="lit-row">
-        <td class="lit-col-seq">
-          <label class="lit-check-cell">
-            <input type="checkbox" class="lit-row-check" data-lit-select="${escapeHtml(item.key)}"${checked} />
-            <span class="small muted">${item._seq}</span>
-          </label>
-        </td>
-        <td class="lit-col-status">
-          <span class="${statusBadgeClass(item.status)}" title="${escapeHtml(item.source || '')}">${escapeHtml(shortStatusLabel(item))}</span>
-        </td>
-        <td class="lit-col-main">
-          <div class="lit-apa-box">${item.apa_html || escapeHtml(item.apa || item.input)}</div>
-          ${stageText}
-          ${notesText}
-          <div class="lit-actions">
-            ${pdfBtn}
-            ${reviewBtn}
-            ${refreshBtn}
-            <button class="btn btn-xs btn-soft" data-lit-retry="${escapeHtml(item.key)}">重試</button>
-            <button class="btn btn-xs btn-soft" data-lit-reid="${escapeHtml(item.key)}">改字重認</button>
-            <button class="btn btn-xs btn-soft" data-lit-del="${escapeHtml(item.key)}">刪除</button>
-          </div>
-        </td>
-        <td class="lit-col-target">${renderTargetCell(item)}</td>
-      </tr>${renderExpandRowHtml(item, expandedPdfKey, expandedReviewKey)}`;
-  }
-
-  /**
-   * Compare two items by one column key.
-   * @param {object} a First item.
-   * @param {object} b Second item.
-   * @param {string} col Column key (`seq` | `status` | `apa` | `target`).
-   * @returns {number} Comparison result.
-   */
-  function compareByCol(a, b, col) {
-    if (col === 'seq') return a._seq - b._seq;
-    if (col === 'status') return String(a.status_label || a.status).localeCompare(String(b.status_label || b.status), 'zh-Hant');
-    if (col === 'target') return String(a.course_code || '').localeCompare(String(b.course_code || ''), 'zh-Hant');
-    return String(a.apa || a.input || '').localeCompare(String(b.apa || b.input || ''), 'en');
-  }
-
-  /**
-   * Sort visible literature items using multi-condition `sortRules`.
-   * @param {Array<object>} items Literature items with `_seq` assigned.
-   * @returns {Array<object>} Sorted copy.
-   */
-  function sortItems(items) {
-    return [...items].sort((a, b) => {
-      for (const rule of sortRules) {
-        const cmp = compareByCol(a, b, rule.col);
-        if (cmp !== 0) return cmp * (rule.dir === 'asc' ? 1 : -1);
-      }
-      return a._seq - b._seq;
-    });
-  }
-
-  /**
-   * Extract the display/filter key for a filterable table column.
-   * @param {object} item Serialized literature item.
-   * @param {string} col Column key (`seq` | `status` | `target`).
-   * @returns {string} Display label used in column checkboxes.
-   */
-  function getColFilterVal(item, col) {
-    if (col === 'seq') return String(item._seq);
-    if (col === 'status') return shortStatusLabel(item);
-    return item.course_code ? `${item.course_code} → ${item.target_category}/${item.target_subfolder}` : '未歸檔（暫存區）';
-  }
-
-  /**
-   * Format the sort indicator badge HTML for a column key.
-   * @param {string} col Column key.
-   * @returns {string} Badge HTML or empty string.
-   */
-  function sortBadgeHtml(col) {
-    const idx = sortRules.findIndex(r => r.col === col);
-    if (idx === -1) return '';
-    const arrow = caretSvg(sortRules[idx].dir === 'asc' ? 'up' : 'down');
-    const num = sortRules.length > 1 ? `${idx + 1}` : '';
-    return `<span class="lit-sort-badge">${num}${arrow}</span>`;
-  }
-
-  /**
    * Update multi-condition sort badges and Excel-style filter popovers on table headers.
    */
   function updateSortHeaders() {
@@ -274,7 +79,7 @@
     document.querySelectorAll('#view-literature [data-lit-th]').forEach(wrap => {
       const col = wrap.getAttribute('data-lit-th');
       const isFiltered = col === 'apa' ? Boolean(apaSearchQuery.trim()) : Boolean(colFilters[col]);
-      const badge = sortBadgeHtml(col);
+      const badge = sortBadgeHtml(col, sortRules);
       const indicator = badge || caretSvg('down');
       const pop = openColPop === col
         ? renderExcelColPopoverHtml({ col, items: lastAllItems, sortRules, activeSet: colFilters[col], valGetter: getColFilterVal, apaQuery: apaSearchQuery })
@@ -310,7 +115,7 @@
   function renderItems(items, skipHeaderUpdate) {
     const body = litEl('litItemsBody');
     if (!body) return;
-    const sorted = sortItems(items || []);
+    const sorted = sortItems(items || [], sortRules);
     visibleItemKeys = sorted.map(i => i.key);
     syncSelectionUi();
     if (!skipHeaderUpdate) updateSortHeaders();
@@ -318,7 +123,8 @@
       body.innerHTML = '<tr><td colspan="4" class="muted small">尚無文獻紀錄。請在上方貼上 APA、標題或 DOI。</td></tr>';
       return;
     }
-    body.innerHTML = sorted.map(renderItemRow).join('');
+    const st = { selectedKeys, expandedPdfKey, expandedReviewKey, openArchiveKey, courses: cachedCourses };
+    body.innerHTML = sorted.map(item => renderItemRow(item, st)).join('');
     const expandEl = litEl('litExpandPages');
     if (expandEl) {
       const pdfUrl = expandEl.getAttribute('data-pdf-url');
@@ -339,16 +145,7 @@
     populateCourseDropdown(coursesData.courses || coursesData || []);
     const dirEl = litEl('litUnarchivedDir');
     if (dirEl && litData.unarchived_dir) dirEl.textContent = litData.unarchived_dir;
-    if (nbData) {
-      const st = litEl('litNbStatus');
-      const link = litEl('litNbOpenLink');
-      const base = `已同步 ${nbData.synced_count}/${nbData.total_with_pdf} 份 PDF · 已生成 ${nbData.reviewed_count} 篇 Review`;
-      if (st) st.textContent = nbData.review_message ? `${base} ｜ ${nbData.review_message}` : base;
-      if (link) {
-        link.style.display = nbData.notebook_url ? 'inline-flex' : 'none';
-        if (nbData.notebook_url) link.href = nbData.notebook_url;
-      }
-    }
+    if (nbData) renderNotebookStatus(nbData);
     renderJobBanner(litData);
 
     lastAllItems = (litData.items || []).map((item, idx) => ({ ...item, _seq: idx + 1 }));
@@ -360,64 +157,6 @@
     } else if (!anyRunning && litPollTimer) {
       clearInterval(litPollTimer);
       litPollTimer = null;
-    }
-  }
-
-  /**
-   * Add pasted entries (if any) and trigger a background fetch or identify run.
-   * @param {boolean} identifyOnly When true, only resolve metadata and APA 7.
-   * @returns {Promise<void>}
-   */
-  async function handleAddAndProcess(identifyOnly) {
-    const raw = litEl('litInputText')?.value.trim() || '';
-    const courseCode = getSelectVal('litCourseSelectWrap') || null;
-    const category = getSelectVal('litCategorySelectWrap') || '01 Material';
-    const subfolder = litEl('litSubfolderInput')?.value.trim() || 'Literature_Review';
-    const interactive = Boolean(litEl('litInteractiveCheck')?.checked);
-
-    if (raw) {
-      await litApi('/api/literature/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: raw, course_code: courseCode, category, subfolder }),
-      });
-      litEl('litInputText').value = '';
-    }
-
-    await litApi('/api/literature/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ interactive, identify_only: identifyOnly }),
-    });
-    await refreshLiterature();
-  }
-
-  /**
-   * Copy sorted APA 7 references to the clipboard preserving italic HTML formatting.
-   * @returns {Promise<void>}
-   */
-  async function handleCopyApa() {
-    const chosen = Array.from(selectedKeys);
-    const qs = chosen.length > 0 ? `?keys=${encodeURIComponent(chosen.join(','))}` : '';
-    const data = await litApi('/api/literature/export/apa' + qs);
-    if (!data.count) {
-      alert('目前沒有可產生的 APA 7 參考文獻。');
-      return;
-    }
-    const box = litEl('litApaPreviewBox');
-    const title = litEl('litApaPreviewTitle');
-    const body = litEl('litApaPreviewBody');
-    if (box && body) {
-      if (title) title.textContent = `APA 7 參考文獻清單（共 ${data.count} 筆 · 已複製到剪貼簿）`;
-      body.innerHTML = data.html;
-      box.style.display = 'block';
-    }
-    if (navigator.clipboard && window.ClipboardItem) {
-      const htmlBlob = new Blob([data.html], { type: 'text/html' });
-      const textBlob = new Blob([data.plain], { type: 'text/plain' });
-      await navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })]);
-    } else if (navigator.clipboard) {
-      await navigator.clipboard.writeText(data.plain);
     }
   }
 
@@ -562,41 +301,6 @@
   }
 
   /**
-   * Bind Gemini Literature Notebook sync, batch review, and Q&A search buttons.
-   */
-  function bindNotebookEvents() {
-    litEl('litNbSyncBtn')?.addEventListener('click', async () => {
-      const btn = litEl('litNbSyncBtn');
-      if (btn) btn.textContent = '同步中…';
-      try { await litApi('/api/literature/notebook/sync', { method: 'POST' }); await refreshLiterature(); }
-      catch (e) { alert(e.message); } finally { if (btn) btn.textContent = '同步 PDF 至 Gemini'; }
-    });
-    litEl('litBatchReviewBtn')?.addEventListener('click', async () => {
-      try {
-        await litApi('/api/literature/reviews/batch', { method: 'POST' });
-        await refreshLiterature();
-      } catch (e) { alert(e.message); }
-    });
-    litEl('litNbQueryBtn')?.addEventListener('click', async () => {
-      const q = litEl('litNbQueryInput')?.value.trim();
-      if (!q) return;
-      const btn = litEl('litNbQueryBtn');
-      if (btn) btn.textContent = '查詢中…';
-      try {
-        const res = await litApi('/api/literature/notebook/ask', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q }),
-        });
-        const box = litEl('litNbAnswerBox'), body = litEl('litNbAnswerBody');
-        if (box && body) { body.textContent = res.answer || '（無回覆）'; box.style.display = 'block'; }
-      } catch (e) { alert(e.message); } finally { if (btn) btn.textContent = '查詢文獻'; }
-    });
-    litEl('litNbAnswerClose')?.addEventListener('click', () => {
-      const box = litEl('litNbAnswerBox');
-      if (box) box.style.display = 'none';
-    });
-  }
-
-  /**
    * Update `sortRules` for a column, optionally forcing `asc`, `desc`, or `none`.
    * @param {string} col Column key.
    * @param {string} [mode] Optional explicit direction (`asc` | `desc` | `none`).
@@ -722,17 +426,17 @@
    * Bind DOM event handlers for the Literature Collection view.
    */
   function bindLiteratureEvents() {
-    bindNotebookEvents();
+    bindNotebookEvents(refreshLiterature);
     bindFilterAndSelectEvents();
-    litEl('litStartBtn')?.addEventListener('click', () => handleAddAndProcess(false).catch(e => alert(e.message)));
-    litEl('litIdentifyBtn')?.addEventListener('click', () => handleAddAndProcess(true).catch(e => alert(e.message)));
+    litEl('litStartBtn')?.addEventListener('click', () => handleAddAndProcess(false, refreshLiterature).catch(e => alert(e.message)));
+    litEl('litIdentifyBtn')?.addEventListener('click', () => handleAddAndProcess(true, refreshLiterature).catch(e => alert(e.message)));
     litEl('litLookupMissingBtn')?.addEventListener('click', async () => {
       await litApi('/api/literature/process', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identify_only: true, no_browser: true }),
       });
       await refreshLiterature();
     });
-    litEl('litCopyApaBtn')?.addEventListener('click', () => handleCopyApa().catch(e => alert(e.message)));
+    litEl('litCopyApaBtn')?.addEventListener('click', () => handleCopyApa(selectedKeys).catch(e => alert(e.message)));
     litEl('litReportBtn')?.addEventListener('click', () => window.open('/api/literature/export/report', '_blank'));
     litEl('litSelectAll')?.addEventListener('change', ev => {
       const checked = Boolean(ev.target?.checked);

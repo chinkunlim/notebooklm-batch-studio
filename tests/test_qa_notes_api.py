@@ -18,6 +18,7 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.models import Course, Lecture
 from notebooklm_batch_studio.entrypoints.api import create_app
+from notebooklm_batch_studio.entrypoints.mcp_qa_notes import QANoteInput
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.qa_notes_service import QANotesService
@@ -129,7 +130,13 @@ class TestQANotesAPIAndMCP(unittest.TestCase):
         ans = json.loads(asyncio.run(tools["ask_notebook_question"].fn("BIO101", "什麼是細胞膜？", 1)))
         self.assertIn("深入解析", ans["answer"])
 
-        saved = json.loads(tools["save_qa_note"].fn("BIO101", "細胞膜", "# 細胞膜\n\n雙層磷脂。", 1))
+        saved = json.loads(
+            tools["save_qa_note"].fn(
+                "BIO101",
+                QANoteInput(title="細胞膜", content_markdown="# 細胞膜\n\n雙層磷脂。", lecture_no=1),
+                confirm=True,
+            )
+        )
         note_id = saved["id"]
 
         notes = json.loads(tools["list_course_notes"].fn("BIO101", "L01"))

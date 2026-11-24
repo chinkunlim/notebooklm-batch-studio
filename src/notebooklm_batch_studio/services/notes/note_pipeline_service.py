@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import shutil
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Generator
@@ -20,11 +19,10 @@ from notebooklm_batch_studio.domain.note_pipeline import (
     STANDARD_NOTE_STEPS,
     DriverUnavailableError,
     GenerationPausedError,
-    NoteBackend,
     NotePipelineStep,
     QuotaExceededError,
 )
-from notebooklm_batch_studio.domain.study_hierarchy import resolve_note_studio_dir
+from notebooklm_batch_studio.domain.path_safety import validate_path_segment
 from notebooklm_batch_studio.services.notes.chapter_normalizer import normalize_step_markdown
 from notebooklm_batch_studio.services.notes.module_composer import compose_chapter_from_modules
 from notebooklm_batch_studio.services.notes.module_prompts import (
@@ -32,6 +30,7 @@ from notebooklm_batch_studio.services.notes.module_prompts import (
     list_module_prompt_specs,
     load_module_prompt,
 )
+from notebooklm_batch_studio.services.notes.note_paths import ChapterNoteRequest, NotePathResolver
 from notebooklm_batch_studio.services.notes.note_sync import (
     import_legacy_notes,
     list_chapter_notes,
@@ -40,38 +39,9 @@ from notebooklm_batch_studio.services.notes.note_sync import (
 from notebooklm_batch_studio.services.notes.state_manager import NoteStateManager
 from notebooklm_batch_studio.services.notes.step_validator import validate_step_output
 
+__all__ = ["ChapterNoteRequest", "NotePipelineService"]
+
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class ChapterNoteRequest:
-    """Parameters for generating or rerunning one chapter's Markdown notes.
-
-    Attributes:
-        course_key: Course identifier or folder code.
-        course_name: Human-readable course name filled into `{{COURSE_NAME}}`.
-        chapter_id: Chapter identifier such as `ch01`.
-        chapter_title: Chapter title filled into `{{CHAPTER_TITLE}}`.
-        pdf_path: Optional chapter PDF path (used by `gemini_web` upload).
-        backend: Generation backend (`gemini_web` default, `notebooklm` fallback).
-        model: Gemini model name (e.g. `4 Argon`).
-        notebook_id: Target NotebookLM ID when `backend == notebooklm`.
-        source_ids: Single-chapter NotebookLM source IDs when `backend == notebooklm`.
-        steps_override: Optional subset of step IDs for single-module rerun.
-        study_dir: Optional course study directory (`<study_root>/<term>/<subject>`).
-    """
-
-    course_key: str
-    course_name: str
-    chapter_id: str
-    chapter_title: str = ""
-    pdf_path: Path | None = None
-    backend: NoteBackend = NoteBackend.GEMINI_WEB
-    model: str = "4 Argon"
-    notebook_id: str = ""
-    source_ids: list[str] = field(default_factory=list)
-    steps_override: list[str] | None = None
-    study_dir: Path | None = None
 
 
 def _select_steps(steps_override: list[str] | None) -> list[NotePipelineStep]:
@@ -110,6 +80,7 @@ class NotePipelineService:
         config: AppConfig,
         driver_factory: Callable[[ChapterNoteRequest], Any] | None = None,
         study_dir_resolver: Callable[[str], Path | None] | None = None,
+        source_dir_resolver: Callable[[str], Path | None] | None = None,
     ) -> None:
         """Initialize the note pipeline service.
 
@@ -117,41 +88,14 @@ class NotePipelineService:
             config: Immutable application configuration.
             driver_factory: Factory returning a context manager yielding a driver.
             study_dir_resolver: Optional callback resolving `course_key -> study_dir`.
+            source_dir_resolver: Optional callback resolving `course_key -> registered PDF folder`,
+                the only place outside `DATA_DIR` / `STUDY_ROOT_DIR` a chapter PDF may come from.
         """
         self.config = config
         self._driver_factory = driver_factory
-        self._study_dir_resolver = study_dir_resolver
+        self.paths = NotePathResolver(config, study_dir_resolver, source_dir_resolver)
         self.state = NoteStateManager(config.state_dir / "notes")
         self.override_prompt_dir = config.data_dir / "prompts" / "modular_specs"
-
-    def _notes_course_dir(self, course_key: str, study_dir: Path | None = None) -> Path:
-        """Return `<study_dir>/03 Notes/NoteStudio`, or `<scratch_dir>/notes/<course_key>` if unlinked.
-
-        Args:
-            course_key: Course identifier.
-            study_dir: Optional explicit course study directory.
-
-        Returns:
-            Path inside `03 Notes/NoteStudio`, or `scratch/notes/<course_key>` when no study_dir exists.
-        """
-        resolved = study_dir or (self._study_dir_resolver(course_key) if self._study_dir_resolver else None)
-        if resolved is not None:
-            return resolve_note_studio_dir(resolved)
-        return self.config.scratch_dir / "notes" / course_key
-
-    def _stitched_note_path(self, request: ChapterNoteRequest) -> Path:
-        """Return the canonical stitched `.md` path for a chapter.
-
-        Args:
-            request: Chapter note generation request.
-
-        Returns:
-            Path to `<chapter_id>_<title>_學習筆記.md` inside `03 Notes/NoteStudio`.
-        """
-        title = request.chapter_title.strip() or request.chapter_id
-        safe_title = title.replace("/", "_").replace("\\", "_")
-        notes_dir = self._notes_course_dir(request.course_key, request.study_dir)
-        return notes_dir / f"{request.chapter_id}_{safe_title}_學習筆記.md"
 
     def list_prompts(self) -> list[dict[str, str]]:
         """List all standalone modular prompt `.md` templates.
@@ -321,12 +265,12 @@ class NotePipelineService:
         Returns:
             Result summary with `status`, `stitched_path`, `completed_steps`, and `backend`.
         """
+        request = self.paths.validated_request(request)
         self.state.clear_pause(request.course_key)
-        steps = _select_steps(request.steps_override)
-        notes_dir = self._notes_course_dir(request.course_key, request.study_dir)
+        notes_dir = self.paths.notes_course_dir(request.course_key, request.study_dir)
         module_dir = notes_dir / "modules" / request.chapter_id
         module_dir.mkdir(parents=True, exist_ok=True)
-        stitched_path = self._stitched_note_path(request)
+        stitched_path = self.paths.stitched_note_path(request)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         archive_dir = notes_dir / "versions" / request.chapter_id / stamp
 
@@ -337,14 +281,46 @@ class NotePipelineService:
             {"status": "in_progress", "backend": request.backend.value, "completed_steps": []},
         )
         try:
-            completed = self._execute_steps(request, steps, module_dir, archive_dir)
-        except (GenerationPausedError, QuotaExceededError) as exc:
-            status = "paused" if isinstance(exc, GenerationPausedError) else "quota_wait"
-            self.state.update_chapter_state(
-                request.course_key, request.chapter_id, {"status": status, "last_error": str(exc)}
+            completed = self._execute_steps(
+                request, _select_steps(request.steps_override), module_dir, archive_dir
             )
-            return {"status": status, "error": str(exc), "completed_steps": []}
+        except (GenerationPausedError, QuotaExceededError) as exc:
+            return self._record_interruption(request, exc)
+        return self._stitch_chapter(request, module_dir, stitched_path, completed)
 
+    def _record_interruption(
+        self, request: ChapterNoteRequest, exc: GenerationPausedError | QuotaExceededError
+    ) -> dict[str, Any]:
+        """Persist a paused / quota-wait status after generation stopped early.
+
+        Args:
+            request: Chapter note request.
+            exc: Pause or quota exception that stopped the run.
+
+        Returns:
+            Result summary with `status` and `error`.
+        """
+        status = "paused" if isinstance(exc, GenerationPausedError) else "quota_wait"
+        logger.info("Note generation %s/%s stopped: %s", request.course_key, request.chapter_id, status)
+        self.state.update_chapter_state(
+            request.course_key, request.chapter_id, {"status": status, "last_error": str(exc)}
+        )
+        return {"status": status, "error": str(exc), "completed_steps": []}
+
+    def _stitch_chapter(
+        self, request: ChapterNoteRequest, module_dir: Path, stitched_path: Path, completed: list[str]
+    ) -> dict[str, Any]:
+        """Compose module files into the chapter `.md` and record the finished state.
+
+        Args:
+            request: Chapter note request.
+            module_dir: Folder holding per-module `.md` files.
+            stitched_path: Destination of the stitched chapter note.
+            completed: Step IDs completed in this run.
+
+        Returns:
+            Result summary with `status`, `stitched_path`, `completed_steps`, and `backend`.
+        """
         composed = compose_chapter_from_modules(module_dir, request.chapter_id, request.chapter_title)
         stitched_path.parent.mkdir(parents=True, exist_ok=True)
         stitched_path.write_text(composed, encoding="utf-8")
@@ -407,7 +383,8 @@ class NotePipelineService:
         Returns:
             Dictionary with `exists`, `path`, and `content`.
         """
-        course_dir = self._notes_course_dir(course_key, study_dir)
+        validate_path_segment(chapter_id, "chapter_id")
+        course_dir = self.paths.notes_course_dir(course_key, study_dir)
         matches = sorted(course_dir.glob(f"{chapter_id}_*_學習筆記.md")) if course_dir.is_dir() else []
         if not matches:
             return {"exists": False, "path": "", "content": ""}
@@ -424,7 +401,7 @@ class NotePipelineService:
         Returns:
             List of chapter note metadata dicts.
         """
-        return list_chapter_notes(self._notes_course_dir(course_key, study_dir))
+        return list_chapter_notes(self.paths.notes_course_dir(course_key, study_dir))
 
     def push_to_source(
         self,
@@ -444,8 +421,9 @@ class NotePipelineService:
         Returns:
             Upload result dictionary with `source_id`.
         """
+        validate_path_segment(chapter_id, "chapter_id")
         return push_chapter_note_to_source(
-            self._notes_course_dir(course_key), chapter_id, notebook_id, upload_fn
+            self.paths.notes_course_dir(course_key), chapter_id, notebook_id, upload_fn
         )
 
     def import_legacy(
@@ -467,5 +445,5 @@ class NotePipelineService:
             Import summary dictionary.
         """
         return import_legacy_notes(
-            source_dir, self._notes_course_dir(course_key, study_dir), overwrite=overwrite
+            source_dir, self.paths.notes_course_dir(course_key, study_dir), overwrite=overwrite
         )

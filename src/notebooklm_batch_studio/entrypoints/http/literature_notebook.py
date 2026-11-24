@@ -157,6 +157,33 @@ async def generate_literature_review_endpoint(
         session.close()
 
 
+def _set_review_message(msg: str) -> None:
+    """Record the latest batch Literature Review progress message.
+
+    Args:
+        msg: Status message text.
+    """
+    global _review_message
+    _review_message = msg
+
+
+async def _run_review_batch(request: Request) -> None:
+    """Generate all missing Literature Reviews in the background, updating the progress message.
+
+    Args:
+        request: HTTP request context used to open the notebook service.
+    """
+    session, svc = _nb_service(request)
+    try:
+        res = await svc.generate_missing_reviews(progress_cb=_set_review_message)
+        _set_review_message(f"已完成 {len(res['generated'])} 篇 Literature Review")
+    except Exception as exc:
+        logger.error("Batch Literature Review generation failed: %s", exc)
+        _set_review_message(f"批次生成失敗：{exc}")
+    finally:
+        session.close()
+
+
 @literature_notebook_router.post(
     "/api/literature/reviews/batch", tags=["Literature"], operation_id="batch_literature_reviews"
 )
@@ -173,28 +200,6 @@ async def batch_literature_reviews_endpoint(request: Request) -> dict[str, Any]:
     if _review_task is not None and not _review_task.done():
         return {"started": False, "review_running": True, "review_message": _review_message}
 
-    async def _run_batch() -> None:
-        """Execute batch Literature Review generation in the background."""
-        global _review_message
-        session, svc = _nb_service(request)
-        try:
-
-            def _on_msg(msg: str) -> None:
-                """Record latest progress status message.
-
-                Args:
-                    msg: Status message text.
-                """
-                global _review_message
-                _review_message = msg
-
-            res = await svc.generate_missing_reviews(progress_cb=_on_msg)
-            _review_message = f"已完成 {len(res['generated'])} 篇 Literature Review"
-        except Exception as exc:
-            _review_message = f"批次生成失敗：{exc}"
-        finally:
-            session.close()
-
     _review_message = "準備批次生成 Literature Review…"
-    _review_task = asyncio.create_task(_run_batch())
+    _review_task = asyncio.create_task(_run_review_batch(request))
     return {"started": True, "review_running": True, "review_message": _review_message}

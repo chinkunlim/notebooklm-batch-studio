@@ -56,10 +56,9 @@ function renderRemoteNotebookRow(nb) {
   const linked = nb.linked_course_code
     ? `<span class="badge badge-success">已連結：${escHtml(nb.linked_course_code)}</span>`
     : '<span class="badge">尚未匯入</span>';
-  const idAttr = escAttr(nb.id);
   return `<div class="row" style="justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm)">
     <div><strong>${escHtml(nb.title || nb.id)}</strong> <span class="small muted">(${nb.sources_count || 0} 份來源)</span> ${linked}</div>
-    <button type="button" class="btn btn-soft btn-sm" onclick="previewRemoteNotebookUi('${idAttr}')">預覽與選擇匯入</button>
+    <button type="button" class="btn btn-soft btn-sm" onclick="previewRemoteNotebookUi(${jsAttr(nb.id)})">預覽與選擇匯入</button>
   </div>`;
 }
 
@@ -110,7 +109,7 @@ function renderRemotePreviewHtml(data) {
     </div>
     <div><span class="field-label">遠端來源（${sources.length} 份）</span><div class="checks">${srcChecks}</div></div>
     <div class="row" style="justify-content:flex-end;gap:8px">
-      <button type="button" class="btn btn-primary" onclick="executeReverseImport('${escAttr(nb.id)}')">匯入課程並下載全部文件到本地</button>
+      <button type="button" class="btn btn-primary" onclick="executeReverseImport(${jsAttr(nb.id)})">匯入課程並下載全部文件到本地</button>
     </div>
   </div>`;
 }

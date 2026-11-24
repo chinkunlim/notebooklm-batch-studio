@@ -1,4 +1,7 @@
-"""FastAPI routes for literature fetching, APA 7 export, course import, and study migration (SPEC-012)."""
+"""FastAPI routes for literature fetching, processing jobs, and course import (SPEC-012).
+
+PDF preview, APA / report export, and study-layout migration live in `literature_files.py`.
+"""
 
 from __future__ import annotations
 
@@ -7,12 +10,10 @@ from collections import Counter
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from notebooklm_batch_studio.adapters.db.literature_repository import LiteratureRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
-from notebooklm_batch_studio.adapters.db.study_migration_repo import StudyMigrationRepository
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
 from notebooklm_batch_studio.domain.literature.tracker import AlreadyRunningError, ItemStatus
 from notebooklm_batch_studio.domain.study_hierarchy import (
@@ -22,7 +23,6 @@ from notebooklm_batch_studio.domain.study_hierarchy import (
 )
 from notebooklm_batch_studio.services.literature.jobs import JobRunOptions, LiteratureJobRunner
 from notebooklm_batch_studio.services.literature.manager import LiteratureManager
-from notebooklm_batch_studio.services.study_migration import migrate_courses_to_study_hierarchy
 
 logger = logging.getLogger(__name__)
 literature_router = APIRouter()
@@ -84,16 +84,6 @@ class LiteratureImportCourseRequest(BaseModel):
     subfolder: str | None = None
 
 
-class StudyMigrateRequest(BaseModel):
-    """Request body for migrating legacy courses to `<term>/<subject>/<category>`.
-
-    Attributes:
-        dry_run: When True, return planned moves without modifying disk or DB.
-    """
-
-    dry_run: bool = False
-
-
 def _job_runner(request: Request) -> LiteratureJobRunner:
     """Retrieve `LiteratureJobRunner` from FastAPI app state.
 
@@ -106,7 +96,7 @@ def _job_runner(request: Request) -> LiteratureJobRunner:
     return request.app.state.literature_jobs  # type: ignore[no-any-return]
 
 
-def _with_manager(request: Request) -> tuple[Any, LiteratureManager, LiteratureRepository]:
+def with_literature_manager(request: Request) -> tuple[Any, LiteratureManager, LiteratureRepository]:
     """Open a short-lived DB session and construct `LiteratureManager`.
 
     Args:
@@ -123,6 +113,21 @@ def _with_manager(request: Request) -> tuple[Any, LiteratureManager, LiteratureR
     return session, manager, lit_repo
 
 
+def _identify_new_pdfs(runner: LiteratureJobRunner, new_keys: list[str]) -> None:
+    """Start a background identify-only job for newly found PDFs when no job is running.
+
+    Args:
+        runner: Shared literature job runner.
+        new_keys: Keys of PDFs that were just registered.
+    """
+    if not new_keys or runner.is_running():
+        return
+    try:
+        runner.start(kind="identify", opts=JobRunOptions(keys=new_keys, identify_only=True, no_browser=True))
+    except AlreadyRunningError:
+        logger.info("Identify job for %d new PDFs skipped: another job started first", len(new_keys))
+
+
 @literature_router.get("/api/literature", tags=["Literature"], operation_id="list_literature")
 def list_literature_endpoint(request: Request, course_code: str | None = None) -> dict[str, Any]:
     """List tracked literature items, status counts, and current background job state.
@@ -136,17 +141,9 @@ def list_literature_endpoint(request: Request, course_code: str | None = None) -
     """
     runner = _job_runner(request)
     current_key, current_stage = runner.live_stage()
-    session, manager, lit_repo = _with_manager(request)
+    session, manager, lit_repo = with_literature_manager(request)
     try:
-        new_keys = manager.sync_untracked_pdfs()
-        if new_keys and not runner.is_running():
-            try:
-                runner.start(
-                    kind="identify",
-                    opts=JobRunOptions(keys=new_keys, identify_only=True, no_browser=True),
-                )
-            except AlreadyRunningError:
-                pass
+        _identify_new_pdfs(runner, manager.sync_untracked_pdfs())
         items = lit_repo.list_items(course_code=course_code)
         counts = Counter(item.status.value for item in items)
         latest = lit_repo.latest_job()
@@ -177,7 +174,7 @@ def add_literature_endpoint(req: LiteratureAddRequest, request: Request) -> dict
     Returns:
         Dictionary with count and added keys.
     """
-    session, manager, _ = _with_manager(request)
+    session, manager, _ = with_literature_manager(request)
     try:
         added = manager.add_entries(
             req.text,
@@ -230,7 +227,7 @@ def retry_literature_endpoint(key: str, req: LiteratureProcessRequest, request: 
     Returns:
         Started job metadata.
     """
-    session, _, lit_repo = _with_manager(request)
+    session, _, lit_repo = with_literature_manager(request)
     try:
         item = lit_repo.get_item(key)
         if item is None:
@@ -270,7 +267,7 @@ def refresh_literature_endpoint(key: str, req: LiteratureProcessRequest, request
     Returns:
         Started job metadata.
     """
-    session, _, lit_repo = _with_manager(request)
+    session, _, lit_repo = with_literature_manager(request)
     try:
         if lit_repo.get_item(key) is None:
             raise HTTPException(status_code=404, detail=f"Literature item not found: {key}")
@@ -309,7 +306,7 @@ def reidentify_literature_endpoint(
     Returns:
         Updated serialized literature item.
     """
-    session, manager, _ = _with_manager(request)
+    session, manager, _ = with_literature_manager(request)
     try:
         updated = manager.reidentify_item(key, req.text)
         if updated is None:
@@ -337,7 +334,7 @@ def import_literature_to_course_endpoint(
     Returns:
         Updated serialized literature item.
     """
-    session, manager, lit_repo = _with_manager(request)
+    session, manager, lit_repo = with_literature_manager(request)
     try:
         prev = lit_repo.get_item(key)
         prev_code = prev.course_code if prev else None
@@ -375,7 +372,7 @@ def unarchive_literature_endpoint(key: str, request: Request) -> dict[str, Any]:
     Returns:
         Updated serialized literature item.
     """
-    session, manager, lit_repo = _with_manager(request)
+    session, manager, lit_repo = with_literature_manager(request)
     try:
         prev = lit_repo.get_item(key)
         prev_code = prev.course_code if prev else None
@@ -402,7 +399,7 @@ def delete_literature_endpoint(key: str, request: Request) -> dict[str, Any]:
     Returns:
         Deletion status dictionary.
     """
-    session, _, lit_repo = _with_manager(request)
+    session, _, lit_repo = with_literature_manager(request)
     try:
         deleted = lit_repo.delete_item(key)
         if not deleted:
@@ -410,96 +407,3 @@ def delete_literature_endpoint(key: str, request: Request) -> dict[str, Any]:
         return {"deleted": True, "key": key}
     finally:
         session.close()
-
-
-@literature_router.get("/api/literature/{key}/pdf", tags=["Literature"], operation_id="get_literature_pdf")
-def get_literature_pdf_endpoint(key: str, request: Request) -> FileResponse:
-    """Serve the downloaded PDF inline for browser preview.
-
-    Args:
-        key: Literature item key.
-        request: HTTP request context.
-
-    Returns:
-        `FileResponse` with `application/pdf`.
-    """
-    session, manager, _ = _with_manager(request)
-    try:
-        pdf_path = manager.resolve_pdf_path(key)
-        if pdf_path is None:
-            raise HTTPException(status_code=404, detail=f"PDF not found for literature: {key}")
-        return FileResponse(
-            pdf_path,
-            media_type="application/pdf",
-            headers={"Content-Disposition": "inline"},
-        )
-    finally:
-        session.close()
-
-
-@literature_router.get(
-    "/api/literature/export/apa", tags=["Literature"], operation_id="export_literature_apa"
-)
-def export_literature_apa_endpoint(
-    request: Request, course_code: str | None = None, keys: str | None = None
-) -> dict[str, Any]:
-    """Return sorted APA 7 citations in plain text and italic-preserving HTML.
-
-    Args:
-        request: HTTP request context.
-        course_code: Optional course filter.
-        keys: Optional comma-separated literature keys to include.
-
-    Returns:
-        Dictionary with `count`, `plain`, and `html`.
-    """
-    session, manager, _ = _with_manager(request)
-    try:
-        key_list = [k.strip() for k in keys.split(",") if k.strip()] if keys else None
-        return manager.export_apa_list(course_code=course_code, keys=key_list)
-    finally:
-        session.close()
-
-
-@literature_router.get(
-    "/api/literature/export/report", tags=["Literature"], operation_id="export_literature_report"
-)
-def export_literature_report_endpoint(request: Request, course_code: str | None = None) -> PlainTextResponse:
-    """Download the Markdown report of tracked literature items.
-
-    Args:
-        request: HTTP request context.
-        course_code: Optional course filter.
-
-    Returns:
-        Markdown plain text response.
-    """
-    session, manager, _ = _with_manager(request)
-    try:
-        md = manager.export_report(course_code=course_code)
-        return PlainTextResponse(
-            md,
-            media_type="text/markdown; charset=utf-8",
-            headers={"Content-Disposition": 'attachment; filename="literature_report.md"'},
-        )
-    finally:
-        session.close()
-
-
-@literature_router.post(
-    "/api/courses/migrate-study-layout", tags=["Courses"], operation_id="migrate_study_layout"
-)
-def migrate_study_layout_endpoint(req: StudyMigrateRequest, request: Request) -> dict[str, Any]:
-    """Migrate existing legacy courses into `<STUDY_ROOT_DIR>/<term>/<subject>/<category>`.
-
-    Args:
-        req: Migration options (`dry_run`).
-        request: HTTP request context.
-
-    Returns:
-        Summary of migrated or planned courses.
-    """
-    with request.app.state.session_factory() as session:
-        return migrate_courses_to_study_hierarchy(
-            StudyMigrationRepository(session), request.app.state.config, dry_run=req.dry_run
-        )

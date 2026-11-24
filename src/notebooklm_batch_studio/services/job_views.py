@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, Course, Lecture
+from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, Course, JobStatus, Lecture
 from notebooklm_batch_studio.domain.naming import label_for
 from notebooklm_batch_studio.services.job_planner import generate_jobs_for_course
 
@@ -129,3 +129,20 @@ def lecture_to_dict(lec: Lecture) -> dict[str, Any]:
         "upload_status": lec.upload_status,
         "error_message": lec.error_message,
     }
+
+
+def calc_job_progress(raw_counts: dict[str, int]) -> tuple[int, int, float]:
+    """Compute total jobs, completed jobs, and progress percentage excluding skipped jobs.
+
+    Args:
+        raw_counts: Mapping of JobStatus value strings to task counts.
+
+    Returns:
+        Tuple of (total_jobs, done_jobs, progress_percent).
+    """
+    total_jobs = sum(raw_counts.values())
+    done_jobs = raw_counts.get(JobStatus.DONE.value, 0)
+    skipped_jobs = raw_counts.get(JobStatus.SKIPPED.value, 0)
+    active_total = max(0, total_jobs - skipped_jobs)
+    progress = round((done_jobs / active_total * 100), 1) if active_total > 0 else 0.0
+    return total_jobs, done_jobs, progress

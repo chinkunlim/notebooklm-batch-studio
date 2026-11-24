@@ -16,7 +16,6 @@ from typing import Any, cast
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -42,6 +41,7 @@ from notebooklm_batch_studio.entrypoints.http.courses import courses_router
 from notebooklm_batch_studio.entrypoints.http.fonts import fonts_router
 from notebooklm_batch_studio.entrypoints.http.learning import learning_router
 from notebooklm_batch_studio.entrypoints.http.literature import literature_router
+from notebooklm_batch_studio.entrypoints.http.literature_files import literature_files_router
 from notebooklm_batch_studio.entrypoints.http.literature_notebook import literature_notebook_router
 from notebooklm_batch_studio.entrypoints.http.notes import notes_router
 from notebooklm_batch_studio.entrypoints.http.plan import plan_router
@@ -52,6 +52,11 @@ from notebooklm_batch_studio.entrypoints.http.reverse_import import reverse_impo
 from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
+from notebooklm_batch_studio.entrypoints.http_middleware import (
+    HostValidationMiddleware,
+    NoCacheStaticFiles,
+    SecurityHeadersMiddleware,
+)
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.entrypoints.port_check import busy_port_message, port_is_free
 from notebooklm_batch_studio.services.font_service import FontService
@@ -109,40 +114,6 @@ class DbSessionScopeMiddleware(BaseHTTPMiddleware):
             for registry in _SCOPED_REGISTRIES:
                 registry.remove()
             _DB_SCOPE.reset(token)
-
-
-class HostValidationMiddleware(BaseHTTPMiddleware):
-    """Restricts access to local loopback hosts (127.0.0.1 / localhost)."""
-
-    def __init__(self, app: Any, allowed_hosts: tuple[str, ...]) -> None:
-        """Initialize middleware with allowed host names.
-
-        Args:
-            app: Starlette/FastAPI application.
-            allowed_hosts: Tuple of allowed hostname strings.
-        """
-        super().__init__(app)
-        self.allowed_hosts = set(allowed_hosts)
-
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Any]) -> Response:
-        """Verify the Host header matches allowed hosts.
-
-        Args:
-            request: Incoming HTTP request.
-            call_next: Next request handler in pipeline.
-
-        Returns:
-            HTTP response from downstream handler.
-
-        Raises:
-            HTTPException: 400 Bad Request if host header is untrusted.
-        """
-        host_header = request.headers.get("host", "").split(":")[0]
-        if host_header and host_header not in self.allowed_hosts:
-            logger.warning("Rejected request with untrusted Host header: %s", host_header)
-            return Response(content="Untrusted Host header", status_code=400)
-        res = await call_next(request)
-        return cast(Response, res)
 
 
 @contextmanager
@@ -275,27 +246,6 @@ def _build_study_plan(
     )
 
 
-class NoCacheStaticFiles(StaticFiles):
-    """Static files that browsers must revalidate, so an updated page never runs with stale CSS / JS.
-
-    Unchanged files still answer 304 (ETag), so this costs almost nothing on a local server.
-    """
-
-    def file_response(self, *args: Any, **kwargs: Any) -> Response:
-        """Serve a file with `Cache-Control: no-cache`.
-
-        Args:
-            *args: Passed to StaticFiles.file_response.
-            **kwargs: Passed to StaticFiles.file_response.
-
-        Returns:
-            The file response with the cache header.
-        """
-        response = super().file_response(*args, **kwargs)
-        response.headers["Cache-Control"] = "no-cache"
-        return response
-
-
 def _build_learning(service: BatchStudioService, cfg: AppConfig, engine: Engine | None) -> LearningService:
     """Create the learning service (reader, key points, memory, tutor) with request-scoped storage.
 
@@ -410,6 +360,7 @@ _API_ROUTERS = (
     fonts_router,
     reverse_import_router,
     literature_router,
+    literature_files_router,
     literature_notebook_router,
     notes_router,
 )
@@ -422,6 +373,7 @@ def _register_routes_and_middlewares(app: FastAPI, cfg: AppConfig) -> None:
         app: Configured FastAPI application instance.
         cfg: Application configuration.
     """
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(HostValidationMiddleware, allowed_hosts=cfg.http_allowed_hosts)
     app.add_middleware(DbSessionScopeMiddleware)
     app.add_middleware(

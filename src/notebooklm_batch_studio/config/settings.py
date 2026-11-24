@@ -15,6 +15,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +80,9 @@ class AppConfig:
         auto_start_queue: Start the job queue when the web service starts (`AUTO_START_QUEUE`,
             default true in `.env`; off for configs built directly, e.g. in tests).
         study_root_dir_override: Optional custom root for `<term>/<subject>/<category>` study folders.
-        library_email: University e-mail for OpenAthens sign-in (`USER_EMAIL`).
-        library_password: Password for OpenAthens sign-in (`USER_PASSWORD`); hidden from repr.
+        library_email: University e-mail for OpenAthens sign-in (`LIBRARY_EMAIL`; legacy `USER_EMAIL`).
+        library_password: Library (OpenAthens) password, never a Google password (`LIBRARY_PASSWORD`;
+            legacy `USER_PASSWORD`); hidden from repr. Refs: ADR-013
         openathens_domain: OpenAthens organisation domain; empty uses plain DOI links.
         ebsco_profile: Library EBSCO Discovery profile id; empty skips EBSCO.
     """
@@ -102,8 +104,8 @@ class AppConfig:
     study_root_dir_override: Path | None = None
     library_email: str = ""
     library_password: str = field(default="", repr=False)
-    openathens_domain: str = "ndhu.edu.tw"
-    ebsco_profile: str = "3pnjf3"
+    openathens_domain: str = ""
+    ebsco_profile: str = ""
     chrome_path: str = ""
     playwright_startup_timeout_seconds: int = 60
     gemini_outline_timeout_seconds: int = 900
@@ -250,6 +252,82 @@ def _flag(value: str) -> bool:
     return value.strip().lower() in ("1", "true", "yes", "on")
 
 
+def _env(name: str, default: str = "") -> str:
+    """Read one stripped environment variable.
+
+    Args:
+        name: Variable name.
+        default: Value when the variable is unset.
+
+    Returns:
+        The stripped value.
+    """
+    return os.environ.get(name, default).strip()
+
+
+def _http_settings() -> dict[str, Any]:
+    """Collect HTTP server settings from the environment.
+
+    Returns:
+        Keyword arguments for the HTTP fields of `AppConfig`.
+
+    Raises:
+        ValueError: When `HTTP_PORT` is not an integer.
+    """
+    return {
+        "http_host": _env("HTTP_HOST", "127.0.0.1"),
+        "http_port": int(_env("HTTP_PORT", "8768")),
+        "http_allowed_hosts": _csv(_env("HTTP_ALLOWED_HOSTS", "127.0.0.1, localhost")),
+        "http_allowed_origins": _csv(
+            _env("HTTP_ALLOWED_ORIGINS", "http://127.0.0.1:8768, http://127.0.0.1:8080")
+        ),
+    }
+
+
+def _literature_settings() -> dict[str, Any]:
+    """Collect library / browser settings, preferring `LIBRARY_*` over the legacy `USER_*` names.
+
+    Returns:
+        Keyword arguments for the literature and browser fields of `AppConfig`.
+
+    Raises:
+        ValueError: When a timeout setting is not an integer.
+    """
+    return {
+        "library_email": _env("LIBRARY_EMAIL") or _env("USER_EMAIL"),
+        "library_password": _env("LIBRARY_PASSWORD") or _env("USER_PASSWORD"),
+        "openathens_domain": _env("OPENATHENS_DOMAIN"),
+        "ebsco_profile": _env("EBSCO_PROFILE"),
+        "chrome_path": _env("CHROME_PATH"),
+        "playwright_startup_timeout_seconds": int(_env("PLAYWRIGHT_STARTUP_TIMEOUT_SECONDS", "60")),
+        "gemini_outline_timeout_seconds": int(_env("GEMINI_OUTLINE_TIMEOUT_SECONDS", "900")),
+    }
+
+
+def _core_settings(data_dir: Path) -> dict[str, Any]:
+    """Collect runtime, logging, Ollama, and database settings.
+
+    Args:
+        data_dir: Resolved data folder (used for the default SQLite path).
+
+    Returns:
+        Keyword arguments for the core fields of `AppConfig`.
+
+    Raises:
+        ValueError: When `API_TIMEOUT_SECONDS` is not an integer.
+    """
+    return {
+        "app_env": _env("APP_ENV", "development"),
+        "log_level": _env("LOG_LEVEL", "INFO").upper(),
+        "log_to_file": _flag(_env("LOG_TO_FILE", "true")),
+        "timeout_seconds": int(_env("API_TIMEOUT_SECONDS", "15")),
+        "ollama_base_url": _env("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/"),
+        "ollama_model": _env("OLLAMA_MODEL", "gemma4:latest"),
+        "database_url": _env("DATABASE_URL") or f"sqlite:///{data_dir / 'db' / 'app.db'}",
+        "auto_start_queue": _flag(_env("AUTO_START_QUEUE", "true")),
+    }
+
+
 def load_config() -> AppConfig:
     """Read and validate configuration from `.env` and environment variables.
 
@@ -261,35 +339,14 @@ def load_config() -> AppConfig:
     """
     load_dotenv_file(PROJECT_ROOT / ".env")
     data_dir = resolve_data_dir(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR))
-    notebooklm_home = Path(
-        os.environ.get("NOTEBOOKLM_HOME", "~/.config/notebooklm-batch-studio")
-    ).expanduser()
+    notebooklm_home = Path(_env("NOTEBOOKLM_HOME", "~/.config/notebooklm-batch-studio")).expanduser()
     os.environ["NOTEBOOKLM_HOME"] = str(notebooklm_home)
-    study_root_raw = os.environ.get("STUDY_ROOT_DIR", "").strip()
-    study_root_override = resolve_data_dir(study_root_raw) if study_root_raw else None
+    study_root_raw = _env("STUDY_ROOT_DIR")
     return AppConfig(
-        app_env=os.environ.get("APP_ENV", "development").strip(),
-        log_level=os.environ.get("LOG_LEVEL", "INFO").strip().upper(),
-        log_to_file=_flag(os.environ.get("LOG_TO_FILE", "true")),
-        timeout_seconds=int(os.environ.get("API_TIMEOUT_SECONDS", "15")),
-        ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/"),
-        ollama_model=os.environ.get("OLLAMA_MODEL", "gemma4:latest").strip(),
         data_dir=data_dir,
-        database_url=os.environ.get("DATABASE_URL", "").strip() or f"sqlite:///{data_dir / 'db' / 'app.db'}",
         notebooklm_home=notebooklm_home,
-        http_host=os.environ.get("HTTP_HOST", "127.0.0.1").strip(),
-        http_port=int(os.environ.get("HTTP_PORT", "8768")),
-        http_allowed_hosts=_csv(os.environ.get("HTTP_ALLOWED_HOSTS", "127.0.0.1, localhost")),
-        http_allowed_origins=_csv(
-            os.environ.get("HTTP_ALLOWED_ORIGINS", "http://127.0.0.1:8768, http://127.0.0.1:8080")
-        ),
-        auto_start_queue=_flag(os.environ.get("AUTO_START_QUEUE", "true")),
-        study_root_dir_override=study_root_override,
-        library_email=os.environ.get("USER_EMAIL", "").strip(),
-        library_password=os.environ.get("USER_PASSWORD", "").strip(),
-        openathens_domain=os.environ.get("OPENATHENS_DOMAIN", "ndhu.edu.tw").strip(),
-        ebsco_profile=os.environ.get("EBSCO_PROFILE", "3pnjf3").strip(),
-        chrome_path=os.environ.get("CHROME_PATH", "").strip(),
-        playwright_startup_timeout_seconds=int(os.environ.get("PLAYWRIGHT_STARTUP_TIMEOUT_SECONDS", "60")),
-        gemini_outline_timeout_seconds=int(os.environ.get("GEMINI_OUTLINE_TIMEOUT_SECONDS", "900")),
+        study_root_dir_override=resolve_data_dir(study_root_raw) if study_root_raw else None,
+        **_core_settings(data_dir),
+        **_http_settings(),
+        **_literature_settings(),
     )
