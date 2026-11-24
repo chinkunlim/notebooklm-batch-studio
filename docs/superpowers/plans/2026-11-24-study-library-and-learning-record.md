@@ -160,7 +160,7 @@
 - `TERM_PATTERN = re.compile(r"^\d{2,4}-\d{1,2}$")`
 - `notebook_title(course_no: str, name: str, term: str) -> str` → `"[CP30000] 團體諮商 (115-1)"`
 
-- [ ] **Step 1: 失敗測試**
+- [x] **Step 1: 失敗測試**
 
 ```python
 def test_parses_school_course_folders(self):
@@ -186,10 +186,10 @@ def test_codes(self):
         make_course_code("115-1", "CP/30000")
 ```
 
-- [ ] **Step 2:** `uv run python -m unittest tests.test_course_identity -v` → 失敗
-- [ ] **Step 3:** 實作
-- [ ] **Step 4:** 同指令 → `OK`
-- [ ] **Step 5:** Commit `-m "feat(domain): parse school course folders into term-scoped course codes"`
+- [x] **Step 2:** `uv run python -m unittest tests.test_course_identity -v` → 失敗
+- [x] **Step 3:** 實作
+- [x] **Step 4:** 同指令 → `OK`
+- [x] **Step 5:** Commit `-m "feat(domain): parse school course folders into term-scoped course codes"`
 
 ### Task 3: 分類名稱、別名、角色，並替換所有寫死的分類
 

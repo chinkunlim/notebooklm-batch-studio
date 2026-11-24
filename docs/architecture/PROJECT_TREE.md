@@ -394,6 +394,7 @@ notebooklm-batch-studio/
 │       │   │   ├── literature.py
 │       │   │   └── tracker.py
 │       │   ├── __init__.py
+│       │   ├── course_identity.py
 │       │   ├── exceptions.py
 │       │   ├── generation_options.py
 │       │   ├── memory_model.py
@@ -837,6 +838,7 @@ notebooklm-batch-studio/
 │   ├── test_button_routes.py
 │   ├── test_converters.py
 │   ├── test_course_admin.py
+│   ├── test_course_identity.py
 │   ├── test_course_parser.py
 │   ├── test_course_reregistration.py
 │   ├── test_db.py
