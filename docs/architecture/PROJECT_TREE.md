@@ -325,6 +325,7 @@ notebooklm-batch-studio/
 │       │   ├── db/
 │       │   │   ├── __init__.py
 │       │   │   ├── base.py
+│       │   │   ├── course_identity_repo.py
 │       │   │   ├── learning_repository.py
 │       │   │   ├── literature_repository.py
 │       │   │   ├── mappers.py
@@ -774,6 +775,7 @@ notebooklm-batch-studio/
 │       │   │   └── step_validator.py
 │       │   ├── __init__.py
 │       │   ├── artifact_runner.py
+│       │   ├── course_lifecycle.py
 │       │   ├── course_onboarding.py
 │       │   ├── course_options.py
 │       │   ├── course_parser.py

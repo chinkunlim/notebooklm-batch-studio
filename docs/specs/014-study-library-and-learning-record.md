@@ -133,10 +133,27 @@
   - **When** 執行對應服務
   - **Then** 外部 PDF 複製至 `study/<term>/<folder>/02 Handouts/`；課本不上傳；只有 `02 Handouts` PDF 觸發監看；歸檔防同名覆寫並阻擋越界路徑，撤銷歸檔回到 `scratch/unarchived/<code>/`
   - 對應測試：`tests/test_study_library.py`、`tests/test_filing.py`
-- [ ] **場景 11（封存排除佇列與 Today、安全改代碼、未封存禁止刪除且刪除不動 `study/` 檔案）**
-  - **Given** 含工作、作答紀錄、筆記與偏好之課程
-  - **When** 執行 `archive`/`restore`、`rename(dry_run=True/False)`、`delete_course`
-  - **Then** 封存後 `claim_next_job` 回 `None` 且不出現在 Today；`rename` 在單一交易同步 11 張表與 5 種本機檔案（有 `running` 工作或新碼已存在時拒絕且完全不變）；刪除會檢查是否已封存並回傳 `learning_records_removed`
+- [ ] **場景 11（封存／恢復、改代碼與安全刪除：Task 11 ＋ Google Classroom 生命週期）**
+  - **Given（場景 11a：封存排除佇列、Today 與到期複習）** 一門 `active` 課程含有 `pending` 工作、到期複習卡與未完成學習步驟
+  - **When** 呼叫 `CourseLifecycleService.archive(code)`，再呼叫 `CourseLifecycleService.restore(code)`
+  - **Then** 封存後 `claim_next_job` 回傳 `None`、`count_by_status(runnable_only=True)` 排除該課、課程不出現在 `StudyPlanService.get_today()` 且 `due_reviews(code)` 回空陣列；恢復後 `claim_next_job`、`get_today()` 與 `due_reviews(code)` 皆重新出現該課
+  - 對應測試：`tests/test_course_lifecycle.py::CourseArchiveAndRenameTests::test_archive_excludes_queue_today_and_due_reviews_and_restore_reinstates`
+  - **Given（場景 11d：改代碼預設 dry-run 不變更資料與檔案）** 一門課程擁有 11 張表資料、`ui_preferences` 與 5 種本機檔案
+  - **When** 呼叫 `CourseLifecycleService.rename(old, new)`（預設 `dry_run=True`）
+  - **Then** 回傳各表與各檔案預計變更數；資料庫舊代碼與全部檔案內容皆原封不動
+  - 對應測試：`tests/test_course_lifecycle.py::CourseArchiveAndRenameTests::test_rename_dry_run_reports_counts_without_changes`
+  - **Given（場景 11e：有 `running` 工作或新代碼已存在時拒絕改代碼）** 課程有 `status="running"` 的工作，或目標新代碼已存在於 `courses` 表
+  - **When** 呼叫 `CourseLifecycleService.rename(old, new, dry_run=False)`
+  - **Then** 拋出 `ValueError`，資料庫與所有本機檔案完全不變
+  - 對應測試：`tests/test_course_lifecycle.py::CourseArchiveAndRenameTests::test_rename_refused_on_running_job_or_existing_target`
+  - **Given（場景 11f：改代碼成功同步 11 張表、偏好與 5 種檔案，更新 `term`/`course_no`）** 課程 `115-1` 含有 11 張子表資料、`ui_preferences`、`course.toml`、`notes_state_dir/<old>.json` 與 `.pause.json`、`scratch/notes/<old>/`、`03 Notes/QA_Notes/*.md` frontmatter，以及 `notebook_id="nb-keep"` 與既有 `study_dir`
+  - **When** 呼叫 `CourseLifecycleService.rename("115-1", "115-1_CP31000", dry_run=False)`
+  - **Then** 11 張子表、`ui_preferences` 與 5 種本機檔案全數改為 `115-1_CP31000`；舊代碼查無課程；新課程 `term == "115-1"`、`course_no == "CP31000"`；`notebook_id`、`study_dir`、`source_dir` 與資料夾名稱不變
+  - 對應測試：`tests/test_course_lifecycle.py::CourseArchiveAndRenameTests::test_rename_apply_updates_all_11_tables_prefs_and_files`
+  - **Given（場景 11g：改代碼中途失敗完整回滾資料庫與已改檔案）** 改代碼已更新資料庫並修改部分檔案後，在後續檔案同步拋出 `OSError`
+  - **When** 呼叫 `CourseLifecycleService.rename(old, new, dry_run=False)`
+  - **Then** 拋出例外，資料庫整筆交易回滾（舊代碼與 11 張表保留、新代碼不存在），已更動之本機檔案全數還原至改碼前狀態
+  - 對應測試：`tests/test_course_lifecycle.py::CourseArchiveAndRenameTests::test_rename_midway_failure_rolls_back_db_and_files`
   - **Given（場景 11b：未封存不能刪除）** 課程狀態為 `active`（含透過 HTTP 與 `confirm=True` 呼叫 MCP `delete_course`）
   - **When** 執行 `delete_course`
   - **Then** 服務拋出 `ValueError("請先封存課程，封存後才能刪除")`、HTTP 回 `409`、MCP 回 `{"confirmed": false, ...}`，資料庫與本機檔案皆不變

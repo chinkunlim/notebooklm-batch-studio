@@ -15,7 +15,7 @@ from datetime import UTC, date, datetime
 from typing import Any, Protocol
 
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
-from notebooklm_batch_studio.domain.models import Course, JobStatus
+from notebooklm_batch_studio.domain.models import Course, CourseStatus, JobStatus
 from notebooklm_batch_studio.domain.notebooklm_protocol import NotebookLMClientProtocol
 from notebooklm_batch_studio.domain.repositories import (
     CourseRepositoryProtocol,
@@ -238,6 +238,18 @@ class StudyPlanService:
             reviewed=self.review_repo.reviewed_lectures(code, "flashcard"),
         )
 
+    def get_today(self, now: datetime | None = None) -> list[dict[str, Any]]:
+        """Build study plans for all active (non-archived) courses.
+
+        Args:
+            now: Current time (tests pass a fixed time).
+
+        Returns:
+            List of per-course study plan dictionaries for active courses.
+        """
+        active = self.course_repo.list_courses(status=CourseStatus.ACTIVE)
+        return [self.get_plan(c.code, now=now) for c in active]
+
     def get_plan(self, code: str, now: datetime | None = None) -> dict[str, Any]:
         """Build today's plan: per-lecture steps, the next step, progress, exam countdown, reviews due.
 
@@ -251,23 +263,25 @@ class StudyPlanService:
         """
         now = now or datetime.now(UTC)
         course = self._course(code)
+        archived = course.status == CourseStatus.ARCHIVED
         ctx = self._step_context(code)
         lectures, next_step = [], None
         for lec in course.lectures:
             steps, first_todo = build_lecture_steps(lec.no, ctx)
-            if first_todo is not None and next_step is None:
+            if first_todo is not None and next_step is None and not archived:
                 next_step = {"lecture_no": lec.no, "topic": lec.topic, **first_todo}
             usable = [s for s in steps if s["available"]]
             pct = round(100 * sum(1 for s in usable if s["done"]) / len(usable)) if usable else 0
             lectures.append({"lecture_no": lec.no, "topic": lec.topic, "steps": steps, "percent": pct})
-        unresolved = len(self.study_repo.list_mistakes(code, only_unresolved=True))
-        due = self.review_repo.count_due(code, now)
+        mistakes = 0 if archived else len(self.study_repo.list_mistakes(code, only_unresolved=True))
+        flashcards = 0 if archived else self.review_repo.count_due(code, now).get("flashcard", 0)
         return {
             "code": code,
             "name": course.name,
             "exam_date": course.exam_date,
             "days_left": days_until(course.exam_date, now.date()),
-            "due": {"flashcards": due.get("flashcard", 0), "mistakes": unresolved},
+            "archived": archived,
+            "due": {"flashcards": flashcards, "mistakes": mistakes},
             "next": next_step,
             "lectures": lectures,
         }
@@ -343,6 +357,9 @@ class StudyPlanService:
         Returns:
             Due items with front, back, kind, key, stage and lecture.
         """
+        course = self.course_repo.get_course(code)
+        if course is None or course.status == CourseStatus.ARCHIVED:
+            return []
         items = self.review_repo.due_items(code, now or datetime.now(UTC), lecture_no)
         return [
             {

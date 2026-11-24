@@ -6,7 +6,7 @@ import json
 import logging
 from datetime import timedelta
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
 from notebooklm_batch_studio.adapters.db.mappers import to_domain_job
@@ -16,7 +16,7 @@ from notebooklm_batch_studio.adapters.db.models import (
     QuotaRecord,
     utc_now,
 )
-from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, JobStatus
+from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, CourseStatus, JobStatus
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,16 @@ class QueueRepository:
             version=job.version,
         )
 
+    def _inactive_course_codes(self) -> Select[str]:
+        """Return subquery of course codes that are paused or archived.
+
+        Returns:
+            SQLAlchemy select expression of inactive course codes.
+        """
+        return select(CourseRecord.code).where(
+            or_(CourseRecord.paused.is_(True), CourseRecord.status == CourseStatus.ARCHIVED.value)
+        )
+
     def claim_next_job(
         self, worker_id: str, excluded_types: set[ArtifactType] | None = None
     ) -> ArtifactJob | None:
@@ -96,10 +106,10 @@ class QueueRepository:
             The claimed domain ArtifactJob, or None if no eligible job is waiting.
         """
         now = utc_now()
-        paused = select(CourseRecord.code).where(CourseRecord.paused.is_(True))
+        inactive = self._inactive_course_codes()
         stmt = select(ArtifactJobRecord).where(
             ArtifactJobRecord.status == JobStatus.PENDING.value,
-            ArtifactJobRecord.course_code.not_in(paused),
+            ArtifactJobRecord.course_code.not_in(inactive),
             or_(ArtifactJobRecord.cooldown_until.is_(None), ArtifactJobRecord.cooldown_until <= now),
         )
         if excluded_types:
@@ -401,9 +411,9 @@ class QueueRepository:
         if course_code:
             stmt = stmt.where(ArtifactJobRecord.course_code == course_code)
         if respect_cooldown:
-            paused = select(CourseRecord.code).where(CourseRecord.paused.is_(True))
+            inactive = self._inactive_course_codes()
             stmt = stmt.where(
-                ArtifactJobRecord.course_code.not_in(paused),
+                ArtifactJobRecord.course_code.not_in(inactive),
                 ArtifactJobRecord.attempts < 9,
                 or_(ArtifactJobRecord.cooldown_until.is_(None), ArtifactJobRecord.cooldown_until <= now),
             )
@@ -470,8 +480,8 @@ class QueueRepository:
         if course_code:
             stmt = stmt.where(ArtifactJobRecord.course_code == course_code)
         if runnable_only:
-            paused = select(CourseRecord.code).where(CourseRecord.paused.is_(True))
-            stmt = stmt.where(ArtifactJobRecord.course_code.not_in(paused))
+            inactive = self._inactive_course_codes()
+            stmt = stmt.where(ArtifactJobRecord.course_code.not_in(inactive))
         stmt = stmt.group_by(ArtifactJobRecord.status)
         counts = {status: 0 for status in JobStatus}
         for status_str, count in self.session.execute(stmt):

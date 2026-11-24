@@ -376,9 +376,9 @@ def test_no_new_writes_to_old_layout(self):
 - `CourseIdentityRepository(session).rename_code(old: str, new: str) -> dict[str, int]`：單一交易；複製 `courses` 列 → 更新 `lectures`、`artifact_jobs`、`quiz_attempts`、`quiz_mistakes`、`study_progress`、`review_items`、`explanations`、`key_points`（含 `id` 的 `"<code>:<no>"`）、`tutor_messages`、`course_qa_notes`、`literature_items` → 刪舊列；回每表筆數
 - `CourseLifecycleService(course_repo, queue_repo, identity_repo, config)`：`.archive(code)`、`.restore(code)`、`.rename(old, new, dry_run=True) -> dict[str, Any]`；`rename` 另外同步：`course.toml` 的 `code`、`ui_preferences` 中值等於舊代碼的 `course` 鍵、`notes_state_dir/<old>.json` 與 pause 檔、`scratch/notes/<old>/`、`03 Notes/QA_Notes/*.md` frontmatter `course_code`；`notebook_id` 與遠端標題不變；新代碼已存在或有 `running` 工作 → `ValueError`
 
-- [ ] **Step 1: 失敗測試**：rename dry-run 不變更、apply 後 11 表與上述 5 種檔案皆改到新代碼、舊代碼查不到；running／已存在拒絕且全部不變；封存後 `claim_next_job` 回 None、恢復後可取得；封存課程不出現在 Today；刪除課程回傳 `learning_records_removed["quiz_attempts"] == 1`。
-- [ ] **Step 2–4:** 失敗 → 實作 → 通過
-- [ ] **Step 5:** Commit `-m "feat(courses): archive/restore, safe course-code rename, deletion reports lost records"`
+- [x] **Step 1: 失敗測試**：rename dry-run 不變更、apply 後 11 表與上述 5 種檔案皆改到新代碼、舊代碼查不到；running／已存在拒絕且全部不變；封存後 `claim_next_job` 回 None、恢復後可取得；封存課程不出現在 Today；刪除課程回傳 `learning_records_removed["quiz_attempts"] == 1`。
+- [x] **Step 2–4:** 失敗 → 實作 → 通過（Task 11 完成資料庫與服務層；HTTP/MCP/網頁封存與改代碼入口依規劃留於 Task 13）
+- [x] **Step 5:** Commit `-m "feat(courses): archive/restore, safe course-code rename, queue and today archive filtering"`
 
 ## Phase 3：學習紀錄、三入口、登入狀態
 
