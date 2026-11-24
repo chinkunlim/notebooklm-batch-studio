@@ -101,7 +101,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-031-resolve-issue-053-port-gemini-we.json
 │   │   ├── TASK-032-resolve-issue-054-close-stale-ru.json
 │   │   ├── TASK-033-audit-records-unify-mcp-confirm-.json
-│   │   └── TASK-034-fix-issue-054-regression-guard-l.json
+│   │   ├── TASK-034-fix-issue-054-regression-guard-l.json
+│   │   └── TASK-035-study-library-course-identity-an.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -244,6 +245,14 @@ notebooklm-batch-studio/
 │   │   ├── 055-quiz-response-course-code-key.md
 │   │   ├── 056-notes-form-lecture-fields.md
 │   │   ├── 057-literature-stale-cleanup-kills-live-process-job.md
+│   │   ├── 058-course-code-three-rule-inconsistency.md
+│   │   ├── 059-watcher-only-monitors-input-courses.md
+│   │   ├── 060-folder-picker-points-to-input-courses.md
+│   │   ├── 061-reverse-import-uses-output-imported-sources.md
+│   │   ├── 062-legacy-input-output-course-layout-writes.md
+│   │   ├── 063-implicit-load-config-fallbacks.md
+│   │   ├── 064-flashcards-cross-course-glob.md
+│   │   ├── 065-delete-course-silently-drops-learning-records.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

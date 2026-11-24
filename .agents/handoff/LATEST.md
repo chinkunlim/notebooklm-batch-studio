@@ -5,18 +5,24 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-24 09:19 UTC`
+- **最後更新時間**: `2026-11-24 09:21 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `3e2536d chore(framework,docs): complete v3.6.0 Rule 16 sync and CHANGELOG traceability [agent:antigravity]`
+- **最新 Git Commit**: `26c871c docs(docs): update docs documentation (ADR-008, ADR-009, ADR-011, ADR-012, ADR-013, ISSUE-027, ISSUE-028, ISSUE-045, ISSUE-047, ISSUE-048, ISSUE-053, ISSUE-054, ISSUE-057, TASK-025, TASK-031, TASK-033, TASK-034) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
+| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
+|---|---|---|---|---|---|---|
+| **TASK-035**<br/>Study library, course identity and learning record | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-24 09:21 UTC] 建立任務 `TASK-035`: Study library, course identity and learning record (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-24 09:19 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
 - **檢查結果**: 測試與 Code Review Guard 通過
@@ -97,11 +103,3 @@
 ### [2026-11-23 06:42 UTC] 建立任務 `TASK-026`: Integrate note-studio Phase 1: modular markdown note generation pipeline (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
-
-### [2026-11-23 03:42 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
-- **檢查結果**: 測試與 Code Review Guard 通過
-- **目標**: Port all literature-fetch unit tests (108 tests + 3 fixtures), known issues (ISSUE-041..044), design principles (SPEC-012), and README/ARCHITECTURE documentatio
-- **錯誤與根因**: Ported historical literature-fetch issues ISSUE-041..044 (Playwright 403, OpenAlex mismatch, Cloudflare loop, refresh PDF protection) into docs/known-issues/ an
-- **下一步**: 1) Retire standalone literature-fetch repo. 2) Continue live testing or new features in notebooklm-batch-studio.
-- **交接備註**: All literature-fetch tests (108 unit + 5 integration = 333 total), known issues, and docs integrated and pushed to origin/main.
-- **本機對話紀錄**: `.agents/conversations/2026-11-23-1142-antigravity-summary.md`（只在這台電腦）

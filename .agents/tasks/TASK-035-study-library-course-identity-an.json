@@ -1,0 +1,21 @@
+{
+  "id": "TASK-035",
+  "title": "Study library, course identity and learning record",
+  "status": "in_progress",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-24 09:21 UTC",
+  "updated_at": "2026-11-24 09:21 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-24 09:21 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    }
+  ]
+}
