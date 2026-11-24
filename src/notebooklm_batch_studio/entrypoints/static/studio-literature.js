@@ -180,7 +180,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         course_code: courseCode,
-        category: catSel?.getAttribute('data-value') || '01 Material',
+        category: catSel?.getAttribute('data-value') || '01 Materials',
         subfolder: subInput?.value?.trim() || 'Literature_Review',
       }),
     });

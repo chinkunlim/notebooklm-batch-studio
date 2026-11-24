@@ -10,7 +10,6 @@ from typing import Any, Protocol
 
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.study_hierarchy import (
-    STUDY_CATEGORIES,
     CourseMigrationTarget,
     ensure_course_study_tree,
     parse_term_subject,
@@ -18,6 +17,7 @@ from notebooklm_batch_studio.domain.study_hierarchy import (
     resolve_notebooklm_notes_dir,
     resolve_qa_notes_dir,
 )
+from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class CourseMigrationItem:
         subject: Resolved subject name.
         old_source_dir: Previous input directory.
         new_study_dir: Target `<study_root>/<term>/<subject>` directory.
-        moved_pdfs: Number of PDF files moved into `02 Handout`.
+        moved_pdfs: Number of PDF files moved into `02 Handouts`.
         moved_outputs: Number of output entries moved into `03 Notes/NotebookLM`.
         status: `migrated`, `already_migrated`, or `planned`.
     """
@@ -148,7 +148,7 @@ def _move_legacy_outputs(legacy_out: Path, study_dir: Path, dry_run: bool) -> in
 def _relocate_course_files(
     src_dir: Path, study_dir: Path, legacy_out: Path, dry_run: bool
 ) -> tuple[int, int]:
-    """Move a course's PDFs into `02 Handout` and its legacy outputs into `03 Notes`.
+    """Move a course's PDFs into `02 Handouts` and its legacy outputs into `03 Notes`.
 
     Args:
         src_dir: Previous course input directory.
@@ -163,8 +163,9 @@ def _relocate_course_files(
         ensure_course_study_tree(study_dir)
         if (src_dir / "course.toml").is_file() and not (study_dir / "course.toml").is_file():
             shutil.move(str(src_dir / "course.toml"), str(study_dir / "course.toml"))
-    skip = set(STUDY_CATEGORIES) | {"course.toml"}
-    moved_pdfs = _move_children(src_dir, study_dir / "02 Handout", skip, dry_run)
+    skip = {name for role in CategoryRole for name in DEFAULT_LAYOUT.all_names(role)} | {"course.toml"}
+    handouts_dir = DEFAULT_LAYOUT.primary_dir(study_dir, CategoryRole.HANDOUTS)
+    moved_pdfs = _move_children(src_dir, handouts_dir, skip, dry_run)
     return moved_pdfs, _move_legacy_outputs(legacy_out, study_dir, dry_run=dry_run)
 
 

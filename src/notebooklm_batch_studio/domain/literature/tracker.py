@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from notebooklm_batch_studio.domain.literature.literature import Reference
+from notebooklm_batch_studio.domain.study_hierarchy import DEFAULT_LITERATURE_CATEGORY
 
 
 class ItemStatus(str, Enum):
@@ -35,7 +36,7 @@ class TrackedItem:
         source: URL the PDF came from.
         check: Note from identifying the work (e.g. matched by title search) that stays visible.
         course_code: Optional linked course code (`courses.code`).
-        target_category: Target study folder category (default `01 Material`).
+        target_category: Target study folder category (default `01 Materials`).
         target_subfolder: Target subfolder inside the category (default `Literature_Review`).
         imported_to_course: Whether the PDF has been registered/imported into the linked course.
         source_id: Gemini Notebook source ID if uploaded.
@@ -52,7 +53,7 @@ class TrackedItem:
     source: str = ""
     check: str = ""
     course_code: str | None = None
-    target_category: str = "01 Material"
+    target_category: str = DEFAULT_LITERATURE_CATEGORY
     target_subfolder: str = "Literature_Review"
     imported_to_course: bool = False
     source_id: str | None = None

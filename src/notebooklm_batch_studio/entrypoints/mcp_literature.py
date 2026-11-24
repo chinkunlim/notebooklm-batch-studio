@@ -37,7 +37,7 @@ class LiteratureTarget(BaseModel):
 
     Attributes:
         course_code: Optional linked course code.
-        category: Study category (default `01 Material`).
+        category: Study category (default `01 Materials`).
         subfolder: Subfolder under the category (default `Literature_Review`).
     """
 

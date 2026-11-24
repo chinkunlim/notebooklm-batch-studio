@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from notebooklm_batch_studio.adapters.db.models import ArtifactJobRecord, CourseRecord, LectureRecord
 from notebooklm_batch_studio.domain.study_hierarchy import CourseMigrationTarget
+from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +84,13 @@ class StudyMigrationRepository:
         record.study_dir = str(study_dir)
         record.source_dir = str(study_dir)
 
+        handouts_dirs = DEFAULT_LAYOUT.category_dirs(study_dir, CategoryRole.HANDOUTS)
         for lec in self.session.scalars(select(LectureRecord).where(LectureRecord.course_code == code)).all():
-            if not lec.relative_path and (study_dir / "02 Handout" / lec.filename).is_file():
-                lec.category = "02 Handout"
-                lec.relative_path = f"02 Handout/{lec.filename}"
+            if not lec.relative_path:
+                matched_dir = next((d for d in handouts_dirs if (d / lec.filename).is_file()), None)
+                if matched_dir is not None:
+                    lec.category = matched_dir.name
+                    lec.relative_path = f"{matched_dir.name}/{lec.filename}"
 
         for job in self.session.scalars(
             select(ArtifactJobRecord).where(ArtifactJobRecord.course_code == code)

@@ -407,6 +407,7 @@ notebooklm-batch-studio/
 │       │   ├── quota_parser.py
 │       │   ├── repositories.py
 │       │   ├── study_hierarchy.py
+│       │   ├── study_layout.py
 │       │   ├── study_plan.py
 │       │   └── usage_guide.py
 │       ├── entrypoints/
@@ -869,6 +870,7 @@ notebooklm-batch-studio/
 │   ├── test_security_hardening.py
 │   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py
+│   ├── test_study_layout.py
 │   ├── test_study_plan.py
 │   ├── test_study_service.py
 │   └── test_versions_and_options.py

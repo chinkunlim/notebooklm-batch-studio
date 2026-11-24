@@ -68,7 +68,7 @@ class StudyHierarchyAndMigrationTest(unittest.TestCase):
         self.assertEqual(course_dir, root / "115-1" / "心理學研究法")
         self.assertEqual(
             resolve_literature_dir(course_dir),
-            course_dir / "01 Material" / "Literature_Review",
+            course_dir / "01 Materials" / "Literature_Review",
         )
         self.assertEqual(
             resolve_notebooklm_notes_dir(course_dir),
@@ -76,14 +76,14 @@ class StudyHierarchyAndMigrationTest(unittest.TestCase):
         )
 
     def test_recursive_course_scan_ignores_notes_and_assignments(self) -> None:
-        """Scanning a study-layout course reads nested `01 Material` & `02 Handout` only."""
+        """Scanning a study-layout course reads nested `02 Handouts` (or alias) only."""
         with tempfile.TemporaryDirectory() as tmp:
             course_dir = Path(tmp) / "115-1" / "心理學研究法"
             ensure_course_study_tree(course_dir)
-            (course_dir / "01 Material" / "Literature_Review").mkdir(parents=True)
-            (course_dir / "02 Handout" / "Week01").mkdir(parents=True)
-            (course_dir / "01 Material" / "Literature_Review" / "01_Paper.pdf").write_bytes(b"%PDF-1.4\na")
-            (course_dir / "02 Handout" / "Week01" / "02_Slides.pdf").write_bytes(b"%PDF-1.4\nb")
+            (course_dir / "01 Materials" / "Literature_Review").mkdir(parents=True, exist_ok=True)
+            (course_dir / "02 Handouts" / "Week01").mkdir(parents=True, exist_ok=True)
+            (course_dir / "01 Materials" / "Literature_Review" / "01_Paper.pdf").write_bytes(b"%PDF-1.4\na")
+            (course_dir / "02 Handouts" / "Week01" / "02_Slides.pdf").write_bytes(b"%PDF-1.4\nb")
             (course_dir / "03 Notes" / "my_note.pdf").write_bytes(b"%PDF-1.4\nc")
             (course_dir / "05 Assignments" / "report.pdf").write_bytes(b"%PDF-1.4\nd")
 
@@ -92,9 +92,8 @@ class StudyHierarchyAndMigrationTest(unittest.TestCase):
             self.assertEqual(course.subject, "心理學研究法")
             self.assertEqual(course.study_dir, str(course_dir.resolve()))
             filenames = [lec.filename for lec in course.lectures]
-            self.assertEqual(sorted(filenames), ["01_Paper.pdf", "02_Slides.pdf"])
-            self.assertTrue(any(lec.relative_path.startswith("01 Material/") for lec in course.lectures))
-            self.assertTrue(any(lec.relative_path.startswith("02 Handout/") for lec in course.lectures))
+            self.assertEqual(filenames, ["02_Slides.pdf"])
+            self.assertTrue(all(lec.relative_path.startswith("02 Handouts/") for lec in course.lectures))
 
     def test_legacy_migration_moves_files_and_updates_db(self) -> None:
         """Legacy flat `input/courses` + `output/courses` migrate cleanly into `study_root_dir`."""
@@ -139,7 +138,7 @@ class StudyHierarchyAndMigrationTest(unittest.TestCase):
                 self.assertEqual(result["items"][0]["status"], "migrated")
 
                 target_dir = cfg.study_root_dir / "115-1" / "心理學研究法"
-                self.assertTrue((target_dir / "02 Handout" / "01_導論.pdf").is_file())
+                self.assertTrue((target_dir / "02 Handouts" / "01_導論.pdf").is_file())
                 self.assertTrue((target_dir / "03 Notes" / "NotebookLM" / "01_導論" / "audio.m4a").is_file())
                 row = session.get(CourseRecord, "PSYC101")
                 assert row is not None
@@ -189,7 +188,7 @@ class LiteratureIntegrationTest(unittest.TestCase):
                 added = mgr.add_entries(
                     "10.1000/test.2024",
                     course_code="EDPS101",
-                    category="01 Material",
+                    category="01 Materials",
                     subfolder="Literature_Review",
                 )
                 self.assertEqual(len(added), 1)
@@ -198,7 +197,7 @@ class LiteratureIntegrationTest(unittest.TestCase):
                 self.assertIn("Sweller", identified.apa)
 
                 target_dir = mgr.resolve_target_dir(identified)
-                self.assertEqual(target_dir, study_course / "01 Material" / "Literature_Review")
+                self.assertEqual(target_dir, study_course / "01 Materials" / "Literature_Review")
                 pdf_file = target_dir / f"{identified.key}.pdf"
                 pdf_file.write_bytes(b"%PDF-1.4\ntest")
                 lit_repo.upsert_item(
@@ -212,7 +211,7 @@ class LiteratureIntegrationTest(unittest.TestCase):
                         status=ItemStatus.DOWNLOADED,
                         file=pdf_file.name,
                         course_code="EDPS101",
-                        target_category="01 Material",
+                        target_category="01 Materials",
                         target_subfolder="Literature_Review",
                     )
                 )
@@ -258,7 +257,7 @@ class LiteratureIntegrationTest(unittest.TestCase):
                 "/api/literature/add",
                 json={
                     "text": "10.1000/sample.2025",
-                    "category": "01 Material",
+                    "category": "01 Materials",
                     "subfolder": "Literature_Review",
                 },
             )

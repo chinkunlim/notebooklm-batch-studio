@@ -34,7 +34,7 @@ class LiteratureAddRequest(BaseModel):
     Attributes:
         text: Multi-line or paragraph-separated references.
         course_code: Optional course code to link these items to.
-        category: Target study category (default `01 Material`).
+        category: Target study category (default `01 Materials`).
         subfolder: Target subfolder inside category (default `Literature_Review`).
     """
 

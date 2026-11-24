@@ -168,7 +168,7 @@ class LiteratureManager(LiteratureArchiveMixin, LiteratureExportMixin):
         Args:
             raw_text: Multi-line or paragraph-separated APA/DOI/title entries.
             course_code: Optional course code to link these items to.
-            category: Study category (default `01 Material`).
+            category: Study category (default `01 Materials`).
             subfolder: Subfolder under category (default `Literature_Review`).
 
         Returns:

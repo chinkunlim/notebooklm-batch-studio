@@ -64,7 +64,7 @@
   async function handleAddAndProcess(identifyOnly, refresh) {
     const raw = litEl('litInputText')?.value.trim() || '';
     const courseCode = getSelectVal('litCourseSelectWrap') || null;
-    const category = getSelectVal('litCategorySelectWrap') || '01 Material';
+    const category = getSelectVal('litCategorySelectWrap') || '01 Materials';
     const subfolder = litEl('litSubfolderInput')?.value.trim() || 'Literature_Review';
     const interactive = Boolean(litEl('litInteractiveCheck')?.checked);
 

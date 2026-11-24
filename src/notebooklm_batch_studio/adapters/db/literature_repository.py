@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from notebooklm_batch_studio.adapters.db.models import LiteratureItemRecord, LiteratureJobRecord
 from notebooklm_batch_studio.domain.literature.literature import Reference, ReferenceKind
 from notebooklm_batch_studio.domain.literature.tracker import ItemStatus, Job, JobState, TrackedItem
+from notebooklm_batch_studio.domain.study_hierarchy import DEFAULT_LITERATURE_CATEGORY
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ def _to_domain_item(row: LiteratureItemRecord) -> TrackedItem:
         source=row.source or "",
         check=row.check_note or "",
         course_code=row.course_code,
-        target_category=row.target_category or "01 Material",
+        target_category=row.target_category or DEFAULT_LITERATURE_CATEGORY,
         target_subfolder=row.target_subfolder or "Literature_Review",
         imported_to_course=bool(row.imported_to_course),
         source_id=row.source_id,

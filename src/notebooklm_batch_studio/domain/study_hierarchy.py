@@ -1,7 +1,7 @@
-"""Study folder hierarchy rules: `<term>/<subject>/<category>[/<subfolder>]` (ADR-011).
+"""Study folder hierarchy rules: `<term>/<subject>/<category>[/<subfolder>]` (ADR-011, ADR-014).
 
-Defines the canonical five categories (`01 Material`, `02 Handout`, `03 Notes`, `04 Homework`,
-`05 Assignments`), term/subject parsing from legacy course names, and safe path resolution.
+Derives canonical category names (`01 Materials`..`05 Assignments`) from `StudyLayout`,
+handles legacy singular aliases, term/subject parsing, and safe path resolution.
 """
 
 from __future__ import annotations
@@ -11,17 +11,13 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
+
 logger = logging.getLogger(__name__)
 
-STUDY_CATEGORIES: tuple[str, ...] = (
-    "01 Material",
-    "02 Handout",
-    "03 Notes",
-    "04 Homework",
-    "05 Assignments",
-)
-INPUT_SOURCE_CATEGORIES: tuple[str, ...] = ("01 Material", "02 Handout")
-DEFAULT_LITERATURE_CATEGORY = "01 Material"
+STUDY_CATEGORIES: tuple[str, ...] = tuple(DEFAULT_LAYOUT.names[role] for role in CategoryRole)
+INPUT_SOURCE_CATEGORIES: tuple[str, ...] = (DEFAULT_LAYOUT.names[CategoryRole.HANDOUTS],)
+DEFAULT_LITERATURE_CATEGORY = DEFAULT_LAYOUT.names[CategoryRole.MATERIALS]
 DEFAULT_LITERATURE_SUBFOLDER = "Literature_Review"
 NOTEBOOKLM_NOTES_SUBFOLDER = "NotebookLM"
 QA_NOTES_SUBFOLDER = "QA_Notes"
@@ -82,19 +78,25 @@ def resolve_course_study_dir(study_root: Path, term: str, subject: str, fallback
     return study_root / safe_term / safe_subject
 
 
-def resolve_category_dir(course_dir: Path, category: str, subfolder: str = "") -> Path:
+def resolve_category_dir(
+    course_dir: Path,
+    category: str,
+    subfolder: str = "",
+    layout: StudyLayout = DEFAULT_LAYOUT,
+) -> Path:
     """Resolve `<course_dir>/<category>[/<subfolder>]` safely inside `course_dir`.
 
     Args:
         course_dir: Root directory of the course.
-        category: One of `STUDY_CATEGORIES` (defaults to `01 Material` if invalid).
+        category: Target category name or alias (defaults to MATERIALS role if unrecognized).
         subfolder: Optional relative subfolder path (supports nested `/` segments).
+        layout: Study layout defining role names and aliases.
 
     Returns:
         Resolved directory path under `course_dir`.
     """
-    chosen = category if category in STUDY_CATEGORIES else DEFAULT_LITERATURE_CATEGORY
-    target = course_dir / chosen
+    role = layout.role_of(category) or CategoryRole.MATERIALS
+    target = layout.primary_dir(course_dir, role)
     if subfolder:
         parts = [sanitize_segment(p, "") for p in subfolder.replace("\\", "/").split("/")]
         for part in parts:
@@ -112,7 +114,7 @@ def resolve_literature_dir(
 
     Args:
         course_dir: Course study directory.
-        category: Target study category (default `01 Material`).
+        category: Target study category (defaults to `DEFAULT_LITERATURE_CATEGORY`).
         subfolder: Target subfolder (default `Literature_Review`).
 
     Returns:
@@ -157,15 +159,14 @@ def resolve_note_studio_dir(course_dir: Path) -> Path:
     return resolve_category_dir(course_dir, "03 Notes", NOTE_STUDIO_SUBFOLDER)
 
 
-def ensure_course_study_tree(course_dir: Path) -> None:
+def ensure_course_study_tree(course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT) -> None:
     """Create the standard five category directories under a course study directory.
 
     Args:
         course_dir: Course study directory to initialize.
+        layout: Study layout defining category names and aliases.
     """
-    for category in STUDY_CATEGORIES:
-        (course_dir / category).mkdir(parents=True, exist_ok=True)
-    logger.debug("Ensured standard study categories under %s", course_dir)
+    layout.ensure_tree(course_dir)
 
 
 def resolve_lecture_pdf_path(source_dir: str | Path, filename: str, relative_path: str = "") -> Path:

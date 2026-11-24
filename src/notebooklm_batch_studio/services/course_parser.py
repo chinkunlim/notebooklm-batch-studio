@@ -11,11 +11,8 @@ from typing import Any
 import tomli
 
 from notebooklm_batch_studio.domain.models import Course, Lecture, ProfileName
-from notebooklm_batch_studio.domain.study_hierarchy import (
-    INPUT_SOURCE_CATEGORIES,
-    STUDY_CATEGORIES,
-    parse_term_subject,
-)
+from notebooklm_batch_studio.domain.study_hierarchy import parse_term_subject
+from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
 
 logger = logging.getLogger(__name__)
 
@@ -96,33 +93,33 @@ def _is_visible_pdf(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() == ".pdf" and not path.name.startswith(".")
 
 
-def _find_candidate_pdfs(course_dir: Path) -> list[tuple[Path, str, str]]:
+def _find_candidate_pdfs(
+    course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT
+) -> list[tuple[Path, str, str]]:
     """Find candidate PDF files in a course directory (supporting study hierarchy).
 
-    When the directory uses the 5-category study layout (`01 Material`, `02 Handout`, ...),
-    recursively scans `01 Material` and `02 Handout` (plus top-level PDFs) while ignoring
-    `03 Notes`, `04 Homework`, and `05 Assignments`. Otherwise scans top-level PDFs.
+    When the directory uses the 5-category study layout (recognizing plural names and legacy
+    singular aliases), recursively scans only the `HANDOUTS` role directory (plus top-level PDFs)
+    while ignoring `MATERIALS`, `NOTES`, `HOMEWORK`, and `ASSIGNMENTS`. Otherwise scans top-level PDFs.
 
     Args:
         course_dir: Root directory of the course.
+        layout: Study category layout configuration.
 
     Returns:
         Sorted list of `(pdf_path, category, relative_path)` tuples.
     """
-    has_study_layout = any((course_dir / cat).is_dir() for cat in STUDY_CATEGORIES)
+    has_study_layout = any(layout.category_dirs(course_dir, role) for role in CategoryRole)
     top_level = [(p, "", p.name) for p in course_dir.iterdir() if _is_visible_pdf(p)]
     if not has_study_layout:
         return sorted(top_level, key=lambda item: item[2].lower())
 
     candidates = list(top_level)
-    for cat in INPUT_SOURCE_CATEGORIES:
-        cat_dir = course_dir / cat
-        if not cat_dir.is_dir():
-            continue
+    for cat_dir in layout.category_dirs(course_dir, CategoryRole.HANDOUTS):
         for p in cat_dir.rglob("*"):
             if _is_visible_pdf(p):
                 rel = str(p.relative_to(course_dir)).replace("\\", "/")
-                candidates.append((p, cat, rel))
+                candidates.append((p, cat_dir.name, rel))
     candidates.sort(key=lambda item: item[2].lower())
     return candidates
 
@@ -186,7 +183,7 @@ def scan_course_directory(course_dir: Path, custom_code: str | None = None) -> C
     if re.match(r"^\d{2,4}[-_]\d{1,2}$", course_dir.parent.name):
         term = course_dir.parent.name.replace("_", "-")
         subject = course_dir.name
-    has_study_layout = any((course_dir / cat).is_dir() for cat in STUDY_CATEGORIES)
+    has_study_layout = any(DEFAULT_LAYOUT.category_dirs(course_dir, role) for role in CategoryRole)
 
     logger.info("Scanned course %s (%s): found %d lecture PDFs", code, inferred_name, len(lectures))
     return Course(

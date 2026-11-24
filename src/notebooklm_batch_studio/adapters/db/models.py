@@ -8,6 +8,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, Uni
 from sqlalchemy.orm import Mapped, mapped_column
 
 from notebooklm_batch_studio.adapters.db.base import Base
+from notebooklm_batch_studio.domain.study_hierarchy import DEFAULT_LITERATURE_CATEGORY as _CAT
 
 
 def utc_now() -> datetime:
@@ -420,7 +421,7 @@ class LiteratureItemRecord(Base):
         source: URL where PDF was downloaded.
         check_note: Identification verification note.
         course_code: Optional linked course code (`courses.code`).
-        target_category: Study category (default `01 Material`).
+        target_category: Study category (default `01 Materials`).
         target_subfolder: Subfolder under category (default `Literature_Review`).
         imported_to_course: Whether the PDF has been imported into the course's NotebookLM sources.
         source_id: Remote Gemini Notebook source ID if uploaded.
@@ -454,7 +455,7 @@ class LiteratureItemRecord(Base):
         String(50), ForeignKey("courses.code", ondelete="SET NULL"), nullable=True, index=True
     )
     target_category: Mapped[str] = mapped_column(
-        String(60), nullable=False, default="01 Material", server_default="01 Material"
+        String(60), nullable=False, default=_CAT, server_default=_CAT
     )
     target_subfolder: Mapped[str] = mapped_column(
         String(255), nullable=False, default="Literature_Review", server_default="Literature_Review"

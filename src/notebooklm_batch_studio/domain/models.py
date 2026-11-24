@@ -192,7 +192,7 @@ class Lecture:
         source_id: Associated Gemini Notebook source ID once uploaded.
         upload_status: Upload status (`pending`, `uploaded`, `failed`).
         error_message: Upload error message if failed.
-        category: Optional study folder category (e.g. `01 Material`, `02 Handout`).
+        category: Optional study folder category (e.g. `01 Materials`, `02 Handouts`).
         relative_path: Relative path of the PDF inside the course directory.
     """
 

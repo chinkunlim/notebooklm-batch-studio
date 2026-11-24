@@ -7,7 +7,7 @@
   'use strict';
 
   const { statusBadgeClass, shortStatusLabel, escapeHtml, getSelectVal, renderExpandRowHtml, caretSvg } = window.LitUi;
-  const CATEGORIES = ['01 Material', '02 Handout', '03 Notes', '04 Homework', '05 Assignments'];
+  const CATEGORIES = ['01 Materials', '02 Handouts', '03 Notes', '04 Homework', '05 Assignments'];
 
   /**
    * Build custom `.lit-select-opt` buttons for the available courses.
@@ -34,7 +34,7 @@
   function renderArchiveMenu(item, st) {
     if (st.openArchiveKey !== item.key) return '';
     const defCourse = item.course_code || getSelectVal('litCourseSelectWrap') || '';
-    const defCat = item.target_category || getSelectVal('litCategorySelectWrap') || '01 Material';
+    const defCat = item.target_category || getSelectVal('litCategorySelectWrap') || '01 Materials';
     const defSub = item.target_subfolder || document.getElementById('litSubfolderInput')?.value || 'Literature_Review';
     const courseObj = st.courses.find(c => c.code === defCourse);
     const courseLabel = courseObj ? `${courseObj.term ? `[${courseObj.term}] ` : ''}${courseObj.name} (${courseObj.code})` : '請選擇科目…';

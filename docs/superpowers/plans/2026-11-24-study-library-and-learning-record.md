@@ -204,7 +204,7 @@ def test_codes(self):
 - `StudyLayout.category_dirs(course_dir: Path, role: CategoryRole) -> list[Path]`、`.primary_dir(course_dir, role) -> Path`、`.ensure_tree(course_dir) -> None`、`.role_of(name: str) -> CategoryRole | None`、`.as_dict() -> dict[str, str]`
 - `DEFAULT_LITERATURE_SUBFOLDER = "Literature_Review"` 不變；文獻預設分類＝`layout.names[MATERIALS]`
 
-- [ ] **Step 1: 失敗測試**
+- [x] **Step 1: 失敗測試**
 
 ```python
 def test_singular_and_plural_handouts_merged(self):
@@ -246,8 +246,8 @@ def test_no_hardcoded_category_literals_left(self):
     self.assertEqual(hits, [])
 ```
 
-- [ ] **Step 2–4:** 失敗 → 實作 → `uv run python -m unittest discover -s tests` 通過（既有測試若斷言 `01 Material` 為講次來源，改斷言新行為，commit 訊息註明）
-- [ ] **Step 5:** Commit `-m "feat(domain): configurable plural study categories with aliases; remove hardcoded names"`
+- [x] **Step 2–4:** 失敗 → 實作 → `uv run python -m unittest discover -s tests` 通過（既有測試若斷言 `01 Material` 為講次來源，改斷言新行為，commit 訊息註明）
+- [x] **Step 5:** Commit `-m "feat(domain): configurable plural study categories with aliases; remove hardcoded names"`
 
 ### Task 4: 集中 DATA_DIR 路徑、移除 `load_config()` 後備、安裝建立 study／scratch
 
