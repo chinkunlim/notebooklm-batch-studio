@@ -75,7 +75,7 @@ async function onNoteGenCourseSelect() {
       lecSel.innerHTML = ['<option value="">（手動填寫章節）</option>']
         .concat(
           lectures.map(
-            (l) => `<option value="${escHtml(l.lecture_no)}">${String(l.lecture_no).padStart(2, '0')} — ${escHtml(l.filename)}</option>`,
+            (l) => `<option value="${escHtml(l.no)}">${String(l.no).padStart(2, '0')} — ${escHtml(l.topic || l.filename)}</option>`,
           ),
         )
         .join('');
@@ -94,16 +94,17 @@ async function onNoteGenCourseSelect() {
 async function onNoteGenLectureSelect() {
   const lecNo = Number(document.getElementById('ngLectureSelect')?.value || 0);
   if (!lecNo || !_ngActiveCourseDetail) return;
-  const lec = (_ngActiveCourseDetail.lectures || []).find((l) => l.lecture_no === lecNo);
+  // Course detail lectures use `no` (not `lecture_no`). Refs: ISSUE-056
+  const lec = (_ngActiveCourseDetail.lectures || []).find((l) => l.no === lecNo);
   if (!lec) return;
-  const chId = `ch${String(lec.lecture_no).padStart(2, '0')}`;
+  const chId = `ch${String(lec.no).padStart(2, '0')}`;
   const stem = String(lec.filename || '').replace(/\.pdf$/i, '');
   const chEl = document.getElementById('ngChapterId');
   const titleEl = document.getElementById('ngChapterTitle');
   const pdfEl = document.getElementById('ngPdfPath');
   const srcEl = document.getElementById('ngSourceIds');
   if (chEl) chEl.value = chId;
-  if (titleEl) titleEl.value = stem;
+  if (titleEl) titleEl.value = lec.topic || stem;
   if (pdfEl && _ngActiveCourseDetail.source_dir) {
     const rel = lec.relative_path || lec.filename;
     pdfEl.value = `${_ngActiveCourseDetail.source_dir}/${rel}`;

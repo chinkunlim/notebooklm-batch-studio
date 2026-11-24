@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-24 02:13 UTC`
+- **最後更新時間**: `2026-11-24 02:25 UTC`
 - **最近操作 Agent**: `claude-code`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `fc19a68 feat(notes): integrate note-studio Phase 2 course auto-fill, push-to-source, and legacy import (TASK-027) [agent:antigravity]`
+- **最新 Git Commit**: `abb3a3e fix(security): harden path handling, XSS, MCP confirm and clear code-review warnings (TASK-028, ADR-013, ISSUE-045..051) [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-24 02:25 UTC] 完成任務 `TASK-029` — Records audit, port source-project tests, full verification (by `claude-code`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Records audit (gaps listed for Antigravity), ported 52 source-project tests (note-studio gemini adapters, quota parser, literature-fetch markdown/db) plus 13 new pipeline behavior tests, fixed ISSUE-052/055/056, recorded open ISSUE-053/054, full verification
+
+### [2026-11-24 02:20 UTC] 建立任務 `TASK-029`: Records audit, port source-project tests, full verification (by `claude-code`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-24 02:13 UTC] 完成任務 `TASK-028` — Security hardening and code-review zero-violation cleanup (by `claude-code`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -109,11 +117,3 @@
 ### [2026-11-14 06:10 UTC] 完成任務 `TASK-022` — Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Support adding missing artifacts per lecture or course and auto-start queue on selection save
-
-### [2026-11-14 06:08 UTC] 建立任務 `TASK-022`: Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-11-14 05:18 UTC] 完成任務 `TASK-021` — Fix failed artifact job manual rerun and automatic retry recovery (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Enable manual UI/HTTP/MCP rerun and automatic cooldown/orphan recovery for failed artifact jobs (ISSUE-038)

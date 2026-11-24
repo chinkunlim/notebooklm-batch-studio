@@ -1,0 +1,28 @@
+{
+  "id": "TASK-029",
+  "title": "Records audit, port source-project tests, full verification",
+  "status": "done",
+  "agent": "claude-code",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Records audit (gaps listed for Antigravity), ported 52 source-project tests (note-studio gemini adapters, quota parser, literature-fetch markdown/db) plus 13 new pipeline behavior tests, fixed ISSUE-052/055/056, recorded open ISSUE-053/054, full verification",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-24 02:20 UTC",
+  "updated_at": "2026-11-24 02:25 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-24 02:20 UTC",
+      "action": "created_and_claimed",
+      "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-24 02:25 UTC",
+      "action": "done",
+      "agent": "claude-code",
+      "summary": "Records audit (gaps listed for Antigravity), ported 52 source-project tests (note-studio gemini adapters, quota parser, literature-fetch markdown/db) plus 13 new pipeline behavior tests, fixed ISSUE-052/055/056, recorded open ISSUE-053/054, full verification"
+    }
+  ],
+  "summary": "Records audit (gaps listed for Antigravity), ported 52 source-project tests (note-studio gemini adapters, quota parser, literature-fetch markdown/db) plus 13 new pipeline behavior tests, fixed ISSUE-052/055/056, recorded open ISSUE-053/054, full verification"
+}

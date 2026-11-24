@@ -76,7 +76,7 @@ def read_quiz_content(
 
     json_content = json.loads(json_file.read_text(encoding="utf-8")) if json_file.exists() else None
     return {
-        "course.code": course.code,
+        "course_code": course.code,  # Refs: ISSUE-055
         "lecture_no": lecture_no,
         "variant": variant,
         "with_answers": with_answers,

@@ -281,3 +281,11 @@
 ### [2026-11-14 05:12 UTC] 建立任務 `TASK-021`: Fix failed artifact job manual rerun and automatic retry recovery (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-14 05:18 UTC] 完成任務 `TASK-021` — Fix failed artifact job manual rerun and automatic retry recovery (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Enable manual UI/HTTP/MCP rerun and automatic cooldown/orphan recovery for failed artifact jobs (ISSUE-038)
+
+### [2026-11-14 06:08 UTC] 建立任務 `TASK-022`: Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

@@ -300,6 +300,8 @@ class TestApiAndMcp(unittest.TestCase):
         self.assertEqual(resp_quiz.status_code, 200)
         quiz_data = resp_quiz.json()
         self.assertIn("題目卷", quiz_data["markdown"])
+        self.assertEqual(quiz_data["course_code"], "BIO101")  # Refs: ISSUE-055
+        self.assertNotIn("course.code", quiz_data)
 
         # Artifact listing
         resp_artifacts = self.client.get("/api/courses/BIO101/artifacts")

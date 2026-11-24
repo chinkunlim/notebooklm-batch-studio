@@ -165,7 +165,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(ui): fix currentStudyLectureNo undefined error and tablet reader toolbar overlap (by `@Antigravity`)
 - fix(ui): bust Safari static cache for reader JS/CSS and strip query in build_demo (by `@Antigravity`)
 - fix(notes): fallback unlinked note outputs to scratch/notes instead of study unsorted (by `@antigravity`)
-- fix(security): harden path handling, XSS, MCP confirm and clear code-review warnings (TASK-028, ADR-013, ISSUE-045..051) (by `@claude-code`)
+- fix(security): harden path handling, XSS, MCP confirm and clear code-review warnings (TASK-028, ADR-013, ISSUE-045, ISSUE-046, ISSUE-047, ISSUE-048, ISSUE-049, ISSUE-050, ISSUE-051) (by `@claude-code`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)
@@ -187,6 +187,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 
 ### Testing
 - test(literature): port literature-fetch unit tests, fixtures, known issues (ISSUE-041..044), and docs (by `@antigravity`)
+- test: port source-project tests, fix quiz key and notes lecture form, audit records (TASK-029, ISSUE-052, ISSUE-053, ISSUE-054, ISSUE-055, ISSUE-056) (by `@claude-code`)
 
 ### Chore
 - chore: remove template greeting code and table, and the dummy sample PDF generator (by `@claude-code`)

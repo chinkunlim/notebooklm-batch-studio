@@ -105,7 +105,7 @@ def try_copy_code_block(driver: Any, target_scope: Any) -> str | None:
 
 
 def copy_via_button(driver: Any) -> str | None:
-    """嘗試從最後一則回應的「複製」按鈕讀取剪貼簿文字 (Refs: ISSUE-058)。
+    """嘗試從最後一則回應的「複製」按鈕讀取剪貼簿文字 (Refs: note-studio ISSUE-058)。
 
     Args:
         driver: GeminiWebDriver 實例。
@@ -118,7 +118,7 @@ def copy_via_button(driver: Any) -> str | None:
         target_scope = driver.page
         if resp_sel:
             responses = driver.page.locator(resp_sel)
-            # 只有當回覆數量增加時，才代表新回覆已產生 (ISSUE-061)
+            # 只有當回覆數量增加時，才代表新回覆已產生 (note-studio ISSUE-061)
             if responses.count() <= driver._baseline_response_count:
                 return None
             target_scope = responses.last
@@ -146,7 +146,7 @@ def read_response_fallback(driver: Any) -> str | None:
         return None
     try:
         responses = driver.page.locator(resp_sel)
-        # 只有當回覆數量增加時，才代表新回覆已產生 (ISSUE-061)
+        # 只有當回覆數量增加時，才代表新回覆已產生 (note-studio ISSUE-061)
         if responses.count() <= driver._baseline_response_count:
             return None
         last_resp = responses.last
@@ -154,7 +154,8 @@ def read_response_fallback(driver: Any) -> str | None:
         if not text.strip():
             return None
         logger.warning(
-            "Failed to obtain raw markdown via copy buttons; falling back to DOM reading (Refs: ISSUE-058)"
+            "Failed to obtain raw markdown via copy buttons; falling back to DOM reading "
+            "(Refs: note-studio ISSUE-058)"
         )
         driver.was_dom_fallback = True
         driver.last_read_source = "dom"

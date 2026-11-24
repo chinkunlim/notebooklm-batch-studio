@@ -1,4 +1,4 @@
-# ISSUE-046：提示注入可經 Markdown javascript: 連結與 onclick 參數觸發 XSS
+# ISSUE-046：提示注入可經 Markdown `javascript:` 連結與 onclick 參數觸發 XSS
 
 - **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
@@ -7,7 +7,7 @@
 
 ## 1. 現象
 
-惡意 PDF 或網路研究來源可誘導 Gemini 輸出 [x](javascript:...)，報告/家教回覆渲染成可點擊的 javascript: 連結；前端 59 處 onclick="fn('${escHtml(x)}')" 中 AI 產生的標籤或標題含單引號即可跳出 JS 字串；notes-gen 的 option 與章節按鈕未跳脫。網頁與 API 同源，XSS 可呼叫所有 API。
+惡意 PDF 或網路研究來源可誘導 Gemini 輸出 `[x](javascript:...)`，報告/家教回覆渲染成可點擊的 `javascript:` 連結；前端 59 處 `onclick="fn('${escHtml(x)}')"` 中 AI 產生的標籤或標題含單引號即可跳出 JS 字串；notes-gen 的 option 與章節按鈕未跳脫。網頁與 API 同源，XSS 可呼叫所有 API。
 
 - **錯誤訊息**：無（`markdown_fragment('[x](javascript:alert(1))')` 輸出 `<a href="javascript:alert(1)">`）
 - **重現步驟**：讓 Gemini 回覆含 `[點我](javascript:fetch('/api/courses/X',{method:'DELETE'}))` 的報告或家教訊息，在研讀工作室點擊連結；或 QA 筆記標籤含 `x');alert(1);('`。

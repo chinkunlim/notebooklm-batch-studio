@@ -128,6 +128,8 @@ def lecture_to_dict(lec: Lecture) -> dict[str, Any]:
         "pdf_hash": lec.sha256,
         "upload_status": lec.upload_status,
         "error_message": lec.error_message,
+        "category": lec.category,
+        "relative_path": lec.relative_path,  # Refs: ISSUE-056
     }
 
 

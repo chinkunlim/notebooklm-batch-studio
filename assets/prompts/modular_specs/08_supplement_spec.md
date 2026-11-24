@@ -4,9 +4,9 @@
 
 ---
 
-## 1. 核心設計原則與防竄改機制（ADR-008）
+## 1. 核心設計原則與防竄改機制（note-studio ADR-008）
 
-依據 **ADR-008**，為防範 LLM Agent 覆寫長篇 Markdown 筆記時發生「幻覺刪字、底線破壞、軟折行黏結」等排版災難：
+依據 **note-studio ADR-008**，為防範 LLM Agent 覆寫長篇 Markdown 筆記時發生「幻覺刪字、底線破壞、軟折行黏結」等排版災難：
 1. **嚴格禁止 AI 直接修改 Markdown 原稿**：AI 不得覆寫 `courses/<科目>/原稿/ChXX.md` 或各模組檔案。
 2. **結構化卡片中繼**：AI 僅需輸出標準 YAML 卡片（放置於 `DATA_DIR/courses/<科目>/supplements/inbox/*.yaml`）。
 3. **程式原子注入與字元級零損驗證**：

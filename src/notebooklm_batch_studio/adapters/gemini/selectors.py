@@ -1,4 +1,4 @@
-"""Gemini 網頁 DOM 元素選取器集中配置表（SPEC-012, Plan §9.6）。
+"""Gemini 網頁 DOM 元素選取器集中配置表（note-studio SPEC-012, Plan §9.6）。
 
 將所有 Gemini 網頁前端元素之 Locator / Selector 集中管理，
 當 Google 前端改版時，只需在此檔更新選取器規則，或由本機覆寫機制載入。
@@ -77,7 +77,7 @@ GEMINI_SELECTORS: dict[str, str] = {
         'button:has(mat-icon:has-text("content_copy"))'
     ),
     "copy_button": ('button[aria-label*="複製"], button[aria-label*="Copy"], [data-test-id="copy-button"]'),
-    # 更多操作選單（⋯）與回覆詳細資訊 (SPEC-012, Refs: ISSUE-058)
+    # 更多操作選單（⋯）與回覆詳細資訊 (note-studio SPEC-012, Refs: note-studio ISSUE-058)
     # 真實頁面（2026-11-12 探查）：aria-label="Show more options"、mat-icon fonticon="more_horiz"；
     # 屬性比對區分大小寫，所以加上 i 旗標
     "more_actions_button": (
@@ -99,7 +99,7 @@ GEMINI_SELECTORS: dict[str, str] = {
         'button[aria-label*="Upload file"], [data-test-id="upload-button"]'
     ),
     "file_upload_input": 'input[type="file"]',
-    # Quota 限流與警示橫幅 (Refs: ISSUE-043)
+    # Quota 限流與警示橫幅 (Refs: note-studio ISSUE-043)
     "quota_warning_banner": (
         '.limit-reached, [data-test-id*="limit-reached"], '
         ':has-text("Limit reached"), :has-text("limit reached"), '

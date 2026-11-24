@@ -95,7 +95,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-025-integrate-literature-fetch-and-u.json
 │   │   ├── TASK-026-integrate-note-studio-phase-1-mo.json
 │   │   ├── TASK-027-integrate-note-studio-phase-2-st.json
-│   │   └── TASK-028-security-hardening-and-code-revi.json
+│   │   ├── TASK-028-security-hardening-and-code-revi.json
+│   │   └── TASK-029-records-audit-port-source-projec.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -232,6 +233,11 @@ notebooklm-batch-studio/
 │   │   ├── 049-http-host-and-artifact-code.md
 │   │   ├── 050-artifact-view-ignores-study-dir.md
 │   │   ├── 051-reader-notes-premature-export.md
+│   │   ├── 052-gemini-logger-legacy-name.md
+│   │   ├── 053-gemini-web-login-entry-missing.md
+│   │   ├── 054-literature-job-stays-running-after-crash.md
+│   │   ├── 055-quiz-response-course-code-key.md
+│   │   ├── 056-notes-form-lecture-fields.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -774,6 +780,16 @@ notebooklm-batch-studio/
 │   │   ├── sample_flashcards.json
 │   │   ├── sample_mindmap.json
 │   │   └── sample_quiz.json
+│   ├── gemini/
+│   │   ├── __init__.py
+│   │   ├── test_browser_session.py
+│   │   ├── test_chrome_session.py
+│   │   ├── test_gemini_adapter.py
+│   │   ├── test_gemini_copy_selector.py
+│   │   ├── test_gemini_rename_logs.py
+│   │   ├── test_gemini_response_count_baseline.py
+│   │   ├── test_playwright_startup_timeout.py
+│   │   └── test_quota_resume_parser.py
 │   ├── literature/
 │   │   ├── __init__.py
 │   │   ├── test_airiti.py
@@ -783,6 +799,8 @@ notebooklm-batch-studio/
 │   │   ├── test_chinese.py
 │   │   ├── test_free_text.py
 │   │   ├── test_literature.py
+│   │   ├── test_literature_repository.py
+│   │   ├── test_markdown_files.py
 │   │   └── test_tracker.py
 │   ├── __init__.py
 │   ├── dummy_client.py
@@ -802,6 +820,7 @@ notebooklm-batch-studio/
 │   ├── test_learning.py
 │   ├── test_literature_and_hierarchy.py
 │   ├── test_needs_review_and_ollama.py
+│   ├── test_note_pipeline_behaviors.py
 │   ├── test_note_pipeline_phase1.py
 │   ├── test_note_pipeline_phase2.py
 │   ├── test_notebooklm_adapter.py

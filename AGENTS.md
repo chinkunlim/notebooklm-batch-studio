@@ -134,6 +134,7 @@ notebooklm-batch-studio/
 │   └── notebooklm_batch_studio/
 └── tests/                                  # 【測試層】單元與整合測試
     ├── fixtures/
+    ├── gemini/
     └── literature/
 ```
 <!-- TREE_END -->

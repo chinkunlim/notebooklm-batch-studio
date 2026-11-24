@@ -1,4 +1,4 @@
-"""Gemini 網頁自動化適配器（SPEC-012, Plan §9）。
+"""Gemini 網頁自動化適配器（note-studio SPEC-012, Plan §9）。
 
 提供：
 1. GEMINI_SELECTORS: 集中式 DOM 選取器表

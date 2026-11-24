@@ -1,9 +1,9 @@
-"""Gemini 瀏覽器會話與 Profile 管理器（SPEC-012, Plan §9.2）。
+"""Gemini 瀏覽器會話與 Profile 管理器（note-studio SPEC-012, Plan §9.2）。
 
 以一般方式啟動真正的 Google Chrome（專用 profile 在
 DATA_DIR/state/gemini_profile/chrome_user_data/），Playwright 只透過本機除錯埠接上去。
 Google 會拒絕在 Playwright 自己啟動的瀏覽器裡登入，所以登入一律在
-「Gemini 登入」流程完成（services/gemini_auth_service.py，ISSUE-039）；
+「Gemini 登入」流程完成（services/gemini_auth_service.py，note-studio ISSUE-039）；
 這裡只重用已登入的 profile，不儲存密碼。
 """
 
@@ -106,7 +106,7 @@ def _wait_playwright_startup(pcm: Any, timeout_seconds: int, state: dict[str, An
 
 
 def _start_playwright_with_watchdog(timeout_seconds: int) -> tuple[Any, Any]:
-    """啟動 Playwright 並具備驅動程式超時終止保護（ISSUE-050）。
+    """啟動 Playwright 並具備驅動程式超時終止保護（note-studio ISSUE-050）。
 
     Args:
         timeout_seconds: 啟動最大等待秒數。
@@ -278,7 +278,7 @@ class BrowserSessionManager:
             logger.warning("_create_browser_and_page: wait on the page failed (page closed?): %s", exc)
         if "accounts.google.com" not in (page.url or "") and self._check_signed_in(page):
             return
-        # Signing in here would be rejected by Google: Playwright is attached (ISSUE-039).
+        # Signing in here would be rejected by Google: Playwright is attached (note-studio ISSUE-039).
         self._release(browser, context, page)
         raise RuntimeError(
             "Gemini 尚未登入（或登入已過期）。請先在設定面板按「啟動登入視窗」"
@@ -333,7 +333,7 @@ class BrowserSessionManager:
             logger.warning("_release: closing the Gemini tab failed: %s", exc)
 
     def _wait_window_closed(self, page: Any, max_wait_seconds: int = 120) -> None:
-        """安全等待瀏覽器視窗手動關閉，具備超時與斷線偵測防止 Worker 死鎖 (ISSUE-050)。
+        """安全等待瀏覽器視窗手動關閉，具備超時與斷線偵測防止 Worker 死鎖 (note-studio ISSUE-050)。
 
         Args:
             page: 監聽之 Playwright Page。
@@ -383,7 +383,8 @@ class BrowserSessionManager:
         """
         if callable(opts.on_done_callback):
             opts.on_done_callback()
-        # Step logs: a batch worker once hung somewhere in this teardown with no trace (ISSUE-050).
+        # Step logs: a batch worker once hung somewhere in this teardown with no trace
+        # (note-studio ISSUE-050).
         logger.info("open_driver teardown: saving sign-in state")
         self._sync_storage_state(context, self.profile_dir / "storage_state.json")
         if opts.headless or opts.auto_close:

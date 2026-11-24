@@ -1,7 +1,7 @@
 # 模組化學習筆記生成規格手冊（Modular Note Generation Handbook）
 
 > **專為 Gemini / AI 模型設計之出版級學習筆記全自動生成規範**  
-> 本手冊依據 `note-studio` 專案之 **SPEC-017 模組化筆記解耦規格** 與 **Argon 認知筆記模式** 提煉而成，結合語意標籤體系、排版防錯規範與零刪字稽核（Gate 3 Auto-Audit）。供日後生成其他科目、章節或跨領域教材時遵循。
+> 本手冊依據 `note-studio` 專案之 **note-studio SPEC-017 模組化筆記解耦規格** 與 **Argon 認知筆記模式** 提煉而成，結合語意標籤體系、排版防錯規範與零刪字稽核（Gate 3 Auto-Audit）。供日後生成其他科目、章節或跨領域教材時遵循。
 
 ---
 
@@ -47,7 +47,7 @@ graph TD
 
 ### 階段三：稽核缺失填補與課外經典補充（Audit Gap-Filling & Supplements）
 - 當稽核掃描出缺漏（如：課本一句帶過的經典實驗、未中文化的學習目標、題庫只有答案缺少誘答分析）時，進入缺失填補工作流：
-  - [08_supplement_spec.md](08_supplement_spec.md)：課外經典實驗補充與缺失填補規格（ADR-008 結構化卡片）
+  - [08_supplement_spec.md](08_supplement_spec.md)：課外經典實驗補充與缺失填補規格（note-studio ADR-008 結構化卡片）
   - 核心防錯原則：**嚴禁 AI 隨意改寫長篇原稿**，AI 僅輸出結構化 YAML 卡片，由專用 CLI 執行原子級無損注入與 `extract_core_tokens` 驗證。
 
 ---

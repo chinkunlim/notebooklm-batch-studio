@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
-_driver_logger = logging.getLogger("note_studio.adapters.gemini.web_driver")
+_driver_logger = logging.getLogger("notebooklm_batch_studio.adapters.gemini.web_driver")  # Refs: ISSUE-052
 
 
 def find_rename_menu_button(driver: Any, menu_sel: str) -> Any:
@@ -55,7 +55,7 @@ def open_rename_dialog(driver: Any, menu_sel: str, rename_sel: str) -> bool:
     if not menu_btn:
         _driver_logger.warning(
             "Rename chat aborted: menu button not found or not visible (selector: %s). "
-            "Gemini DOM may have updated (Refs: ISSUE-034, PROJECT_RULES R100).",
+            "Gemini DOM may have updated (Refs: note-studio ISSUE-034, PROJECT_RULES R100).",
             menu_sel,
         )
         return False
@@ -65,7 +65,7 @@ def open_rename_dialog(driver: Any, menu_sel: str, rename_sel: str) -> bool:
     rename_item = driver.page.locator(rename_sel).first
     if not (rename_item.count() > 0 and rename_item.is_visible()):
         _driver_logger.warning(
-            "Rename chat aborted: rename item not found (selector: %s) (Refs: ISSUE-034).",
+            "Rename chat aborted: rename item not found (selector: %s) (Refs: note-studio ISSUE-034).",
             rename_sel,
         )
         return False
@@ -91,7 +91,7 @@ def submit_rename_input(driver: Any, target_title: str, input_sel: str, save_sel
     )
     if not (title_input.count() > 0 and title_input.is_visible()):
         _driver_logger.warning(
-            "Rename chat aborted: title input not found (selector: %s) (Refs: ISSUE-034).",
+            "Rename chat aborted: title input not found (selector: %s) (Refs: note-studio ISSUE-034).",
             input_sel,
         )
         return False
@@ -129,7 +129,7 @@ def rename_current_chat(driver: Any, new_title: str = "") -> bool:
             return False
         return bool(driver._submit_rename_input(target_title, input_sel, save_sel))
     except Exception as exc:
-        _driver_logger.warning("Rename chat failed with exception (Refs: ISSUE-034): %s", exc)
+        _driver_logger.warning("Rename chat failed with exception (Refs: note-studio ISSUE-034): %s", exc)
         return False
 
 

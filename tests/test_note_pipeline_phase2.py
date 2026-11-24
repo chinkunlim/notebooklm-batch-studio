@@ -56,6 +56,30 @@ class NotePipelinePhase2Tests(unittest.TestCase):
         self.assertEqual(res["source_id"], "src-uploaded-99")
         self.assertEqual(uploaded_calls[0][0], "nb-abc")
 
+    def test_course_detail_lecture_fields_used_by_notes_form(self) -> None:
+        """The notes form reads `no`, `topic` and `relative_path` from course detail (Refs: ISSUE-056)."""
+        from notebooklm_batch_studio.domain.models import Lecture
+        from notebooklm_batch_studio.services.job_views import lecture_to_dict
+
+        lec = Lecture(
+            no=3,
+            topic="種族與階級",
+            filename="Ch03.pdf",
+            sha256="x",
+            category="02 Handout",
+            relative_path="02 Handout/Ch03.pdf",
+        )
+        data = lecture_to_dict(lec)
+        self.assertEqual(data["no"], 3)
+        self.assertEqual(data["topic"], "種族與階級")
+        self.assertEqual(data["relative_path"], "02 Handout/Ch03.pdf")
+        js = (
+            Path(__file__).resolve().parent.parent
+            / "src/notebooklm_batch_studio/entrypoints/static/studio-notes-gen.js"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("l.lecture_no", js)
+        self.assertNotIn("lec.lecture_no", js)
+
     def test_import_legacy_notes_skips_and_overwrites(self) -> None:
         legacy_dir = Path(self.tmp.name) / "legacy_notes"
         legacy_dir.mkdir(parents=True, exist_ok=True)

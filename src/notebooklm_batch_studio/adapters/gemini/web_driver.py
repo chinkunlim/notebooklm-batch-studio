@@ -1,4 +1,4 @@
-"""Gemini 網頁自動化操作驅動器（SPEC-012, Plan §9.3）。
+"""Gemini 網頁自動化操作驅動器（note-studio SPEC-012, Plan §9.3）。
 
 透過 Playwright 操作 Gemini 網頁前端：
 1. 開啟新 Chat 並命名章節標題
@@ -84,7 +84,7 @@ class GeminiWebDriver:
                 time.sleep(ms / 1000)
 
     def close_tab(self) -> None:
-        """關閉這個 driver 使用的分頁（自動重試換新分頁前、或多工章節結束後呼叫，ADR-016）。
+        """關閉這個 driver 使用的分頁（自動重試換新分頁前、或多工章節結束後呼叫，note-studio ADR-016）。
 
         分頁已關或瀏覽器已斷線時只記 log，不拋出。
         """
@@ -245,7 +245,7 @@ class GeminiWebDriver:
         return [self._read_model_from_scope(responses.nth(i)) for i in range(count)]
 
     def check_quota_exceeded(self) -> bool:
-        """檢查頁面上是否出現配額上限警示 (Refs: ISSUE-043)。
+        """檢查頁面上是否出現配額上限警示 (Refs: note-studio ISSUE-043)。
 
         Returns:
             若已達到配額上限則為 True，否則為 False。
@@ -261,7 +261,7 @@ class GeminiWebDriver:
             return False
 
     def get_quota_notice_text(self) -> str | None:
-        """獲取頁面上限流或配額提示之原始文字 (ISSUE-065)。
+        """獲取頁面上限流或配額提示之原始文字 (note-studio ISSUE-065)。
 
         Returns:
             若找到警示橫幅則回傳其文字內容，否則為 None。
@@ -282,7 +282,7 @@ class GeminiWebDriver:
         return None
 
     def assert_quota_available(self) -> None:
-        """確認配額可用；若超限則解析恢復時間並拋出異常 (ISSUE-065)。
+        """確認配額可用；若超限則解析恢復時間並拋出異常 (note-studio ISSUE-065)。
 
         Raises:
             GeminiQuotaExceededError: 當頁面出現限流警告時。
@@ -300,7 +300,7 @@ class GeminiWebDriver:
             )
 
     def refresh_and_check_quota(self) -> bool:
-        """重新整理瀏覽器頁面並檢驗 Quota 是否已恢復 (SPEC-019)。
+        """重新整理瀏覽器頁面並檢驗 Quota 是否已恢復 (note-studio SPEC-019)。
 
         Returns:
             若重新整理後警告橫幅已消失（Quota 可用）則回傳 True，否則為 False。
@@ -362,7 +362,7 @@ class GeminiWebDriver:
         return response_reader.try_copy_code_block(self, target_scope)
 
     def _copy_via_button(self) -> str | None:
-        """嘗試從最後一則回應的「複製」按鈕讀取剪貼簿文字 (Refs: ISSUE-058)。
+        """嘗試從最後一則回應的「複製」按鈕讀取剪貼簿文字 (Refs: note-studio ISSUE-058)。
 
         Returns:
             若複製成功傳回字串，否則為 None。
@@ -436,7 +436,7 @@ class GeminiWebDriver:
         raise GeminiAutomationError(f"等待 Gemini 生成超時 ({timeout_seconds}s)")
 
     def _record_send_baselines(self) -> None:
-        """送出前記錄當前最後一則回覆與數量作為 baseline，並清空剪貼簿 (ISSUE-054, ISSUE-061)。"""
+        """送出前記錄當前最後一則回覆與數量作為 baseline，並清空剪貼簿 (note-studio ISSUE-054, 061)。"""
         prev = self._copy_via_button()
         if prev is None:
             prev = self._read_response_fallback()

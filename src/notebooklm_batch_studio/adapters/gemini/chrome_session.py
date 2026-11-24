@@ -1,4 +1,4 @@
-"""Real Google Chrome session for Gemini (ISSUE-039).
+"""Real Google Chrome session for Gemini (note-studio ISSUE-039).
 
 Google refuses to sign in ("This browser or app may not be secure") inside a
 browser that Playwright launched. So Chrome is started here as an ordinary
@@ -47,7 +47,7 @@ _LAUNCH_LOCK_TIMEOUT_SECONDS = 15.0
 
 @contextmanager
 def _acquire_launch_lock(timeout: float = _LAUNCH_LOCK_TIMEOUT_SECONDS) -> Generator[None, None, None]:
-    """獲取 Chrome 啟動互斥鎖，具備超時機制防止永久死鎖 (ISSUE-050)。
+    """獲取 Chrome 啟動互斥鎖，具備超時機制防止永久死鎖 (note-studio ISSUE-050)。
 
     Args:
         timeout: 獲取鎖之最長等待秒數。
