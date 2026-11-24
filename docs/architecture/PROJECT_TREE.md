@@ -789,6 +789,7 @@ notebooklm-batch-studio/
 │       │   ├── font_service.py
 │       │   ├── job_planner.py
 │       │   ├── job_views.py
+│       │   ├── learning_record.py
 │       │   ├── learning_service.py
 │       │   ├── orchestrator.py
 │       │   ├── preferences_service.py
@@ -862,6 +863,7 @@ notebooklm-batch-studio/
 │   ├── test_guides_and_reports.py
 │   ├── test_job_settings.py
 │   ├── test_learning.py
+│   ├── test_learning_record.py
 │   ├── test_literature_and_hierarchy.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_note_pipeline_behaviors.py

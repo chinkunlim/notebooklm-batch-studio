@@ -86,6 +86,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(study): generic file/unfile between scratch and course categories (by `@antigravity`)
 - feat(study): generic file/unfile between scratch and course categories (by `@antigravity`)
 - feat(courses): archive/restore, safe course-code rename, queue and today archive filtering (by `@antigravity`)
+- feat(record): cross-term learning record with study time, memory strength, MD/PDF export (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

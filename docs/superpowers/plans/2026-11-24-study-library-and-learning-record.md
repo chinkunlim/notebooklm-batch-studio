@@ -394,9 +394,9 @@ def test_no_new_writes_to_old_layout(self):
 - `LearningRecordService(config, course_repo, repos: RecordRepos)`：`.build(term: str | None = None) -> list[TermRecordView]`、`.export_markdown(term=None) -> str`、`.export_pdf(term: str | None, out: Path) -> Path`（`render_markdown_to_pdf`）
 - 檔案清單：遞迴、排除隱藏檔；NoteStudio 筆記與筆記狀態從檔案與 `notes_state_dir` 讀；未登錄的課程資料夾也列出（`status="unregistered"`）；學期層 `others` 照列
 
-- [ ] **Step 1: 失敗測試**：依學期排序；`02 Handouts/slides.pptx`、`05 Assignments/期中/報告.pdf` 出現在 files；`stats["quiz_attempts"]==1`、`study_days>=1`；未登錄課程 `status=="unregistered"`；Markdown 以 `# 學習紀錄` 開頭並含 `## 115-1`、`### CP30000 團體諮商`；`export_pdf` 產生 `%PDF` 開頭檔案。
-- [ ] **Step 2–4:** 失敗 → 實作 → 通過
-- [ ] **Step 5:** Commit `-m "feat(record): cross-term learning record with study time, memory strength, MD/PDF export"`
+- [x] **Step 1: 失敗測試**：依學期排序；`02 Handouts/slides.pptx`、`05 Assignments/期中/報告.pdf` 出現在 files；`stats["quiz_attempts"]==1`、`study_days>=1`；未登錄課程 `status=="unregistered"`；Markdown 以 `# 學習紀錄` 開頭並含 `## 115-1`、`### CP30000 團體諮商`；`export_pdf` 產生 `%PDF` 開頭檔案。
+- [x] **Step 2–4:** 失敗 → 實作 → 通過
+- [x] **Step 5:** Commit `-m "feat(record): cross-term learning record with study time, memory strength, MD/PDF export"`
 
 ### Task 13: HTTP、MCP、網頁三入口
 
