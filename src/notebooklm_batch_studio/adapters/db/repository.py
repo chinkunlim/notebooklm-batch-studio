@@ -7,12 +7,13 @@ import json
 import logging
 from typing import Any
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from notebooklm_batch_studio.adapters.db.mappers import to_domain_course, to_domain_lecture
 from notebooklm_batch_studio.adapters.db.models import (
     ArtifactJobRecord,
+    CourseQANoteRecord,
     CourseRecord,
     ExplanationRecord,
     KeyPointsRecord,
@@ -29,6 +30,20 @@ from notebooklm_batch_studio.adapters.db.queue_repository import QueueRepository
 from notebooklm_batch_studio.domain.models import Course, CourseStatus, GenerationOptions, Lecture
 
 logger = logging.getLogger(__name__)
+
+
+_COURSE_OWNED_MODELS: tuple[Any, ...] = (
+    QuizMistakeRecord,
+    QuizAttemptRecord,
+    StudyProgressRecord,
+    ReviewItemRecord,
+    ExplanationRecord,
+    KeyPointsRecord,
+    TutorMessageRecord,
+    CourseQANoteRecord,
+    ArtifactJobRecord,
+    LectureRecord,
+)
 
 
 class CourseRepository:
@@ -245,6 +260,31 @@ class CourseRepository:
             self.session.flush()
             self.session.commit()
 
+    def count_learning_records(self, code: str) -> dict[str, int]:
+        """Count removable learning records per table for a course.
+
+        Args:
+            code: Course code.
+
+        Returns:
+            Mapping of table name to record count.
+        """
+        tables: tuple[tuple[str, Any], ...] = (
+            ("quiz_attempts", QuizAttemptRecord),
+            ("quiz_mistakes", QuizMistakeRecord),
+            ("study_progress", StudyProgressRecord),
+            ("review_items", ReviewItemRecord),
+            ("explanations", ExplanationRecord),
+            ("key_points", KeyPointsRecord),
+            ("tutor_messages", TutorMessageRecord),
+            ("course_qa_notes", CourseQANoteRecord),
+        )
+        counts: dict[str, int] = {}
+        for name, model in tables:
+            stmt = select(func.count()).select_from(model).where(model.course_code == code)
+            counts[name] = int(self.session.execute(stmt).scalar_one() or 0)
+        return counts
+
     def delete_course(self, code: str) -> int:
         """Delete a course and everything recorded for it in this database.
 
@@ -257,17 +297,7 @@ class CourseRepository:
             Number of jobs that were removed.
         """
         removed = 0
-        for model in (
-            QuizMistakeRecord,
-            QuizAttemptRecord,
-            StudyProgressRecord,
-            ReviewItemRecord,
-            ExplanationRecord,
-            KeyPointsRecord,
-            TutorMessageRecord,
-            ArtifactJobRecord,
-            LectureRecord,
-        ):
+        for model in _COURSE_OWNED_MODELS:
             result = self.session.execute(delete(model).where(model.course_code == code))
             if model is ArtifactJobRecord:
                 removed = int(getattr(result, "rowcount", 0) or 0)

@@ -176,6 +176,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(literature): close stale running jobs on runner startup and worker interrupt (TASK-032, ISSUE-054) (by `@antigravity`)
 - fix(literature): guard stale job cleanup with cross-process RunLock (TASK-034, ISSUE-057) (by `@antigravity`)
 - fix(layout): retire input/output course folders, scope flashcards to their course (by `@antigravity`)
+- fix(courses): require archived status before delete, preserve study files, report removed records (updated existing delete tests to archive first) (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import tempfile
 import unittest
@@ -22,6 +23,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    CourseStatus,
     Lecture,
     QuizAttempt,
 )
@@ -218,6 +220,9 @@ class PlanTest(PlanFixture):
             "C1", "flashcard", "k", remembered=True, lecture_no=1, front="f", back="b", now=NOW
         )
         asyncio.run(self.plan.explain("C1", 1, "q?", choices=["a"], answer_index=0))
+        course = self.course_repo.get_course("C1")
+        assert course is not None
+        self.course_repo.save_course(dataclasses.replace(course, status=CourseStatus.ARCHIVED))
         service.course_settings.delete_course("C1")
         self.assertEqual(ReviewRepository(self.session).list_steps("C1"), set())
         self.assertEqual(ReviewRepository(self.session).list_explanations("C1"), [])

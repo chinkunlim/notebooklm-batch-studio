@@ -52,7 +52,7 @@
 - 未歸檔一律 `scratch/<種類>/`，種類固定：`literature`、`notes`、`outputs`、`uploads`、`unarchived`。
 - 舊學期課程以 `record-only` 登錄（不排生成、不讀額度），預設 `status=archived`；封存課程不進佇列、Today、到期複習、課程選單預設清單。
 - 會修改資料的 MCP 工具一律 `confirm: bool = False`，未確認回 `{"confirmed": false, "warning": "..."}`。
-- 不刪除使用者在 `study/` 的任何檔案；刪除課程只移除資料庫並提示改用「封存」；不自動刪除本機或遠端資料。
+- 刪除課程必須先封存（只有 `status == archived` 才能刪除）；刪除只移除資料庫並回報遺失學習紀錄筆數，不動 `study/` 任何檔案（僅舊佈局 `output/courses/<code>` 可移到 `deleted/`）；不自動刪除本機或遠端資料。
 - 程式不讀寫 iCloud 路徑；舊學期資料由使用者自行複製到 `DATA_DIR/study/`。
 - Commit：`python3 scripts/agentctl.py commit --agent <名字> --model <模型> -m "<English>"`；找到錯誤根因立刻用 `adr-issue-tracker` 寫 known-issue（核心規則 4）；未經同意不 push。
 
@@ -278,7 +278,7 @@ def test_no_hardcoded_category_literals_left(self):
 - Modify `services/source_manager.py:340,359`、`services/qa_notes_service.py:124,377,429`（上傳 PDF 改存 `<HANDOUTS>/_uploaded/`；課程沒有 `study_dir` 時存 `scratch/uploads/<code>/`）
 - Modify `services/study_service.py:210-213`（閃卡只在 `resolve_course_output_root(..., course.study_dir)` 下找，刪掉跨課程 glob）
 - Modify `services/orchestrator.py:82`（`CourseReporter` 依課程 output root 寫 `summary.md/html`）
-- Modify `services/course_settings.py:443`（刪除課程時也處理 `03 Notes/NotebookLM` 以外不動；見 Task 11）
+- Modify `services/course_settings.py:443`（刪除課程必須先封存且不動 `study/` 任何檔案，僅移走舊佈局 `output/courses/<code>` 與 `needs_review`；已於 Phase 1 前置修正補齊 `learning_records_removed`）
 - Modify `services/folder_browser.py:47-83`、`entrypoints/http/settings.py:228`、`entrypoints/mcp_studio_tools.py:359`（第一個捷徑改為 `study_root_dir`，第二個 `scratch_dir`；`input/courses` 存在時列為「舊課程資料夾（待整併）」）
 - Test `tests/test_old_layout_retired.py`
 
@@ -368,9 +368,9 @@ def test_no_new_writes_to_old_layout(self):
 
 ## Phase 2：課程生命週期
 
-### Task 11: 封存／恢復、改代碼、刪除改為建議封存
+### Task 11: 封存／恢復、改代碼、配合 Google Classroom 刪除生命週期
 
-**Files:** Create `adapters/db/course_identity_repo.py`、`services/course_lifecycle.py`；Modify `adapters/db/queue_repository.py:99,404,464`（排除 `status=="archived"`，與排除 paused 同處）、`services/study_plan_service.py`（Today、到期複習略過封存課程）、`services/course_settings.py:427-450`（刪除回傳加 `"learning_records_removed": {...}` 筆數；HTTP/MCP 的刪除說明改為先建議封存）；Test `tests/test_course_lifecycle.py`（追加）
+**Files:** Create `adapters/db/course_identity_repo.py`、`services/course_lifecycle.py`；Modify `adapters/db/queue_repository.py:99,404,464`（排除 `status=="archived"`，與排除 paused 同處）、`services/study_plan_service.py`（Today、到期複習略過封存課程）、HTTP/MCP/Web 加入封存與恢復入口（刪除護欄「未封存拒絕、只移舊佈局不動 `study/`、回傳 `learning_records_removed`」已於 Phase 1 前置修正完成）；Test `tests/test_course_lifecycle.py`（追加）
 
 **Interfaces — Produces:**
 - `CourseIdentityRepository(session).rename_code(old: str, new: str) -> dict[str, int]`：單一交易；複製 `courses` 列 → 更新 `lectures`、`artifact_jobs`、`quiz_attempts`、`quiz_mistakes`、`study_progress`、`review_items`、`explanations`、`key_points`（含 `id` 的 `"<code>:<no>"`）、`tutor_messages`、`course_qa_notes`、`literature_items` → 刪舊列；回每表筆數

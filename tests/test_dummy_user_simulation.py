@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import tempfile
 import unittest
 from pathlib import Path
@@ -22,7 +23,7 @@ from notebooklm_batch_studio.adapters.db.review_repository import ReviewReposito
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.config.settings import AppConfig
-from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, JobStatus
+from notebooklm_batch_studio.domain.models import ArtifactJob, ArtifactType, CourseStatus, JobStatus
 from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
@@ -229,6 +230,10 @@ class NaiveChaosUserJourneyTest(DummySimulationFixture):
         self._verify_qa_notes_workflow()
 
         # Delete leaves zero DB orphans for BIO101 while keeping global prefs (ISSUE-034)
+        self.assertEqual(self.http.delete("/api/courses/BIO101").status_code, 409)
+        course = self.service.course_repo.get_course("BIO101")
+        assert course is not None
+        self.service.course_repo.save_course(dataclasses.replace(course, status=CourseStatus.ARCHIVED))
         self.assertEqual(self.http.delete("/api/courses/BIO101").status_code, 200)
         self.assertIsNone(self.session.get(UiPreferenceRecord, "course"))
         self.assertIsNone(self.session.get(UiPreferenceRecord, "place:BIO101"))

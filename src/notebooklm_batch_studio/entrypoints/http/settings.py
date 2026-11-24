@@ -341,3 +341,5 @@ def delete_course(code: str, request: Request) -> dict[str, Any]:
         return service.course_settings.delete_course(code)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

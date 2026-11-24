@@ -21,6 +21,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    CourseStatus,
     JobStatus,
     effective_options,
     merge_generation_options,
@@ -425,28 +426,48 @@ class CourseSettingsService:
         logger.info("Course %s %s", code, "paused" if paused else "started")
         return {"code": code, "paused": paused}
 
-    def delete_course(self, code: str) -> dict[str, Any]:
-        """Remove a course from this app: database records go, its output folder is set aside.
-
-        Output files are moved to `DATA_DIR/deleted/<code>-<time>/` (recoverable), the source
-        PDFs in `input/` are never touched, and nothing on Gemini Notebook is deleted.
+    def _move_legacy_delete_targets(self, code: str) -> str | None:
+        """Move only legacy output/courses and needs_review folders into deleted/.
 
         Args:
-            code: Course code.
+            code: Course code being removed from the database.
 
         Returns:
-            Removed job count and where the output files were moved (None when there were none).
+            Target archive path when at least one legacy folder moved, else None.
         """
-        course = self._course(code)
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         target = self.config.deleted_dir / f"{code}-{stamp}"
         moved: str | None = None
-        output_root = resolve_course_output_root(self.config.courses_output_dir, code, course.study_dir)
-        sources = [output_root, *self.config.needs_review_dir.glob(f"{code}_*")]
+        legacy_output = resolve_course_output_root(self.config.courses_output_dir, code, "")
+        sources = [legacy_output, *self.config.needs_review_dir.glob(f"{code}_*")]
         for folder in (f for f in sources if f.exists()):
             target.mkdir(parents=True, exist_ok=True)
             shutil.move(str(folder), str(target / folder.name))
             moved = str(target)
+        return moved
+
+    def delete_course(self, code: str) -> dict[str, Any]:
+        """Remove an archived course from DB while keeping all study/ files intact.
+
+        Only legacy `output/courses/<code>` and `needs_review/<code>_*` folders are moved
+        to `DATA_DIR/deleted/<code>-<time>/` (Refs: ISSUE-065). Active courses are refused.
+
+        Args:
+            code: Course code (must already have `status == CourseStatus.ARCHIVED`).
+
+        Returns:
+            Removed job count, legacy move target, and counts of removed learning records.
+        """
+        course = self._course(code)
+        if course.status != CourseStatus.ARCHIVED:
+            raise ValueError("請先封存課程，封存後才能刪除")
+        counts = self.course_repo.count_learning_records(code)
+        moved = self._move_legacy_delete_targets(code)
         removed = self.course_repo.delete_course(code)
-        logger.info("Deleted course %s (%d jobs); outputs moved to %s", code, removed, moved)
-        return {"code": code, "removed_jobs": removed, "moved_to": moved}
+        logger.info("Deleted archived course %s (%d jobs); legacy moved to %s", code, removed, moved)
+        return {
+            "code": code,
+            "removed_jobs": removed,
+            "moved_to": moved,
+            "learning_records_removed": counts,
+        }

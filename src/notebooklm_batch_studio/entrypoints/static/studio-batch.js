@@ -305,16 +305,21 @@ function jobGroupsHtml(data, code) {
  * The course's pause / start button and its advanced tools menu.
  * @param {string} code Course code
  * @param {boolean} paused Whether the course is paused
+ * @param {string} [status='active'] Lifecycle status ('active' or 'archived')
  * @returns {string} HTML
  */
-function courseActionsHtml(code, paused) {
+function courseActionsHtml(code, paused, status = 'active') {
+  const canDelete = status === 'archived';
+  const deleteBtn = canDelete
+    ? `<button class="btn btn-ghost" onclick="deleteCourse(${jsAttr(code)})" style="color:var(--danger)">刪除課程</button>`
+    : `<button class="btn btn-ghost" disabled title="請先封存" style="color:var(--muted);opacity:.6;cursor:not-allowed">刪除課程（請先封存）</button>`;
   return (paused
     ? `<span class="badge badge-warning">暫停中</span><button class="btn btn-primary btn-sm" onclick="setCoursePaused(${jsAttr(code)}, false)">開始生成</button>`
     : `<button class="btn btn-soft btn-sm" onclick="setCoursePaused(${jsAttr(code)}, true)">暫停這門課</button>`) +
     `<details class="more-menu"><summary class="btn btn-ghost btn-sm">進階工具</summary><div class="menu">
       <button class="btn btn-ghost" onclick="syncFromNotebookLM(${jsAttr(code)})">從 Gemini Notebook 同步網頁上做的產出</button>
       <button class="btn btn-ghost" onclick="refinePrompts(${jsAttr(code)})">用本機模型潤飾 Prompt</button>
-      <button class="btn btn-ghost" onclick="deleteCourse(${jsAttr(code)})" style="color:var(--danger)">刪除課程</button></div></details>`;
+      ${deleteBtn}</div></details>`;
 }
 
 /**
@@ -350,7 +355,7 @@ async function viewCourseDetail(code, silent = false) {
       if (typeof loadCourseSources === 'function') loadCourseSources(code);
       if (typeof loadCourseRemoteArtifacts === 'function') loadCourseRemoteArtifacts(code);
     }
-    document.getElementById('detailCourseActions').innerHTML = courseActionsHtml(code, data.paused);
+    document.getElementById('detailCourseActions').innerHTML = courseActionsHtml(code, data.paused, data.status);
     renderActiveJobs(data.jobs || [], code);
   } catch (e) {
     content.innerHTML = `<p style="color:var(--danger)">載入失敗：${escHtml(e.message)}</p>`;
@@ -404,7 +409,7 @@ function clearCoursePreferences(code) {
  * @returns {Promise<void>}
  */
 async function deleteCourse(code) {
-  if (!(await askConfirm(`刪除課程 ${code}？\n\n• 本機的工作紀錄與學習紀錄會刪除\n• 產出檔案移到 DATA_DIR/deleted/（可找回）\n• 講義 PDF 和 Gemini Notebook 上的筆記本不會動`, { okLabel: '刪除', danger: true }))) return;
+  if (!(await askConfirm(`刪除已封存課程 ${code}？\n\n• 只從本程式移除資料庫紀錄（含學習紀錄）\n• study/ 內的所有檔案、個人隨筆與 Gemini Notebook 不會動`, { okLabel: '刪除', danger: true }))) return;
   try {
     const res = await fetch(`/api/courses/${code}`, { method: 'DELETE' });
     const data = await res.json();

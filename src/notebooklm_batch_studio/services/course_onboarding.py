@@ -256,6 +256,9 @@ class CourseOnboardingMixin:
             "progress_percent": progress_percent,
             "counts": raw_counts,
             "paused": c.paused,
+            "status": c.status.value,
+            "term": c.term,
+            "course_no": c.course_no,
             "study_state": self._course_study_state(c),
         }
 
@@ -319,6 +322,9 @@ class CourseOnboardingMixin:
             "mock_exam_questions": course.mock_exam_questions,
             **self._job_progress(course_code),
             "paused": course.paused,
+            "status": course.status.value,
+            "term": course.term,
+            "course_no": course.course_no,
             "lectures": [lecture_to_dict(lec) for lec in course.lectures],
             "jobs": format_jobs_data(jobs, course_dir, self.config.needs_review_dir),
         }

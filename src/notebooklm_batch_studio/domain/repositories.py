@@ -17,7 +17,9 @@ from notebooklm_batch_studio.domain.models import (
     QuizAttempt,
     QuizMistake,
 )
-from notebooklm_batch_studio.domain.notebooklm_protocol import NotebookLMClientProtocol
+from notebooklm_batch_studio.domain.notebooklm_protocol import (
+    NotebookLMClientProtocol as NotebookLMClientProtocol,
+)
 
 
 class OllamaClientProtocol(Protocol):
@@ -316,6 +318,17 @@ class CourseRepositoryProtocol(Protocol):
         """
         ...
 
+    def count_learning_records(self, code: str) -> dict[str, int]:
+        """Count removable learning records per table for a course.
+
+        Args:
+            code: Course code.
+
+        Returns:
+            Mapping of table name to record count.
+        """
+        ...
+
     def set_course_paused(self, code: str, paused: bool) -> None:
         """Pause or resume one course in the queue.
 
@@ -424,10 +437,7 @@ class StudyRepositoryProtocol(Protocol):
         ...
 
     def list_mistakes(
-        self,
-        course_code: str,
-        lecture_no: int | None = None,
-        only_unresolved: bool = True,
+        self, course_code: str, lecture_no: int | None = None, only_unresolved: bool = True
     ) -> list[QuizMistake]:
         """List recorded mistakes for a course or lecture.
 
@@ -482,13 +492,3 @@ class PreferencesRepositoryProtocol(Protocol):
             Number of deleted preferences.
         """
         ...
-
-
-__all__ = [
-    "CourseRepositoryProtocol",
-    "NotebookLMClientProtocol",
-    "OllamaClientProtocol",
-    "PreferencesRepositoryProtocol",
-    "QueueRepositoryProtocol",
-    "StudyRepositoryProtocol",
-]

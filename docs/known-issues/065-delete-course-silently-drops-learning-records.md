@@ -19,8 +19,9 @@ services/course_settings.py::delete_course 直接刪除課程在資料庫的測�
 
 ## 3. 修正或規避方式
 
-計畫於 Task 5（courses.status）與 Task 11（CourseLifecycleService.archive/restore、刪除回報 lost records）修正。（相關程式碼註解加 `Refs: ISSUE-065`）
+已先於進入 Phase 1 前補強刪除保護（`CourseSettingsService.delete_course`、HTTP `DELETE /api/courses/{code}`、MCP `delete_course`、UI `courseActionsHtml`），採用 Google Classroom 模式：僅 `status == archived` 可刪除，未封存回報錯誤/409/confirm_warning；刪除僅移除資料庫紀錄（含 8 張學習紀錄表）並回傳 `learning_records_removed`，`study/` 內任何檔案不搬不刪（僅舊佈局 `output/courses/<code>` 移入 `deleted/`）。剩餘 `CourseLifecycleService.archive/restore` 將於 Task 11 實作。（Refs: ISSUE-065）
 
 ## 4. 防回歸
 
-待補：tests/test_course_lifecycle.py (Task 5/11)
+- `tests/test_course_lifecycle.py::CourseDeletionRulesTests`：`test_delete_refused_unless_archived`、`test_delete_archived_course_keeps_study_files`、`test_delete_archived_course_moves_only_legacy_output`
+- 待補：Task 11 `archive`/`restore` 整合測試（`tests/test_course_lifecycle.py`）

@@ -43,7 +43,7 @@
 - **課程代碼與安全**：代碼格式為 `<學期>_<課號>`（如 `115-1_CP30000`）；課號取 `__` 或 `_` 兩側英數字相接轉大寫（`CP__30000` → `CP30000`、`YY__5061AA` → `YY5061AA`）；必須通過 `domain/path_safety.validate_path_segment`。
 - **分類彈性**：預設複數名 `01 Materials`…`05 Assignments`，可透過 `.env` 的 `STUDY_CATEGORIES`（須剛好 5 個逗號分隔名稱）覆寫；讀取時合併別名，建立目錄時不重複建置。
 - **路徑集中與不可變**：所有 `DATA_DIR` 子路徑集中由 `AppConfig` 提供；`entrypoints/` 與 `config/` 以外禁止隱式 `load_config()`；任何新寫入不得落在 `input/courses` 或 `output/courses`。
-- **封存與安全刪除**：舊學期課程預設 `profile="record-only"`、`status="archived"`；封存課程不進工作佇列、Today 與到期複習，課程選單預設隱藏；刪除課程只移除資料庫並回報遺失學習紀錄筆數、引導改用封存，**絕不刪除 `study/` 內任何使用者檔案**。
+- **封存與安全刪除**：舊學期課程預設 `profile="record-only"`、`status="archived"`；封存課程不進工作佇列、Today 與到期複習，課程選單預設隱藏；課程生命週期採 Google Classroom 模式（`active → archived → 刪除`），未封存課程一律拒絕刪除並提示「請先封存課程」，刪除只移除資料庫並回報遺失學習紀錄筆數，**絕不刪除或移動 `study/` 內任何檔案**（僅可搬移舊佈局 `output/courses/<code>` 與 `needs_review/<code>_*` 至 `deleted/`）。
 - **三入口一致與確認防護**：所有新服務同時提供 HTTP、MCP 與 Web UI；會新增、移動、封存或改寫資料的 MCP 工具皆帶 `confirm: bool = False`，未確認回傳 `{"confirmed": false, "warning": "..."}`（經 `entrypoints/mcp_confirm.py::confirm_warning`）。
 
 ### 不做 (Out of scope)
@@ -133,11 +133,17 @@
   - **When** 執行對應服務
   - **Then** 外部 PDF 複製至 `study/<term>/<folder>/02 Handouts/`；課本不上傳；只有 `02 Handouts` PDF 觸發監看；歸檔防同名覆寫並阻擋越界路徑，撤銷歸檔回到 `scratch/unarchived/<code>/`
   - 對應測試：`tests/test_study_library.py`、`tests/test_filing.py`
-- [ ] **場景 11（封存排除佇列與 Today、安全改代碼、刪除回報遺失紀錄）**
+- [ ] **場景 11（封存排除佇列與 Today、安全改代碼、未封存禁止刪除且刪除不動 `study/` 檔案）**
   - **Given** 含工作、作答紀錄、筆記與偏好之課程
   - **When** 執行 `archive`/`restore`、`rename(dry_run=True/False)`、`delete_course`
-  - **Then** 封存後 `claim_next_job` 回 `None` 且不出現在 Today；`rename` 在單一交易同步 11 張表與 5 種本機檔案（有 `running` 工作或新碼已存在時拒絕且完全不變）；刪除課程回傳 `learning_records_removed`
-  - 對應測試：`tests/test_course_lifecycle.py`
+  - **Then** 封存後 `claim_next_job` 回 `None` 且不出現在 Today；`rename` 在單一交易同步 11 張表與 5 種本機檔案（有 `running` 工作或新碼已存在時拒絕且完全不變）；刪除會檢查是否已封存並回傳 `learning_records_removed`
+  - **Given（場景 11b：未封存不能刪除）** 課程狀態為 `active`（含透過 HTTP 與 `confirm=True` 呼叫 MCP `delete_course`）
+  - **When** 執行 `delete_course`
+  - **Then** 服務拋出 `ValueError("請先封存課程，封存後才能刪除")`、HTTP 回 `409`、MCP 回 `{"confirmed": false, ...}`，資料庫與本機檔案皆不變
+  - **Given（場景 11c：刪除不動 `study/` 檔案）** 已封存（`archived`）課程於 `study/<term>/<課程>/03 Notes/NotebookLM/` 與 `03 Notes/` 含有檔案，且可能另有舊佈局 `output/courses/<code>/`
+  - **When** 執行 `delete_course`
+  - **Then** 移除資料庫課程與 8 張學習紀錄表並回傳 `learning_records_removed`；`study/` 內所有檔案與個人隨筆原封不動，僅舊佈局 `output/courses/<code>/` 移入 `deleted/`
+  - 對應測試：`tests/test_course_lifecycle.py`（含 `test_delete_refused_unless_archived`、`test_delete_archived_course_keeps_study_files`、`test_delete_archived_course_moves_only_legacy_output`）
 
 ### 5.6 學習紀錄、三入口、登入狀態與整併（Task 12–15）
 - [ ] **場景 12（跨學期完整學習紀錄與 Markdown/PDF 匯出）**

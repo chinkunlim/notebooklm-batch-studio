@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import dataclasses
 import json
 import tempfile
 import unittest
@@ -21,6 +22,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    CourseStatus,
     GenerationOptions,
     JobStatus,
     Lecture,
@@ -136,6 +138,9 @@ class DeleteCourseTest(Fixture):
         out = self.config.courses_output_dir / "BIO101" / "01_t1"
         out.mkdir(parents=True)
         (out / "quiz.json").write_text("{}", encoding="utf-8")
+        course = self.course_repo.get_course("BIO101")
+        assert course is not None
+        self.course_repo.save_course(dataclasses.replace(course, status=CourseStatus.ARCHIVED))
         result = self.service.course_settings.delete_course("BIO101")
         self.assertGreater(result["removed_jobs"], 0)
         self.assertIsNone(self.course_repo.get_course("BIO101"))
@@ -173,6 +178,9 @@ class DeleteCourseTest(Fixture):
         )
         self.session.commit()
 
+        course = self.course_repo.get_course("BIO101")
+        assert course is not None
+        self.course_repo.save_course(dataclasses.replace(course, status=CourseStatus.ARCHIVED))
         self.service.course_settings.delete_course("BIO101")
 
         self.assertIsNone(self.session.get(KeyPointsRecord, "BIO101:1"))
@@ -226,6 +234,10 @@ class EntrypointTest(Fixture):
             self.assertFalse(http.post("/api/courses/BIO101/start").json()["paused"])
             start.assert_called_once()
         self.assertTrue(http.post("/api/courses/BIO101/pause").json()["paused"])
+        self.assertEqual(http.delete("/api/courses/BIO101").status_code, 409)
+        course = self.course_repo.get_course("BIO101")
+        assert course is not None
+        self.course_repo.save_course(dataclasses.replace(course, status=CourseStatus.ARCHIVED))
         self.assertEqual(http.delete("/api/courses/BIO101").status_code, 200)
         self.assertEqual(http.delete("/api/courses/BIO101").status_code, 404)
 

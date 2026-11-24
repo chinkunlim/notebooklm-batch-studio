@@ -7,6 +7,8 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
+from notebooklm_batch_studio.domain.models import CourseStatus
+from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
 
@@ -63,6 +65,8 @@ def _set_course_paused_payload(
 def _delete_course_payload(active_service: BatchStudioService, code: str, confirm: bool) -> str:
     """Delete a course from local DB and move outputs to deleted archive.
 
+    Requires archived status first; study/ files are never touched (Refs: ISSUE-065).
+
     Args:
         active_service: Orchestrator service.
         code: Course code.
@@ -71,10 +75,17 @@ def _delete_course_payload(active_service: BatchStudioService, code: str, confir
     Returns:
         JSON string response.
     """
+    course = active_service.course_repo.get_course(code)
+    if course is not None and course.status != CourseStatus.ARCHIVED:
+        return confirm_warning(
+            "請先封存課程，封存後才能刪除。",
+            code=code,
+            status=course.status.value,
+        )
     if not confirm:
-        return json.dumps(
-            {"confirmed": False, "warning": "Set confirm=True to delete this course's local records."},
-            ensure_ascii=False,
+        return confirm_warning(
+            "Set confirm=True to delete this archived course's local DB records.",
+            code=code,
         )
     try:
         return json.dumps(active_service.course_settings.delete_course(code), ensure_ascii=False)

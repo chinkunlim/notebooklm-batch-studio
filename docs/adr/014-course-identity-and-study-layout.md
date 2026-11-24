@@ -36,10 +36,11 @@
    - 徹底退場 `input/courses/`、`output/courses/`、`output/imported_sources/`：上傳的自訂來源存 `<HANDOUTS>/_uploaded/`（無 `study_dir` 時存 `scratch/uploads/<code>/`）。
    - 所有未歸檔或撤銷歸檔檔案統一放在 `DATA_DIR/scratch/<kind>/`，種類限定五種：`literature`、`notes`、`outputs`、`uploads`、`unarchived`。
    - 集中所有 `DATA_DIR` 子路徑於 `AppConfig`，移除 `entrypoints/` 與 `config/` 以外的隱式 `load_config()`。
-4. **舊學期 `record-only`、封存與安全刪除**：
+4. **課程生命週期與舊學期 `record-only`：active → archived → 刪除（只移除資料庫）**：
    - 新增 `CourseStatus`（`active` / `archived`）與 `ProfileName.RECORD_ONLY`。
+   - 課程生命週期採 Google Classroom 模式：平常只做「封存」，**只有 `status == archived` 的課程才能刪除**；未封存一律拒絕刪除（HTTP 409、MCP `confirm_warning`、UI 刪除鈕停用）。
    - 舊學期課程掃描登錄後設為 `record-only` + `archived`，絕不排入生成佇列，亦排除於佇列認領、Today 與到期複習、預設課程選單之外，但仍完整納入學習紀錄彙整。
-   - 刪除課程不刪除 `study/` 內任何使用者檔案，並回報移除的資料庫學習紀錄筆數，HTTP/MCP 說明引導改用「封存」。
+   - 刪除課程只移除本程式資料庫紀錄（並回報 8 張學習紀錄表的 `learning_records_removed` 筆數），**`study/` 內任何檔案（含 `03 Notes/NotebookLM`、`QA_Notes`、`NoteStudio` 與個人隨筆）一律不動不搬**，僅將舊佈局 `output/courses/<code>` 與 `needs_review/<code>_*` 移入 `deleted/`。
 
 ## 4. 影響與代價
 
