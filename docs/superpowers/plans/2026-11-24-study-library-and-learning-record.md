@@ -414,10 +414,10 @@ def test_no_new_writes_to_old_layout(self):
 | `POST /api/courses/{code}/rename` `{new_code, dry_run}` | `rename_course_code(code, new_code, dry_run=True, confirm=False)` | 是 |
 | `GET /api/study/record?term=`、`GET /api/study/record/export?term=&format=md|pdf` | `get_learning_record(term=None)`、`export_learning_record(term=None, format="md")` | 否 |
 
-- [ ] **Step 1: 失敗測試**：每列 HTTP 200／MCP 名稱存在；會改資料的 MCP 未確認回 `confirmed: false`；`/api/courses` 列含 `term`、`course_no`、`status`；非法代碼回 400／404；掃描全部 MCP 工具，凡有 `confirm` 參數者在 `confirm=False` 時回應都含 `"confirmed": false`。
-- [ ] **Step 2–4:** 失敗 → 實作（前端一律 `escHtml`／`jsAttr`，`node --check`）→ 通過
-- [ ] **Step 5: 瀏覽器驗證**：`preview_start web-verify`；學習紀錄頁列出學期、課程選單依學期分組、封存切換、匯出 MD／PDF 可下載；console 無錯、無 4xx/5xx；截圖
-- [ ] **Step 6:** Commit `-m "feat(study): HTTP/MCP/web for study library, filing, lifecycle, learning record"`
+- [x] **Step 1: 失敗測試**：每列 HTTP 200／MCP 名稱存在；會改資料的 MCP 未確認回 `confirmed: false`；`/api/courses` 列含 `term`、`course_no`、`status`；非法代碼回 400／404；掃描全部 MCP 工具，凡有 `confirm` 參數者在 `confirm=False` 時回應都含 `"confirmed": false`。
+- [x] **Step 2–4:** 失敗 → 實作（前端一律 `escHtml`／`jsAttr`，`node --check`）→ 通過
+- [x] **Step 5: 瀏覽器驗證**：`preview_start web-verify`；學習紀錄頁列出學期、課程選單依學期分組、封存切換、匯出 MD／PDF 可下載；console 無錯、無 4xx/5xx；截圖
+- [x] **Step 6:** Commit `-m "feat(study): HTTP/MCP/web for study library, filing, lifecycle, learning record"`
 
 ### Task 14: 三組登入狀態一覽
 

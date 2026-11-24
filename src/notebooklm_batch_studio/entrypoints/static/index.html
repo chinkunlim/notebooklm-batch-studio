@@ -51,6 +51,7 @@
       <button class="dock-btn" data-view="literature" aria-label="文獻收集"><i class="icon-file-text"></i><span class="label">文獻收集</span><span class="tip">文獻收集</span></button>
       <button class="dock-btn" data-view="notesgen" aria-label="筆記生成"><i class="icon-sparkles"></i><span class="label">筆記生成</span><span class="tip">筆記生成</span></button>
       <button class="dock-btn" data-view="queue" aria-label="批次排程"><i class="icon-clock"></i><span class="label">批次排程</span><span class="tip">批次排程</span></button>
+      <button class="dock-btn" data-view="record" aria-label="學習紀錄"><i class="icon-graduation-cap"></i><span class="label">學習紀錄</span><span class="tip">學習紀錄</span></button>
     </nav>
     <div class="dock-disc-wrap" id="discWrap">
       <button class="dock-disc" id="dockDisc" aria-label="正在播放" aria-expanded="false"><span class="vinyl-icon" style="--d:40px" id="dockDiscIcon"></span><span class="tip">正在播放</span></button>
@@ -666,6 +667,21 @@
         </div>
       </section>
 
+      <!-- ============ 學習紀錄 ============ -->
+      <section class="view lg" id="view-record">
+        <div class="subbar">
+          <div><h1 class="h1">學習紀錄</h1><p class="muted small">跨學期課程檔案、測驗、複習與記憶強度總覽</p></div>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <select id="recordTermFilter" class="select" aria-label="篩選學期" onchange="loadLearningRecordView(this.value)">
+              <option value="">全部學期</option>
+            </select>
+            <a id="recordExportMd" class="btn btn-soft" href="/api/study/record/export?format=md" download="learning-record.md">匯出 Markdown</a>
+            <a id="recordExportPdf" class="btn btn-soft" href="/api/study/record/export?format=pdf" download="learning-record.pdf">匯出 PDF</a>
+          </div>
+        </div>
+        <div id="recordContent"><div class="card empty-state">載入學習紀錄中…</div></div>
+      </section>
+
       <!-- ============ 設計與自訂 ============ -->
       <section class="view" id="view-custom">
         <div class="subbar"><div><h1 class="h1">設計與自訂</h1><p class="muted small">每個人的學習方式不同，這裡的選擇都可以隨時改回來</p></div></div>
@@ -1145,6 +1161,7 @@
 <script src="/static/studio-literature-actions.js"></script>
 <script src="/static/studio-literature.js"></script>
 <script src="/static/studio-notes-gen.js"></script>
+<script src="/static/studio-record.js"></script>
 <script src="/static/studio-nav.js"></script>
 <script src="/static/studio-player.js"></script>
 <script src="/static/studio-bench.js"></script>

@@ -54,6 +54,7 @@ from notebooklm_batch_studio.entrypoints.http.queue import queue_router
 from notebooklm_batch_studio.entrypoints.http.reverse_import import reverse_import_router
 from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
+from notebooklm_batch_studio.entrypoints.http.study_library import study_library_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
 from notebooklm_batch_studio.entrypoints.http_middleware import (
     HostValidationMiddleware,
@@ -371,6 +372,7 @@ _API_ROUTERS = (
     literature_notebook_router,
     notes_router,
     gemini_auth_router,
+    study_library_router,
 )
 
 

@@ -394,6 +394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     if (await syncPreferences()) applyAllPreferences();
     loadFonts();
+    if (typeof loadStudyLayoutOptions === 'function') loadStudyLayoutOptions();
     restorePomo();
     await fetchCourses();
     await initStudyPortal();

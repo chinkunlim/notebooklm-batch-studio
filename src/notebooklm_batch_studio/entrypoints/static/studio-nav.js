@@ -14,7 +14,7 @@ function updateMini() {
   const popOpen = $('#discPop').classList.contains('open');
   $('#discWrap').classList.toggle('show', show || popOpen);
 }
-const pageNames = { overview: '研讀總覽', studio: '研讀工作室', review: '弱點複習', literature: '文獻收集', notesgen: '筆記生成', queue: '批次排程', custom: '設計與自訂' };
+const pageNames = { overview: '研讀總覽', studio: '研讀工作室', review: '弱點複習', literature: '文獻收集', notesgen: '筆記生成', queue: '批次排程', record: '學習紀錄', custom: '設計與自訂' };
 /* Page change: the old page fades out, the window returns to the top while nothing is visible, and the
    new page rises in. The Dock never moves; its indicator glides on a soft curve that takes longer for a
    longer distance, so neighbouring pages feel as calm as far ones. */
@@ -135,6 +135,7 @@ function showView(view) {
   if (view === 'overview') animateRings($('#view-overview'));
   if (view === 'literature' && window.loadLiteratureView) window.loadLiteratureView();
   if (view === 'notesgen' && window.initNoteGenPanel) window.initNoteGenPanel();
+  if (view === 'record' && window.loadLearningRecordView) window.loadLearningRecordView();
   if (view === 'queue') {
     animateRings($('#view-queue'));
     if (!activeCourseCode && currentCoursesList.length) viewCourseDetail(currentCoursesList[0].code);

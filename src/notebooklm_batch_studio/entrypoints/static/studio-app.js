@@ -78,9 +78,13 @@ async function initStudyPortal() {
     onStudyDataChanged();
     return;
   }
-  select.innerHTML = currentCoursesList.map(c => `<option value="${escHtml(c.code)}">${escHtml(c.code)}　${escHtml(c.name)}</option>`).join('');
+  const visible = typeof visibleCoursesList === 'function' ? visibleCoursesList() : currentCoursesList;
+  select.innerHTML = typeof renderTermCourseOptionsHtml === 'function'
+    ? renderTermCourseOptionsHtml(visible)
+    : visible.map(c => `<option value="${escHtml(c.code)}">${escHtml(c.code)}　${escHtml(c.name)}</option>`).join('');
+  const pool = visible.length ? visible : currentCoursesList;
   const remembered = prefLoad('course', '');
-  const target = currentCoursesList.some(c => c.code === remembered) ? remembered : currentCoursesList[0].code;
+  const target = currentCoursesList.some(c => c.code === remembered) ? remembered : pool[0].code;
   select.value = target;
   await loadStudyCourseData(target);
 }
@@ -151,20 +155,18 @@ function courseColour(code) {
  */
 function buildCourseDirectoryListHtml() {
   const filter = typeof load === 'function' ? load('courseFilter', 'all') : 'all';
-  const filtered = currentCoursesList.filter(c => filter === 'all' || c.study_state === filter);
+  const base = typeof visibleCoursesList === 'function' ? visibleCoursesList() : currentCoursesList;
+  const filtered = base.filter(c => filter === 'all' || c.study_state === filter);
   document.getElementById('courseCount').textContent = currentCoursesList.length
     ? (filtered.length === currentCoursesList.length ? `${currentCoursesList.length} 門` : `${filtered.length} / ${currentCoursesList.length} 門`)
     : '';
-  if (!filtered.length) {
-    return currentCoursesList.length ? '<div class="empty-state">目前這個篩選分類下沒有課程。</div>' : '<div class="empty-state">還沒有課程。到「批次排程」按「加入課程」選講義資料夾。<br><button class="btn btn-soft" onclick="go(\'queue\')">前往批次排程</button></div>';
+  if (typeof renderGroupedCourseDirectoryHtml === 'function') {
+    return renderGroupedCourseDirectoryHtml(filtered);
   }
-  return filtered.map(c => {
-    const stats = c.counts || {}, total = (c.total_jobs || 0) - (stats.skipped || 0);
-    const pct = total > 0 ? Math.round(((stats.done || 0) / total) * 100) : 0;
-    const on = currentStudyCourse && currentStudyCourse.code === c.code ? ' on' : '';
-    return `<button class="course${on}" onclick="pickStudyCourse(${jsAttr(c.code)})"><span class="course-cover" style="background:${courseColour(c.code)}">${escHtml(String(c.code).slice(0, 3))}</span>
-      <span style="min-width:0"><span class="course-name">${escHtml(c.name)}</span><span class="small muted">${c.lecture_count} 講　·　產出完成 ${pct}%</span><span class="bar"><i style="width:${pct}%"></i></span></span></button>`;
-  }).join('');
+  if (!filtered.length) {
+    return currentCoursesList.length ? '<div class="empty-state">目前這個篩選分類下沒有課程。</div>' : '<div class="empty-state">還沒有課程。</div>';
+  }
+  return filtered.map(c => `<button class="course" onclick="pickStudyCourse(${jsAttr(c.code)})">${escHtml(c.name)}</button>`).join('');
 }
 
 /**

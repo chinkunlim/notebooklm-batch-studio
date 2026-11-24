@@ -8,6 +8,13 @@
 
   const { statusBadgeClass, shortStatusLabel, escapeHtml, getSelectVal, renderExpandRowHtml, caretSvg } = window.LitUi;
   const CATEGORIES = ['01 Materials', '02 Handouts', '03 Notes', '04 Homework', '05 Assignments'];
+  /**
+   * Return configured study categories when loaded from `/api/study/layout`.
+   * @returns {Array<string>} Category names
+   */
+  function getCategories() {
+    return Array.isArray(window.STUDY_CATEGORIES) && window.STUDY_CATEGORIES.length ? window.STUDY_CATEGORIES : CATEGORIES;
+  }
 
   /**
    * Build custom `.lit-select-opt` buttons for the available courses.
@@ -38,7 +45,7 @@
     const defSub = item.target_subfolder || document.getElementById('litSubfolderInput')?.value || 'Literature_Review';
     const courseObj = st.courses.find(c => c.code === defCourse);
     const courseLabel = courseObj ? `${courseObj.term ? `[${courseObj.term}] ` : ''}${courseObj.name} (${courseObj.code})` : '請選擇科目…';
-    const catOpts = CATEGORIES.map(c => `<button type="button" class="lit-select-opt${c === defCat ? ' on' : ''}" data-val="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+    const catOpts = getCategories().map(c => `<button type="button" class="lit-select-opt${c === defCat ? ' on' : ''}" data-val="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
     const key = escapeHtml(item.key);
     return `
       <div class="lit-archive-menu">

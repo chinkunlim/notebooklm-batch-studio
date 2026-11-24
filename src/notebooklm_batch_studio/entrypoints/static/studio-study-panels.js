@@ -16,18 +16,31 @@ function renderCoursePicker() {
   cover.style.background = course ? courseColour(course.code) : 'var(--track)';
   document.getElementById('cpName').textContent = course ? course.name : (currentCoursesList.length ? '選一門課' : '還沒有課程');
   document.getElementById('cpMeta').textContent = course ? `${course.code}　·　${(course.lectures || []).length} 講` : '';
-  const items = currentCoursesList.map(c => {
-    const stats = c.counts || {};
-    const total = (c.total_jobs || 0) - (stats.skipped || 0);
-    const pct = total > 0 ? Math.round(((stats.done || 0) / total) * 100) : 0;
-    const on = course && course.code === c.code;
-    return `<button class="cp-item${on ? ' on' : ''}" role="option" aria-selected="${on}" data-code="${escHtml(c.code)}">
-      <span class="cp-cover" style="background:${courseColour(c.code)}">${escHtml(String(c.code).slice(0, 3))}</span>
-      <span class="cp-text"><b>${escHtml(c.name)}</b><span>${escHtml(c.code)}　·　${c.lecture_count} 講　·　產出 ${pct}%</span></span>
-      ${on ? '<i class="icon-check"></i>' : ''}</button>`;
-  }).join('');
-  document.getElementById('coursePop').innerHTML = (items || '<p class="small muted" style="padding:12px">還沒有課程。</p>') +
-    '<div class="cp-foot"><button class="btn btn-ghost btn-sm" data-manage>管理課程</button></div>';
+  const visible = typeof visibleCoursesList === 'function' ? visibleCoursesList() : currentCoursesList;
+  const archivedCount = currentCoursesList.filter(c => c.status === 'archived').length;
+  const byTerm = new Map();
+  visible.forEach(c => {
+    const t = c.term || '其他';
+    if (!byTerm.has(t)) byTerm.set(t, []);
+    byTerm.get(t).push(c);
+  });
+  const items = [...byTerm.entries()].map(([term, list]) =>
+    `<div class="small muted" style="padding:6px 10px 2px;font-weight:600">${escHtml(term)}</div>` + list.map(c => {
+      const stats = c.counts || {};
+      const total = (c.total_jobs || 0) - (stats.skipped || 0);
+      const pct = total > 0 ? Math.round(((stats.done || 0) / total) * 100) : 0;
+      const on = course && course.code === c.code;
+      return `<button class="cp-item${on ? ' on' : ''}" role="option" aria-selected="${on}" data-code="${escHtml(c.code)}">
+        <span class="cp-cover" style="background:${courseColour(c.code)}">${escHtml(String(c.code).slice(0, 3))}</span>
+        <span class="cp-text"><b>${escHtml(c.name)}${c.status === 'archived' ? '（已封存）' : ''}</b><span>${escHtml(c.code)}　·　${c.lecture_count} 講　·　產出 ${pct}%</span></span>
+        ${on ? '<i class="icon-check"></i>' : ''}</button>`;
+    }).join('')
+  ).join('');
+  const archBtn = archivedCount
+    ? `<button class="btn btn-ghost btn-sm" data-toggle-archived>${typeof showArchivedCourses !== 'undefined' && showArchivedCourses ? '隱藏封存' : `含封存 (${archivedCount})`}</button>`
+    : '';
+  document.getElementById('coursePop').innerHTML = (items || '<p class="small muted" style="padding:12px">還沒有顯示中的課程。</p>') +
+    `<div class="cp-foot" style="display:flex;gap:6px;justify-content:space-between">${archBtn}<button class="btn btn-ghost btn-sm" data-manage>管理課程</button></div>`;
 }
 
 /**
@@ -45,6 +58,7 @@ document.getElementById('coursePickBtn').addEventListener('click', e => {
   setCoursePop(!document.getElementById('coursePick').classList.contains('open'));
 });
 document.getElementById('coursePop').addEventListener('click', e => {
+  if (e.target.closest('[data-toggle-archived]')) { e.stopPropagation(); if (typeof toggleShowArchivedCourses === 'function') toggleShowArchivedCourses(); return; }
   if (e.target.closest('[data-manage]')) { setCoursePop(false); go('queue'); return; }
   const item = e.target.closest('.cp-item');
   if (!item) return;

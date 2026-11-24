@@ -129,6 +129,7 @@ async function fetchCourses() {
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
       const hasNb = !!c.notebook_id;
       const extra = [
+        c.status === 'archived' ? '已封存' : '',
         c.paused ? '暫停中' : '',
         !hasNb ? '待建立筆記本' : '',
         stats.running ? `${stats.running} 項生成中` : '',
@@ -310,6 +311,10 @@ function jobGroupsHtml(data, code) {
  */
 function courseActionsHtml(code, paused, status = 'active') {
   const canDelete = status === 'archived';
+  const archiveBtn = canDelete
+    ? `<button class="btn btn-ghost" onclick="toggleCourseArchived(${jsAttr(code)}, false)">恢復課程（解除封存）</button>`
+    : `<button class="btn btn-ghost" onclick="toggleCourseArchived(${jsAttr(code)}, true)">封存課程</button>`;
+  const renameBtn = `<button class="btn btn-ghost" onclick="openRenameCourseFlow(${jsAttr(code)})">更改課程代碼…</button>`;
   const deleteBtn = canDelete
     ? `<button class="btn btn-ghost" onclick="deleteCourse(${jsAttr(code)})" style="color:var(--danger)">刪除課程</button>`
     : `<button class="btn btn-ghost" disabled title="請先封存" style="color:var(--muted);opacity:.6;cursor:not-allowed">刪除課程（請先封存）</button>`;
@@ -319,6 +324,8 @@ function courseActionsHtml(code, paused, status = 'active') {
     `<details class="more-menu"><summary class="btn btn-ghost btn-sm">進階工具</summary><div class="menu">
       <button class="btn btn-ghost" onclick="syncFromNotebookLM(${jsAttr(code)})">從 Gemini Notebook 同步網頁上做的產出</button>
       <button class="btn btn-ghost" onclick="refinePrompts(${jsAttr(code)})">用本機模型潤飾 Prompt</button>
+      ${archiveBtn}
+      ${renameBtn}
       ${deleteBtn}</div></details>`;
 }
 

@@ -434,6 +434,7 @@ notebooklm-batch-studio/
 │       │   │   ├── reverse_import.py
 │       │   │   ├── settings.py
 │       │   │   ├── study.py
+│       │   │   ├── study_library.py
 │       │   │   └── system.py
 │       │   ├── static/
 │       │   │   ├── vendor/
@@ -705,6 +706,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-queue.js
 │       │   │   ├── studio-reader-notes.js
 │       │   │   ├── studio-reader.js
+│       │   │   ├── studio-record.js
 │       │   │   ├── studio-remote-artifacts.js
 │       │   │   ├── studio-reverse-import.js
 │       │   │   ├── studio-settings.js
@@ -736,6 +738,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_remote_admin.py
 │       │   ├── mcp_server.py
 │       │   ├── mcp_studio_tools.py
+│       │   ├── mcp_study_library.py
 │       │   ├── mcp_study_plan.py
 │       │   ├── port_check.py
 │       │   ├── schemas.py
@@ -888,6 +891,7 @@ notebooklm-batch-studio/
 │   ├── test_settings_paths.py
 │   ├── test_study_layout.py
 │   ├── test_study_library.py
+│   ├── test_study_library_api.py
 │   ├── test_study_plan.py
 │   ├── test_study_service.py
 │   └── test_versions_and_options.py
