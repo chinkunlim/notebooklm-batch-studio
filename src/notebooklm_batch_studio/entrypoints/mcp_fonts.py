@@ -23,7 +23,8 @@ def _install_font_payload(fonts: FontService, family: str, confirm: bool) -> str
     """
     if not confirm:
         return json.dumps(
-            {"confirm": "Call again with confirm=True to download this font."}, ensure_ascii=False
+            {"confirmed": False, "warning": "Call again with confirm=True to download this font."},
+            ensure_ascii=False,
         )
     try:
         return json.dumps(fonts.install(family), ensure_ascii=False, indent=2)
@@ -44,7 +45,8 @@ def _delete_font_payload(fonts: FontService, slug: str, confirm: bool) -> str:
     """
     if not confirm:
         return json.dumps(
-            {"confirm": "Call again with confirm=True to delete this font."}, ensure_ascii=False
+            {"confirmed": False, "warning": "Call again with confirm=True to delete this font."},
+            ensure_ascii=False,
         )
     try:
         return json.dumps({"deleted": fonts.delete(slug)}, ensure_ascii=False)

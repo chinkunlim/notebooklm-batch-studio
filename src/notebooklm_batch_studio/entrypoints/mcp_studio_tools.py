@@ -9,6 +9,7 @@ from mcp.server.mcpserver import MCPServer
 
 from notebooklm_batch_studio.domain.naming import naming_guide
 from notebooklm_batch_studio.domain.usage_guide import usage_guide
+from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
 from notebooklm_batch_studio.services.folder_browser import browse_folders
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.study_service import StudyTrackerService
@@ -176,6 +177,26 @@ def _register_study_history_tool(mcp: MCPServer, active_study: StudyTrackerServi
         return json.dumps(res, ensure_ascii=False, indent=2)
 
 
+def _resolve_weakness_payload(active_study: StudyTrackerService, mistake_id: str, confirm: bool) -> str:
+    """Resolve one weakness mistake record when confirmed.
+
+    Args:
+        active_study: Study tracker service.
+        mistake_id: Mistake record UUID.
+        confirm: Must be True to resolve the mistake.
+
+    Returns:
+        JSON confirmation warning or status message.
+    """
+    if not confirm:
+        return confirm_warning(
+            f"Action not confirmed. Pass confirm=True to mark mistake {mistake_id} as resolved."
+        )
+    if active_study.resolve_weakness(mistake_id):
+        return f"Mistake {mistake_id} successfully marked as resolved."
+    return f"Mistake {mistake_id} not found."
+
+
 def _register_resolve_weakness_tool(mcp: MCPServer, active_study: StudyTrackerService) -> None:
     """Register the resolve_weakness_mistake MCP tool.
 
@@ -195,11 +216,7 @@ def _register_resolve_weakness_tool(mcp: MCPServer, active_study: StudyTrackerSe
         Returns:
             Status message.
         """
-        if not confirm:
-            return f"Action not confirmed. Pass confirm=True to mark mistake {mistake_id} as resolved."
-        if active_study.resolve_weakness(mistake_id):
-            return f"Mistake {mistake_id} successfully marked as resolved."
-        return f"Mistake {mistake_id} not found."
+        return _resolve_weakness_payload(active_study, mistake_id, confirm)
 
 
 def _register_weakness_read_tool(mcp: MCPServer, active_study: StudyTrackerService) -> None:
@@ -404,6 +421,31 @@ def _register_type_write_tool(mcp: MCPServer, active_service: BatchStudioService
         return _set_artifact_types_payload(active_service, code, (chapter, course), confirm)
 
 
+def _set_course_profile_payload(
+    active_service: BatchStudioService, course_code: str, profile: str, confirm: bool
+) -> str:
+    """Update a course's active profile when confirmed.
+
+    Args:
+        active_service: Orchestrator service.
+        course_code: Course code identifier.
+        profile: Target profile name.
+        confirm: Must be True to commit the update.
+
+    Returns:
+        Result JSON or confirmation warning.
+    """
+    if not confirm:
+        return confirm_warning(
+            f"Action not confirmed. Pass confirm=True to update course {course_code} profile to '{profile}'."
+        )
+    try:
+        payload = active_service.set_course_profile(course_code, profile)
+        return json.dumps(payload, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
 def _register_course_profile_tool(mcp: MCPServer, active_service: BatchStudioService) -> None:
     """Register the set_course_profile MCP tool.
 
@@ -424,16 +466,7 @@ def _register_course_profile_tool(mcp: MCPServer, active_service: BatchStudioSer
         Returns:
             Result JSON or confirmation prompt.
         """
-        if not confirm:
-            return (
-                f"Action not confirmed. Pass confirm=True to update course {course_code} "
-                f"profile to '{profile}'."
-            )
-        try:
-            payload = active_service.set_course_profile(course_code, profile)
-            return json.dumps(payload, ensure_ascii=False, indent=2)
-        except Exception as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        return _set_course_profile_payload(active_service, course_code, profile, confirm)
 
 
 def register_settings_and_study_tools(

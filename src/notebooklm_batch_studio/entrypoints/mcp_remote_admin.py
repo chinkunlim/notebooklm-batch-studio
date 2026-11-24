@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
 from notebooklm_batch_studio.entrypoints.schemas import (
     ChatConfigureRequest,
     ExportArtifactRequest,
@@ -83,7 +84,9 @@ def _reg_cinematic_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
             JSON string with generation result or confirmation warning.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "action": "generate_cinematic_video"})
+            return confirm_warning(
+                "Pass confirm=True to generate a cinematic video.", action="generate_cinematic_video"
+            )
         res = await admin.generate_cinematic_video(course_code, instructions, lecture_no)
         return json.dumps(res, ensure_ascii=False, indent=2)
 
@@ -112,7 +115,7 @@ def _reg_revise_slide_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
             JSON string with revision result or confirmation warning.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "artifact_id": artifact_id})
+            return confirm_warning("Pass confirm=True to revise this slide.", artifact_id=artifact_id)
         res = await admin.revise_slide(course_code, artifact_id, payload.slide_index, payload.prompt)
         return json.dumps(res, ensure_ascii=False, indent=2)
 
@@ -141,7 +144,9 @@ def _reg_export_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
             JSON string with export result or confirmation warning.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "artifact_id": artifact_id})
+            return confirm_warning(
+                "Pass confirm=True to export this remote artifact.", artifact_id=artifact_id
+            )
         res = await admin.export_artifact(course_code, artifact_id, title=payload.title, kind=payload.kind)
         return json.dumps(res, ensure_ascii=False, indent=2)
 
@@ -167,7 +172,9 @@ def _reg_retry_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
             JSON string with retry status or confirmation warning.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "artifact_id": artifact_id})
+            return confirm_warning(
+                "Pass confirm=True to retry this remote artifact.", artifact_id=artifact_id
+            )
         res = await admin.retry_remote_artifact(course_code, artifact_id)
         return json.dumps(res, ensure_ascii=False, indent=2)
 
@@ -196,7 +203,7 @@ def _reg_add_url_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
             JSON string with created source or confirmation prompt.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "url": url})
+            return confirm_warning("Pass confirm=True to add this URL source.", url=url)
         res = await admin.add_url_source(course_code, url, title=title)
         return json.dumps(res, ensure_ascii=False, indent=2)
 
@@ -223,7 +230,7 @@ def _reg_add_text_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
             JSON string with created source or confirmation prompt.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "title": title})
+            return confirm_warning("Pass confirm=True to add this text source.", title=title)
         res = await admin.add_text_source(course_code, title, content)
         return json.dumps(res, ensure_ascii=False, indent=2)
 
@@ -276,7 +283,7 @@ def _reg_research_import_tool(mcp: MCPServer, admin: RemoteAdminService) -> None
             JSON string with import summary or confirmation prompt.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "task_id": task_id})
+            return confirm_warning("Pass confirm=True to import research sources.", task_id=task_id)
         res = await admin.import_research_sources(course_code, task_id, sources)
         return json.dumps(res, ensure_ascii=False, indent=2)
 
@@ -306,7 +313,7 @@ def _reg_chat_config_tool(mcp: MCPServer, admin: RemoteAdminService) -> None:
             JSON string with applied settings or confirmation prompt.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "goal": settings.goal})
+            return confirm_warning("Pass confirm=True to configure remote notebook chat.", goal=settings.goal)
         res = await admin.configure_chat(
             course_code,
             goal=settings.goal,
@@ -339,7 +346,7 @@ def _reg_scoped_generate_tool(mcp: MCPServer, admin: RemoteAdminService) -> None
             JSON string with created artifact_id or confirmation prompt.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "kind": payload.kind})
+            return confirm_warning("Pass confirm=True to generate artifact from sources.", kind=payload.kind)
         res = await admin.generate_from_sources(
             course_code,
             payload.kind,

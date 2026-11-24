@@ -1,4 +1,4 @@
-"""Tests for Gemini quota reset time parsing and fallback (note-studio SPEC-019, ISSUE-065)."""
+"""Tests for Gemini quota reset time parsing and fallback (note-studio SPEC-019, note-studio ISSUE-065)."""
 
 from __future__ import annotations
 

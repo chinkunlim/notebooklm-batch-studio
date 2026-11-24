@@ -160,10 +160,14 @@ class FontServiceTest(unittest.TestCase):
             service=mock.MagicMock(), study_service=mock.MagicMock(), config=config, fonts=svc
         )
         tools = mcp._tool_manager._tools  # type: ignore[attr-defined]
-        self.assertIn("confirm", json.loads(tools["delete_font"].fn("lxgw-wenkai-tc")))
+        del_guard = json.loads(tools["delete_font"].fn("lxgw-wenkai-tc"))
+        self.assertFalse(del_guard["confirmed"])
+        self.assertIn("confirm", del_guard["warning"].lower())
         self.assertEqual(len(json.loads(tools["list_fonts"].fn())["fonts"]), 1)
         self.assertEqual(http.delete("/api/fonts/lxgw-wenkai-tc").status_code, 200)
-        self.assertIn("confirm", json.loads(tools["install_google_font"].fn("Noto Sans TC")))
+        inst_guard = json.loads(tools["install_google_font"].fn("Noto Sans TC"))
+        self.assertFalse(inst_guard["confirmed"])
+        self.assertIn("confirm", inst_guard["warning"].lower())
 
 
 if __name__ == "__main__":

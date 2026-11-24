@@ -38,7 +38,7 @@ async def _generate_key_points_payload(
     """
     force, confirm = flags
     if not confirm:
-        return _dump({"confirmed": False, "message": "Pass confirm=True to ask Gemini Notebook."})
+        return _dump({"confirmed": False, "warning": "Pass confirm=True to ask Gemini Notebook."})
     try:
         return _dump(await learning.generate_key_points(code, lecture_no, force))
     except Exception as exc:
@@ -61,7 +61,7 @@ async def _ask_tutor_payload(
     """
     lecture_no, confirm = opts
     if not confirm:
-        return _dump({"confirmed": False, "message": "Pass confirm=True to ask the tutor."})
+        return _dump({"confirmed": False, "warning": "Pass confirm=True to ask the tutor."})
     try:
         return _dump(await learning.ask_tutor(code, lecture_no, message))
     except Exception as exc:

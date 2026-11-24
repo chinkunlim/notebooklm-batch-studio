@@ -84,11 +84,15 @@ class PreferencesTest(unittest.TestCase):
             preferences=self.prefs,
         )
         tools = mcp._tool_manager._tools  # type: ignore[attr-defined]
-        self.assertIn("confirm", json.loads(tools["set_ui_preferences"].fn({"palette": "sage"})))
+        set_guard = json.loads(tools["set_ui_preferences"].fn({"palette": "sage"}))
+        self.assertFalse(set_guard["confirmed"])
+        self.assertIn("confirm", set_guard["warning"].lower())
         self.assertEqual(self.prefs.get_all(), {})
         tools["set_ui_preferences"].fn({"palette": "sage"}, confirm=True)
         self.assertEqual(json.loads(tools["get_ui_preferences"].fn())["values"], {"palette": "sage"})
-        self.assertIn("confirm", json.loads(tools["reset_ui_preferences"].fn([])))
+        reset_guard = json.loads(tools["reset_ui_preferences"].fn([]))
+        self.assertFalse(reset_guard["confirmed"])
+        self.assertIn("confirm", reset_guard["warning"].lower())
         tools["reset_ui_preferences"].fn([], confirm=True)
         self.assertEqual(self.prefs.get_all(), {})
 

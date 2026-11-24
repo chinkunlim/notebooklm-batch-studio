@@ -21,8 +21,8 @@
       "timestamp": "2026-11-02 12:58 UTC",
       "action": "done",
       "agent": "claude-code",
-      "summary": ""
+      "summary": "Applied v05 Study Studio UI shell, sidebar navigation, bottom customization drawer, local preferences/fonts persistence, and GitHub Pages demo (commits 1cf8c8d..815c881; ADR-008, ADR-009, SPEC-009, ISSUE-031..033)"
     }
   ],
-  "summary": ""
+  "summary": "Applied v05 Study Studio UI shell, sidebar navigation, bottom customization drawer, local preferences/fonts persistence, and GitHub Pages demo (commits 1cf8c8d..815c881; ADR-008, ADR-009, SPEC-009, ISSUE-031..033)"
 }

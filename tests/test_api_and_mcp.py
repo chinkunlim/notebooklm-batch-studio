@@ -382,12 +382,15 @@ class TestApiAndMcp(unittest.TestCase):
 
         # retry_item without confirm
         retry_fn = mcp._tool_manager._tools["retry_item"].fn  # type: ignore[attr-defined]
-        res_retry_unconfirmed = retry_fn("job-123", False)
-        self.assertIn("Action not confirmed", res_retry_unconfirmed)
+        res_retry_unconfirmed = json.loads(retry_fn("job-123", False))
+        self.assertFalse(res_retry_unconfirmed["confirmed"])
+        self.assertIn("Action not confirmed", res_retry_unconfirmed["warning"])
 
         # start_queue and pause_queue without confirm
         start_fn = mcp._tool_manager._tools["start_queue"].fn  # type: ignore[attr-defined]
-        self.assertIn("Action not confirmed", start_fn(False))
+        start_guard = json.loads(start_fn(False))
+        self.assertFalse(start_guard["confirmed"])
+        self.assertIn("Action not confirmed", start_guard["warning"])
         self.assertIn("started successfully", start_fn(True))
 
         # Study tools verification
@@ -419,15 +422,23 @@ class TestApiAndMcp(unittest.TestCase):
         self.assertEqual(weak_res[0]["question_text"], "What is ATP?")
 
         resolve_fn = mcp._tool_manager._tools["resolve_weakness_mistake"].fn  # type: ignore[attr-defined]
-        unconf_resolve = resolve_fn("fake-id", False)
-        self.assertIn("Action not confirmed", unconf_resolve)
+        unconf_resolve = json.loads(resolve_fn("fake-id", False))
+        self.assertFalse(unconf_resolve["confirmed"])
+        self.assertIn("Action not confirmed", unconf_resolve["warning"])
+
+        profile_fn = mcp._tool_manager._tools["set_course_profile"].fn  # type: ignore[attr-defined]
+        unconf_profile = json.loads(profile_fn("BIO101", "quiz-only", False))
+        self.assertFalse(unconf_profile["confirmed"])
+        self.assertIn("Action not confirmed", unconf_profile["warning"])
 
         # Sync and prompt tools verification
         sync_fn = mcp._tool_manager._tools["sync_course_remote_artifacts"].fn  # type: ignore[attr-defined]
 
-        sync_unconf = asyncio.run(sync_fn("BIO101", False))
-        self.assertIn("Action not confirmed", sync_unconf)
+        sync_unconf = json.loads(asyncio.run(sync_fn("BIO101", False)))
+        self.assertFalse(sync_unconf["confirmed"])
+        self.assertIn("Action not confirmed", sync_unconf["warning"])
 
         refine_fn = mcp._tool_manager._tools["refine_prompts_with_ollama"].fn  # type: ignore[attr-defined]
-        refine_unconf = refine_fn("BIO101", False)
-        self.assertIn("Action not confirmed", refine_unconf)
+        refine_unconf = json.loads(refine_fn("BIO101", False))
+        self.assertFalse(refine_unconf["confirmed"])
+        self.assertIn("Action not confirmed", refine_unconf["warning"])

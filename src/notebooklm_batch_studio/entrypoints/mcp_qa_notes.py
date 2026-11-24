@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
 from notebooklm_batch_studio.entrypoints.mcp_remote_admin import register_remote_extra_tools
 from notebooklm_batch_studio.services.qa_notes_service import AskOptions, QANotesService
 
@@ -225,6 +226,32 @@ def _register_list_notebooks_tool(mcp: MCPServer, service: Any) -> None:
         return json.dumps(await svc.list_remote_notebooks(), ensure_ascii=False, indent=2)
 
 
+async def _import_remote_notebook_payload(
+    service: Any, notebook_id: str, course_code: str, download_sources: bool
+) -> str:
+    """Execute confirmed import_remote_notebook workflow.
+
+    Args:
+        service: BatchStudioService instance.
+        notebook_id: Remote Gemini Notebook identifier.
+        course_code: Optional local course code.
+        download_sources: Whether to download remote source fulltext.
+
+    Returns:
+        JSON string with import result.
+    """
+    from notebooklm_batch_studio.services.reverse_import import ReverseImportOptions
+
+    svc = _reverse_import_service(service)
+    opts = ReverseImportOptions(
+        notebook_id=notebook_id,
+        course_code=course_code.strip() or None,
+        download_sources=download_sources,
+        download_artifacts=True,
+    )
+    return json.dumps(await svc.import_remote_notebook(opts), ensure_ascii=False, indent=2)
+
+
 def _register_import_notebook_tool(mcp: MCPServer, service: Any) -> None:
     """Register the import_remote_notebook MCP tool with confirm guard.
 
@@ -252,17 +279,10 @@ def _register_import_notebook_tool(mcp: MCPServer, service: Any) -> None:
             JSON string with imported course summary or confirmation prompt.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "notebook_id": notebook_id}, ensure_ascii=False)
-        from notebooklm_batch_studio.services.reverse_import import ReverseImportOptions
-
-        svc = _reverse_import_service(service)
-        opts = ReverseImportOptions(
-            notebook_id=notebook_id,
-            course_code=course_code.strip() or None,
-            download_sources=download_sources,
-            download_artifacts=True,
-        )
-        return json.dumps(await svc.import_remote_notebook(opts), ensure_ascii=False, indent=2)
+            return confirm_warning(
+                "Confirmation required: pass confirm=True to import remote notebook.", notebook_id=notebook_id
+            )
+        return await _import_remote_notebook_payload(service, notebook_id, course_code, download_sources)
 
 
 def _register_download_course_files_tool(mcp: MCPServer, service: Any) -> None:
@@ -292,12 +312,33 @@ def _register_download_course_files_tool(mcp: MCPServer, service: Any) -> None:
             JSON string with downloaded counts and local folder paths.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "course_code": course_code}, ensure_ascii=False)
+            return confirm_warning(
+                "Confirmation required: pass confirm=True to download course files locally.",
+                course_code=course_code,
+            )
         svc = _reverse_import_service(service)
         res = await svc.download_course_files_locally(
             course_code, include_sources=include_sources, include_artifacts=include_artifacts
         )
         return json.dumps(res, ensure_ascii=False, indent=2)
+
+
+async def _delete_remote_artifact_payload(
+    service: Any, course_code: str, artifact_id: str, delete_local: bool
+) -> str:
+    """Execute confirmed delete_remote_artifact workflow.
+
+    Args:
+        service: BatchStudioService instance.
+        course_code: Course identifier.
+        artifact_id: Remote artifact identifier.
+        delete_local: Whether to also delete local files.
+
+    Returns:
+        JSON string with deletion summary.
+    """
+    res = await service.delete_remote_artifact(course_code, artifact_id, delete_local=delete_local)
+    return json.dumps(res, ensure_ascii=False, indent=2)
 
 
 def _register_remote_list_delete(mcp: MCPServer, service: Any) -> None:
@@ -336,6 +377,7 @@ def _register_remote_list_delete(mcp: MCPServer, service: Any) -> None:
             JSON string with deletion summary or confirmation prompt.
         """
         if not confirm:
-            return json.dumps({"requires_confirmation": True, "artifact_id": artifact_id}, ensure_ascii=False)
-        res = await service.delete_remote_artifact(course_code, artifact_id, delete_local=delete_local)
-        return json.dumps(res, ensure_ascii=False, indent=2)
+            return confirm_warning(
+                "Confirmation required: pass confirm=True to delete remote artifact.", artifact_id=artifact_id
+            )
+        return await _delete_remote_artifact_payload(service, course_code, artifact_id, delete_local)

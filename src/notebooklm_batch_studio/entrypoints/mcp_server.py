@@ -27,6 +27,7 @@ from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.adapters.web_search import search_web_snippets
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
+from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
 from notebooklm_batch_studio.entrypoints.mcp_course_settings import register_course_settings_tools
 from notebooklm_batch_studio.entrypoints.mcp_extensions import register_literature_and_note_tools
 from notebooklm_batch_studio.entrypoints.mcp_fonts import register_font_tools
@@ -96,10 +97,10 @@ async def _sync_remote_payload(active_service: BatchStudioService, course_code: 
         confirm: Explicit confirmation flag.
 
     Returns:
-        Status string or JSON response.
+        JSON string response.
     """
     if not confirm:
-        return (
+        return confirm_warning(
             f"Action not confirmed. Pass confirm=True to sync remote Gemini Notebook "
             f"artifacts for course '{course_code}'."
         )
@@ -119,10 +120,10 @@ def _refine_prompts_payload(active_service: BatchStudioService, course_code: str
         confirm: Explicit confirmation flag.
 
     Returns:
-        Status string or JSON response.
+        JSON string response.
     """
     if not confirm:
-        return (
+        return confirm_warning(
             f"Action not confirmed. Pass confirm=True to refine prompts using "
             f"Ollama for course '{course_code}'."
         )
@@ -303,7 +304,7 @@ def _register_queue_tools(mcp: MCPServer, active_service: BatchStudioService) ->
             Action result description.
         """
         if not confirm:
-            return "Action not confirmed. Pass confirm=True to start worker processing."
+            return confirm_warning("Action not confirmed. Pass confirm=True to start worker processing.")
         active_service.start_queue()
         return "Worker queue started successfully."
 
@@ -315,10 +316,10 @@ def _register_queue_tools(mcp: MCPServer, active_service: BatchStudioService) ->
             confirm: Must be explicitly set to True to pause execution.
 
         Returns:
-            Action result description.
+            Action result description or confirmation JSON.
         """
         if not confirm:
-            return "Action not confirmed. Pass confirm=True to pause worker processing."
+            return confirm_warning("Action not confirmed. Pass confirm=True to pause worker processing.")
         active_service.pause_queue()
         return "Worker queue paused successfully."
 
@@ -340,10 +341,10 @@ def _register_retry_tool(mcp: MCPServer, active_service: BatchStudioService) -> 
             confirm: Must be explicitly set to True to perform the retry.
 
         Returns:
-            Action result message.
+            Action result message or confirmation JSON.
         """
         if not confirm:
-            return f"Action not confirmed. Pass confirm=True to retry job {job_id}."
+            return confirm_warning(f"Action not confirmed. Pass confirm=True to retry job {job_id}.")
         if active_service.retry_job(job_id):
             return f"Job {job_id} successfully reset to pending."
         return f"Job {job_id} not found."

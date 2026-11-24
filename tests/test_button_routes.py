@@ -83,7 +83,9 @@ class ButtonRoutesTest(unittest.TestCase):
         mcp = build_mcp_server(service=self.service, study_service=mock.MagicMock(), config=self.config)
         tools = mcp._tool_manager._tools  # type: ignore[attr-defined]
         self.assertEqual(json.loads(tools["get_job_prompt"].fn("q"))["custom_prompt"], "生成 30 題")
-        self.assertFalse(json.loads(tools["set_job_prompt"].fn("q", "新的"))["confirmed"])
+        guard_msg = json.loads(tools["set_job_prompt"].fn("q", "新的"))
+        self.assertFalse(guard_msg["confirmed"])
+        self.assertIn("confirm", guard_msg["warning"].lower())
         self.assertTrue(json.loads(tools["set_job_prompt"].fn("q", "新的", confirm=True))["success"])
         self.assertEqual(self.queue_repo.get_job("q").custom_prompt, "新的")  # type: ignore[union-attr]
 

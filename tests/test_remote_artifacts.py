@@ -116,7 +116,8 @@ class TestRemoteArtifactsAdmin(unittest.IsolatedAsyncioTestCase):
         """MCP delete_remote_artifact requires confirm=True before deleting."""
         tools = self.mcp._tool_manager._tools  # type: ignore[attr-defined]
         blocked = json.loads(await tools["delete_remote_artifact"].fn("BIO101", "art-v1", confirm=False))
-        self.assertTrue(blocked["requires_confirmation"])
+        self.assertFalse(blocked["confirmed"])
+        self.assertIn("confirm", blocked["warning"].lower())
         done = json.loads(await tools["delete_remote_artifact"].fn("BIO101", "art-v1", confirm=True))
         self.assertEqual(done["deleted_artifact_id"], "art-v1")
 
@@ -148,11 +149,9 @@ class TestRemoteArtifactsAdmin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ret.status_code, 200)
 
         tools = self.mcp._tool_manager._tools  # type: ignore[attr-defined]
-        self.assertTrue(
-            json.loads(await tools["generate_cinematic_video"].fn("BIO101", confirm=False))[
-                "requires_confirmation"
-            ]
-        )
+        vid_guard = json.loads(await tools["generate_cinematic_video"].fn("BIO101", confirm=False))
+        self.assertFalse(vid_guard["confirmed"])
+        self.assertIn("confirm", vid_guard["warning"].lower())
         mc_vid = json.loads(
             await tools["generate_cinematic_video"].fn("BIO101", instructions="核心", confirm=True)
         )
@@ -181,30 +180,23 @@ class TestRemoteArtifactsAdmin(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(cfg.json()["goal"], "learning_guide")
 
         tools = self.mcp._tool_manager._tools  # type: ignore[attr-defined]
-        self.assertTrue(
-            json.loads(await tools["add_url_source"].fn("BIO101", "https://a.b", confirm=False))[
-                "requires_confirmation"
-            ]
-        )
-        self.assertTrue(
-            json.loads(await tools["add_text_source"].fn("BIO101", "T", "B", confirm=False))[
-                "requires_confirmation"
-            ]
-        )
-        self.assertTrue(
-            json.loads(
-                await tools["import_research_sources"].fn(
-                    "BIO101", "t1", [{"url": "https://a.b", "title": "A"}], confirm=False
-                )
-            )["requires_confirmation"]
-        )
+        for call in (
+            await tools["add_url_source"].fn("BIO101", "https://a.b", confirm=False),
+            await tools["add_text_source"].fn("BIO101", "T", "B", confirm=False),
+            await tools["import_research_sources"].fn(
+                "BIO101", "t1", [{"url": "https://a.b", "title": "A"}], confirm=False
+            ),
+        ):
+            payload = json.loads(call)
+            self.assertFalse(payload["confirmed"])
+            self.assertIn("confirm", payload["warning"].lower())
         from notebooklm_batch_studio.entrypoints.schemas import ChatConfigureRequest
 
-        self.assertTrue(
-            json.loads(
-                await tools["configure_notebook_chat"].fn("BIO101", ChatConfigureRequest(), confirm=False)
-            )["requires_confirmation"]
+        chat_guard = json.loads(
+            await tools["configure_notebook_chat"].fn("BIO101", ChatConfigureRequest(), confirm=False)
         )
+        self.assertFalse(chat_guard["confirmed"])
+        self.assertIn("confirm", chat_guard["warning"].lower())
         mc_res = json.loads(await tools["research_course_sources"].fn("BIO101", "ATP", mode="deep"))
         self.assertEqual(mc_res["task_id"], "res-task-1")
         mc_cfg = json.loads(
@@ -230,13 +222,13 @@ class TestRemoteArtifactsAdmin(unittest.IsolatedAsyncioTestCase):
 
         from notebooklm_batch_studio.entrypoints.schemas import GenerateScopedArtifactRequest
 
-        self.assertTrue(
-            json.loads(
-                await tools["generate_from_sources"].fn(
-                    "BIO101", GenerateScopedArtifactRequest(kind="audio"), confirm=False
-                )
-            )["requires_confirmation"]
+        gen_guard = json.loads(
+            await tools["generate_from_sources"].fn(
+                "BIO101", GenerateScopedArtifactRequest(kind="audio"), confirm=False
+            )
         )
+        self.assertFalse(gen_guard["confirmed"])
+        self.assertIn("confirm", gen_guard["warning"].lower())
         mc_gen = json.loads(
             await tools["generate_from_sources"].fn(
                 "BIO101",

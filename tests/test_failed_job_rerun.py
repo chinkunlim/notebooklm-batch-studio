@@ -306,6 +306,7 @@ class FailedJobHttpAndMcpTest(unittest.TestCase):
         tools = mcp._tool_manager._tools  # type: ignore[attr-defined]
         unconfirmed = json.loads(tools["retry_course_failed_jobs"].fn("BIO101"))
         self.assertFalse(unconfirmed["confirmed"])
+        self.assertIn("warning", unconfirmed)
         with mock.patch.object(self.service, "start_queue"):
             confirmed = json.loads(tools["retry_course_failed_jobs"].fn("BIO101", confirm=True))
         self.assertTrue(confirmed["confirmed"])

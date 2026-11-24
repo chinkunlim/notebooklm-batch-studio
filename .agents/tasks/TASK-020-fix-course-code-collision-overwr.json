@@ -27,8 +27,8 @@
       "timestamp": "2026-11-12 16:03 UTC",
       "action": "done",
       "agent": "antigravity",
-      "summary": ""
+      "summary": "Fixed course code regex collision for semester-prefixed folders so new courses no longer overwrite existing courses or inherit stale notebook_id (commits 2bcd42a, f3fab5b, c9305b1; ISSUE-037)"
     }
   ],
-  "summary": ""
+  "summary": "Fixed course code regex collision for semester-prefixed folders so new courses no longer overwrite existing courses or inherit stale notebook_id (commits 2bcd42a, f3fab5b, c9305b1; ISSUE-037)"
 }

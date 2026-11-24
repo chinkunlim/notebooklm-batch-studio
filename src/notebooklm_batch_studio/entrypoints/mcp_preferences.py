@@ -22,7 +22,8 @@ def _set_preferences_payload(prefs: PreferencesService, values: dict[str, str | 
     """
     if not confirm:
         return json.dumps(
-            {"confirm": "Call again with confirm=True to save these preferences."}, ensure_ascii=False
+            {"confirmed": False, "warning": "Call again with confirm=True to save these preferences."},
+            ensure_ascii=False,
         )
     try:
         return json.dumps({"values": prefs.update(values)}, ensure_ascii=False, indent=2)
@@ -82,7 +83,8 @@ def _register_pref_reset(mcp: MCPServer, prefs: PreferencesService) -> None:
         """
         if not confirm:
             return json.dumps(
-                {"confirm": "Call again with confirm=True to reset the preferences."}, ensure_ascii=False
+                {"confirmed": False, "warning": "Call again with confirm=True to reset the preferences."},
+                ensure_ascii=False,
             )
         return json.dumps({"values": prefs.reset(keep)}, ensure_ascii=False, indent=2)
 

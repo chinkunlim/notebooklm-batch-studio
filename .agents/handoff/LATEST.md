@@ -8,15 +8,21 @@
 - **最後更新時間**: `2026-11-24 08:04 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `3976c94 feat(notes): port Gemini Web auth service and 3-entrypoint login (TASK-031, ISSUE-053) [agent:antigravity]`
+- **最新 Git Commit**: `13dff45 fix(literature): close stale running jobs on runner startup and worker interrupt (TASK-032, ISSUE-054) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
+| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
+|---|---|---|---|---|---|---|
+| **TASK-033**<br/>Audit records, unify MCP confirm format, and document cross-repo decisions | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-24 08:04 UTC] 建立任務 `TASK-033`: Audit records, unify MCP confirm format, and document cross-repo decisions (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-24 08:04 UTC] 完成任務 `TASK-032` — Resolve ISSUE-054: close stale running literature jobs on startup (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -105,11 +111,3 @@
 - **下一步**: 1) 可在母版執行 collect_feedback.py 決策 docs/TEMPLATE_FEEDBACK.md 中 16 條待決定建議；2) 持續於 iPad 實機驗證 Apple Pencil 研讀體驗；3) 功能收斂後可執行 python3 scripts/agentctl.py finish --tag 發
 - **交接備註**: 專案健康度 100 分 A+、220 項測試全數通過、審計 0 殘留 TODO；ADR-010、SPEC-011、ISSUE-039/040 與 8 項母版架構建議皆已整理並同步至 GitHub。
 - **本機對話紀錄**: `.agents/conversations/2026-11-22-2129-antigravity-summary.md`（只在這台電腦）
-
-### [2026-11-19 05:10 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
-- **檢查結果**: 測試與 Code Review Guard 通過
-- **目標**: 修復生成失敗無法重試、支援單一講次補生成產出物、解決平板閱讀器工具列重疊與快取
-- **錯誤與根因**: ISSUE-038: 生成失敗任務在網頁無重試按鈕且背景佇列不會自動重試恢復（已根治並寫入 tests/test_failed_job_rerun.py）
-- **下一步**: 系統架構完美合規（100分 A+），各端點與 220 項測試均 PASS，可隨時開展後續研讀
-- **交接備註**: 所有測試通過，所有修改與已知問題均已記錄並推送到 GitHub。
-- **本機對話紀錄**: `.agents/conversations/2026-11-19-1310-antigravity-2-summary.md`（只在這台電腦）

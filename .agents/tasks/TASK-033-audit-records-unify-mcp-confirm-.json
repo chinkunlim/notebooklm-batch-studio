@@ -1,0 +1,21 @@
+{
+  "id": "TASK-033",
+  "title": "Audit records, unify MCP confirm format, and document cross-repo decisions",
+  "status": "in_progress",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-24 08:04 UTC",
+  "updated_at": "2026-11-24 08:04 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-24 08:04 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    }
+  ]
+}

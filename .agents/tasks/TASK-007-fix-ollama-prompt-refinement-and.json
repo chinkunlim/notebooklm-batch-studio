@@ -21,8 +21,8 @@
       "timestamp": "2026-11-01 02:17 UTC",
       "action": "done",
       "agent": "claude-code",
-      "summary": ""
+      "summary": "Marked incomplete quizzes (<30 questions) as needs_review instead of done and wired Ollama client into prompt refinement (commit d84b503; ISSUE-001, ISSUE-002)"
     }
   ],
-  "summary": ""
+  "summary": "Marked incomplete quizzes (<30 questions) as needs_review instead of done and wired Ollama client into prompt refinement (commit d84b503; ISSUE-001, ISSUE-002)"
 }

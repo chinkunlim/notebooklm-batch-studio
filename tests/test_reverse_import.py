@@ -157,7 +157,8 @@ class TestReverseImport(unittest.TestCase):
             self.assertEqual(len(nbs), 2)
 
             guard_imp = json.loads(await tools["import_remote_notebook"].fn("nb-remote-1", confirm=False))
-            self.assertTrue(guard_imp["requires_confirmation"])
+            self.assertFalse(guard_imp["confirmed"])
+            self.assertIn("confirm", guard_imp["warning"].lower())
 
             imp_data = json.loads(
                 await tools["import_remote_notebook"].fn("nb-remote-1", course_code="MATH202", confirm=True)
@@ -166,7 +167,8 @@ class TestReverseImport(unittest.TestCase):
             self.assertEqual(imp_data["downloaded_sources_count"], 2)
 
             guard_dl = json.loads(await tools["download_course_files_locally"].fn("BIO101", confirm=False))
-            self.assertTrue(guard_dl["requires_confirmation"])
+            self.assertFalse(guard_dl["confirmed"])
+            self.assertIn("confirm", guard_dl["warning"].lower())
 
             dl_data = json.loads(await tools["download_course_files_locally"].fn("BIO101", confirm=True))
             self.assertEqual(dl_data["downloaded_sources_count"], 1)

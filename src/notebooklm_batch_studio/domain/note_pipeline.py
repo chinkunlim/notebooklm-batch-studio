@@ -168,17 +168,3 @@ def is_gemini_refusal(text: str) -> bool:
     if not stripped or len(stripped) > _MAX_REFUSAL_CHARS:
         return False
     return bool(_REFUSAL_PATTERNS.search(stripped))
-
-
-def calculate_outline_words(text: str) -> int:
-    """Count substantive CJK characters and English words in Markdown text.
-
-    Args:
-        text: Markdown text to measure.
-
-    Returns:
-        Sum of CJK characters and alphanumeric word tokens.
-    """
-    cjk_count = len(re.findall(r"[\u4e00-\u9fff]", text))
-    en_words = len(re.findall(r"\b[A-Za-z0-9_-]+\b", text))
-    return cjk_count + en_words
