@@ -185,10 +185,19 @@
   - **When** 呼叫 §4 全部端點與工具、以及 `GET /api/system/sign-ins`
   - **Then** 查詢端點回 200；非法代碼回 400/404；全數具 `confirm` 參數之 MCP 工具於 `confirm=False` 回傳 `{"confirmed": false, ...}`；登入狀態正確回報 `ready|missing|expired`
   - 對應測試：`tests/test_study_library_api.py`、`tests/test_auth_status.py`
-- [ ] **場景 14（一次性整併工具預設 dry-run 與可追溯報表）**
-  - **Given** 模擬舊 `input/courses`、未對齊校名資料夾、單數分類、note-studio 舊筆記與 `deleted/`
-  - **When** 執行 `plan_consolidation`（dry-run）與 `apply_consolidation`
-  - **Then** dry-run 不改任何檔案與 DB；apply 後路徑前綴同步且同名檔不覆寫，`deleted/` 僅盤點不刪不搬
+- [x] **場景 14（一次性整併工具預設 dry-run 與可追溯報表）**
+  - **Given（場景 14a：預設 dry-run 不改檔案與 DB，可輸出逐列計畫與 diagnostics JSON）** 模擬 `input/courses/CP__30210-心理學研究法/01.pdf`、未對齊校名資料夾 `study/115-1/生涯諮商`、單數分類 `02 Handout/`、`midterm-submission/`、note-studio 舊筆記與 `deleted/115-1-20261112-182701/`
+  - **When** 執行 `plan_consolidation`（dry-run）與 `save_consolidation_report`
+  - **Then** 回傳含 `action`/`source`/`target`/`note` 之 `ConsolidationStep` 計畫表；磁碟與資料庫原封不動；報告 JSON 寫入 `DATA_DIR/diagnostics/` 且可完整追溯
+  - **Given（場景 14b：課程資料夾改名、單數分類合併、舊筆記與任意指派 `--apply` 完整同步）** 設定 `--folder 115-1/生涯諮商=CP__31000-生涯諮商與實務`、`--map`、`--assign midterm-submission=<新代碼>:ASSIGNMENTS/期中專題`、`LEGACY_NOTE_STUDIO_DIR`，且 `02 Handout/ch01.pdf` 與 `02 Handouts/ch01.pdf` 同名、筆記狀態 `stitched_path` 與 `artifact_jobs.{output_file,interactive_path}` 指向舊資料夾
+  - **When** 執行 `apply_consolidation`
+  - **Then** 資料夾改名、單數分類內容併入複數資料夾（同名檔加後綴不覆寫、舊空資料夾保留不刪）、資料庫 `courses.{source_dir,study_dir,subject,course_no}`、`artifact_jobs.{output_file,interactive_path}`、`lectures.{category,relative_path}`、`literature_items.target_category` 與筆記狀態 `stitched_path` 全部更新；`GET /api/artifacts/<新代碼>/view/...` 回傳 200；`deleted/` 僅盤點不搬不刪
+  - **Given（場景 14c：課程資料夾改名中途失敗完整回滾）** 資料夾改名並更新筆記狀態 `stitched_path` 後，後續資料庫更新拋出例外
+  - **When** 執行 `apply_consolidation`
+  - **Then** 拋出例外，資料庫交易回滾，已改寫之筆記狀態 JSON 還原，課程資料夾移回原路徑
+  - **Given（場景 14d：獨占防護與監看器暫停旗標）** 本機 Web 伺服器埠號佔用中、或存在 `running` 工作／文獻鎖，或 `DATA_DIR/state/consolidate.pause` 存在時觸發 `CoursePdfEventHandler`
+  - **When** 執行 `apply_consolidation` 或監看器收到 PDF 事件
+  - **Then** `--apply` 拒絕執行且磁碟與資料庫零異動；`CoursePdfEventHandler` 偵測 `consolidate.pause` 期間直接略過事件不呼叫 `on_pdf_detected`
   - 對應測試：`tests/test_legacy_consolidation.py`
 
 ## 6. 未決問題（Task 16 動真實資料前須逐題請使用者確認）

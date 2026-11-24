@@ -286,6 +286,16 @@ class AppConfig:
         return self.data_dir / "diagnostics"
 
     @property
+    def consolidate_lock_path(self) -> Path:
+        """Return `<data_dir>/state/consolidate.lock` OS lock path (ADR-015)."""
+        return self.state_dir / "consolidate.lock"
+
+    @property
+    def consolidate_pause_path(self) -> Path:
+        """Return `<data_dir>/state/consolidate.pause` sentinel path (ADR-015)."""
+        return self.state_dir / "consolidate.pause"
+
+    @property
     def deleted_dir(self) -> Path:
         """Recoverable trash folder for deleted course legacy artifacts.
 

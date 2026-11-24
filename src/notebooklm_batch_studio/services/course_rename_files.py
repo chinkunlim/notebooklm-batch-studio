@@ -33,7 +33,7 @@ def _safe_key(name: str) -> str:
     return cleaned or "default"
 
 
-def _is_flock_held(lock_path: Path) -> bool:
+def is_flock_held(lock_path: Path) -> bool:
     """Return True if another open file descriptor currently holds an exclusive flock on `lock_path`.
 
     Args:
@@ -56,6 +56,9 @@ def _is_flock_held(lock_path: Path) -> bool:
         return False
     finally:
         os.close(fd)
+
+
+_is_flock_held = is_flock_held
 
 
 def check_active_locks(config: AppConfig, old_code: str, linked_lit_count: int) -> None:

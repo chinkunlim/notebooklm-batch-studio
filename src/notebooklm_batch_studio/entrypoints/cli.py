@@ -276,6 +276,7 @@ def _handle_watch(config: AppConfig) -> int:
         resolve_course=lambda p_path: _resolve_registered_study_dir(p_path, env),
         layout=config.study_layout,
     )
+    watcher.set_pause_check(lambda: config.consolidate_pause_path.exists())
     watcher.start()
     print(f"👀 CourseWatcher 守護中... 監看目錄：{watch_root}")
     print("   按下 Ctrl+C 即可停止監看。")
@@ -321,6 +322,10 @@ def _dispatch_command(args: argparse.Namespace, config: AppConfig) -> int:
         from notebooklm_batch_studio.entrypoints.cli_literature import handle_literature_cli
 
         return handle_literature_cli(config, args)
+    if args.command == "consolidate":
+        from notebooklm_batch_studio.entrypoints.cli_consolidate import handle_consolidate_cli
+
+        return handle_consolidate_cli(config, args)
     return 0
 
 
@@ -354,6 +359,26 @@ def _handle_mcp(config: AppConfig) -> int:
     return 0
 
 
+def _add_batch_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Register the `batch` subcommand arguments on `subparsers`.
+
+    Args:
+        subparsers: Parent argparse subparsers container.
+    """
+    batch_parser = subparsers.add_parser("batch", help="批次掃描課程並執行生成")
+    batch_parser.add_argument("paths", nargs="+", help="課程資料夾路徑")
+    batch_parser.add_argument("--workers", type=int, default=2, help="平行 Worker 數量")
+    batch_parser.add_argument(
+        "--profile",
+        choices=[p.value for p in ProfileName],
+        default=ProfileName.FULL.value,
+        help="產出組合：full / quiz-only / exam-prep",
+    )
+    batch_parser.add_argument(
+        "--wait-quota", action="store_true", help="額度用完時等待重置並自動繼續，全部完成才結束"
+    )
+
+
 def _build_cli_parser() -> argparse.ArgumentParser:
     """Build argument parser with all notebooklm-batch-studio CLI subcommands.
 
@@ -372,25 +397,16 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     status_parser = subparsers.add_parser("status", help="檢視課程與工作佇列狀態")
     status_parser.add_argument("--course", default=None, help="過濾特定課程代碼")
     subparsers.add_parser("resume", help="手動喚醒配額等待 (quota_wait) 任務")
-    batch_parser = subparsers.add_parser("batch", help="批次掃描課程並執行生成")
-    batch_parser.add_argument("paths", nargs="+", help="課程資料夾路徑")
-    batch_parser.add_argument("--workers", type=int, default=2, help="平行 Worker 數量")
-    batch_parser.add_argument(
-        "--profile",
-        choices=[p.value for p in ProfileName],
-        default=ProfileName.FULL.value,
-        help="產出組合：full / quiz-only / exam-prep",
-    )
-    batch_parser.add_argument(
-        "--wait-quota", action="store_true", help="額度用完時等待重置並自動繼續，全部完成才結束"
-    )
+    _add_batch_subparser(subparsers)
     subparsers.add_parser("watch", help="啟動資料夾監控守護")
     subparsers.add_parser("web", help="啟動本機網頁管理伺服器 (127.0.0.1:8768)")
     subparsers.add_parser("mcp", help="啟動 MCP stdio 伺服器")
     subparsers.add_parser("init-data", help="建立 DATA_DIR 下的 study/ 與 scratch/<種類>/ 資料夾")
+    from notebooklm_batch_studio.entrypoints.cli_consolidate import add_consolidate_subparser
     from notebooklm_batch_studio.entrypoints.cli_literature import add_literature_subparser
 
     add_literature_subparser(subparsers)
+    add_consolidate_subparser(subparsers)
     return parser
 
 

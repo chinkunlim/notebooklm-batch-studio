@@ -445,8 +445,8 @@ def test_no_new_writes_to_old_layout(self):
 6. 任意路徑指派（例 `midterm-submission/` → `<課程>:ASSIGNMENTS/期中專題`）；
 7. `deleted/` 只做 inventory：每個子資料夾的大小、日期、是否含 `.json`／`.md` 學習資料，不搬不刪。
 
-- [ ] **Step 1–4:** 測試 dry-run 不改任何檔案與 DB；apply 後來源→目的地可由報告追溯；同名不覆寫；DB 路徑前綴已更新且 `GET /api/artifacts/<新代碼>/view/...` 200 → 實作 → 通過
-- [ ] **Step 5:** Commit `-m "feat(cli): dry-run-first consolidation of legacy data into the study tree"`
+- [x] **Step 1–4:** 測試 dry-run 不改任何檔案與 DB；apply 後來源→目的地可由報告追溯；同名不覆寫；DB 路徑前綴已更新且 `GET /api/artifacts/<新代碼>/view/...` 200 → 實作 → 通過
+- [x] **Step 5:** Commit `-m "feat(cli): dry-run-first consolidation of legacy data into the study tree"`
 
 ### Task 16: 在使用者電腦上整併（每步需使用者確認）
 

@@ -173,6 +173,7 @@ notebooklm-batch-studio/
 │   │   ├── 012-note-studio-phase1-markdown-pipeline.md
 │   │   ├── 013-local-security-model.md
 │   │   ├── 014-course-identity-and-study-layout.md
+│   │   ├── 015-consolidation-exclusive-guard.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -326,6 +327,7 @@ notebooklm-batch-studio/
 │       │   ├── db/
 │       │   │   ├── __init__.py
 │       │   │   ├── base.py
+│       │   │   ├── consolidation_repo.py
 │       │   │   ├── course_identity_repo.py
 │       │   │   ├── learning_repository.py
 │       │   │   ├── literature_repository.py
@@ -721,6 +723,7 @@ notebooklm-batch-studio/
 │       │   ├── __init__.py
 │       │   ├── api.py
 │       │   ├── cli.py
+│       │   ├── cli_consolidate.py
 │       │   ├── cli_literature.py
 │       │   ├── http_middleware.py
 │       │   ├── mcp_confirm.py
@@ -795,6 +798,9 @@ notebooklm-batch-studio/
 │       │   ├── job_views.py
 │       │   ├── learning_record.py
 │       │   ├── learning_service.py
+│       │   ├── legacy_consolidation.py
+│       │   ├── legacy_consolidation_ops.py
+│       │   ├── legacy_consolidation_planner.py
 │       │   ├── orchestrator.py
 │       │   ├── preferences_service.py
 │       │   ├── prompt_generator.py
@@ -869,6 +875,7 @@ notebooklm-batch-studio/
 │   ├── test_job_settings.py
 │   ├── test_learning.py
 │   ├── test_learning_record.py
+│   ├── test_legacy_consolidation.py
 │   ├── test_literature_and_hierarchy.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_note_pipeline_behaviors.py

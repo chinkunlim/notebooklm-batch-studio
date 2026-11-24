@@ -77,6 +77,15 @@ class CoursePdfEventHandler(FileSystemEventHandler):
         self.resolve_course = resolve_course
         self.on_pdf_detected = on_pdf_detected
         self.layout = layout
+        self._is_paused: Callable[[], bool] = lambda: False
+
+    def set_pause_check(self, is_paused: Callable[[], bool]) -> None:
+        """Configure a pause predicate checked before handling any PDF event (Refs: ADR-015).
+
+        Args:
+            is_paused: Zero-argument callable returning True while filesystem consolidation runs.
+        """
+        self._is_paused = is_paused
 
     def on_created(self, event: FileSystemEvent) -> None:
         """Handle new file creation events.
@@ -110,6 +119,9 @@ class CoursePdfEventHandler(FileSystemEventHandler):
         Args:
             target_path: File system path of the event.
         """
+        if self._is_paused():
+            logger.info("Skipping watcher event during consolidation pause: %s", target_path)
+            return
         if target_path.name.startswith(".") or target_path.suffix.lower() != ".pdf":
             return
         resolved = target_path.resolve()
@@ -158,6 +170,15 @@ class CourseWatcher:
         self.resolve_course = resolve_course
         self.layout = layout
         self.observer: BaseObserver | None = None
+        self._is_paused: Callable[[], bool] | None = None
+
+    def set_pause_check(self, is_paused: Callable[[], bool]) -> None:
+        """Configure a pause predicate forwarded to the event handler on start (Refs: ADR-015).
+
+        Args:
+            is_paused: Zero-argument callable returning True while consolidation runs.
+        """
+        self._is_paused = is_paused
 
     def start(self) -> None:
         """Start the background filesystem observer."""
@@ -166,6 +187,8 @@ class CourseWatcher:
             lambda p: self.watch_root / p.relative_to(self.watch_root).parts[0]
         )
         handler = CoursePdfEventHandler(self.watch_root, resolver, self.on_pdf_detected, layout=self.layout)
+        if self._is_paused is not None:
+            handler.set_pause_check(self._is_paused)
         self.observer = Observer()
         self.observer.schedule(handler, str(self.watch_root), recursive=True)
         self.observer.start()
