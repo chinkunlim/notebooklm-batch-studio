@@ -336,6 +336,11 @@ class UiAndStaticRegressionTest(unittest.TestCase):
         self.assertIn("/api/courses/${code}/jobs/retry-failed", queue_js)
         self.assertIn("fetchCourses()", start_js)
         self.assertIn("window.StudioBus", core_js)
+        # ISSUE-066 & dark modal input styling
+        reader_js = (STATIC_DIR / "studio-reader.js").read_text(encoding="utf-8")
+        index_html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+        self.assertIn("lec && lec.source_id", reader_js)
+        self.assertIn('type="text" id="addTerm"', index_html)
         self.assertIn("window.StudioStore", core_js)
 
 

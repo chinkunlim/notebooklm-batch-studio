@@ -255,6 +255,7 @@ notebooklm-batch-studio/
 │   │   ├── 063-implicit-load-config-fallbacks.md
 │   │   ├── 064-flashcards-cross-course-glob.md
 │   │   ├── 065-delete-course-silently-drops-learning-records.md
+│   │   ├── 066-auto-keypoints-422-before-upload.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

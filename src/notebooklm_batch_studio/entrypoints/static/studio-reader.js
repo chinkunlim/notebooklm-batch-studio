@@ -121,7 +121,8 @@ async function loadKeyPoints(code, no) {
   }
   renderKeyPointList();
   const key = `${code}:${no}`;
-  if (!reader.points.length && !reader.autoTried.has(key)) {
+  const lec = (currentStudyCourse?.lectures || []).find(item => item.no === no);
+  if (!reader.points.length && !reader.autoTried.has(key) && lec && lec.source_id) {
     reader.autoTried.add(key);
     generateKeyPoints(false, true);
   }

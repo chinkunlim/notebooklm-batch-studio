@@ -97,16 +97,16 @@ function renderRemotePreviewHtml(data) {
   return `<div class="stack" style="gap:10px">
     <div class="row" style="gap:10px;flex-wrap:wrap">
       <label class="opt-field" style="width:120px"><span>學期（必填）</span>
-        <input id="riTerm" class="input" placeholder="113-2" />
+        <input type="text" id="riTerm" class="input" placeholder="113-2" />
       </label>
       <label class="opt-field" style="width:140px"><span>課號（選填）</span>
-        <input id="riCourseNo" class="input" placeholder="CP30000" />
+        <input type="text" id="riCourseNo" class="input" placeholder="CP30000" />
       </label>
       <label class="opt-field" style="flex:1;min-width:180px"><span>課程名稱</span>
-        <input id="riCourseName" class="input" value="${escAttr(nb.title || '')}" />
+        <input type="text" id="riCourseName" class="input" value="${escAttr(nb.title || '')}" />
       </label>
       <label class="opt-field" style="width:150px"><span>課程代碼（選填）</span>
-        <input id="riCourseCode" class="input" value="${escAttr(nb.linked_course_code || '')}" placeholder="自動產生" />
+        <input type="text" id="riCourseCode" class="input" value="${escAttr(nb.linked_course_code || '')}" placeholder="自動產生" />
       </label>
     </div>
     <div class="row" style="gap:14px;flex-wrap:wrap">
