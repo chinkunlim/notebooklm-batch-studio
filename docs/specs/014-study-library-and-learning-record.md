@@ -209,3 +209,4 @@
 | Q3 | 文獻 PDF 預設歸檔位置 | `01 Materials/Literature_Review`（透過 `CategoryRole.MATERIALS` 解析，不寫死字串） |
 | Q4 | `01 Materials`（課本）是否上傳為 NotebookLM 來源 | 預設不上傳；由課程設定勾選「課本作為整門課來源」（`materials_as_source`）控制 |
 | Q5 | 現有真實資料課程對照 | `115-1`（生涯諮商）→ `115-1_CP31000`（`CP__31000-生涯諮商與實務`）；`心理學研究法` → `CP__30210`；確認 `midterm-submission/` 歸屬與 `deleted/115-1-20261112-182701` 是否還原 |
+| Q6 | 從既有 `03 Notes/NotebookLM/` 重建 `artifact_jobs`（`done`） | 調查實測（2026-11-25 暫存資料夾）：現有 `StudyLibraryService.register` 與 `BatchStudioService.register_course_folder` 僅掃描 `02 Handouts/` 建立 `lectures`，**不會**依 `03 Notes/NotebookLM/<講次>/` 既有產出重建 `artifact_jobs`（`jobs == []`、`stats["artifacts_done"] == 0`、`GET /api/courses/<code>` 顯示 `study_state == "not_started"`；`LearningRecordService` 的 `categories` 檔案清單仍會列出該等檔案）。**待後續討論決定是否新增「從本地 NotebookLM 產出反向重建 done jobs 與講次對應」功能** |
