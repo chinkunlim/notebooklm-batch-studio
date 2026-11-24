@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
+from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.entrypoints.schemas import DownloadAllLocalRequest, ReverseImportRequest
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.reverse_import import ReverseImportOptions, ReverseImportService
@@ -23,11 +24,8 @@ def _build_reverse_import_service(request: Request) -> ReverseImportService:
         Configured ReverseImportService instance.
     """
     svc: BatchStudioService = request.app.state.service
-    return ReverseImportService(
-        notebooklm_client=svc.notebooklm_client,
-        course_repo=svc.course_repo,
-        queue_repo=svc.queue_repo,
-        output_base_dir=request.app.state.config.output_dir,
+    return ReverseImportService.from_config(
+        svc.notebooklm_client, svc.course_repo, svc.queue_repo, request.app.state.config
     )
 
 
@@ -87,9 +85,12 @@ async def import_remote_notebook_endpoint(
     svc = _build_reverse_import_service(request)
     opts = ReverseImportOptions(
         notebook_id=notebook_id,
+        term=payload.term,
+        course_no=payload.course_no,
         course_code=payload.course_code,
         course_name=payload.course_name,
         language=payload.language,
+        record_only=payload.record_only,
         download_sources=payload.download_sources,
         download_artifacts=payload.download_artifacts,
         source_ids=payload.source_ids,
@@ -97,6 +98,8 @@ async def import_remote_notebook_endpoint(
     )
     try:
         return await svc.import_remote_notebook(opts)
+    except (ValueError, PathSafetyError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Reverse import failed: {exc}") from exc
 

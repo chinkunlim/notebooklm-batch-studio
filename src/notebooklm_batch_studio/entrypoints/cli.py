@@ -24,8 +24,10 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
-from notebooklm_batch_studio.domain.models import JobStatus, ProfileName
+from notebooklm_batch_studio.domain.models import CourseStatus, JobStatus, ProfileName
+from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
+from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.watcher import CourseWatcher
 from notebooklm_batch_studio.services.worker_pool import WorkerPool
@@ -213,18 +215,44 @@ def _handle_batch(config: AppConfig, args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_registered_study_dir(pdf_path: Path, env: _BatchEnv) -> Path | None:
+    """Match a changed PDF inside `study/` to an active registered course directory.
+
+    Args:
+        pdf_path: Detected PDF file path.
+        env: Shared CLI runtime environment.
+
+    Returns:
+        Course `study_dir` Path when matched and non-archived, else None.
+    """
+    with session_scope(env.engine) as session:
+        for course in CourseRepository(session).list_courses(status=CourseStatus.ACTIVE):
+            if course.study_dir and is_within(pdf_path, Path(course.study_dir)):
+                return Path(course.study_dir)
+    return None
+
+
 def _on_pdf_detected(course_dir: Path, pdf_path: Path, env: _BatchEnv) -> None:
     """Handle arrival of new lecture PDF file by registering and queuing.
 
     Args:
-        course_dir: Course input directory path.
+        course_dir: Course study directory path.
         pdf_path: Newly stabilized PDF path.
         env: Bundled engine, Gemini Notebook adapter, and config.
     """
     print(f"\n🔔 偵測到新講義檔案：{pdf_path.name}，開始自動註冊並排程...")
     with session_scope(env.engine) as session:
-        srv = BatchStudioService(CourseRepository(session), QueueRepository(session), env.adapter, env.config)
-        course = srv.register_course_folder(course_dir)
+        repo = CourseRepository(session)
+        resolved_dir = str(course_dir.resolve())
+        existing = next((c for c in repo.list_courses() if c.study_dir == resolved_dir), None)
+        srv = BatchStudioService(repo, QueueRepository(session), env.adapter, env.config)
+        course = scan_course_directory(
+            course_dir,
+            custom_code=existing.code if existing else None,
+            term=existing.term if existing else "",
+            layout=env.config.study_layout,
+        )
+        repo.save_course(course)
         added = srv.enqueue_course_artifacts(course.code)
         print(f"✅ 已新增 {added} 個產出任務至佇列。")
 
@@ -232,25 +260,22 @@ def _on_pdf_detected(course_dir: Path, pdf_path: Path, env: _BatchEnv) -> None:
 def _handle_watch(config: AppConfig) -> int:
     """Start continuous folder monitoring for incoming course lectures.
 
+    Watches `config.study_root_dir` and filters to active courses' HANDOUTS PDFs.
+
     Args:
         config: Application configuration.
 
     Returns:
         Exit code (0 on interrupt).
     """
-    watch_root = config.courses_input_dir
+    watch_root = config.study_root_dir
     env = _BatchEnv(create_db_engine(config.database_url), NotebookLMAdapter(config), config)
-
-    def callback(c_dir: Path, p_path: Path) -> None:
-        """Forward detected lecture PDF to detection handler.
-
-        Args:
-            c_dir: Course input directory.
-            p_path: New PDF file path.
-        """
-        _on_pdf_detected(c_dir, p_path, env)
-
-    watcher = CourseWatcher(watch_root, callback)
+    watcher = CourseWatcher(
+        watch_root,
+        lambda c_dir, p_path: _on_pdf_detected(c_dir, p_path, env),
+        resolve_course=lambda p_path: _resolve_registered_study_dir(p_path, env),
+        layout=config.study_layout,
+    )
     watcher.start()
     print(f"👀 CourseWatcher 守護中... 監看目錄：{watch_root}")
     print("   按下 Ctrl+C 即可停止監看。")

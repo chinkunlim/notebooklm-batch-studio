@@ -15,12 +15,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from notebooklm_batch_studio.domain.models import Course, Lecture, ProfileName
+from notebooklm_batch_studio.config.settings import AppConfig
+from notebooklm_batch_studio.domain.course_identity import TERM_PATTERN, make_course_code, split_course_code
+from notebooklm_batch_studio.domain.models import Course, CourseStatus, Lecture, ProfileName
+from notebooklm_batch_studio.domain.path_safety import ensure_within_roots
 from notebooklm_batch_studio.domain.repositories import (
     CourseRepositoryProtocol,
     NotebookLMClientProtocol,
     QueueRepositoryProtocol,
 )
+from notebooklm_batch_studio.domain.study_hierarchy import resolve_course_output_root
+from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
+from notebooklm_batch_studio.services.course_placement import build_study_folder_name
 from notebooklm_batch_studio.services.sync_service import RemoteSyncService
 
 logger = logging.getLogger(__name__)
@@ -32,9 +38,12 @@ class ReverseImportOptions:
 
     Attributes:
         notebook_id: Remote Gemini Notebook identifier.
-        course_code: Optional local course code (auto-generated from title if omitted).
+        term: Required academic term matching `TERM_PATTERN` (e.g. `113-2`).
+        course_no: Optional school course number (e.g. `CP30000`).
+        course_code: Optional legacy/custom course code hint.
         course_name: Optional local course title (defaults to remote notebook title).
         language: Output language code for future local generations.
+        record_only: True to import as `record-only` + `archived` without scheduling jobs.
         download_sources: Whether to download remote source fulltext locally as Markdown.
         download_artifacts: Whether to download remote artifacts locally.
         source_ids: Optional subset of remote source IDs to download (None = all).
@@ -42,9 +51,12 @@ class ReverseImportOptions:
     """
 
     notebook_id: str
+    term: str = ""
+    course_no: str = ""
     course_code: str | None = None
     course_name: str | None = None
     language: str = "zh-TW"
+    record_only: bool = True
     download_sources: bool = True
     download_artifacts: bool = True
     source_ids: list[str] | None = None
@@ -135,7 +147,35 @@ class ReverseImportService:
         self.course_repo = course_repo
         self.queue_repo = queue_repo
         self.output_base_dir = output_base_dir
+        self.study_root = output_base_dir.parent / "study"
+        self.scratch_unarchived = output_base_dir.parent / "scratch" / "unarchived"
+        self.study_layout: StudyLayout = DEFAULT_LAYOUT
         self.sync_service = RemoteSyncService(notebooklm_client, course_repo, queue_repo, output_base_dir)
+
+    @classmethod
+    def from_config(
+        cls,
+        notebooklm_client: NotebookLMClientProtocol,
+        course_repo: CourseRepositoryProtocol,
+        queue_repo: QueueRepositoryProtocol,
+        config: AppConfig,
+    ) -> ReverseImportService:
+        """Build a `ReverseImportService` configured with `AppConfig` study paths and layout.
+
+        Args:
+            notebooklm_client: Adapter client for Gemini Notebook API calls.
+            course_repo: Course repository for local persistence.
+            queue_repo: Queue repository for recording synced artifact jobs.
+            config: Application configuration providing study root, scratch paths, and layout.
+
+        Returns:
+            Configured `ReverseImportService` instance.
+        """
+        instance = cls(notebooklm_client, course_repo, queue_repo, config.output_dir)
+        instance.study_root = config.study_root_dir
+        instance.scratch_unarchived = config.scratch_kind_dir("unarchived")
+        instance.study_layout = config.study_layout
+        return instance
 
     async def list_remote_notebooks(self) -> list[dict[str, Any]]:
         """List remote Gemini Notebooks and annotate which ones are already linked locally.
@@ -206,15 +246,7 @@ class ReverseImportService:
             return lec, info
         except Exception as err:
             logger.warning("Failed to download fulltext for source %s (%s): %s", src_id, title, err)
-            fallback = Lecture(
-                no=idx,
-                topic=title,
-                filename=title,
-                sha256=uuid.uuid4().hex,
-                source_id=src_id,
-                upload_status="ready",
-            )
-            return fallback, None
+            return self._placeholder_lecture(idx, title, src_id), None
 
     async def _download_sources_to_lectures(
         self,
@@ -278,47 +310,92 @@ class ReverseImportService:
             List of Lecture entities.
         """
         return [
-            Lecture(
-                no=i,
-                topic=str(s.get("title") or f"Source {i}"),
-                filename=str(s.get("title") or f"Source {i}"),
-                sha256=uuid.uuid4().hex,
-                source_id=str(s.get("id", "")),
-                upload_status="ready",
-            )
+            self._placeholder_lecture(i, str(s.get("title") or f"Source {i}"), str(s.get("id", "")))
             for i, s in enumerate(remote_sources, start=1)
         ]
 
-    async def _resolve_import_target(self, options: ReverseImportOptions) -> tuple[str, str]:
+    async def _resolve_import_target(self, options: ReverseImportOptions) -> tuple[str, str, str, str, Path]:
         """Resolve target course code and name for a remote notebook import.
+
+        Validates `term` and resolves term-scoped `course_no` and `study_dir`.
 
         Args:
             options: Reverse import configuration options.
 
         Returns:
-            Tuple of `(course_code, course_name)`.
+            Tuple of `(course_code, course_name, term, course_no, study_dir)`.
+
+        Raises:
+            ValueError: When `term` is missing or invalid.
         """
+        clean_term = (options.term or "").strip().replace("_", "-")
+        if not TERM_PATTERN.match(clean_term):
+            raise ValueError(f"term 為必填且須符合學期格式，例如 113-2（收到：{options.term!r}）")
         notebooks = await self.client.list_notebooks()
         nb_meta = next((n for n in notebooks if n["id"] == options.notebook_id), None)
-        nb_title = options.course_name or (nb_meta["title"] if nb_meta else options.notebook_id)
+        nb_title = (options.course_name or (nb_meta["title"] if nb_meta else options.notebook_id)).strip()
         existing = self.course_repo.list_courses()
-        linked = next((c for c in existing if c.notebook_id == options.notebook_id), None)
-        code = options.course_code or (
-            linked.code if linked else _derive_course_code(nb_title, {c.code for c in existing})
+        if options.course_no.strip():
+            clean_no = re.sub(r"[^A-Za-z0-9]", "", options.course_no).upper()
+        elif options.course_code:
+            _, split_no = split_course_code(options.course_code.strip())
+            clean_no = re.sub(r"[^A-Za-z0-9]", "", split_no or options.course_code).upper()
+        else:
+            clean_no = _derive_course_code(nb_title, {c.course_no or c.code for c in existing})
+        course_code = make_course_code(clean_term, clean_no)
+        folder_name = build_study_folder_name(clean_no, nb_title)
+        study_dir = self.study_root / clean_term / folder_name
+        ensure_within_roots(study_dir, [self.study_root], "study course directory")
+        self.study_layout.ensure_tree(study_dir)
+        return course_code, nb_title, clean_term, clean_no, study_dir
+
+    @staticmethod
+    def _build_imported_course(
+        options: ReverseImportOptions, target: tuple[str, str, str, str, Path], lectures: list[Lecture]
+    ) -> Course:
+        """Construct the persisted Course entity for a reverse-imported notebook.
+
+        Args:
+            options: Reverse import options.
+            target: Tuple of `(course_code, nb_title, term, course_no, study_dir)`.
+            lectures: Lecture entries built from remote sources.
+
+        Returns:
+            Configured `Course` entity.
+        """
+        course_code, nb_title, term, course_no, study_dir = target
+        resolved_dir = str(study_dir.resolve())
+        return Course(
+            code=course_code,
+            name=nb_title,
+            source_dir=resolved_dir,
+            notebook_id=options.notebook_id,
+            profile=ProfileName.RECORD_ONLY if options.record_only else ProfileName.FULL,
+            language=options.language,
+            watch=False,
+            lectures=lectures,
+            reuse_notebook=True,
+            term=term,
+            subject=nb_title,
+            study_dir=resolved_dir,
+            status=CourseStatus.ARCHIVED if options.record_only else CourseStatus.ACTIVE,
+            course_no=course_no,
         )
-        return code, nb_title
 
     async def import_remote_notebook(self, options: ReverseImportOptions) -> dict[str, Any]:
         """Import an existing remote Gemini Notebook as a local course and download files locally.
 
+        Places sources and outputs inside `DATA_DIR/study/<term>/<folder>/`.
+
         Args:
-            options: Reverse import configuration options.
+            options: Reverse import configuration options (including required `term`).
 
         Returns:
             Summary dictionary with course_code, source_dir, downloaded_sources, and synced_artifacts.
         """
-        course_code, nb_title = await self._resolve_import_target(options)
-        sources_dir = self.output_base_dir / "imported_sources" / course_code
+        target = await self._resolve_import_target(options)
+        course_code, nb_title, _, _, study_dir = target
+        sources_dir = self.study_layout.primary_dir(study_dir, CategoryRole.HANDOUTS)
         remote_sources = await self.client.list_sources(options.notebook_id)
         selected_src_ids = set(options.source_ids) if options.source_ids is not None else None
         if options.download_sources:
@@ -328,24 +405,27 @@ class ReverseImportService:
         else:
             lectures = self._build_placeholder_lectures(remote_sources)
             downloaded_sources = []
-        course = Course(
-            code=course_code,
-            name=nb_title,
-            source_dir=str(sources_dir),
-            notebook_id=options.notebook_id,
-            profile=ProfileName.FULL,
-            language=options.language,
-            watch=False,
-            lectures=lectures,
-            reuse_notebook=True,
-        )
-        self.course_repo.save_course(course)
+        self.course_repo.save_course(self._build_imported_course(options, target, lectures))
         sync_res = (
             await self.sync_service.sync_course(course_code)
             if options.download_artifacts
             else {"synced_count": 0, "items": []}
         )
         return self._format_download_summary(course_code, downloaded_sources, sync_res, nb_title)
+
+    def _course_sources_dir(self, course_code: str, study_dir: str = "") -> Path:
+        """Return local sources folder (`<study_dir>/02 Handouts` or `scratch/unarchived/<code>`).
+
+        Args:
+            course_code: Course identifier.
+            study_dir: Optional course study directory.
+
+        Returns:
+            Destination folder path for downloaded source Markdown files.
+        """
+        if study_dir:
+            return self.study_layout.primary_dir(Path(study_dir), CategoryRole.HANDOUTS)
+        return self.scratch_unarchived / course_code
 
     def _format_download_summary(
         self,
@@ -365,11 +445,14 @@ class ReverseImportService:
         Returns:
             Normalized summary dictionary.
         """
-        sources_dir = self.output_base_dir / "imported_sources" / course_code
+        course = self.course_repo.get_course(course_code)
+        study_dir = course.study_dir if course else ""
+        sources_dir = self._course_sources_dir(course_code, study_dir)
+        artifacts_dir = resolve_course_output_root(self.output_base_dir / "courses", course_code, study_dir)
         summary: dict[str, Any] = {
             "course_code": course_code,
             "sources_dir": str(sources_dir),
-            "artifacts_dir": str(self.output_base_dir / "courses" / course_code),
+            "artifacts_dir": str(artifacts_dir),
             "downloaded_sources_count": len(downloaded_sources),
             "downloaded_sources": downloaded_sources,
             "synced_artifacts_count": sync_res.get("synced_count", 0),
@@ -397,7 +480,7 @@ class ReverseImportService:
             raise ValueError(f"Course not found: {course_code}")
         if not course.notebook_id:
             raise ValueError(f"Course {course_code} has no linked Gemini Notebook")
-        sources_dir = self.output_base_dir / "imported_sources" / course_code
+        sources_dir = self._course_sources_dir(course_code, course.study_dir)
         downloaded_sources: list[dict[str, Any]] = []
         if include_sources:
             remote_sources = await self.client.list_sources(course.notebook_id)

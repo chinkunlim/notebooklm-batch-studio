@@ -19,6 +19,7 @@ from notebooklm_batch_studio.domain.repositories import (
     NotebookLMClientProtocol,
     QueueRepositoryProtocol,
 )
+from notebooklm_batch_studio.domain.study_hierarchy import resolve_course_output_root
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +236,9 @@ class RemoteSyncService:
             logger.info("Skipping already synchronized remote artifact %s (%s)", art_id, title)
             return None
 
-        course_out = self.output_base_dir / "courses" / course.code
+        course_out = resolve_course_output_root(
+            self.output_base_dir / "courses", course.code, course.study_dir
+        )
         lec_no, art_type, output_file = resolve_artifact_destination(
             course, course_out, title, art_id=art_id, kind=kind
         )
@@ -418,15 +421,16 @@ def _annotate_remote_artifact(
     }
 
 
-def _remove_local_output(output_base_dir: Path, course_code: str, rel_path: str) -> None:
+def _remove_local_output(output_base_dir: Path, course_code: str, rel_path: str, study_dir: str = "") -> None:
     """Safely remove a local artifact output file inside the course output directory.
 
     Args:
         output_base_dir: Base output directory containing `courses/`.
         course_code: Course identifier.
         rel_path: Course-relative output path.
+        study_dir: Optional course study directory path.
     """
-    course_dir = (output_base_dir / "courses" / course_code).resolve()
+    course_dir = resolve_course_output_root(output_base_dir / "courses", course_code, study_dir).resolve()
     target = (course_dir / rel_path).resolve()
     if target.is_relative_to(course_dir) and target.is_file():
         target.unlink()

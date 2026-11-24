@@ -20,7 +20,7 @@ from notebooklm_batch_studio.services.course_parser import scan_course_directory
 logger = logging.getLogger(__name__)
 
 
-def _build_study_folder_name(course_no: str, course_name: str) -> str:
+def build_study_folder_name(course_no: str, course_name: str) -> str:
     """Format canonical `study/<term>/` course directory name from course number and title.
 
     Args:
@@ -87,7 +87,7 @@ def place_course_folder_in_study(src: Path, config: AppConfig, metadata: dict[st
         raise ValueError("請提供課號（course_no）才能歸入 study/ 目錄")
     make_course_code(term, clean_no)
     course_name = (metadata.get("course_name") or "").strip() or (info.name if info.is_course else src.name)
-    folder_name = _build_study_folder_name(clean_no, course_name)
+    folder_name = build_study_folder_name(clean_no, course_name)
 
     target_dir = config.study_root_dir / term / folder_name
     ensure_within_roots(target_dir, [config.study_root_dir], "study course directory")

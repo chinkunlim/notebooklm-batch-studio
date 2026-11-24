@@ -96,6 +96,12 @@ function renderRemotePreviewHtml(data) {
     : '<p class="small muted">（無來源）</p>';
   return `<div class="stack" style="gap:10px">
     <div class="row" style="gap:10px;flex-wrap:wrap">
+      <label class="opt-field" style="width:120px"><span>學期（必填）</span>
+        <input id="riTerm" class="input" placeholder="113-2" />
+      </label>
+      <label class="opt-field" style="width:140px"><span>課號（選填）</span>
+        <input id="riCourseNo" class="input" placeholder="CP30000" />
+      </label>
       <label class="opt-field" style="flex:1;min-width:180px"><span>課程名稱</span>
         <input id="riCourseName" class="input" value="${escAttr(nb.title || '')}" />
       </label>
@@ -104,6 +110,7 @@ function renderRemotePreviewHtml(data) {
       </label>
     </div>
     <div class="row" style="gap:14px;flex-wrap:wrap">
+      <label class="cbox"><input type="checkbox" id="riRecordOnly" checked>只建學習紀錄並封存（不排生成）</label>
       <label class="cbox"><input type="checkbox" id="riDownloadSources" checked>下載來源全文為 Markdown 到本地</label>
       <label class="cbox"><input type="checkbox" id="riDownloadArtifacts" checked>下載所有雲端產出物（${artifacts.length} 件）到本地</label>
     </div>
@@ -120,10 +127,18 @@ function renderRemotePreviewHtml(data) {
  * @returns {Promise<void>} Resolves when import completes
  */
 async function executeReverseImport(notebookId) {
+  const term = (document.getElementById('riTerm')?.value || '').trim();
+  if (!term) {
+    showToast('請先填寫學期（例如 113-2）', 'warning');
+    return;
+  }
   const srcIds = Array.from(document.querySelectorAll('input[name="ri_src"]:checked')).map(el => el.value);
   const payload = {
+    term,
+    course_no: (document.getElementById('riCourseNo')?.value || '').trim(),
     course_name: (document.getElementById('riCourseName')?.value || '').trim() || null,
     course_code: (document.getElementById('riCourseCode')?.value || '').trim() || null,
+    record_only: Boolean(document.getElementById('riRecordOnly')?.checked ?? true),
     download_sources: Boolean(document.getElementById('riDownloadSources')?.checked),
     download_artifacts: Boolean(document.getElementById('riDownloadArtifacts')?.checked),
     source_ids: srcIds,

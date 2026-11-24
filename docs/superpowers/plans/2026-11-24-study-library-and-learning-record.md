@@ -347,9 +347,9 @@ def test_no_new_writes_to_old_layout(self):
 
 **Files:** Modify `services/watcher.py`（`CoursePdfEventHandler(watch_root, resolve_course, on_pdf_detected)`）、`entrypoints/cli.py:241`（監看 `study_root_dir`，以 DB `study_dir` 前綴對應課程，只收 HANDOUTS 角色 PDF）、`services/reverse_import.py`（`ReverseImportOptions` 加 `term: str`（必填）、`course_no: str = ""`、`record_only: bool = True`；來源存 `study/<term>/<課號資料夾>/02 Handouts/`、產出 `03 Notes/NotebookLM`；`profile=RECORD_ONLY`、`status=ARCHIVED` 當 `record_only`）、`entrypoints/http/reverse_import.py:30`、`entrypoints/mcp_qa_notes.py:193`、`services/literature/*`、`services/notes/note_paths.py`（未歸檔改 `scratch_kind_dir(...)`）；Test `tests/test_study_library.py`（追加）
 
-- [ ] **Step 1: 失敗測試**：新 `02 Handouts/w2.pdf` 觸發；`04 Homework/hw.pdf` 與 `專題/x.pdf` 不觸發；反向匯入結果在 `study/113-2/` 下、`output/imported_sources` 不存在、課程為 record-only／archived；文獻與筆記未歸檔路徑分別為 `scratch/literature`、`scratch/notes`。
-- [ ] **Step 2–4:** 失敗 → 實作 → 通過
-- [ ] **Step 5:** Commit `-m "feat(study): watch study tree, import notebooks into terms, scratch kinds"`
+- [x] **Step 1: 失敗測試**：新 `02 Handouts/w2.pdf` 觸發；`04 Homework/hw.pdf` 與 `專題/x.pdf` 不觸發；反向匯入結果在 `study/113-2/` 下、`output/imported_sources` 不存在、課程為 record-only／archived；文獻與筆記未歸檔路徑分別為 `scratch/literature`、`scratch/notes`。
+- [x] **Step 2–4:** 失敗 → 實作 → 通過
+- [x] **Step 5:** Commit `-m "feat(study): watch study tree, import notebooks into terms, scratch kinds"`
 
 ### Task 10: 通用歸檔／撤銷歸檔
 

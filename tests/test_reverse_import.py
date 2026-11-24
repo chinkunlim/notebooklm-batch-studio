@@ -119,22 +119,29 @@ class TestReverseImport(unittest.TestCase):
         """Reverse import creates Course, saves Markdown sources locally, and syncs artifacts."""
         res = self.client.post(
             "/api/remote-notebooks/nb-remote-1/import",
-            json={"course_code": "MATH201", "download_sources": True, "download_artifacts": True},
+            json={
+                "term": "113-2",
+                "course_no": "MATH201",
+                "download_sources": True,
+                "download_artifacts": True,
+            },
         )
         self.assertEqual(res.status_code, 200)
         data = res.json()
-        self.assertEqual(data["course_code"], "MATH201")
+        self.assertEqual(data["course_code"], "113-2_MATH201")
         self.assertEqual(data["downloaded_sources_count"], 2)
         self.assertEqual(data["synced_artifacts_count"], 1)
 
-        saved_course = self.course_repo.get_course("MATH201")
+        saved_course = self.course_repo.get_course("113-2_MATH201")
         self.assertIsNotNone(saved_course)
         assert saved_course is not None
         self.assertEqual(saved_course.notebook_id, "nb-remote-1")
+        self.assertEqual(saved_course.term, "113-2")
         self.assertEqual(len(saved_course.lectures), 2)
         for src in data["downloaded_sources"]:
             self.assertTrue(Path(src["path"]).exists())
             self.assertIn("notes.", Path(src["path"]).read_text(encoding="utf-8"))
+        self.assertFalse((self.config.output_dir / "imported_sources").exists())
 
     def test_download_all_course_files_locally_http(self) -> None:
         """POST /api/courses/{code}/download-all downloads both remote sources and artifacts."""
@@ -161,9 +168,11 @@ class TestReverseImport(unittest.TestCase):
             self.assertIn("confirm", guard_imp["warning"].lower())
 
             imp_data = json.loads(
-                await tools["import_remote_notebook"].fn("nb-remote-1", course_code="MATH202", confirm=True)
+                await tools["import_remote_notebook"].fn(
+                    "nb-remote-1", term="113-2", course_code="MATH202", confirm=True
+                )
             )
-            self.assertEqual(imp_data["course_code"], "MATH202")
+            self.assertEqual(imp_data["course_code"], "113-2_MATH202")
             self.assertEqual(imp_data["downloaded_sources_count"], 2)
 
             guard_dl = json.loads(await tools["download_course_files_locally"].fn("BIO101", confirm=False))
@@ -187,6 +196,7 @@ class TestReverseImport(unittest.TestCase):
             svc.import_remote_notebook(
                 ReverseImportOptions(
                     notebook_id="nb-remote-1",
+                    term="113-2",
                     course_code="MATH_SUB",
                     download_sources=True,
                     download_artifacts=False,

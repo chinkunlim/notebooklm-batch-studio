@@ -359,9 +359,12 @@ class GenerateScopedArtifactRequest(BaseModel):
 class ReverseImportRequest(BaseModel):
     """Payload to optionally reverse-import an existing remote Gemini Notebook locally."""
 
+    term: str = Field(..., description="Target semester term matching TERM_PATTERN (e.g. '113-2')")
+    course_no: str = ""
     course_code: str | None = None
     course_name: str | None = None
     language: str = "zh-TW"
+    record_only: bool = True
     download_sources: bool = True
     download_artifacts: bool = True
     source_ids: list[str] | None = None

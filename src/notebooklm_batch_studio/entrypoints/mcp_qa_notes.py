@@ -187,11 +187,8 @@ def _reverse_import_service(service: Any) -> Any:
     """
     from notebooklm_batch_studio.services.reverse_import import ReverseImportService
 
-    return ReverseImportService(
-        notebooklm_client=service.notebooklm_client,
-        course_repo=service.course_repo,
-        queue_repo=service.queue_repo,
-        output_base_dir=service.config.output_dir,
+    return ReverseImportService.from_config(
+        service.notebooklm_client, service.course_repo, service.queue_repo, service.config
     )
 
 
@@ -226,30 +223,21 @@ def _register_list_notebooks_tool(mcp: MCPServer, service: Any) -> None:
         return json.dumps(await svc.list_remote_notebooks(), ensure_ascii=False, indent=2)
 
 
-async def _import_remote_notebook_payload(
-    service: Any, notebook_id: str, course_code: str, download_sources: bool
-) -> str:
+async def _import_remote_notebook_payload(service: Any, options: Any) -> str:
     """Execute confirmed import_remote_notebook workflow.
 
     Args:
         service: BatchStudioService instance.
-        notebook_id: Remote Gemini Notebook identifier.
-        course_code: Optional local course code.
-        download_sources: Whether to download remote source fulltext.
+        options: ReverseImportOptions instance.
 
     Returns:
-        JSON string with import result.
+        JSON string with import result or validation error.
     """
-    from notebooklm_batch_studio.services.reverse_import import ReverseImportOptions
-
     svc = _reverse_import_service(service)
-    opts = ReverseImportOptions(
-        notebook_id=notebook_id,
-        course_code=course_code.strip() or None,
-        download_sources=download_sources,
-        download_artifacts=True,
-    )
-    return json.dumps(await svc.import_remote_notebook(opts), ensure_ascii=False, indent=2)
+    try:
+        return json.dumps(await svc.import_remote_notebook(options), ensure_ascii=False, indent=2)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
 
 def _register_import_notebook_tool(mcp: MCPServer, service: Any) -> None:
@@ -262,17 +250,16 @@ def _register_import_notebook_tool(mcp: MCPServer, service: Any) -> None:
 
     @mcp.tool()
     async def import_remote_notebook(
-        notebook_id: str,
-        course_code: str = "",
-        download_sources: bool = True,
-        confirm: bool = False,
+        notebook_id: str, term: str = "", course_code: str = "", confirm: bool = False
     ) -> str:
         """Reverse-import an existing Gemini Notebook as a local course (requires confirm=True).
 
+        Stores downloaded sources and artifacts under `study/<term>/` as record-only.
+
         Args:
             notebook_id: Remote Gemini Notebook identifier.
-            course_code: Optional local course code (auto-derived if empty).
-            download_sources: Whether to download remote source fulltext as Markdown.
+            term: Required academic term (e.g. `113-2`).
+            course_code: Optional course code or course_no hint.
             confirm: Must be set to True to create the local course and download files.
 
         Returns:
@@ -282,7 +269,12 @@ def _register_import_notebook_tool(mcp: MCPServer, service: Any) -> None:
             return confirm_warning(
                 "Confirmation required: pass confirm=True to import remote notebook.", notebook_id=notebook_id
             )
-        return await _import_remote_notebook_payload(service, notebook_id, course_code, download_sources)
+        from notebooklm_batch_studio.services.reverse_import import ReverseImportOptions
+
+        opts = ReverseImportOptions(
+            notebook_id=notebook_id, term=term, course_code=course_code.strip() or None
+        )
+        return await _import_remote_notebook_payload(service, opts)
 
 
 def _register_download_course_files_tool(mcp: MCPServer, service: Any) -> None:

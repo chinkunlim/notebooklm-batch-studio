@@ -16,6 +16,9 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
 
+from notebooklm_batch_studio.domain.path_safety import is_within
+from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,20 +55,28 @@ def _wait_for_file_settled(file_path: Path, max_wait: float = 10.0, check_interv
 class CoursePdfEventHandler(FileSystemEventHandler):
     """File system event handler targeting course lecture PDFs."""
 
+    # Restricts triggers to HANDOUTS PDFs inside registered study courses.
+
     def __init__(
         self,
         watch_root: Path,
+        resolve_course: Callable[[Path], Path | None],
         on_pdf_detected: Callable[[Path, Path], None],
+        layout: StudyLayout = DEFAULT_LAYOUT,
     ) -> None:
         """Initialize the handler.
 
         Args:
-            watch_root: Base courses input directory (DATA_DIR/input/courses).
-            on_pdf_detected: Callback receiving (course_dir, pdf_path).
+            watch_root: Base study library directory (`DATA_DIR/study`).
+            resolve_course: Callback resolving a PDF path to its registered course directory, or None.
+            on_pdf_detected: Callback receiving `(course_dir, pdf_path)`.
+            layout: Study category layout identifying `CategoryRole.HANDOUTS`.
         """
         super().__init__()
         self.watch_root = watch_root.resolve()
+        self.resolve_course = resolve_course
         self.on_pdf_detected = on_pdf_detected
+        self.layout = layout
 
     def on_created(self, event: FileSystemEvent) -> None:
         """Handle new file creation events.
@@ -94,25 +105,27 @@ class CoursePdfEventHandler(FileSystemEventHandler):
     def _process_event_path(self, target_path: Path) -> None:
         """Verify and forward detected PDF files.
 
+        Accepts PDFs inside a registered course's HANDOUTS category.
+
         Args:
             target_path: File system path of the event.
         """
-        if target_path.suffix.lower() != ".pdf":
+        if target_path.name.startswith(".") or target_path.suffix.lower() != ".pdf":
             return
-
         resolved = target_path.resolve()
+        if not is_within(resolved, self.watch_root):
+            return
+        raw_course_dir = self.resolve_course(resolved)
+        if raw_course_dir is None:
+            return
+        course_dir = raw_course_dir.resolve()
         try:
-            rel = resolved.relative_to(self.watch_root)
+            rel = resolved.relative_to(course_dir)
         except ValueError:
             return
-
-        # Path must be inside a course folder: <watch_root>/<COURSE_CODE>/filename.pdf
-        if len(rel.parts) < 2:
+        if len(rel.parts) < 2 or self.layout.role_of(rel.parts[0]) != CategoryRole.HANDOUTS:
             return
-
-        course_dir = self.watch_root / rel.parts[0]
-        logger.info("Detected new PDF: %s in course %s", resolved.name, course_dir.name)
-
+        logger.info("Detected new handout PDF: %s in course %s", resolved.name, course_dir.name)
         if _wait_for_file_settled(resolved):
             try:
                 self.on_pdf_detected(course_dir, resolved)
@@ -129,21 +142,30 @@ class CourseWatcher:
         self,
         watch_root: Path,
         on_pdf_detected: Callable[[Path, Path], None],
+        resolve_course: Callable[[Path], Path | None] | None = None,
+        layout: StudyLayout = DEFAULT_LAYOUT,
     ) -> None:
         """Initialize the watcher service.
 
         Args:
-            watch_root: Path to input courses directory.
-            on_pdf_detected: Callback invoked when a new lecture PDF is ready.
+            watch_root: Path to study root directory (`DATA_DIR/study`).
+            on_pdf_detected: Callback invoked when a new handout PDF is ready.
+            resolve_course: Optional resolver mapping PDF path -> registered course directory.
+            layout: Study category layout configuration.
         """
         self.watch_root = watch_root
         self.on_pdf_detected = on_pdf_detected
+        self.resolve_course = resolve_course
+        self.layout = layout
         self.observer: BaseObserver | None = None
 
     def start(self) -> None:
         """Start the background filesystem observer."""
         self.watch_root.mkdir(parents=True, exist_ok=True)
-        handler = CoursePdfEventHandler(self.watch_root, self.on_pdf_detected)
+        resolver = self.resolve_course or (
+            lambda p: self.watch_root / p.relative_to(self.watch_root).parts[0]
+        )
+        handler = CoursePdfEventHandler(self.watch_root, resolver, self.on_pdf_detected, layout=self.layout)
         self.observer = Observer()
         self.observer.schedule(handler, str(self.watch_root), recursive=True)
         self.observer.start()

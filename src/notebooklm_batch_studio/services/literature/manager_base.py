@@ -63,8 +63,9 @@ class LiteratureManagerBase:
                 target = resolve_literature_dir(base, item.target_category, item.target_subfolder)
                 target.mkdir(parents=True, exist_ok=True)
                 return target
-        self.config.literature_dir.mkdir(parents=True, exist_ok=True)
-        return self.config.literature_dir
+        unarchived_dir = self.config.scratch_kind_dir("literature")
+        unarchived_dir.mkdir(parents=True, exist_ok=True)
+        return unarchived_dir
 
     def resolve_pdf_path(self, key: str) -> Path | None:
         """Return the existing PDF file path for a literature item, if present on disk.
@@ -81,7 +82,7 @@ class LiteratureManagerBase:
         item = self.lit_repo.get_item(key)
         if item is None or not item.file:
             return None
-        for folder in (self.resolve_target_dir(item), self.config.literature_dir):
+        for folder in (self.resolve_target_dir(item), self.config.scratch_kind_dir("literature")):
             root = folder.resolve()
             candidate = (root / item.file).resolve()
             if not candidate.is_relative_to(root):

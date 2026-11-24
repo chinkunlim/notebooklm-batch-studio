@@ -229,7 +229,7 @@ class AppConfig:
         Returns:
             `<data_dir>/scratch/literature`.
         """
-        return self.scratch_dir / "literature"
+        return self.scratch_kind_dir("literature")
 
     @property
     def literature_browser_profile_dir(self) -> Path:

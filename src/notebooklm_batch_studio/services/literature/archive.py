@@ -154,9 +154,10 @@ class LiteratureArchiveMixin(LiteratureManagerBase):
         if item is None:
             raise ValueError(f"Literature item not found: {key}")
         src_pdf = self.resolve_pdf_path(key)
-        self.config.literature_dir.mkdir(parents=True, exist_ok=True)
+        unarchived_dir = self.config.scratch_kind_dir("literature")
+        unarchived_dir.mkdir(parents=True, exist_ok=True)
         if src_pdf is not None and src_pdf.is_file():
-            _move_pdf_with_review(item, src_pdf, self.config.literature_dir)
+            _move_pdf_with_review(item, src_pdf, unarchived_dir)
         saved = replace(item, course_code=None, imported_to_course=False)
         self.lit_repo.upsert_item(saved)
         logger.info("Moved literature %s back to unarchived folder", key)
@@ -224,11 +225,12 @@ class LiteratureArchiveMixin(LiteratureManagerBase):
         Returns:
             List of newly registered item keys.
         """
-        self.config.literature_dir.mkdir(parents=True, exist_ok=True)
+        unarchived_dir = self.config.scratch_kind_dir("literature")
+        unarchived_dir.mkdir(parents=True, exist_ok=True)
         items = self.lit_repo.list_items()
         known_files = {item.file for item in items if item.file}
         taken_keys = {item.key for item in items}
-        added_keys = self._register_dir_pdfs(self.config.literature_dir, known_files, taken_keys)
+        added_keys = self._register_dir_pdfs(unarchived_dir, known_files, taken_keys)
         for course in self.course_repo.list_courses():
             base = Path(course.study_dir) if course.study_dir else Path(course.source_dir)
             lit_dir = resolve_literature_dir(base, DEFAULT_LITERATURE_CATEGORY, DEFAULT_LITERATURE_SUBFOLDER)

@@ -13,13 +13,18 @@ from notebooklm_batch_studio.adapters.db.repository import CourseRepository, Que
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, make_session_factory
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.models import CourseStatus, ProfileName
+from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.job_planner import (
     generate_jobs_for_course,
     list_material_source_pdfs,
 )
+from notebooklm_batch_studio.services.notes.note_paths import NotePathResolver
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from notebooklm_batch_studio.services.reverse_import import ReverseImportOptions, ReverseImportService
 from notebooklm_batch_studio.services.study_library import StudyLibraryService
+from notebooklm_batch_studio.services.watcher import CoursePdfEventHandler
+from tests.dummy_client import DummyStudioClient
 
 
 class StudyLibraryTests(unittest.TestCase):
@@ -254,6 +259,107 @@ class ExternalPlacementAndMaterialsTests(unittest.TestCase):
             asyncio.run(svc.setup_notebook_and_sources("115-1_CP30000"))
             uploaded_mat = [Path(c.args[1]).name for c in client.upload_source.call_args_list]
             self.assertIn("textbook.pdf", uploaded_mat)
+
+
+class WatcherReverseImportScratchTests(unittest.TestCase):
+    """BDD Scenario 10b: study watcher HANDOUTS filtering, reverse import to study/, scratch kinds."""
+
+    def setUp(self) -> None:
+        """Create isolated DATA_DIR and SQLite database."""
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmpdir.name)
+        data_dir = self.root / "data"
+        self.cfg = AppConfig(
+            data_dir=data_dir,
+            database_url=f"sqlite:///{data_dir / 'db' / 'app.db'}",
+            http_allowed_hosts=("127.0.0.1", "localhost", "testserver"),
+        )
+        self.cfg.ensure_data_dirs()
+        self.engine = create_db_engine(self.cfg.database_url)
+        Base.metadata.create_all(self.engine)
+        self.session_factory = make_session_factory(self.engine)
+
+    def tearDown(self) -> None:
+        """Dispose DB engine and clean up temporary workspace."""
+        self.engine.dispose()
+        self.tmpdir.cleanup()
+
+    def test_watcher_triggers_only_on_registered_course_handouts_pdf(self) -> None:
+        """Watcher accepts only 02 Handouts PDFs for registered courses; ignores Homework/Materials/專題."""
+        reg = self.cfg.study_root_dir / "115-1" / "CP__30000-團體諮商"
+        for sub in ("01 Materials", "02 Handouts", "04 Homework"):
+            (reg / sub).mkdir(parents=True, exist_ok=True)
+        unreg = self.cfg.study_root_dir / "115-1" / "專題"
+        unreg.mkdir(parents=True, exist_ok=True)
+
+        p_handout = reg / "02 Handouts" / "w2.pdf"
+        p_hw = reg / "04 Homework" / "hw.pdf"
+        p_mat = reg / "01 Materials" / "book.pdf"
+        p_unreg = unreg / "x.pdf"
+        for f in (p_handout, p_hw, p_mat, p_unreg):
+            f.write_bytes(b"%PDF-1.4\ncontent")
+
+        detected: list[tuple[Path, Path]] = []
+
+        def resolve_course(p: Path) -> Path | None:
+            return reg if p.resolve().is_relative_to(reg.resolve()) else None
+
+        handler = CoursePdfEventHandler(  # type: ignore[arg-type]
+            self.cfg.study_root_dir,
+            resolve_course,
+            lambda c, p: detected.append((c, p)),
+            layout=self.cfg.study_layout,
+        )
+        with mock.patch("notebooklm_batch_studio.services.watcher._wait_for_file_settled", return_value=True):
+            for f in (p_hw, p_mat, p_unreg, p_handout):
+                handler._process_event_path(f)
+
+        self.assertEqual(detected, [(reg.resolve(), p_handout.resolve())])
+
+    def test_reverse_import_writes_to_study_term_record_only(self) -> None:
+        """ReverseImportService requires term, stores files in study/<term>/, sets RECORD_ONLY/ARCHIVED."""
+        dummy = DummyStudioClient()
+        dummy._notebooks = [{"id": "nb-1", "title": "心理測驗", "sources_count": 1, "is_owner": True}]
+        dummy._sources["nb-1"] = [{"id": "s1", "title": "W01", "status": "ready", "kind": "pdf"}]
+        dummy._artifacts = {
+            "nb-1": [{"id": "a1", "title": "[Ch01] Briefing", "kind": "report", "status": "completed"}]
+        }
+        with self.session_factory() as session:
+            svc = ReverseImportService.from_config(
+                dummy, CourseRepository(session), QueueRepository(session), self.cfg
+            )
+            with self.assertRaises((ValueError, PathSafetyError)):
+                asyncio.run(svc.import_remote_notebook(ReverseImportOptions(notebook_id="nb-1", term="bad")))
+
+            res = asyncio.run(
+                svc.import_remote_notebook(
+                    ReverseImportOptions(notebook_id="nb-1", term="113-2", course_no="CP30000")
+                )
+            )
+            self.assertEqual(res["course_code"], "113-2_CP30000")
+            self.assertFalse((self.cfg.output_dir / "imported_sources").exists())
+            saved = CourseRepository(session).get_course("113-2_CP30000")
+            assert saved is not None
+            self.assertEqual(saved.profile, ProfileName.RECORD_ONLY)
+            self.assertEqual(saved.status, CourseStatus.ARCHIVED)
+            self.assertEqual(saved.term, "113-2")
+            self.assertEqual(saved.course_no, "CP30000")
+            study_dir = Path(saved.study_dir).resolve()
+            self.assertTrue(study_dir.is_relative_to((self.cfg.study_root_dir / "113-2").resolve()))
+            self.assertTrue(
+                Path(res["downloaded_sources"][0]["path"]).resolve().is_relative_to(study_dir / "02 Handouts")
+            )
+            self.assertTrue(
+                Path(res["synced_artifacts"][0]["path"])
+                .resolve()
+                .is_relative_to(study_dir / "03 Notes" / "NotebookLM")
+            )
+
+    def test_unarchived_paths_use_scratch_kind_dir(self) -> None:
+        """Unarchived literature and notes dirs map strictly to scratch_kind_dir(kind)."""
+        self.assertEqual(self.cfg.literature_dir, self.cfg.scratch_kind_dir("literature"))
+        notes_dir = NotePathResolver(self.cfg).notes_course_dir("115-1_CP30000")
+        self.assertEqual(notes_dir, self.cfg.scratch_kind_dir("notes") / "115-1_CP30000")
 
 
 if __name__ == "__main__":
