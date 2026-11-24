@@ -1,0 +1,28 @@
+{
+  "id": "TASK-030",
+  "title": "Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review",
+  "status": "done",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Closed path-safety gaps (import_legacy, source_manager), notes HTTP 400 handling, frontend XSS/escHtml/URL guards, and unified MCP confirm format with synced specs",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-24 05:43 UTC",
+  "updated_at": "2026-11-24 05:48 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-24 05:43 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-24 05:48 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Closed path-safety gaps (import_legacy, source_manager), notes HTTP 400 handling, frontend XSS/escHtml/URL guards, and unified MCP confirm format with synced specs"
+    }
+  ],
+  "summary": "Closed path-safety gaps (import_legacy, source_manager), notes HTTP 400 handling, frontend XSS/escHtml/URL guards, and unified MCP confirm format with synced specs"
+}

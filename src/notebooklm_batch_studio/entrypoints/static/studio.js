@@ -446,7 +446,7 @@ function explainMistake(mistakeId, anchor, force = false) {
   const m = (window.currentMistakes || []).find(x => x.id === mistakeId);
   if (!m) return Promise.resolve();
   const q = { question: m.question_text, choices: m.choices, answer_index: m.correct_index, lecture_no: m.lecture_no };
-  return askExplanation(q, anchor, force, `explainMistake('${mistakeId}', this, true)`);
+  return askExplanation(q, anchor, force, `explainMistake(${jsAttr(mistakeId)}, this, true)`);
 }
 
 /**

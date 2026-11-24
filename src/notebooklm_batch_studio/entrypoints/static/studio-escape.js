@@ -8,9 +8,28 @@
  */
 function escHtml(s) {
   if (s === null || s === undefined) return '';
-  const d = document.createElement('div');
-  d.textContent = String(s);
-  return d.innerHTML;
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Accept only http: or https: URLs so untrusted metadata cannot inject javascript: links (Refs: ISSUE-046).
+ * @param {*} raw Candidate URL string
+ * @returns {string} Normalized safe URL, or '' when empty or unsafe
+ */
+function safeHttpUrl(raw) {
+  const text = raw === null || raw === undefined ? '' : String(raw).trim();
+  if (!text) return '';
+  try {
+    const parsed = new URL(text, window.location.origin);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : '';
+  } catch (_) {
+    return '';
+  }
 }
 
 /**

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.models import Course, Lecture
+from notebooklm_batch_studio.domain.path_safety import ensure_within_roots
 from notebooklm_batch_studio.services.job_views import lecture_to_dict
 
 if TYPE_CHECKING:
@@ -296,23 +297,31 @@ class CourseSourceMixin:
             "error_message": updated.error_message,
         }
 
-    def _resolve_upload_file_path(self, raw_path: str) -> Path:
+    def _resolve_upload_file_path(self, course: Course, raw_path: str) -> Path:
         """Validate a local PDF file path inside allowed filesystem roots.
 
+        Refs: ISSUE-045, ADR-013.
+
         Args:
+            course: Target Course entity whose `study_dir` and `source_dir` are allowed roots.
             raw_path: User-supplied filesystem path string.
 
         Returns:
             Resolved Path pointing to an existing `.pdf` file.
 
         Raises:
-            ValueError: When path is outside allowed roots or not a `.pdf`.
+            PathSafetyError: When path is outside `DATA_DIR`, `STUDY_ROOT_DIR`, or the course's
+                registered directories.
             FileNotFoundError: When the target file does not exist.
+            ValueError: When the target file is not a `.pdf`.
         """
-        candidate = Path(raw_path).expanduser().resolve()
-        allowed_roots = (Path.home().resolve(), self.config.data_dir.resolve())
-        if not any(candidate.is_relative_to(root) for root in allowed_roots):
-            raise ValueError("file_path must be inside the home directory or DATA_DIR")
+        roots = (
+            self.config.data_dir,
+            self.config.study_root_dir,
+            Path(course.study_dir) if course.study_dir else None,
+            Path(course.source_dir) if course.source_dir else None,
+        )
+        candidate = ensure_within_roots(Path(raw_path), roots, "file_path")
         if not candidate.exists() or not candidate.is_file():
             raise FileNotFoundError(f"PDF file not found: {raw_path}")
         if candidate.suffix.lower() != ".pdf":
@@ -367,7 +376,7 @@ class CourseSourceMixin:
             ValueError: When no valid upload source fields were provided.
         """
         if payload.get("file_path"):
-            return self._resolve_upload_file_path(str(payload["file_path"]))
+            return self._resolve_upload_file_path(course, str(payload["file_path"]))
         if payload.get("filename") and payload.get("content_base64"):
             return self._save_uploaded_base64_pdf(
                 course.code, str(payload["filename"]), str(payload["content_base64"])

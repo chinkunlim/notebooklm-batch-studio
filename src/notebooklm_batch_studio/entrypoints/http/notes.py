@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
@@ -15,6 +16,7 @@ from notebooklm_batch_studio.adapters.note_driver_factory import (
     build_note_upload_fn,
 )
 from notebooklm_batch_studio.domain.note_pipeline import NoteBackend
+from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.services.notes.module_prompts import (
     ModulePromptError,
     StepPromptContext,
@@ -145,6 +147,26 @@ def preview_note_prompt(body: PromptPreviewRequest, request: Request) -> dict[st
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+def _run_notes_call(fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    """Execute a note service call and translate path-safety or missing-file errors to HTTP status.
+
+    Args:
+        fn: Zero-argument service call returning a dictionary.
+
+    Returns:
+        Dictionary returned by `fn`.
+
+    Raises:
+        HTTPException: 400 on `PathSafetyError` or `ValueError`, 404 on `FileNotFoundError`.
+    """
+    try:
+        return fn()
+    except (PathSafetyError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @notes_router.get("/status/{course_key}")
 def get_note_status(course_key: str, request: Request) -> dict[str, Any]:
     """Get generation status and pause flag for a course.
@@ -156,7 +178,7 @@ def get_note_status(course_key: str, request: Request) -> dict[str, Any]:
     Returns:
         Course state dictionary.
     """
-    return _service(request).get_status(course_key)
+    return _run_notes_call(lambda: _service(request).get_status(course_key))
 
 
 @notes_router.post("/generate")
@@ -201,7 +223,7 @@ def pause_note_generation(course_key: str, request: Request) -> dict[str, Any]:
     Returns:
         Updated pause status.
     """
-    return _service(request).request_pause(course_key)
+    return _run_notes_call(lambda: _service(request).request_pause(course_key))
 
 
 @notes_router.post("/resume/{course_key}")
@@ -215,7 +237,7 @@ def resume_note_generation(course_key: str, request: Request) -> dict[str, Any]:
     Returns:
         Updated pause status.
     """
-    return _service(request).clear_pause(course_key)
+    return _run_notes_call(lambda: _service(request).clear_pause(course_key))
 
 
 @notes_router.get("/content/{course_key}/{chapter_id}")
@@ -234,7 +256,7 @@ def read_stitched_note_content(
     Returns:
         Dictionary with `exists`, `path`, and `content`.
     """
-    return _service(request).read_stitched_note(course_key, chapter_id)
+    return _run_notes_call(lambda: _service(request).read_stitched_note(course_key, chapter_id))
 
 
 class PushNoteSourceRequest(BaseModel):
@@ -294,7 +316,7 @@ def list_note_chapters(course_key: str, request: Request) -> dict[str, Any]:
     Returns:
         Dictionary containing `chapters` list.
     """
-    return {"chapters": _service(request).list_chapters(course_key)}
+    return _run_notes_call(lambda: {"chapters": _service(request).list_chapters(course_key)})
 
 
 @notes_router.post("/push_to_source")
@@ -329,9 +351,8 @@ def import_legacy_notes_endpoint(body: ImportLegacyNotesRequest, request: Reques
     Returns:
         Import summary dictionary.
     """
-    try:
-        return _service(request).import_legacy(
+    return _run_notes_call(
+        lambda: _service(request).import_legacy(
             Path(body.source_dir), body.course_key, overwrite=body.overwrite
         )
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    )

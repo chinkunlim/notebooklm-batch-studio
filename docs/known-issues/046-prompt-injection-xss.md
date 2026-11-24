@@ -19,7 +19,7 @@ markdown_fragment 只跳脫原始 HTML，未過濾連結 scheme；escHtml 不處
 
 ## 3. 修正或規避方式
 
-report_converter 只保留 http/https/mailto/相對連結；新增 studio-escape.js 的 jsAttr()（JSON 字串再 HTML 跳脫）取代所有 inline handler 參數；notes-gen 補 escHtml；新增 SecurityHeadersMiddleware（CSP：connect-src 'self'、object-src 'none'、base-uri 'none'、frame-ancestors 'self'，以及 nosniff、no-referrer）。inline script 仍需 'unsafe-inline'，跳脫是主要防線。（相關程式碼註解加 `Refs: ISSUE-046`）
+report_converter 只保留 http/https/mailto/相對連結；新增 studio-escape.js 的 escHtml（同時跳脫 `& < > " '`）、jsAttr()（JSON 字串再 HTML 跳脫）與 safeHttpUrl()（只允許 http/https URL）取代所有 inline handler 參數（含 explainMistake）與外連賦值；studio-literature-ui.js 委派至 escHtml；notes-gen 補 escHtml；新增 SecurityHeadersMiddleware（CSP：connect-src 'self'、object-src 'none'、base-uri 'none'、frame-ancestors 'self'，以及 nosniff、no-referrer）。inline script 仍需 'unsafe-inline'，跳脫是主要防線。（相關程式碼註解加 `Refs: ISSUE-046`）
 
 ## 4. 防回歸
 

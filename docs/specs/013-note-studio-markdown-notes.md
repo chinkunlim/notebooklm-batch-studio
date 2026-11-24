@@ -24,7 +24,7 @@
   - 偵測額度用完、模型被降級、制式拒答時停在 `quota_wait`，不無效重試；使用者可要求暫停（跨程序的 pause 檔）。
   - 重跑前把舊模組檔與縫合檔封存到 `versions/<chapter_id>/<UTC 時間戳>/`。
   - 輸出位置：課程有 `study_dir` 時寫到 `<study_dir>/03 Notes/NoteStudio/`，沒有時寫到 `DATA_DIR/scratch/notes/<course_key>/`；狀態存在 `DATA_DIR/state/notes/`。
-  - **路徑安全（ISSUE-045、ADR-013）**：`course_key`、`chapter_id` 不可含 `/`、`\`、NUL、萬用字元，也不可以 `.` 開頭；`study_dir` 必須在 `DATA_DIR` 或 `STUDY_ROOT_DIR` 內；`pdf_path` 必須是 `.pdf`，而且在 `DATA_DIR`、`STUDY_ROOT_DIR` 或該課程登錄的 `source_dir` 內。
+  - **路徑安全（ISSUE-045、ADR-013）**：`course_key`、`chapter_id` 不可含 `/`、`\`、NUL、萬用字元，也不可以 `.` 開頭；`study_dir` 必須在 `DATA_DIR` 或 `STUDY_ROOT_DIR` 內；`pdf_path` 必須是 `.pdf`，而且在 `DATA_DIR`、`STUDY_ROOT_DIR` 或該課程登錄的 `source_dir` 內；`import_legacy` 的 `source_dir` 必須在 `DATA_DIR`、`STUDY_ROOT_DIR` 或 `.env` 的 `LEGACY_NOTE_STUDIO_DIR` 內。
   - 三入口一致：HTTP（`/api/notes/*`）、MCP（`notes_*`）、網頁面板呼叫同一個 `NotePipelineService`。
 - **可選 (Nice to have)**：`08_supplement_spec.md` 補充模組（目前不在標準 7 步內）。
 - **不做 (Out of scope)**：PDF 向量排版（Node/Chrome/ELK 渲染器）留到階段三。

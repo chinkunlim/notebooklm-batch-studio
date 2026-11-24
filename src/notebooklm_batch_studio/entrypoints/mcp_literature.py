@@ -84,16 +84,19 @@ def make_manager(deps: LiteratureToolDeps, session: Any) -> LiteratureManager:
 
 
 def confirm_required(action: str) -> str:
-    """Build the standard JSON error returned when a mutating tool is called without `confirm=True`.
+    """Build the standard JSON warning returned when a mutating tool is called without `confirm=True`.
 
     Args:
         action: Short description of what the call would do.
 
     Returns:
-        JSON string with an `error` message.
+        JSON string with `confirmed: False` and a `warning` message.
     """
     logger.info("MCP literature tool refused without confirm: %s", action)
-    return json.dumps({"error": f"Confirmation required: pass confirm=True to {action}."}, ensure_ascii=False)
+    return json.dumps(
+        {"confirmed": False, "warning": f"Confirmation required: pass confirm=True to {action}."},
+        ensure_ascii=False,
+    )
 
 
 def _to_json(payload: Any) -> str:

@@ -107,6 +107,22 @@ class NotePathResolver:
         """
         return ensure_within_roots(study_dir, (self.config.data_dir, self.config.study_root_dir), "study_dir")
 
+    def checked_legacy_source_dir(self, source_dir: Path) -> Path:
+        """Require a legacy note-studio folder to sit inside allowed roots (Refs: ISSUE-045, ADR-013).
+
+        Args:
+            source_dir: Caller-supplied folder containing standalone `note-studio` `.md` files.
+
+        Returns:
+            The resolved source directory.
+
+        Raises:
+            PathSafetyError: The folder is outside `DATA_DIR`, `STUDY_ROOT_DIR`, and
+                `LEGACY_NOTE_STUDIO_DIR`.
+        """
+        roots = (self.config.data_dir, self.config.study_root_dir, self.config.legacy_note_studio_dir)
+        return ensure_within_roots(source_dir, roots, "source_dir")
+
     def checked_pdf_path(self, course_key: str, pdf_path: Path) -> Path:
         """Require a chapter PDF to be a `.pdf` inside the app's folders or the course's PDF folder.
 

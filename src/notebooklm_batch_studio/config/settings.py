@@ -80,6 +80,8 @@ class AppConfig:
         auto_start_queue: Start the job queue when the web service starts (`AUTO_START_QUEUE`,
             default true in `.env`; off for configs built directly, e.g. in tests).
         study_root_dir_override: Optional custom root for `<term>/<subject>/<category>` study folders.
+        legacy_note_studio_dir: Optional whitelisted folder for standalone `note-studio` legacy
+            imports (`LEGACY_NOTE_STUDIO_DIR`). Refs: ADR-013, ISSUE-045
         library_email: University e-mail for OpenAthens sign-in (`LIBRARY_EMAIL`; legacy `USER_EMAIL`).
         library_password: Library (OpenAthens) password, never a Google password (`LIBRARY_PASSWORD`;
             legacy `USER_PASSWORD`); hidden from repr. Refs: ADR-013
@@ -102,6 +104,7 @@ class AppConfig:
     http_allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8768", "http://127.0.0.1:8080")
     auto_start_queue: bool = False
     study_root_dir_override: Path | None = None
+    legacy_note_studio_dir: Path | None = None
     library_email: str = ""
     library_password: str = field(default="", repr=False)
     openathens_domain: str = ""
@@ -342,10 +345,12 @@ def load_config() -> AppConfig:
     notebooklm_home = Path(_env("NOTEBOOKLM_HOME", "~/.config/notebooklm-batch-studio")).expanduser()
     os.environ["NOTEBOOKLM_HOME"] = str(notebooklm_home)
     study_root_raw = _env("STUDY_ROOT_DIR")
+    legacy_notes_raw = _env("LEGACY_NOTE_STUDIO_DIR")
     return AppConfig(
         data_dir=data_dir,
         notebooklm_home=notebooklm_home,
         study_root_dir_override=resolve_data_dir(study_root_raw) if study_root_raw else None,
+        legacy_note_studio_dir=resolve_data_dir(legacy_notes_raw) if legacy_notes_raw else None,
         **_core_settings(data_dir),
         **_http_settings(),
         **_literature_settings(),

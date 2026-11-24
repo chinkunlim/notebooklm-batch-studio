@@ -27,11 +27,13 @@
    * @returns {string} Escaped HTML text.
    */
   function escapeHtml(text) {
-    return String(text || '')
+    if (typeof window.escHtml === 'function') return window.escHtml(text);
+    return String(text ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**

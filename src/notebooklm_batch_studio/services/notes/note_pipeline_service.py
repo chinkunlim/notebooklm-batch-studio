@@ -127,6 +127,7 @@ class NotePipelineService:
         Returns:
             Course state dictionary including `paused` boolean.
         """
+        validate_path_segment(course_key, "course_key")
         data = self.state.load_course_state(course_key)
         data["paused"] = self.state.is_pause_requested(course_key)
         return data
@@ -140,6 +141,7 @@ class NotePipelineService:
         Returns:
             Updated status summary.
         """
+        validate_path_segment(course_key, "course_key")
         self.state.request_pause(course_key)
         return {"course_key": course_key, "paused": True}
 
@@ -152,6 +154,7 @@ class NotePipelineService:
         Returns:
             Updated status summary.
         """
+        validate_path_segment(course_key, "course_key")
         self.state.clear_pause(course_key)
         return {"course_key": course_key, "paused": False}
 
@@ -444,6 +447,7 @@ class NotePipelineService:
         Returns:
             Import summary dictionary.
         """
+        checked_source = self.paths.checked_legacy_source_dir(source_dir)
         return import_legacy_notes(
-            source_dir, self.paths.notes_course_dir(course_key, study_dir), overwrite=overwrite
+            checked_source, self.paths.notes_course_dir(course_key, study_dir), overwrite=overwrite
         )

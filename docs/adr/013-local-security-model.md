@@ -21,7 +21,7 @@
 
 採方案 A；B 列為後續可選的強化。
 
-1) 所有 AI/來源文字一律當資料：HTML 跳脫、jsAttr、連結 scheme 白名單、CSP；MCP 會改資料的工具一律 confirm。2) 呼叫端路徑只能落在 DATA_DIR、STUDY_ROOT_DIR 或課程登錄的 source_dir（domain/path_safety）。3) 瀏覽器設定檔資料夾建立為 700（adapters/private_dir）。4) Chrome 遠端除錯埠只綁 127.0.0.1（Chrome 預設），接受本機其他程式可連線的風險，不另做驗證。5) 圖書館帳密只讀 .env 的 LIBRARY_EMAIL / LIBRARY_PASSWORD（舊名 USER_* 仍相容），僅用於 OpenAthens，絕不存放 Google 密碼；學校網域與 EBSCO profile 不再寫死在程式碼。
+1) 所有 AI/來源文字一律當資料：HTML 跳脫（含雙引號與單引號）、jsAttr、連結 scheme 白名單（safeHttpUrl 與 markdown_fragment）、CSP；MCP 會改資料的工具一律要求 confirm=True，未確認時統一回傳 `{"confirmed": false, "warning": "..."}`。2) 呼叫端路徑只能落在 DATA_DIR、STUDY_ROOT_DIR、課程登錄的 source_dir，或舊筆記匯入白名單 LEGACY_NOTE_STUDIO_DIR（domain/path_safety）。3) 瀏覽器設定檔資料夾建立為 700（adapters/private_dir）。4) Chrome 遠端除錯埠只綁 127.0.0.1（Chrome 預設），接受本機其他程式可連線的風險，不另做驗證。5) 圖書館帳密只讀 .env 的 LIBRARY_EMAIL / LIBRARY_PASSWORD（舊名 USER_* 仍相容），僅用於 OpenAthens，絕不存放 Google 密碼；學校網域與 EBSCO profile 不再寫死在程式碼。
 
 ## 4. 影響與代價
 

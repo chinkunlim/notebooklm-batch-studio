@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from mcp.server.mcpserver import MCPServer
 from pydantic import BaseModel, Field
 
 from notebooklm_batch_studio.domain.note_pipeline import NoteBackend
+from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.services.notes.module_prompts import StepPromptContext
 from notebooklm_batch_studio.services.notes.note_pipeline_service import (
     ChapterNoteRequest,
@@ -47,6 +48,23 @@ class McpNoteGenerateInput(BaseModel):
     source_ids: list[str] = Field(default_factory=list)
     steps_override: list[str] | None = None
     study_dir: str = ""
+
+
+def _json_or_error(fn: Callable[[], Any], *, indent: int | None = None) -> str:
+    """Run a note MCP call and serialize its result, turning validation errors into JSON errors.
+
+    Args:
+        fn: Zero-argument callable returning a JSON-serializable object.
+        indent: Optional JSON indentation passed to `json.dumps`.
+
+    Returns:
+        Serialized JSON string (or `{"error": ...}` when input/path validation fails).
+    """
+    try:
+        return json.dumps(fn(), ensure_ascii=False, indent=indent)
+    except (PathSafetyError, FileNotFoundError, ValueError) as exc:
+        logger.warning("Note MCP tool rejected request: %s", exc)
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
 
 def _register_prompt_tools(mcp: MCPServer, service: NotePipelineService) -> None:
@@ -106,7 +124,7 @@ def _register_status_tools(mcp: MCPServer, service: NotePipelineService) -> None
         Returns:
             JSON string of course state.
         """
-        return json.dumps(service.get_status(course_key), ensure_ascii=False, indent=2)
+        return _json_or_error(lambda: service.get_status(course_key), indent=2)
 
 
 def _register_chapter_read_tools(mcp: MCPServer, service: NotePipelineService) -> None:
@@ -128,7 +146,7 @@ def _register_chapter_read_tools(mcp: MCPServer, service: NotePipelineService) -
         Returns:
             JSON string with `exists`, `path`, and `content`.
         """
-        return json.dumps(service.read_stitched_note(course_key, chapter_id), ensure_ascii=False)
+        return _json_or_error(lambda: service.read_stitched_note(course_key, chapter_id))
 
     @mcp.tool()
     def notes_list_chapters(course_key: str) -> str:
@@ -140,7 +158,7 @@ def _register_chapter_read_tools(mcp: MCPServer, service: NotePipelineService) -
         Returns:
             JSON string with `chapters` array.
         """
-        return json.dumps({"chapters": service.list_chapters(course_key)}, ensure_ascii=False, indent=2)
+        return _json_or_error(lambda: {"chapters": service.list_chapters(course_key)}, indent=2)
 
 
 def _register_generate_tool(mcp: MCPServer, service: NotePipelineService) -> None:
@@ -163,10 +181,7 @@ def _register_generate_tool(mcp: MCPServer, service: NotePipelineService) -> Non
             JSON string of generation outcome or confirmation prompt.
         """
         if not confirm:
-            return json.dumps(
-                {"confirm": "Call again with confirm=True to start chapter note generation."},
-                ensure_ascii=False,
-            )
+            return _confirm_prompt("Call again with confirm=True to start chapter note generation.")
         req = ChapterNoteRequest(
             course_key=params.course_key,
             course_name=params.course_name,
@@ -180,7 +195,7 @@ def _register_generate_tool(mcp: MCPServer, service: NotePipelineService) -> Non
             steps_override=params.steps_override,
             study_dir=Path(params.study_dir) if params.study_dir else None,
         )
-        return json.dumps(service.run_chapter(req), ensure_ascii=False, indent=2)
+        return _json_or_error(lambda: service.run_chapter(req), indent=2)
 
 
 def _register_pause_tool(mcp: MCPServer, service: NotePipelineService) -> None:
@@ -203,11 +218,8 @@ def _register_pause_tool(mcp: MCPServer, service: NotePipelineService) -> None:
             JSON string of pause state.
         """
         if not confirm:
-            return json.dumps(
-                {"confirm": "Call again with confirm=True to pause note generation."},
-                ensure_ascii=False,
-            )
-        return json.dumps(service.request_pause(course_key), ensure_ascii=False)
+            return _confirm_prompt("Call again with confirm=True to pause note generation.")
+        return _json_or_error(lambda: service.request_pause(course_key))
 
 
 def _confirm_prompt(message: str) -> str:
@@ -217,9 +229,9 @@ def _confirm_prompt(message: str) -> str:
         message: What to tell the caller.
 
     Returns:
-        JSON string with a `confirm` key.
+        JSON string with `confirmed: False` and a `warning` message.
     """
-    return json.dumps({"confirm": message}, ensure_ascii=False)
+    return json.dumps({"confirmed": False, "warning": message}, ensure_ascii=False)
 
 
 def _register_push_tool(
@@ -257,10 +269,7 @@ def _register_push_tool(
             return _confirm_prompt("Call again with confirm=True to upload chapter note PDF.")
         if upload_fn is None:
             return json.dumps({"error": "Upload adapter not configured."}, ensure_ascii=False)
-        return json.dumps(
-            service.push_to_source(course_key, chapter_id, notebook_id, upload_fn),
-            ensure_ascii=False,
-        )
+        return _json_or_error(lambda: service.push_to_source(course_key, chapter_id, notebook_id, upload_fn))
 
 
 def _register_legacy_import_tool(mcp: MCPServer, service: NotePipelineService) -> None:
@@ -291,9 +300,8 @@ def _register_legacy_import_tool(mcp: MCPServer, service: NotePipelineService) -
         """
         if not confirm:
             return _confirm_prompt("Call again with confirm=True to import legacy notes.")
-        return json.dumps(
-            service.import_legacy(Path(source_dir), course_key, overwrite=overwrite),
-            ensure_ascii=False,
+        return _json_or_error(
+            lambda: service.import_legacy(Path(source_dir), course_key, overwrite=overwrite)
         )
 
 

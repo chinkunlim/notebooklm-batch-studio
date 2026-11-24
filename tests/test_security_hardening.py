@@ -13,15 +13,17 @@ import sqlite3
 import tempfile
 import unittest
 from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Generator
+from unittest import mock
 
 from fastapi.testclient import TestClient
 
 from notebooklm_batch_studio.adapters.db.base import Base
 from notebooklm_batch_studio.adapters.db.literature_repository import LiteratureRepository
 from notebooklm_batch_studio.adapters.db.models import CourseRecord
-from notebooklm_batch_studio.adapters.db.repository import CourseRepository
+from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, make_session_factory
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
 from notebooklm_batch_studio.adapters.literature.legacy_import import (
@@ -31,8 +33,10 @@ from notebooklm_batch_studio.adapters.literature.legacy_import import (
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.literature.literature import Reference
 from notebooklm_batch_studio.domain.literature.tracker import ItemStatus, TrackedItem
+from notebooklm_batch_studio.domain.models import Course
 from notebooklm_batch_studio.domain.path_safety import PathSafetyError, validate_path_segment
 from notebooklm_batch_studio.entrypoints.api import create_app
+from notebooklm_batch_studio.entrypoints.mcp_notes import McpNoteGenerateInput
 from notebooklm_batch_studio.entrypoints.mcp_qa_notes import QANoteInput
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.converters.report_converter import markdown_fragment
@@ -41,6 +45,9 @@ from notebooklm_batch_studio.services.notes.note_pipeline_service import (
     ChapterNoteRequest,
     NotePipelineService,
 )
+from notebooklm_batch_studio.services.notes.state_manager import _safe_key
+from notebooklm_batch_studio.services.orchestrator import BatchStudioService
+from tests.dummy_client import DummyStudioClient
 
 
 class _RecordingDriver:
@@ -174,6 +181,58 @@ class NotePathTraversalTests(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 400)
 
+    def test_import_legacy_checks_source_dir_and_allows_whitelisted(self) -> None:
+        outside = self.root / "outside_legacy"
+        outside.mkdir(parents=True)
+        (outside / "ch01_導論_學習筆記.md").write_text("# hi", encoding="utf-8")
+        with self.assertRaises(PathSafetyError):
+            self.svc.import_legacy(outside, "PSY201")
+        allowed_svc = NotePipelineService(replace(self.cfg, legacy_note_studio_dir=outside))
+        res = allowed_svc.import_legacy(outside, "PSY201")
+        self.assertEqual(res["copied"], ["ch01_導論_學習筆記.md"])
+
+    def test_http_notes_endpoints_return_400_on_unsafe_inputs(self) -> None:
+        self.cfg.db_dir.mkdir(parents=True, exist_ok=True)
+        Base.metadata.create_all(create_db_engine(self.cfg.database_url))
+        app = create_app(config=self.cfg)
+        app.state.note_pipeline_service = self.svc
+        client = TestClient(app)
+        bad_gets = (
+            "/api/notes/content/.hidden/ch01",
+            "/api/notes/content/PSY201/.hidden",
+            "/api/notes/chapters/.hidden",
+            "/api/notes/status/.hidden",
+        )
+        for url in bad_gets:
+            self.assertEqual(client.get(url).status_code, 400, msg=url)
+        for url in ("/api/notes/pause/.hidden", "/api/notes/resume/.hidden"):
+            self.assertEqual(client.post(url).status_code, 400, msg=url)
+        outside = self.root / "outside_notes"
+        self.assertEqual(
+            client.post(
+                "/api/notes/import_legacy", json={"source_dir": str(outside), "course_key": "PSY201"}
+            ).status_code,
+            400,
+        )
+        self.assertEqual(
+            client.post(
+                "/api/notes/import_legacy",
+                json={"source_dir": str(self.cfg.data_dir), "course_key": ".hidden"},
+            ).status_code,
+            400,
+        )
+
+    def test_state_manager_safe_key_and_mcp_error_payload(self) -> None:
+        self.assertEqual(_safe_key(".."), "default")
+        self.assertEqual(_safe_key(".hidden"), "hidden")
+        self.assertEqual(_safe_key("PSY 201/x"), "PSY_201_x")
+        self.cfg.db_dir.mkdir(parents=True, exist_ok=True)
+        Base.metadata.create_all(create_db_engine(self.cfg.database_url))
+        mcp = build_mcp_server(config=self.cfg)
+        tools = {t.name: t for t in mcp._tool_manager.list_tools()}
+        self.assertIn("error", json.loads(tools["notes_read_chapter"].fn(".hidden", "ch01")))
+        self.assertIn("error", json.loads(tools["notes_get_status"].fn(".hidden")))
+
 
 class XssAndHeaderTests(unittest.TestCase):
     """Rendered Markdown and HTTP responses must not enable script execution (ISSUE-046)."""
@@ -217,6 +276,20 @@ class XssAndHeaderTests(unittest.TestCase):
             resp = client.get("/api/artifacts/%2E%2E/download/OTHER/secret.md")
             self.assertIn(resp.status_code, (400, 403, 404))
             self.assertNotIn("secret", resp.text)
+
+    def test_static_js_escaping_and_safe_url_guards(self) -> None:
+        static_dir = Path(__file__).resolve().parent.parent / "src/notebooklm_batch_studio/entrypoints/static"
+        escape_js = (static_dir / "studio-escape.js").read_text(encoding="utf-8")
+        self.assertIn("&quot;", escape_js)
+        self.assertIn("&#39;", escape_js)
+        self.assertIn("function safeHttpUrl", escape_js)
+        for name in ("studio-study-panels.js", "studio.js"):
+            self.assertNotIn("explainMistake('${", (static_dir / name).read_text(encoding="utf-8"), msg=name)
+        lit_actions = (static_dir / "studio-literature-actions.js").read_text(encoding="utf-8")
+        self.assertIn("safeHttpUrl(nbData.notebook_url)", lit_actions)
+        lit_ui = (static_dir / "studio-literature-ui.js").read_text(encoding="utf-8")
+        self.assertIn("window.escHtml", lit_ui)
+        self.assertIn("&#39;", lit_ui)
 
 
 class ArtifactStudyDirTests(unittest.TestCase):
@@ -338,13 +411,47 @@ class LiteratureHardeningTests(unittest.TestCase):
                 "sync_literature_notebook": {},
                 "generate_literature_review": {"key": "x"},
                 "save_qa_note": {"code": "X", "note": QANoteInput(title="t", content_markdown="a")},
+                "notes_generate_chapter": {
+                    "params": McpNoteGenerateInput(course_key="X", course_name="x", chapter_id="ch01")
+                },
+                "notes_pause_course": {"course_key": "X"},
+                "notes_push_to_source": {"course_key": "X", "chapter_id": "ch01", "notebook_id": "nb-1"},
+                "notes_import_legacy": {"source_dir": str(cfg.data_dir), "course_key": "X"},
             }
             for name, kwargs in calls.items():
                 result = tools[name].fn(**kwargs)
                 if asyncio.iscoroutine(result):
                     result = asyncio.run(result)
                 payload = json.loads(result)
-                self.assertIn("confirm", str(payload.get("error", "")).lower(), msg=name)
+                self.assertFalse(payload["confirmed"], msg=name)
+                self.assertIn("confirm", str(payload.get("warning", "")).lower(), msg=name)
+
+
+class CourseSourcePathTests(unittest.TestCase):
+    """Course custom-source uploads must stay inside DATA_DIR, STUDY_ROOT_DIR, or the course folder."""
+
+    def test_upload_custom_source_rejects_outside_pdf_and_allows_course_source_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg = _cfg(root)
+            cfg.db_dir.mkdir(parents=True, exist_ok=True)
+            engine = create_db_engine(cfg.database_url)
+            Base.metadata.create_all(engine)
+            course_dir = root / "icloud" / "BIO101"
+            course_dir.mkdir(parents=True)
+            allowed_pdf = course_dir / "01.pdf"
+            allowed_pdf.write_bytes(b"%PDF-1.4 ok")
+            outside_pdf = root / "sibling_user_file.pdf"
+            outside_pdf.write_bytes(b"%PDF-1.4 outside")
+            with make_session_factory(engine)() as session:
+                course_repo = CourseRepository(session)
+                course_repo.save_course(Course(code="BIO101", name="Bio", source_dir=str(course_dir)))
+                svc = BatchStudioService(course_repo, QueueRepository(session), DummyStudioClient(), cfg)
+                client = TestClient(create_app(config=cfg, service=svc, study_service=mock.MagicMock()))
+                bad = client.post("/api/courses/BIO101/sources", json={"file_path": str(outside_pdf)})
+                self.assertEqual(bad.status_code, 422)
+                ok = client.post("/api/courses/BIO101/sources", json={"file_path": str(allowed_pdf)})
+                self.assertEqual(ok.status_code, 200)
 
 
 if __name__ == "__main__":

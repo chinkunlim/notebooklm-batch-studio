@@ -166,9 +166,9 @@
 - `DELETE /api/courses/{code}/notes/{note_id}`：刪除筆記（可選是否同步刪除遠端 source）。
 
 #### MCP 工具
-- `ask_notebook_question(code, question, lecture_no=None)`
+- `ask_notebook_question(code, question, lecture_no=None, use_web_search=False)`
 - `list_course_notes(code, tag=None)`
-- `save_qa_note(code, title, content_markdown, lecture_no=None, tags=None)`
+- `save_qa_note(code, note: QANoteInput, confirm=False)`
 - `push_note_to_source(code, note_id, confirm=False)`
 
 ---

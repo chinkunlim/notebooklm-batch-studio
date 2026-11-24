@@ -19,8 +19,8 @@ literature-fetch 與 QA 筆記整合時沿用原專案的工具簽章，沒套�
 
 ## 3. 修正或規避方式
 
-上述 8 個工具加 confirm=False 預設，未確認時回傳 Confirmation required；參數過多者改用 LiteratureTarget / QANoteInput 物件；文獻 Notebook 工具拆到 mcp_literature_notebook.py。（相關程式碼註解加 `Refs: ISSUE-048`）
+上述 8 個工具加 confirm=False 預設，未確認時統一回傳 `{"confirmed": false, "warning": "..."}`；參數過多者改用 LiteratureTarget / QANoteInput 物件；文獻 Notebook 工具拆到 mcp_literature_notebook.py。（相關程式碼註解加 `Refs: ISSUE-048`）
 
 ## 4. 防回歸
 
-tests/test_security_hardening.py::test_mutating_literature_tools_require_confirm 逐一呼叫 8 個工具。
+tests/test_security_hardening.py::test_mutating_literature_tools_require_confirm 逐一驗證文獻、QA 筆記與筆記管線 MCP 工具。

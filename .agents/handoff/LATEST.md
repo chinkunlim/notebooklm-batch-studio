@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-24 02:25 UTC`
-- **最近操作 Agent**: `claude-code`
+- **最後更新時間**: `2026-11-24 05:48 UTC`
+- **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `abb3a3e fix(security): harden path handling, XSS, MCP confirm and clear code-review warnings (TASK-028, ADR-013, ISSUE-045..051) [agent:claude-code]`
+- **最新 Git Commit**: `5c999f2 test: port source-project tests, fix quiz key and notes lecture form, audit records (TASK-029, ISSUE-052, ISSUE-053, ISSUE-054, ISSUE-055, ISSUE-056) [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-24 05:48 UTC] 完成任務 `TASK-030` — Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Closed path-safety gaps (import_legacy, source_manager), notes HTTP 400 handling, frontend XSS/escHtml/URL guards, and unified MCP confirm format with synced specs
+
+### [2026-11-24 05:43 UTC] 建立任務 `TASK-030`: Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-24 02:25 UTC] 完成任務 `TASK-029` — Records audit, port source-project tests, full verification (by `claude-code`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -109,11 +117,3 @@
 ### [2026-11-14 07:47 UTC] 完成任務 `TASK-023` — Add notebook source listing, upload, and deletion management (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Added Gemini Notebook source listing, PDF/lecture upload, and source deletion across HTTP, MCP, Web UI, and demo
-
-### [2026-11-14 07:39 UTC] 建立任務 `TASK-023`: Add notebook source listing, upload, and deletion management (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-11-14 06:10 UTC] 完成任務 `TASK-022` — Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Support adding missing artifacts per lecture or course and auto-start queue on selection save

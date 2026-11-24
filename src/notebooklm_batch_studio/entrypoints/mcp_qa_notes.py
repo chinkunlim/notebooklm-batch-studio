@@ -108,7 +108,8 @@ def _register_save_note_tool(mcp: MCPServer, qa_notes: QANotesService) -> None:
         """
         if not confirm:
             return json.dumps(
-                {"error": "Confirmation required: pass confirm=True to save the note."}, ensure_ascii=False
+                {"confirmed": False, "warning": "Confirmation required: pass confirm=True to save the note."},
+                ensure_ascii=False,
             )
         try:
             res = qa_notes.save_note(code, note.title, note.content_markdown, lecture_no=note.lecture_no)

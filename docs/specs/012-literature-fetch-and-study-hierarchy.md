@@ -39,7 +39,7 @@
 
 3. **三入口一致（Web UI + HTTP API + MCP）**
    - Web UI 左側 Sidebar 新增「文獻收集」圖示與專屬頁面（貼上文獻、選擇科目/分類/子資料夾、人工處理模式開關、進度追蹤、重試/重新辨識/試抓正式版/刪除、PDF.js 內嵌預覽含縮放、歸檔至課程、生成／複製已勾選 APA 7 斜體清單、下載 `report.md`）。
-   - HTTP API `/api/literature/*` 與 MCP 工具 `list_literature`、`add_literature`、`process_literature`、`import_literature_to_course`、`delete_literature`、`get_literature_notebook`、`sync_literature_notebook`、`ask_literature_notebook`、`generate_literature_review`（含 `confirm` 保護）同步提供。
+   - HTTP API `/api/literature/*` 與 MCP 工具 `list_literature`、`export_literature_apa`、`add_literature`、`process_literature`、`refresh_literature`、`import_literature_to_course`、`unarchive_literature`、`delete_literature`、`migrate_study_layout`、`sync_literature_notebook`、`query_literature_notebook`、`generate_literature_review`（會改資料者含 `confirm` 保護）同步提供。
 
 ## 3. 繼承自 `literature-fetch` 的核心設計原則（原 ADR-001 ~ 007）
 

@@ -19,8 +19,8 @@ note-studio 整合時只在 state_manager 清理 course_key，NotePipelineServic
 
 ## 3. 修正或規避方式
 
-新增 domain/path_safety.py（validate_path_segment、ensure_within_roots）；services/notes/note_paths.py 的 NotePathResolver 在動到磁碟前驗證：識別碼不可含分隔符號、.. 開頭或萬用字元；study_dir 必須在 DATA_DIR / STUDY_ROOT_DIR；pdf_path 必須是 .pdf 且在 DATA_DIR / STUDY_ROOT_DIR / 該課程登錄的 source_dir。（相關程式碼註解加 `Refs: ISSUE-045`）
+新增 domain/path_safety.py（validate_path_segment、ensure_within_roots）；services/notes/note_paths.py 的 NotePathResolver 在動到磁碟前驗證：識別碼不可含分隔符號、.. 開頭或萬用字元；study_dir 必須在 DATA_DIR / STUDY_ROOT_DIR；pdf_path 必須是 .pdf 且在 DATA_DIR / STUDY_ROOT_DIR / 該課程登錄的 source_dir；import_legacy 的 source_dir 必須在 DATA_DIR / STUDY_ROOT_DIR / LEGACY_NOTE_STUDIO_DIR；get_status / request_pause / clear_pause 同步驗證 course_key（state_manager._safe_key 亦去除前導點號），HTTP 端點統一將 PathSafetyError 轉為 400；source_manager._resolve_upload_file_path 亦對齊 DATA_DIR / STUDY_ROOT_DIR / 課程登錄資料夾白名單。（相關程式碼註解加 `Refs: ISSUE-045`）
 
 ## 4. 防回歸
 
-tests/test_security_hardening.py::NotePathTraversalTests（7 個案例，含 HTTP 400）。
+tests/test_security_hardening.py::NotePathTraversalTests（含 HTTP 400、import_legacy 與 source upload 白名單檢查）。

@@ -26,7 +26,7 @@ def _safe_key(name: str) -> str:
     Returns:
         Safe filename stem.
     """
-    cleaned = re.sub(r"[^\w\-.]+", "_", name.strip())
+    cleaned = re.sub(r"[^\w\-.]+", "_", name.strip()).lstrip(".")
     return cleaned or "default"
 
 

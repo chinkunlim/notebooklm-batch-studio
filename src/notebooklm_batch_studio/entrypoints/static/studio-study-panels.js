@@ -119,7 +119,7 @@ function showMistake(id) {
     <p class="q-title" style="margin:8px 0 16px">${escHtml(m.question_text)}</p>
     <div class="opts" style="--hue:var(--h-quiz)">${opts}</div>
     <div class="explain"><b>解析</b><br>${escHtml(m.explanation || '暫無解析')}</div>
-    ${explanationSlot(m.question_text, `explainMistake('${m.id}', this)`, `explainMistake('${m.id}', this, true)`)}
+    ${explanationSlot(m.question_text, `explainMistake(${jsAttr(m.id)}, this)`, `explainMistake(${jsAttr(m.id)}, this, true)`)}
     <div class="row section-gap" style="flex-wrap:wrap">
       <button class="btn btn-primary" onclick="resolveMistake(${jsAttr(m.id)})">我已經會了</button>
       <button class="btn btn-soft" onclick="practiseLecture(${lec === null ? 'null' : lec})">練習這一講</button>

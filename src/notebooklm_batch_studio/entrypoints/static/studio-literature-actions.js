@@ -48,8 +48,10 @@
     const base = `已同步 ${nbData.synced_count}/${nbData.total_with_pdf} 份 PDF · 已生成 ${nbData.reviewed_count} 篇 Review`;
     if (st) st.textContent = nbData.review_message ? `${base} ｜ ${nbData.review_message}` : base;
     if (link) {
-      link.style.display = nbData.notebook_url ? 'inline-flex' : 'none';
-      if (nbData.notebook_url) link.href = nbData.notebook_url;
+      const safeUrl = typeof safeHttpUrl === 'function' ? safeHttpUrl(nbData.notebook_url) : '';
+      link.style.display = safeUrl ? 'inline-flex' : 'none';
+      if (safeUrl) link.href = safeUrl;
+      else link.removeAttribute('href');
     }
   }
 

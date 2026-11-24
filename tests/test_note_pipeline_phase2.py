@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -86,7 +87,8 @@ class NotePipelinePhase2Tests(unittest.TestCase):
         (legacy_dir / "ch01_科學研究導論_學習筆記.md").write_text("NEW", encoding="utf-8")
         (legacy_dir / "ch02_研究倫理_學習筆記.md").write_text("CH02", encoding="utf-8")
 
-        svc = NotePipelineService(self.cfg, study_dir_resolver=lambda _: self.study_dir)
+        cfg = replace(self.cfg, legacy_note_studio_dir=legacy_dir)
+        svc = NotePipelineService(cfg, study_dir_resolver=lambda _: self.study_dir)
         first = svc.import_legacy(legacy_dir, "PSY201", overwrite=False)
         self.assertEqual(first["copied"], ["ch02_研究倫理_學習筆記.md"])
         self.assertEqual(first["skipped"], ["ch01_科學研究導論_學習筆記.md"])
@@ -126,4 +128,5 @@ class NotePipelinePhase2Tests(unittest.TestCase):
         confirm_msg = json.loads(
             mcp._tool_manager._tools["notes_push_to_source"].fn("PSY201", "ch01", "nb-1", False)
         )
-        self.assertIn("confirm", confirm_msg)
+        self.assertFalse(confirm_msg["confirmed"])
+        self.assertIn("confirm", confirm_msg["warning"].lower())

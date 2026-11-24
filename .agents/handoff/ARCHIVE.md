@@ -289,3 +289,11 @@
 ### [2026-11-14 06:08 UTC] 建立任務 `TASK-022`: Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-14 06:10 UTC] 完成任務 `TASK-022` — Support adding missing artifacts per lecture or course and auto-start queue on selection save (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Support adding missing artifacts per lecture or course and auto-start queue on selection save
+
+### [2026-11-14 07:39 UTC] 建立任務 `TASK-023`: Add notebook source listing, upload, and deletion management (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

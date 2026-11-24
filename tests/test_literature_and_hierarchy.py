@@ -296,7 +296,8 @@ class LiteratureIntegrationTest(unittest.TestCase):
             self.assertIn("total_with_pdf", nb_resp.json())
 
             guard_res = json.loads(tools["delete_literature"].fn(key="x", confirm=False))
-            self.assertIn("error", guard_res)
+            self.assertFalse(guard_res["confirmed"])
+            self.assertIn("confirm", guard_res["warning"].lower())
 
 
 if __name__ == "__main__":
