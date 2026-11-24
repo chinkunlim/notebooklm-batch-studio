@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from notebooklm_batch_studio.domain.exceptions import AuthExpiredError, StudioError
 from notebooklm_batch_studio.entrypoints.schemas import StatusResponse
 from notebooklm_batch_studio.entrypoints.web_template import get_dashboard_html
+from notebooklm_batch_studio.services.auth_status import sign_in_status
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
 system_router = APIRouter()
@@ -74,3 +75,17 @@ async def get_notebooklm_quota(request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     except StudioError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@system_router.get("/api/system/sign-ins", tags=["System"], operation_id="get_sign_in_status")
+def get_sign_in_status_route(request: Request) -> dict[str, Any]:
+    """Return read-only authentication readiness across NotebookLM, Gemini Web, and library browser profiles.
+
+    Args:
+        request: Incoming HTTP request context.
+
+    Returns:
+        Dictionary containing `sign_ins` status entries.
+    """
+    rows = sign_in_status(request.app.state.config, request.app.state.gemini_auth)
+    return {"sign_ins": rows}

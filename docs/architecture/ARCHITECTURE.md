@@ -294,7 +294,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ## 4. 安全性與環境隔離 (Security & Isolation)
 
-1. **憑證安全**：不讀取亦不儲存使用者 Google 密碼。使用者透過 `login` 指令開啟本機 Chromium 瀏覽器完成 OAuth 登入，登入狀態隔離儲存於 `~/.config/notebooklm-batch-studio`（權限 600）。
+1. **憑證安全與三組獨立登入**：不讀取亦不儲存使用者 Google 密碼；本機共隔離維護三組登入狀態——**NotebookLM**（`notebooklm_home`，預設 `~/.config/notebooklm-batch-studio`，權限 600）、**Gemini 網頁**（`<DATA_DIR>/state/gemini_profile`，note-studio CDP 登入）、與**文獻／圖書館瀏覽器**（`<DATA_DIR>/state/literature_browser_profile`）。總覽 API（`GET /api/system/sign-ins` / MCP `get_sign_in_status`）僅檢查檔案／資料夾存在性與 `check_auth_status(live_check=False)`，絕不讀取或回傳 Cookie／Token 內容。
 2. **服務綁定**：FastAPI 與 MCP 本機伺服器嚴格僅綁定 `127.0.0.1:8768`，並具備 Host Header 檢查機制，禁止對外網暴露。
 3. **路徑穿越防護**：產出物下載與檢視都限制在該課程的輸出根目錄（有 `study_dir` 時為 `<study_dir>/03 Notes/NotebookLM`，ISSUE-050）或 `needs_review` 隔離區內，課程代號本身也要通過 `validate_path_segment`；講義 PDF 閱讀器只提供已註冊講次的檔案，並檢查解析後的路徑必須位於該課程的講義資料夾內（否則回 403），且只讀不改。筆記管線的識別碼與呼叫端路徑只能落在 `DATA_DIR`、`STUDY_ROOT_DIR` 或課程登錄資料夾（ISSUE-045）；文獻 PDF 只從文獻資料夾提供（ISSUE-047）。
 4. **資料隔離**：原始講義、中繼資料、產出物與紀錄檔案全數集中於專案目錄外的 `DATA_DIR`，避免程式碼倉庫污染或敏感講義外流。

@@ -88,6 +88,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(courses): archive/restore, safe course-code rename, queue and today archive filtering (by `@antigravity`)
 - feat(record): cross-term learning record with study time, memory strength, MD/PDF export (by `@antigravity`)
 - feat(study): HTTP/MCP/web for study library, filing, lifecycle, learning record (by `@antigravity`)
+- feat(system): sign-in status overview for NotebookLM, Gemini web and library (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

@@ -877,6 +877,15 @@
             </div>
             <p class="hint" style="margin-top:12px">本機服務：http://127.0.0.1:8768　·　設定記在這台電腦</p>
           </article>
+
+          <article class="card" id="signInStatusCard" style="grid-column:1/-1">
+            <div class="card-head">
+              <h2 class="h2">三組本機登入狀態一覽</h2>
+              <button type="button" class="btn btn-soft btn-sm" onclick="loadSignInStatus()">重新檢查</button>
+            </div>
+            <p class="small muted" style="margin-bottom:10px">僅檢查設定檔或設定目錄是否存在（不讀取 Cookie／Token 內容）。</p>
+            <div id="signInStatusList" class="stack"></div>
+          </article>
         </div>
       </section>
     </div>

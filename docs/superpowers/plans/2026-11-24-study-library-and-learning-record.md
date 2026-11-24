@@ -425,8 +425,8 @@ def test_no_new_writes_to_old_layout(self):
 
 **Interfaces — Produces:** `sign_in_status(config: AppConfig, gemini_auth: GeminiAuthService) -> list[dict[str, str]]`，每列 `{"name", "location", "state": "ready|missing|expired", "how_to_sign_in"}`；Gemini 列直接用 `GeminiAuthService.check_auth_status(live_check=False)`（Antigravity `3976c94`，入口 `/api/notes/gemini/login`）；NotebookLM 與文獻只檢查檔案／資料夾是否存在，不讀 cookie 內容。
 
-- [ ] **Step 1–4:** 測試三種狀態（tmp 中建立／不建立對應資料夾）→ 實作 → 通過
-- [ ] **Step 5:** Commit `-m "feat(system): sign-in status overview for NotebookLM, Gemini web and library"`
+- [x] **Step 1–4:** 測試三種狀態（tmp 中建立／不建立對應資料夾）→ 實作 → 通過
+- [x] **Step 5:** Commit `-m "feat(system): sign-in status overview for NotebookLM, Gemini web and library"`
 
 ## Phase 4：既有資料整併與收尾
 

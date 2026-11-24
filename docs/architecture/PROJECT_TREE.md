@@ -779,6 +779,7 @@ notebooklm-batch-studio/
 │       │   │   └── step_validator.py
 │       │   ├── __init__.py
 │       │   ├── artifact_runner.py
+│       │   ├── auth_status.py
 │       │   ├── course_lifecycle.py
 │       │   ├── course_onboarding.py
 │       │   ├── course_options.py
@@ -850,6 +851,7 @@ notebooklm-batch-studio/
 │   ├── __init__.py
 │   ├── dummy_client.py
 │   ├── test_api_and_mcp.py
+│   ├── test_auth_status.py
 │   ├── test_button_routes.py
 │   ├── test_converters.py
 │   ├── test_course_admin.py

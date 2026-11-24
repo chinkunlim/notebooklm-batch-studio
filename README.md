@@ -72,6 +72,11 @@ uv run notebooklm-batch-studio login --browser
 uv run notebooklm-batch-studio login
 ```
 
+系統共管理三組獨立的本機登入設定（可於 Web UI「設計與自訂」、HTTP `GET /api/system/sign-ins` 或 MCP `get_sign_in_status` 唯讀檢視狀態，不會讀取 Cookie 或 Token 明文）：
+- **NotebookLM**：`~/.config/notebooklm-batch-studio`（`notebooklm_home`，由 `login --browser` 建立）
+- **Gemini 網頁（note-studio）**：`<DATA_DIR>/state/gemini_profile`（於網頁「筆記生成 → 登入 Gemini」或 `/api/notes/gemini/login` 建立）
+- **文獻／圖書館瀏覽器**：`<DATA_DIR>/state/literature_browser_profile`（配合 `.env` 的 `LIBRARY_EMAIL` / `LIBRARY_PASSWORD`，下載需認證 PDF 時由瀏覽器建立）
+
 ---
 
 ## 日常操作指令 (CLI)

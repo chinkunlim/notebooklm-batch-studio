@@ -140,6 +140,6 @@ def register_literature_and_note_tools(mcp: MCPServer, cfg: AppConfig, resolved:
     notes = _note_service(cfg, session_factory, resolved.get("notes"))
     register_note_pipeline_tools(mcp, notes, upload_fn=build_note_upload_fn(cfg))
     gemini_auth = resolved.get("gemini_auth") or build_gemini_auth_service(cfg)
-    register_gemini_auth_tools(mcp, gemini_auth)
+    register_gemini_auth_tools(mcp, gemini_auth, config=cfg)
     register_study_library_tools(mcp, cfg, session_factory)
     logger.debug("Registered literature, note pipeline, Gemini auth, and study library MCP tools")

@@ -298,7 +298,39 @@ async function loadLearningRecordView(term) {
   }
 }
 
+/**
+ * Fetch and display the read-only three-profile sign-in status list inside `#signInStatusList`.
+ * @returns {Promise<void>}
+ */
+async function loadSignInStatus() {
+  const host = document.getElementById('signInStatusList');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/system/sign-ins');
+    if (!res.ok) throw new Error('無法取得登入狀態');
+    const data = await res.json();
+    const stateBadge = {
+      ready: { text: '就緒', cls: 'badge-success' },
+      expired: { text: '已過期', cls: 'badge-warning' },
+      missing: { text: '尚未登入', cls: 'badge-neutral' },
+    };
+    host.innerHTML = (data.sign_ins || []).map(item => {
+      const b = stateBadge[item.state] || { text: item.state, cls: 'badge-neutral' };
+      return `<div class="row" style="justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);gap:12px">
+        <div style="min-width:0">
+          <div><b>${escHtml(item.name)}</b> <span class="badge ${b.cls}">${escHtml(b.text)}</span></div>
+          <div class="small muted num" style="word-break:break-all">${escHtml(item.location)}</div>
+          <div class="small muted">${escHtml(item.how_to_sign_in)}</div>
+        </div>
+      </div>`;
+    }).join('') || '<div class="small muted">尚無登入設定項目。</div>';
+  } catch (e) {
+    host.innerHTML = `<div class="small muted">${escHtml(e.message || '載入失敗')}</div>`;
+  }
+}
+
 window.loadStudyLayoutOptions = loadStudyLayoutOptions;
 window.loadLearningRecordView = loadLearningRecordView;
+window.loadSignInStatus = loadSignInStatus;
 window.toggleCourseArchived = toggleCourseArchived;
 window.openRenameCourseFlow = openRenameCourseFlow;

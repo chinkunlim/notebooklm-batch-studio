@@ -175,12 +175,12 @@
   - 對應測試：`tests/test_course_lifecycle.py`（含 `test_delete_refused_unless_archived`、`test_delete_archived_course_keeps_study_files`、`test_delete_archived_course_moves_only_legacy_output`）
 
 ### 5.6 學習紀錄、三入口、登入狀態與整併（Task 12–15）
-- [ ] **場景 12（跨學期完整學習紀錄與 Markdown/PDF 匯出）**
+- [x] **場景 12（跨學期完整學習紀錄與 Markdown/PDF 匯出）**
   - **Given** 多學期課程（含 `active` 與 `archived` 已封存課程、未登錄校方資料夾 `CP__30000-團體諮商`、非課程資料夾進 `others`、指往 `DATA_DIR` 外的 symlink、`02 Handouts/slides.pptx`、`05 Assignments/期中/報告.pdf`、題庫作答紀錄、`activity_times` 與 `memory_signals`）
   - **When** 呼叫 `LearningRecordService.build(term=None)`、`export_markdown(term=None)`、`export_pdf(term, out_pdf)`
   - **Then** 依學期排序回傳；同時包含 `status="archived"` 與 `status="unregistered"` 課程及學期 `others`；檔案清單只列名稱與相對路徑且不讀檔案內容、略過隱藏檔與 symlink；`stats` 齊全且 `quiz_attempts == 1`、`study_days >= 1`、`memory_strength_avg > 0`；Markdown 以 `# 學習紀錄` 開頭並含 `## 115-1`、`### CP30000 團體諮商`；`export_pdf` 輸出以 `%PDF` 開頭的有效 PDF
   - 對應測試：`tests/test_learning_record.py`
-- [ ] **場景 13（HTTP / MCP / Web 三入口、全域 `confirm=False` 與登入狀態總覽）**
+- [x] **場景 13（HTTP / MCP / Web 三入口、全域 `confirm=False` 與登入狀態總覽）**
   - **Given** 啟動 FastAPI 測試客戶端與掃描全庫 MCP 工具
   - **When** 呼叫 §4 全部端點與工具、以及 `GET /api/system/sign-ins`
   - **Then** 查詢端點回 200；非法代碼回 400/404；全數具 `confirm` 參數之 MCP 工具於 `confirm=False` 回傳 `{"confirmed": false, ...}`；登入狀態正確回報 `ready|missing|expired`

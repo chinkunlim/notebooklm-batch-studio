@@ -423,6 +423,7 @@ def _resolve_mcp_services(
         "preferences": prefs,
         "qa_notes": qa,
         "fonts": overrides.get("fonts"),
+        "gemini_auth": overrides.get("gemini_auth"),
     }
 
 

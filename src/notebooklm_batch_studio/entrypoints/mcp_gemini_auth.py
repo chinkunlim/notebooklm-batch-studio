@@ -7,6 +7,8 @@ import logging
 
 from mcp.server.mcpserver import MCPServer
 
+from notebooklm_batch_studio.config.settings import AppConfig
+from notebooklm_batch_studio.services.auth_status import sign_in_status
 from notebooklm_batch_studio.services.notes.gemini_auth_service import GeminiAuthService
 
 logger = logging.getLogger(__name__)
@@ -100,13 +102,37 @@ def _register_login_and_logout_tools(mcp: MCPServer, auth: GeminiAuthService) ->
         return json.dumps(auth.logout(), ensure_ascii=False, indent=2)
 
 
-def register_gemini_auth_tools(mcp: MCPServer, auth: GeminiAuthService) -> None:
+def _register_sign_in_overview_tool(mcp: MCPServer, config: AppConfig, auth: GeminiAuthService) -> None:
+    """Register `get_sign_in_status` overview tool covering all 3 browser/session profiles.
+
+    Args:
+        mcp: MCPServer instance.
+        config: Application configuration.
+        auth: Configured `GeminiAuthService`.
+    """
+
+    @mcp.tool()
+    def get_sign_in_status() -> str:
+        """Report readiness across NotebookLM, Gemini Web, and library profiles without tokens.
+
+        Returns:
+            JSON string with `sign_ins` list.
+        """
+        return json.dumps({"sign_ins": sign_in_status(config, auth)}, ensure_ascii=False, indent=2)
+
+
+def register_gemini_auth_tools(
+    mcp: MCPServer, auth: GeminiAuthService, config: AppConfig | None = None
+) -> None:
     """Register all Gemini Web authentication MCP tools.
 
     Args:
         mcp: MCPServer instance.
         auth: Configured `GeminiAuthService`.
+        config: Optional `AppConfig` to also expose three-profile sign-in overview.
     """
     _register_status_and_retention_tools(mcp, auth)
     _register_login_and_logout_tools(mcp, auth)
+    if config is not None:
+        _register_sign_in_overview_tool(mcp, config, auth)
     logger.debug("Registered Gemini Web auth MCP tools")
