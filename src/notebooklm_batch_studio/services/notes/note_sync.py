@@ -14,6 +14,9 @@ from notebooklm_batch_studio.services.converters.note_pdf_renderer import render
 logger = logging.getLogger(__name__)
 
 _RE_CHAPTER_STEM = re.compile(r"^(ch\d+)_(.+?)_學習筆記$", re.IGNORECASE)
+_LEGACY_EXCLUDED_DIRS = frozenset({"版本", "手動生成提示詞"})
+_LEGACY_LAYOUT_PREFIX = ("學習筆記", "PDF", "layout")
+_LEGACY_PDF_SUBDIR = Path("學習筆記") / "PDF"
 
 
 def list_chapter_notes(notes_dir: Path) -> list[dict[str, Any]]:
@@ -105,8 +108,27 @@ def push_chapter_note_to_source(
     }
 
 
+def _is_excluded_legacy_path(rel: Path) -> bool:
+    """Return True when a relative legacy note-studio path belongs to excluded dirs or hidden segments.
+
+    Args:
+        rel: Path relative to a course's legacy NoteStudio output folder.
+
+    Returns:
+        True if hidden, inside `版本/` or `手動生成提示詞/`, or under `學習筆記/PDF/layout/`.
+    """
+    parts = rel.parts
+    if any(part.startswith(".") for part in parts):
+        return True
+    if any(part in _LEGACY_EXCLUDED_DIRS for part in parts[:-1]):
+        return True
+    return len(parts) > 3 and parts[:3] == _LEGACY_LAYOUT_PREFIX
+
+
 def list_legacy_markdown_files(source_dir: Path) -> list[Path]:
-    """Return sorted relative paths of non-hidden, non-symlink `.md` files under `source_dir`.
+    """Return sorted relative paths of current non-hidden `.md` files under `source_dir`.
+
+    Excludes `版本/`, `手動生成提示詞/`, `學習筆記/PDF/layout/`, hidden paths, and symlinks.
 
     Args:
         source_dir: Root directory of legacy NoteStudio outputs.
@@ -121,10 +143,61 @@ def list_legacy_markdown_files(source_dir: Path) -> list[Path]:
         if path.is_symlink() or not path.is_file():
             continue
         rel = path.relative_to(source_dir)
-        if any(part.startswith(".") for part in rel.parts):
-            continue
-        results.append(rel)
+        if not _is_excluded_legacy_path(rel):
+            results.append(rel)
     return results
+
+
+def list_legacy_final_pdf_files(source_dir: Path) -> list[Path]:
+    """Return sorted relative paths of final `*.pdf` files directly inside `學習筆記/PDF/`.
+
+    Args:
+        source_dir: Root directory of legacy NoteStudio outputs.
+
+    Returns:
+        Sorted list of relative `.pdf` paths directly beneath `學習筆記/PDF/`.
+    """
+    pdf_dir = source_dir / _LEGACY_PDF_SUBDIR
+    if not pdf_dir.is_dir() or pdf_dir.is_symlink():
+        return []
+    results: list[Path] = []
+    for path in sorted(pdf_dir.iterdir()):
+        if path.is_symlink() or not path.is_file():
+            continue
+        if path.name.startswith(".") or path.suffix.lower() != ".pdf":
+            continue
+        results.append(path.relative_to(source_dir))
+    return results
+
+
+def list_legacy_note_files(source_dir: Path) -> list[Path]:
+    """Return all eligible legacy NoteStudio `.md` notes and final `學習筆記/PDF/*.pdf` files.
+
+    Args:
+        source_dir: Root directory of legacy NoteStudio outputs.
+
+    Returns:
+        Sorted union of eligible relative `.md` and `.pdf` paths inside `source_dir`.
+    """
+    return sorted([*list_legacy_markdown_files(source_dir), *list_legacy_final_pdf_files(source_dir)])
+
+
+def format_legacy_notes_note(md_count: int, pdf_count: int, *, matched: bool) -> str:
+    """Format a dry-run consolidation step note for legacy NoteStudio files.
+
+    Args:
+        md_count: Number of eligible Markdown files.
+        pdf_count: Number of eligible final PDF files under `學習筆記/PDF/`.
+        matched: Whether the folder resolved to a target study course.
+
+    Returns:
+        Human-readable summary string for the consolidation plan table.
+    """
+    pdf_suffix = f" 與 {pdf_count} 份最終 PDF" if pdf_count else ""
+    if not matched:
+        desc = f"{md_count} 份 .md{pdf_suffix or ' 筆記'}"
+        return f"note-studio 含 {desc}，請以對照表指定目標課程"
+    return f"匯入 {md_count} 份舊 NoteStudio .md{pdf_suffix} 至 03 Notes/NoteStudio"
 
 
 def import_legacy_notes(
@@ -132,10 +205,10 @@ def import_legacy_notes(
     target_notes_dir: Path,
     overwrite: bool = False,
 ) -> dict[str, Any]:
-    """Copy existing `.md` notes recursively from standalone `note-studio` into `03 Notes/NoteStudio`.
+    """Copy current `.md` notes and `學習筆記/PDF/*.pdf` into `03 Notes/NoteStudio`.
 
     Args:
-        source_dir: Source folder containing `.md` notes (flat or nested subdirectories).
+        source_dir: Source folder containing legacy NoteStudio outputs.
         target_notes_dir: Destination `03 Notes/NoteStudio` directory.
         overwrite: Whether to overwrite existing files at the same relative path.
 
@@ -150,20 +223,18 @@ def import_legacy_notes(
     target_notes_dir.mkdir(parents=True, exist_ok=True)
     copied: list[str] = []
     skipped: list[str] = []
-    for rel in list_legacy_markdown_files(source_dir):
-        src = source_dir / rel
+    for rel in list_legacy_note_files(source_dir):
         dst = target_notes_dir / rel
         if dst.exists() and not overwrite:
             skipped.append(rel.as_posix())
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+        shutil.copy2(source_dir / rel, dst)
         copied.append(rel.as_posix())
     logger.info(
-        "Imported %d legacy .md notes into %s (skipped %d)", len(copied), target_notes_dir, len(skipped)
+        "Imported %d legacy NoteStudio files into %s (skipped %d)",
+        len(copied),
+        target_notes_dir,
+        len(skipped),
     )
-    return {
-        "target_dir": str(target_notes_dir),
-        "copied": copied,
-        "skipped": skipped,
-    }
+    return {"target_dir": str(target_notes_dir), "copied": copied, "skipped": skipped}

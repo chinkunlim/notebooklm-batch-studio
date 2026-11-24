@@ -26,7 +26,11 @@ from notebooklm_batch_studio.services.legacy_consolidation_ops import (
     inventory_directory_summary,
     singular_aliases_for,
 )
-from notebooklm_batch_studio.services.notes.note_sync import list_legacy_markdown_files
+from notebooklm_batch_studio.services.notes.note_sync import (
+    format_legacy_notes_note,
+    list_legacy_final_pdf_files,
+    list_legacy_markdown_files,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -450,7 +454,7 @@ def _match_notes_course(
 def plan_legacy_notes(
     config: AppConfig, request: ConsolidationRequest, code_to_dir: dict[str, Path], courses: list[Course]
 ) -> list[ConsolidationStep]:
-    """Plan imports of legacy standalone `note-studio` `.md` folders into `03 Notes/NoteStudio/`.
+    """Plan imports of legacy `note-studio` `.md` and final `.pdf` files into `03 Notes/NoteStudio/`.
 
     Args:
         config: Application configuration.
@@ -468,20 +472,16 @@ def plan_legacy_notes(
     for folder in sorted(ns_root.iterdir()):
         if not folder.is_dir() or folder.name.startswith("."):
             continue
-        mds = list_legacy_markdown_files(folder)
-        if not mds:
+        mds, pdfs = list_legacy_markdown_files(folder), list_legacy_final_pdf_files(folder)
+        if not mds and not pdfs:
             continue
         target_course = _match_notes_course(folder.name, request, code_to_dir, courses)
         if target_course is None:
-            note = f"note-studio 含 {len(mds)} 份 .md 筆記，請以對照表指定目標課程"
+            note = format_legacy_notes_note(len(mds), len(pdfs), matched=False)
             steps.append(ConsolidationStep("inventory", str(folder), "(未對照到課程)", note))
             continue
+        note = format_legacy_notes_note(len(mds), len(pdfs), matched=True)
         steps.append(
-            ConsolidationStep(
-                "import_notes",
-                str(folder),
-                str(resolve_note_studio_dir(target_course)),
-                f"匯入 {len(mds)} 份舊 NoteStudio .md 至 03 Notes/NoteStudio",
-            )
+            ConsolidationStep("import_notes", str(folder), str(resolve_note_studio_dir(target_course)), note)
         )
     return steps

@@ -561,6 +561,60 @@ class LegacyConsolidationTests(unittest.TestCase):
         self.assertFalse((notes_root / ".hidden" / "secret.md").exists())
         self.assertFalse((notes_root / "學習筆記" / "Ch01_導論.pdf").exists())
 
+    def test_legacy_notes_filters_version_history_layout_prompts_and_imports_final_pdfs(self) -> None:
+        """NoteStudio import skips 版本/layout/prompts and copies current .md plus 學習筆記/PDF/*.pdf."""
+        ns = self.legacy_notes_root / "115-1 心理學研究法"
+        files = {
+            "章節/ch01/版本/x.md": "# Version",
+            "章節/ch01/版本/v02/y.md": "# Nested Version",
+            "章節/ch01/目前/x.md": "# Current Chapter Note",
+            "學習筆記/原稿/x.md": "# New Raw Note",
+            "學習筆記/PDF/Ch01_x_學習筆記.pdf": "%PDF-final",
+            "學習筆記/PDF/layout/x.blocks.json": '{"blocks": []}',
+            "學習筆記/PDF/layout/draft.pdf": "%PDF-layout",
+            "學習筆記/PDF/layout/draft.md": "# Layout MD",
+            "學習筆記/115-1_完整.pdf": "%PDF-combined",
+            "手動生成提示詞/p.md": "# Prompt",
+        }
+        for rel, body in files.items():
+            p = ns / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(body, encoding="utf-8")
+
+        notes_root = self.research_dir / "03 Notes" / "NoteStudio"
+        existing = notes_root / "學習筆記" / "原稿" / "x.md"
+        existing.parent.mkdir(parents=True, exist_ok=True)
+        existing.write_text("# Existing", encoding="utf-8")
+
+        req = ConsolidationRequest(note_course_maps={"115-1 心理學研究法": "115-1_CP30210"})
+        with self.session_factory() as session:
+            steps = plan_consolidation(self.cfg, req, repo=ConsolidationRepository(session))
+            import_steps = [
+                s for s in steps if s.action == "import_notes" and s.source.endswith("115-1 心理學研究法")
+            ]
+            self.assertEqual(len(import_steps), 1, steps)
+            self.assertIn("2 份舊 NoteStudio .md 與 1 份最終 PDF", import_steps[0].note)
+            apply_consolidation(self.cfg, steps, deps=self._deps(session))
+
+        self.assertEqual(existing.read_text(encoding="utf-8"), "# Existing")
+        self.assertEqual(
+            (notes_root / "章節/ch01/目前/x.md").read_text(encoding="utf-8"), "# Current Chapter Note"
+        )
+        self.assertEqual(
+            (notes_root / "學習筆記/PDF/Ch01_x_學習筆記.pdf").read_text(encoding="utf-8"), "%PDF-final"
+        )
+        for excluded in (
+            "章節/ch01/版本/x.md",
+            "章節/ch01/版本/v02/y.md",
+            "學習筆記/PDF/layout/x.blocks.json",
+            "學習筆記/PDF/layout/draft.pdf",
+            "學習筆記/PDF/layout/draft.md",
+            "學習筆記/115-1_完整.pdf",
+            "手動生成提示詞/p.md",
+        ):
+            self.assertFalse((notes_root / excluded).exists(), f"Should not import {excluded}")
+            self.assertTrue((ns / excluded).is_file(), f"Source should remain untouched: {excluded}")
+
 
 if __name__ == "__main__":
     unittest.main()
