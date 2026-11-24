@@ -14,11 +14,16 @@ from notebooklm_batch_studio.domain.course_identity import (
 )
 from notebooklm_batch_studio.domain.models import Course
 from notebooklm_batch_studio.domain.path_safety import is_within
-from notebooklm_batch_studio.domain.study_hierarchy import resolve_category_dir, resolve_note_studio_dir
+from notebooklm_batch_studio.domain.study_hierarchy import (
+    parse_term_subject,
+    resolve_category_dir,
+    resolve_note_studio_dir,
+)
 from notebooklm_batch_studio.services.legacy_consolidation_ops import (
     ActionType,
     ConsolidationRequest,
     ConsolidationStep,
+    inventory_directory_summary,
     singular_aliases_for,
 )
 
@@ -115,31 +120,84 @@ def _match_input_folder(folder: Path, code_to_dir: dict[str, Path], code_maps: d
         for code, cdir in code_to_dir.items():
             if cdir.name == folder.name or code.endswith(f"_{guessed}"):
                 return cdir
-    return next((d for d in code_to_dir.values() if d.name == folder.name or folder.name in d.name), None)
+    _, subj = parse_term_subject(folder.name)
+    for d in code_to_dir.values():
+        if d.name == folder.name or folder.name in d.name or (subj and subj in d.name):
+            return d
+    return None
+
+
+def _is_under_assigned(path: Path, assigned_paths: set[Path]) -> bool:
+    """Return True when `path` equals or sits inside any `--assign` source path.
+
+    Args:
+        path: Candidate path to check.
+        assigned_paths: Resolved paths explicitly handled by `--assign`.
+
+    Returns:
+        True if already covered by an assignment.
+    """
+    resolved = path.resolve()
+    return any(resolved == ap or is_within(resolved, ap) for ap in assigned_paths)
+
+
+def _input_subfolder_inventories(
+    folder: Path, notes_name: str, assigned_paths: set[Path]
+) -> list[ConsolidationStep]:
+    """Emit inventory steps for un-assigned non-PDF subfolders inside `input/courses/<course>/`.
+
+    Args:
+        folder: Input course directory.
+        notes_name: Canonical Notes category folder name (e.g. `03 Notes`).
+        assigned_paths: Explicitly assigned source paths to skip.
+
+    Returns:
+        List of `inventory` steps for non-empty non-PDF subdirectories (such as `study-notes`).
+    """
+    steps: list[ConsolidationStep] = []
+    for sub in sorted(folder.iterdir()):
+        if not sub.is_dir() or sub.name.startswith(".") or _is_under_assigned(sub, assigned_paths):
+            continue
+        has_non_pdf = any(
+            p.is_file() and not p.name.startswith(".") and p.suffix.lower() != ".pdf" for p in sub.rglob("*")
+        )
+        if not has_non_pdf:
+            continue
+        target_hint = f"(input/courses 子資料夾，建議 --assign 至 {notes_name}/{sub.name}/)"
+        steps.append(ConsolidationStep("inventory", str(sub), target_hint, inventory_directory_summary(sub)))
+    return steps
 
 
 def _steps_for_input_folder(
-    folder: Path, code_to_dir: dict[str, Path], code_maps: dict[str, str], handouts_name: str
+    config: AppConfig, folder: Path, code_to_dir: dict[str, Path], assigned_paths: set[Path]
 ) -> list[ConsolidationStep]:
-    """Build `move` or `inventory` steps for one subfolder under `input/courses/`.
+    """Build `move` and `inventory` steps for PDFs and subfolders under `input/courses/`.
 
     Args:
+        config: Application configuration.
         folder: Candidate input course folder.
         code_to_dir: Course code -> `study_dir` lookup.
-        code_maps: Code override mapping.
-        handouts_name: Canonical target handouts category folder name.
+        assigned_paths: Explicitly assigned paths already moved separately.
 
     Returns:
-        List of steps for the PDFs found in `folder`.
+        List of consolidation steps discovered inside `folder`.
     """
-    pdfs = [p for p in sorted(folder.rglob("*.pdf")) if p.is_file() and not p.name.startswith(".")]
+    handouts_name = config.study_layout.names[CategoryRole.HANDOUTS]
+    notes_name = config.study_layout.names[CategoryRole.NOTES]
+    steps = _input_subfolder_inventories(folder, notes_name, assigned_paths)
+    pdfs = [
+        p
+        for p in sorted(folder.rglob("*.pdf"))
+        if p.is_file() and not p.name.startswith(".") and not _is_under_assigned(p, assigned_paths)
+    ]
     if not pdfs:
-        return []
-    target_dir = _match_input_folder(folder, code_to_dir, code_maps)
+        return steps
+    target_dir = _match_input_folder(folder, code_to_dir, {})
     if target_dir is None:
         note = f"input/courses 含 {len(pdfs)} 份 PDF，待透過 --map / --folder 確認目標"
-        return [ConsolidationStep("inventory", str(folder), "(未對照到已註冊課程)", note)]
-    return [
+        steps.append(ConsolidationStep("inventory", str(folder), "(未對照到已註冊課程)", note))
+        return steps
+    steps.extend(
         ConsolidationStep(
             "move",
             str(pdf),
@@ -147,29 +205,35 @@ def _steps_for_input_folder(
             f"搬移舊 input PDF 至 {handouts_name}",
         )
         for pdf in pdfs
-    ]
+    )
+    return steps
 
 
 def plan_input_moves(
-    config: AppConfig, code_to_dir: dict[str, Path], code_maps: dict[str, str]
+    config: AppConfig,
+    request: ConsolidationRequest,
+    code_to_dir: dict[str, Path],
+    assigned_paths: set[Path] | None = None,
 ) -> list[ConsolidationStep]:
-    """Plan PDF moves from legacy `input/courses/` folders or emit inventory when unmapped.
+    """Plan PDF moves and non-PDF subfolder inventories from legacy `input/courses/` folders.
 
     Args:
         config: Application configuration.
+        request: Consolidation request carrying `code_maps`.
         code_to_dir: Post-rename course code -> `study_dir` lookup.
-        code_maps: Course code mappings.
+        assigned_paths: Resolved paths explicitly handled via `--assign`.
 
     Returns:
-        Planned `move` or `inventory` steps.
+        Planned `move` and `inventory` steps.
     """
     if not config.courses_input_dir.is_dir():
         return []
-    handouts_name = config.study_layout.names[CategoryRole.HANDOUTS]
+    assigned = assigned_paths or set()
+    _ = request
     steps: list[ConsolidationStep] = []
     for folder in sorted(config.courses_input_dir.iterdir()):
         if folder.is_dir() and not folder.name.startswith("."):
-            steps.extend(_steps_for_input_folder(folder, code_to_dir, code_maps, handouts_name))
+            steps.extend(_steps_for_input_folder(config, folder, code_to_dir, assigned))
     return steps
 
 

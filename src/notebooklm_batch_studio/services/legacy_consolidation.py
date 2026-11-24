@@ -150,8 +150,8 @@ def plan_consolidation(
         note = f"改名為校方命名 {Path(new_str).name} 並同步資料庫與筆記狀態路徑"
         steps.append(ConsolidationStep("rename_folder", old_str, new_str, note))
     steps.extend(plan_singular_merges(config, old_to_new))
-    steps.extend(plan_input_moves(config, code_to_dir, request.code_maps))
     assign_steps, assigned_paths = plan_assignments(config, request, code_to_dir)
+    steps.extend(plan_input_moves(config, request, code_to_dir, assigned_paths))
     steps.extend(assign_steps)
     steps.extend(plan_restores(config, request, code_to_dir))
     steps.extend(plan_legacy_notes(config, request, code_to_dir, courses))

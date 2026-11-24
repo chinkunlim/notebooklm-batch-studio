@@ -482,6 +482,53 @@ class LegacyConsolidationTests(unittest.TestCase):
             )
             self.assertEqual(rc, 0)
 
+    def test_input_course_study_notes_subfolder_appears_in_inventory_and_supports_assign(self) -> None:
+        """Non-PDF subfolders like input/courses/<course>/study-notes appear in inventory and assign."""
+        legacy_in = self.cfg.courses_input_dir / "115-1 心理學研究法"
+        sn_dir = legacy_in / "study-notes"
+        (sn_dir / "output").mkdir(parents=True, exist_ok=True)
+        (sn_dir / "STYLE_GUIDE.md").write_text("# Style Guide", encoding="utf-8")
+        (sn_dir / "output" / "ch01.html").write_text("<h1>Ch01</h1>", encoding="utf-8")
+        (legacy_in / "Ch01.pdf").write_bytes(b"%PDF-legacy-in")
+
+        base_req = ConsolidationRequest(
+            folder_maps={"115-1/CP__30210-心理學研究法": "CP__30210-心理學研究法"},
+        )
+        with self.session_factory() as session:
+            steps = plan_consolidation(self.cfg, base_req, repo=ConsolidationRepository(session))
+
+        inv_notes = [s for s in steps if s.action == "inventory" and s.source.endswith("study-notes")]
+        self.assertEqual(len(inv_notes), 1, steps)
+        self.assertIn("03 Notes/study-notes", inv_notes[0].target)
+        self.assertIn("files=2", inv_notes[0].note)
+
+        # Verify legacy folder name `115-1 心理學研究法` matches CP__30210-心理學研究法
+        pdf_moves = [s for s in steps if s.action == "move" and s.source.endswith("Ch01.pdf")]
+        self.assertEqual(len(pdf_moves), 1, steps)
+        self.assertTrue(pdf_moves[0].target.endswith("CP__30210-心理學研究法/02 Handouts/Ch01.pdf"))
+
+        assigned_req = ConsolidationRequest(
+            folder_maps={"115-1/CP__30210-心理學研究法": "CP__30210-心理學研究法"},
+            assignments=[
+                (
+                    "input/courses/115-1 心理學研究法/study-notes",
+                    "115-1_CP30210",
+                    CategoryRole.NOTES,
+                    "study-notes",
+                )
+            ],
+        )
+        with self.session_factory() as session:
+            steps2 = plan_consolidation(self.cfg, assigned_req, repo=ConsolidationRepository(session))
+            self.assertFalse(
+                any(s.action == "inventory" and s.source.endswith("study-notes") for s in steps2), steps2
+            )
+            apply_consolidation(self.cfg, steps2, deps=self._deps(session))
+
+        dest_notes = self.research_dir / "03 Notes" / "study-notes"
+        self.assertEqual((dest_notes / "STYLE_GUIDE.md").read_text(encoding="utf-8"), "# Style Guide")
+        self.assertTrue((dest_notes / "output" / "ch01.html").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()
