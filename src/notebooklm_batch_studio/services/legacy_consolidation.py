@@ -19,6 +19,7 @@ from notebooklm_batch_studio.services.legacy_consolidation_ops import (
     ActionType,
     ConsolidationRequest,
     ConsolidationStep,
+    apply_copy_step,
     apply_folder_rename_step,
     apply_merge_step,
     apply_move_step,
@@ -31,6 +32,7 @@ from notebooklm_batch_studio.services.legacy_consolidation_planner import (
     plan_assignments,
     plan_input_moves,
     plan_legacy_notes,
+    plan_restores,
     plan_singular_merges,
 )
 from notebooklm_batch_studio.services.notes.note_sync import import_legacy_notes
@@ -151,6 +153,7 @@ def plan_consolidation(
     steps.extend(plan_input_moves(config, code_to_dir, request.code_maps))
     assign_steps, assigned_paths = plan_assignments(config, request, code_to_dir)
     steps.extend(assign_steps)
+    steps.extend(plan_restores(config, request, code_to_dir))
     steps.extend(plan_legacy_notes(config, request, code_to_dir, courses))
     mapped_keys = set(old_to_new.keys()) | set(request.folder_maps.keys())
     inv_rows = collect_inventory_rows(
@@ -234,6 +237,8 @@ def _execute_single_step(
         apply_merge_step(deps.repo, step.source, step.target)
     elif step.action == "move":
         apply_move_step(step.source, step.target)
+    elif step.action == "copy":
+        apply_copy_step(step.source, step.target)
     elif step.action == "import_notes":
         import_legacy_notes(Path(step.source), Path(step.target), overwrite=False)
     elif step.action == "inventory":

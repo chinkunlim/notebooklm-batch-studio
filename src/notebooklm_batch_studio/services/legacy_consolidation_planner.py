@@ -7,11 +7,16 @@ from pathlib import Path
 
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.config.study_layout import CategoryRole
-from notebooklm_batch_studio.domain.course_identity import parse_course_folder
+from notebooklm_batch_studio.domain.course_identity import (
+    TERM_PATTERN,
+    make_course_code,
+    parse_course_folder,
+)
 from notebooklm_batch_studio.domain.models import Course
 from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.domain.study_hierarchy import resolve_category_dir, resolve_note_studio_dir
 from notebooklm_batch_studio.services.legacy_consolidation_ops import (
+    ActionType,
     ConsolidationRequest,
     ConsolidationStep,
     singular_aliases_for,
@@ -71,12 +76,18 @@ def build_course_dir_index(
     """
     old_to_new: dict[str, Path] = {}
     pairs: list[tuple[str, str]] = []
+    code_to_dir: dict[str, Path] = {}
     for old_raw, new_raw in request.folder_maps.items():
         old_d, new_d = _resolve_folder_pair(config.study_root_dir, old_raw, new_raw)
-        old_to_new[str(old_d)] = new_d
-        old_to_new[str(old_d.resolve())] = new_d
-        pairs.append((str(old_d), str(new_d)))
-    code_to_dir: dict[str, Path] = {}
+        if old_d != new_d:
+            old_to_new[str(old_d)] = new_d
+            old_to_new[str(old_d.resolve())] = new_d
+            pairs.append((str(old_d), str(new_d)))
+        parsed = parse_course_folder(new_d.name)
+        if parsed and parsed.course_no and TERM_PATTERN.match(new_d.parent.name):
+            inferred = make_course_code(new_d.parent.name, parsed.course_no)
+            code_to_dir[inferred] = new_d
+            code_to_dir[request.code_maps.get(inferred, inferred)] = new_d
     for c in courses:
         if not c.study_dir:
             continue
@@ -260,10 +271,40 @@ def _singular_steps_in_term(
     return steps
 
 
+def _target_for_spec(
+    config: AppConfig,
+    request: ConsolidationRequest,
+    code_to_dir: dict[str, Path],
+    target_spec: tuple[str, CategoryRole, str],
+) -> tuple[str, Path, str]:
+    """Resolve destination path and descriptive category string for an assign/restore target.
+
+    Args:
+        config: Application configuration.
+        request: Consolidation request carrying `code_maps`.
+        code_to_dir: Resolved course code -> `study_dir` lookup.
+        target_spec: Tuple of `(course_code, CategoryRole, subfolder)`.
+
+    Returns:
+        `(mapped_code, dest_dir, label_suffix)` tuple.
+
+    Raises:
+        ValueError: When target course code lacks a resolved `study_dir`.
+    """
+    raw_code, role, subfolder = target_spec
+    mapped = request.code_maps.get(raw_code, raw_code)
+    course_dir = code_to_dir.get(mapped) or code_to_dir.get(raw_code)
+    if course_dir is None:
+        raise ValueError(f"找不到課程 {raw_code} 的 study 資料夾")
+    cat_name = config.study_layout.names[role]
+    dest_dir = resolve_category_dir(course_dir, cat_name, subfolder, config.study_layout)
+    return mapped, dest_dir, f"{cat_name}/{subfolder}".rstrip("/")
+
+
 def plan_assignments(
     config: AppConfig, request: ConsolidationRequest, code_to_dir: dict[str, Path]
 ) -> tuple[list[ConsolidationStep], set[Path]]:
-    """Plan explicit `--assign PATH=CODE:ROLE[/SUB]` moves into course categories.
+    """Plan explicit `--assign PATH=CODE:ROLE[/SUB]` moves (or copies when inside `deleted/`).
 
     Args:
         config: Application configuration.
@@ -272,27 +313,47 @@ def plan_assignments(
 
     Returns:
         Tuple of `(steps, assigned_resolved_paths)`.
-
-    Raises:
-        ValueError: When target course code lacks a resolved `study_dir`.
     """
     steps: list[ConsolidationStep] = []
     assigned: set[Path] = set()
+    deleted_root = config.deleted_dir.resolve()
     for src_raw, raw_code, role, subfolder in request.assignments:
         src_path = resolve_under(config.data_dir, src_raw)
         assigned.add(src_path.resolve())
-        mapped = request.code_maps.get(raw_code, raw_code)
-        course_dir = code_to_dir.get(mapped) or code_to_dir.get(raw_code)
-        if course_dir is None:
-            raise ValueError(f"--assign 找不到課程 {raw_code} 的 study 資料夾")
-        cat_name = config.study_layout.names[role]
-        dest_dir = resolve_category_dir(course_dir, cat_name, subfolder, config.study_layout)
-        steps.append(
-            ConsolidationStep(
-                "move", str(src_path), str(dest_dir), f"指派至 {mapped} {cat_name}/{subfolder}".rstrip("/")
-            )
+        mapped, dest_dir, label = _target_for_spec(config, request, code_to_dir, (raw_code, role, subfolder))
+        target_path = (dest_dir / src_path.name) if src_path.is_file() else dest_dir
+        is_deleted = is_within(src_path.resolve(), deleted_root)
+        action: ActionType = "copy" if is_deleted else "move"
+        note = (
+            f"從 deleted 複製還原至 {mapped} {label}（保留原檔）"
+            if is_deleted
+            else f"指派至 {mapped} {label}"
         )
+        steps.append(ConsolidationStep(action, str(src_path), str(target_path), note))
     return steps, assigned
+
+
+def plan_restores(
+    config: AppConfig, request: ConsolidationRequest, code_to_dir: dict[str, Path]
+) -> list[ConsolidationStep]:
+    """Plan explicit `--restore PATH=CODE:ROLE[/SUB]` non-destructive copy steps from `deleted/`.
+
+    Args:
+        config: Application configuration.
+        request: Consolidation request payload carrying `restores`.
+        code_to_dir: Post-rename course code -> `study_dir` lookup.
+
+    Returns:
+        List of `copy` `ConsolidationStep` entries.
+    """
+    steps: list[ConsolidationStep] = []
+    for src_raw, raw_code, role, subfolder in request.restores:
+        src_path = resolve_under(config.data_dir, src_raw)
+        mapped, dest_dir, label = _target_for_spec(config, request, code_to_dir, (raw_code, role, subfolder))
+        target_path = (dest_dir / src_path.name) if src_path.is_file() else dest_dir
+        note = f"從 deleted 複製還原至 {mapped} {label}（保留原檔）"
+        steps.append(ConsolidationStep("copy", str(src_path), str(target_path), note))
+    return steps
 
 
 def _match_notes_course(

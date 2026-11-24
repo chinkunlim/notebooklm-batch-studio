@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,7 +17,7 @@ from notebooklm_batch_studio.domain.course_identity import parse_course_folder
 
 logger = logging.getLogger(__name__)
 
-ActionType = Literal["move", "merge", "rename_code", "rename_folder", "import_notes", "inventory"]
+ActionType = Literal["move", "copy", "merge", "rename_code", "rename_folder", "import_notes", "inventory"]
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,7 @@ class ConsolidationRequest:
     code_maps: dict[str, str] = field(default_factory=dict)
     folder_maps: dict[str, str] = field(default_factory=dict)
     assignments: list[tuple[str, str, CategoryRole, str]] = field(default_factory=list)
+    restores: list[tuple[str, str, CategoryRole, str]] = field(default_factory=list)
     note_course_maps: dict[str, str] = field(default_factory=dict)
 
 
@@ -77,6 +79,33 @@ def unique_dest_path(dst: Path) -> Path:
         idx += 1
 
 
+def _transfer_dir_non_overwriting(
+    src_dir: Path, dst_dir: Path, transfer_fn: Callable[[str, str], object]
+) -> list[tuple[str, str]]:
+    """Move or copy non-hidden files from `src_dir` into `dst_dir` without overwriting.
+
+    Args:
+        src_dir: Source directory path.
+        dst_dir: Destination directory path.
+        transfer_fn: File transfer function taking `(src_str, dst_str)` (`shutil.move` or `shutil.copy2`).
+
+    Returns:
+        List of `(old_relative_str, new_relative_str)` pairs for every transferred file.
+    """
+    if not src_dir.is_dir():
+        return []
+    transferred: list[tuple[str, str]] = []
+    for src_file in sorted(src_dir.rglob("*")):
+        if not src_file.is_file() or src_file.is_symlink() or src_file.name.startswith("."):
+            continue
+        rel = src_file.relative_to(src_dir)
+        target = unique_dest_path(dst_dir / rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        transfer_fn(str(src_file), str(target))
+        transferred.append((str(rel), str(target.relative_to(dst_dir))))
+    return transferred
+
+
 def merge_directory_non_overwriting(src_dir: Path, dst_dir: Path) -> list[tuple[str, str]]:
     """Move non-hidden files from `src_dir` into `dst_dir` without overwriting or deleting empty dirs.
 
@@ -87,17 +116,7 @@ def merge_directory_non_overwriting(src_dir: Path, dst_dir: Path) -> list[tuple[
     Returns:
         List of `(old_relative_str, new_relative_str)` pairs for every moved file.
     """
-    if not src_dir.is_dir():
-        return []
-    moved: list[tuple[str, str]] = []
-    for src_file in sorted(src_dir.rglob("*")):
-        if not src_file.is_file() or src_file.is_symlink() or src_file.name.startswith("."):
-            continue
-        rel = src_file.relative_to(src_dir)
-        target = unique_dest_path(dst_dir / rel)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(src_file), str(target))
-        moved.append((str(rel), str(target.relative_to(dst_dir))))
+    moved = _transfer_dir_non_overwriting(src_dir, dst_dir, shutil.move)
     logger.info("Merged %d files from %s into %s", len(moved), src_dir, dst_dir)
     return moved
 
@@ -423,22 +442,47 @@ def apply_merge_step(repo: Any, source: str, target: str) -> None:
     repo.commit()
 
 
+def _apply_transfer_step(
+    source: str, target: str, transfer_fn: Callable[[str, str], object], label: str
+) -> None:
+    """Move or copy a file or directory cleanly into `target` without overwriting existing files.
+
+    Args:
+        source: Source file or folder path string.
+        target: Destination file or directory path string.
+        transfer_fn: `shutil.move` or `shutil.copy2`.
+        label: Chinese verb used in error messages (`搬移` or `複製`).
+
+    Raises:
+        FileNotFoundError: When `source` does not exist.
+    """
+    src, dst = Path(source), Path(target)
+    if src.is_dir():
+        _transfer_dir_non_overwriting(src, dst, transfer_fn)
+        return
+    if not src.is_file():
+        raise FileNotFoundError(f"找不到要{label}的檔案：{src}")
+    candidate = (dst / src.name) if dst.is_dir() else dst
+    final_dst = unique_dest_path(candidate)
+    final_dst.parent.mkdir(parents=True, exist_ok=True)
+    transfer_fn(str(src), str(final_dst))
+
+
 def apply_move_step(source: str, target: str) -> None:
     """Move a file or directory cleanly into `target` without overwriting existing files.
 
     Args:
         source: Source file or folder path string.
         target: Destination file or directory path string.
-
-    Raises:
-        FileNotFoundError: When `source` file does not exist.
     """
-    src, dst = Path(source), Path(target)
-    if src.is_dir():
-        merge_directory_non_overwriting(src, dst)
-        return
-    if not src.is_file():
-        raise FileNotFoundError(f"找不到要搬移的檔案：{src}")
-    final_dst = unique_dest_path(dst)
-    final_dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(src), str(final_dst))
+    _apply_transfer_step(source, target, shutil.move, "搬移")
+
+
+def apply_copy_step(source: str, target: str) -> None:
+    """Copy a file or directory cleanly into `target` without overwriting or deleting source files.
+
+    Args:
+        source: Source file or folder path string (e.g. inside `deleted/`).
+        target: Destination file or directory path string.
+    """
+    _apply_transfer_step(source, target, shutil.copy2, "複製")

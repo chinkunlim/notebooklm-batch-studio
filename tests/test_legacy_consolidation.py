@@ -408,6 +408,80 @@ class LegacyConsolidationTests(unittest.TestCase):
             self.assertEqual(rc_apply, 0)
             self.assertTrue((self.cfg.study_root_dir / "115-1" / "CP__31000-生涯諮商與實務").is_dir())
 
+    def test_restore_from_deleted_copies_without_removing_source_and_suffixes_collisions(
+        self,
+    ) -> None:
+        """Deleted restores and --assign from deleted/ copy files safely with suffixing."""
+        restore_src = self.deleted_sample / "115-1" / "01_Intro"
+        restore_src.mkdir(parents=True, exist_ok=True)
+        (restore_src / "study_guide.md").write_text("# Restored Intro", encoding="utf-8")
+        (restore_src / "audio.m4a").write_bytes(b"M4A")
+        existing_guide = self.research_dir / "03 Notes" / "NotebookLM" / "01_Intro" / "study_guide.md"
+        existing_guide.parent.mkdir(parents=True, exist_ok=True)
+        existing_guide.write_text("# Existing Intro", encoding="utf-8")
+
+        deleted_pdf_src = self.deleted_sample / "extra.pdf"
+        deleted_pdf_src.write_bytes(b"%PDF-deleted-extra")
+
+        req = ConsolidationRequest(
+            folder_maps={
+                "115-1/GC__68210-和 AI 一起寫程式": "GC__68210-和 AI 一起寫程式",
+            },
+            assignments=[
+                ("midterm-submission", "115-1_GC68210", CategoryRole.ASSIGNMENTS, "期中專題"),
+                ("deleted/115-1-20261112-182701/extra.pdf", "115-1_CP30210", CategoryRole.MATERIALS, ""),
+            ],
+            restores=[
+                (
+                    "deleted/115-1-20261112-182701/115-1/01_Intro",
+                    "115-1_CP30210",
+                    CategoryRole.NOTES,
+                    "NotebookLM/01_Intro",
+                ),
+            ],
+        )
+        with self.session_factory() as session:
+            steps = plan_consolidation(self.cfg, req, repo=ConsolidationRepository(session))
+            self.assertFalse(any(s.action == "rename_folder" for s in steps), steps)
+            copy_steps = [s for s in steps if s.action == "copy"]
+            self.assertEqual(len(copy_steps), 2, steps)
+            summary = apply_consolidation(self.cfg, steps, deps=self._deps(session))
+
+        self.assertGreaterEqual(summary.get("copy", 0), 2)
+        # Sources inside deleted/ stay completely intact
+        self.assertTrue((restore_src / "study_guide.md").is_file())
+        self.assertTrue((restore_src / "audio.m4a").is_file())
+        self.assertTrue(deleted_pdf_src.is_file())
+        # Destinations get non-overwriting suffixed copies + unregistered target course dir received midterm
+        self.assertEqual(existing_guide.read_text(encoding="utf-8"), "# Existing Intro")
+        self.assertEqual(
+            (existing_guide.parent / "study_guide_1.md").read_text(encoding="utf-8"), "# Restored Intro"
+        )
+        self.assertTrue((existing_guide.parent / "audio.m4a").is_file())
+        self.assertTrue((self.research_dir / "01 Materials" / "extra.pdf").is_file())
+        self.assertTrue(
+            (
+                self.cfg.study_root_dir
+                / "115-1"
+                / "GC__68210-和 AI 一起寫程式"
+                / "05 Assignments"
+                / "期中專題"
+                / "report.pdf"
+            ).is_file()
+        )
+        from notebooklm_batch_studio.entrypoints.cli import main
+
+        with mock.patch("notebooklm_batch_studio.entrypoints.cli.load_config", return_value=self.cfg):
+            rc = main(
+                [
+                    "consolidate",
+                    "--dry-run",
+                    "--restore",
+                    "deleted/115-1-20261112-182701/115-1/01_Intro=115-1_CP30210:NOTES/NotebookLM/01_Intro",
+                ]
+            )
+            self.assertEqual(rc, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

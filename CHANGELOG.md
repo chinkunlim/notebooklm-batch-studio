@@ -90,6 +90,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(study): HTTP/MCP/web for study library, filing, lifecycle, learning record (by `@antigravity`)
 - feat(system): sign-in status overview for NotebookLM, Gemini web and library (by `@antigravity`)
 - feat(cli): dry-run-first consolidation of legacy data into the study tree (by `@antigravity`)
+- feat(cli): support non-destructive copy restore from deleted/ in consolidate (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

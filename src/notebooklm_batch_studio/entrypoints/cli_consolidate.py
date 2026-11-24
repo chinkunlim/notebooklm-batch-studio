@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+from typing import Any
 
 from notebooklm_batch_studio.adapters.db.consolidation_repo import ConsolidationRepository
 from notebooklm_batch_studio.adapters.db.course_identity_repo import CourseIdentityRepository
@@ -51,6 +52,13 @@ def add_consolidate_subparser(
         action="append",
         default=[],
         help="散落路徑指派 PATH=CODE:ROLE[/SUB]",
+    )
+    p.add_argument(
+        "--restore",
+        dest="restores",
+        action="append",
+        default=[],
+        help="從 deleted 複製還原 PATH=CODE:ROLE[/SUB]",
     )
     p.add_argument(
         "--note-map", dest="note_maps", action="append", default=[], help="NoteStudio 對照 SRC=CODE"
@@ -122,6 +130,32 @@ def _print_plan_table(steps: list[ConsolidationStep]) -> None:
         print(f"{step.action:<14} | {step.source:<44} | {step.target:<44} | {step.note}")
 
 
+def _run_apply_mode(
+    config: AppConfig, session: Any, repo: ConsolidationRepository, steps: list[ConsolidationStep]
+) -> None:
+    """Execute mutating consolidation steps and save an audit report inside `DATA_DIR/diagnostics/`.
+
+    Args:
+        config: Loaded application configuration.
+        session: Active SQLAlchemy session.
+        repo: Bound `ConsolidationRepository`.
+        steps: Planned steps to execute.
+    """
+    lifecycle = CourseLifecycleService(
+        CourseRepository(session), QueueRepository(session), CourseIdentityRepository(session), config
+    )
+    deps = ConsolidationDeps(
+        repo=repo,
+        lifecycle=lifecycle,
+        check_server_idle=lambda: port_is_free(config.http_host, config.http_port),
+        acquire_lock=lambda: RunLock(config.consolidate_lock_path),
+        is_literature_locked=lambda: is_flock_held(config.literature_job_lock_path),
+    )
+    summary = apply_consolidation(config, steps, deps=deps)
+    report = save_consolidation_report(config, steps, applied=True, summary=summary)
+    print(f"✅ 整併執行完成：{summary}｜稽核報告：{report}")
+
+
 def handle_consolidate_cli(config: AppConfig, args: argparse.Namespace) -> int:
     """Execute `notebooklm-batch-studio consolidate` in dry-run (default) or `--apply` mode.
 
@@ -136,6 +170,7 @@ def handle_consolidate_cli(config: AppConfig, args: argparse.Namespace) -> int:
         code_maps=_parse_kv(args.code_maps, "--map"),
         folder_maps=_parse_kv(args.folder_maps, "--folder"),
         assignments=_parse_assignments(args.assignments),
+        restores=_parse_assignments(args.restores),
         note_course_maps=_parse_kv(args.note_maps, "--note-map"),
     )
     engine = create_db_engine(config.database_url)
@@ -148,17 +183,5 @@ def handle_consolidate_cli(config: AppConfig, args: argparse.Namespace) -> int:
                 report = save_consolidation_report(config, steps, applied=False)
                 print(f"📝 Dry-run 計畫已存檔：{report}")
             return 0
-        lifecycle = CourseLifecycleService(
-            CourseRepository(session), QueueRepository(session), CourseIdentityRepository(session), config
-        )
-        deps = ConsolidationDeps(
-            repo=repo,
-            lifecycle=lifecycle,
-            check_server_idle=lambda: port_is_free(config.http_host, config.http_port),
-            acquire_lock=lambda: RunLock(config.consolidate_lock_path),
-            is_literature_locked=lambda: is_flock_held(config.literature_job_lock_path),
-        )
-        summary = apply_consolidation(config, steps, deps=deps)
-        report = save_consolidation_report(config, steps, applied=True, summary=summary)
-        print(f"✅ 整併執行完成：{summary}｜稽核報告：{report}")
+        _run_apply_mode(config, session, repo, steps)
         return 0
