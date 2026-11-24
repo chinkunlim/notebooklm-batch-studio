@@ -87,6 +87,7 @@ class AppConfig:
             legacy `USER_PASSWORD`); hidden from repr. Refs: ADR-013
         openathens_domain: OpenAthens organisation domain; empty uses plain DOI links.
         ebsco_profile: Library EBSCO Discovery profile id; empty skips EBSCO.
+        chrome_path: Google Chrome executable path (`CHROME_PATH`). Refs: ISSUE-053
     """
 
     app_env: str = "development"
@@ -109,7 +110,7 @@ class AppConfig:
     library_password: str = field(default="", repr=False)
     openathens_domain: str = ""
     ebsco_profile: str = ""
-    chrome_path: str = ""
+    chrome_path: str = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     playwright_startup_timeout_seconds: int = 60
     gemini_outline_timeout_seconds: int = 900
 
@@ -301,7 +302,7 @@ def _literature_settings() -> dict[str, Any]:
         "library_password": _env("LIBRARY_PASSWORD") or _env("USER_PASSWORD"),
         "openathens_domain": _env("OPENATHENS_DOMAIN"),
         "ebsco_profile": _env("EBSCO_PROFILE"),
-        "chrome_path": _env("CHROME_PATH"),
+        "chrome_path": _env("CHROME_PATH", AppConfig.chrome_path),
         "playwright_startup_timeout_seconds": int(_env("PLAYWRIGHT_STARTUP_TIMEOUT_SECONDS", "60")),
         "gemini_outline_timeout_seconds": int(_env("GEMINI_OUTLINE_TIMEOUT_SECONDS", "900")),
     }

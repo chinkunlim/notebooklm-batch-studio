@@ -19,10 +19,12 @@ from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
 from notebooklm_batch_studio.adapters.note_driver_factory import (
+    build_gemini_auth_service,
     build_note_driver_factory,
     build_note_upload_fn,
 )
 from notebooklm_batch_studio.config.settings import AppConfig
+from notebooklm_batch_studio.entrypoints.mcp_gemini_auth import register_gemini_auth_tools
 from notebooklm_batch_studio.entrypoints.mcp_literature import LiteratureToolDeps, register_literature_tools
 from notebooklm_batch_studio.entrypoints.mcp_literature_notebook import register_literature_notebook_tools
 from notebooklm_batch_studio.entrypoints.mcp_notes import register_note_pipeline_tools
@@ -135,4 +137,6 @@ def register_literature_and_note_tools(mcp: MCPServer, cfg: AppConfig, resolved:
         register_literature_notebook_tools(mcp, deps)
     notes = _note_service(cfg, session_factory, resolved.get("notes"))
     register_note_pipeline_tools(mcp, notes, upload_fn=build_note_upload_fn(cfg))
-    logger.debug("Registered literature and note pipeline MCP tools")
+    gemini_auth = resolved.get("gemini_auth") or build_gemini_auth_service(cfg)
+    register_gemini_auth_tools(mcp, gemini_auth)
+    logger.debug("Registered literature, note pipeline, and Gemini auth MCP tools")

@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-24 05:48 UTC`
+- **最後更新時間**: `2026-11-24 08:02 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `5c999f2 test: port source-project tests, fix quiz key and notes lecture form, audit records (TASK-029, ISSUE-052, ISSUE-053, ISSUE-054, ISSUE-055, ISSUE-056) [agent:claude-code]`
+- **最新 Git Commit**: `9738caf fix(security,mcp): close path-safety, HTTP 400, XSS, and MCP confirm gaps (TASK-030, ISSUE-045, ISSUE-046, ISSUE-048) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-24 08:02 UTC] 完成任務 `TASK-031` — Resolve ISSUE-053: port Gemini Web auth service and 3-entrypoint login (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Ported GeminiAuthService, ChromeGeminiLoginRuntime, HTTP/MCP/Web login entrypoints, and test_gemini_auth.py; updated browser_session.py error guidance (ISSUE-053)
+
+### [2026-11-24 07:58 UTC] 建立任務 `TASK-031`: Resolve ISSUE-053: port Gemini Web auth service and 3-entrypoint login (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-24 05:48 UTC] 完成任務 `TASK-030` — Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -109,11 +117,3 @@
 ### [2026-11-14 09:41 UTC] 完成任務 `TASK-024` — SPEC-011: Gemini Notebook exploration Q&A, notes repo, and tag system (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Implemented SPEC-011: exploratory QA drawer (Cmd+J), multi-turn NotebookLM synthesis, 4-dimension hierarchical Obsidian tags, quiz explanation collector, full QA notes studio tab with cross-course search, and single/bundled PDF push back to Gemini sources.
-
-### [2026-11-14 09:27 UTC] 建立任務 `TASK-024`: SPEC-011: Gemini Notebook exploration Q&A, notes repo, and tag system (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-11-14 07:47 UTC] 完成任務 `TASK-023` — Add notebook source listing, upload, and deletion management (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Added Gemini Notebook source listing, PDF/lecture upload, and source deletion across HTTP, MCP, Web UI, and demo

@@ -448,6 +448,9 @@
         <div class="subbar">
           <div><h1 class="h1">結構化筆記生成 (Phase 1)</h1><p class="muted small">獨立 .md 提示詞 · 雙後端支援（Gemini 網頁版為主、Gemini Notebook 備用）· 輸出保留完整語意 Tag 的單章 .md</p></div>
           <div class="row" style="flex-wrap:wrap">
+            <span id="ngGeminiAuthBadge" class="small muted" aria-live="polite">Gemini 網頁版：檢查中…</span>
+            <button class="btn btn-soft" id="btnGeminiLogin" onclick="startGeminiWebLogin()">啟動 Gemini 登入視窗</button>
+            <button class="btn btn-ghost btn-sm" id="btnGeminiLogout" onclick="logoutGeminiWeb()">登出 Gemini</button>
             <button class="btn btn-primary" id="btnNoteGenStart" onclick="startNoteChapterGeneration()">生成章節 .md</button>
             <button class="btn btn-soft" id="btnNoteGenPause" onclick="pauseNoteGeneration()">暫停</button>
             <button class="btn btn-soft" id="btnNoteGenRefresh" onclick="refreshNoteGenStatus()">重新整理</button>

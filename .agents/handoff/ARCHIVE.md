@@ -297,3 +297,11 @@
 ### [2026-11-14 07:39 UTC] 建立任務 `TASK-023`: Add notebook source listing, upload, and deletion management (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-14 07:47 UTC] 完成任務 `TASK-023` — Add notebook source listing, upload, and deletion management (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Added Gemini Notebook source listing, PDF/lecture upload, and source deletion across HTTP, MCP, Web UI, and demo
+
+### [2026-11-14 09:27 UTC] 建立任務 `TASK-024`: SPEC-011: Gemini Notebook exploration Q&A, notes repo, and tag system (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

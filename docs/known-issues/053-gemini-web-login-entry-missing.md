@@ -1,9 +1,9 @@
 # ISSUE-053：gemini_web 筆記後端沒有登入入口
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
-- **Agent**：`claude-code`
-- **任務**：`TASK-029`
+- **Agent**：`antigravity`
+- **任務**：`TASK-029`（發現）、`TASK-031`（修復）
 
 ## 1. 現象
 
@@ -19,8 +19,15 @@ note-studio 預設後端 gemini_web 使用 DATA_DIR/state/gemini_profile 的 Chr
 
 ## 3. 修正或規避方式
 
-待辦（交由 Antigravity）：移植 note-studio 的 gemini_auth_service、登入狀態檢查與啟動登入視窗的 HTTP 路由、MCP 工具、網頁按鈕與測試；修改 browser_session.py 的錯誤訊息指向實際入口。目前可改用 backend=notebooklm。（相關程式碼註解加 `Refs: ISSUE-053`）
+已於 `TASK-031` 移植並符合單向分層與安全權限規範：
+- 服務層：`services/notes/gemini_auth_service.py`（`GeminiAuthService`、`GeminiLoginRuntimeProtocol`，設定檔 `0o700`）。
+- 適配器層：`adapters/gemini/auth_runtime.py`（`ChromeGeminiLoginRuntime`，真實 Chrome 登入、CDP 儲存 `storage_state.json` 權限 `0o600`），並於 `config/settings.py` 設定 Mac 預設 Chrome 路徑。
+- 三端入口：
+  - HTTP：`entrypoints/http/gemini_auth.py`（`GET /api/notes/gemini/auth-status`、`POST /api/notes/gemini/login`、`POST /api/notes/gemini/logout`、`POST /api/notes/gemini/retention`）。
+  - MCP：`entrypoints/mcp_gemini_auth.py`（`notes_gemini_auth_status`、`notes_gemini_login`、`notes_gemini_logout`、`notes_set_gemini_retention`，變更操作皆強制 `confirm=True`）。
+  - Web UI：`entrypoints/static/index.html`（`#btnGeminiLogin`「啟動 Gemini 登入視窗」、`#btnGeminiLogout`、`#ngGeminiAuthBadge`）與 `studio-notes-gen.js`。
+- 更正 `adapters/gemini/browser_session.py` 未登入錯誤訊息，指向「筆記生成」頁按鈕、`POST /api/notes/gemini/login` 與 MCP 工具 `notes_gemini_login`。
 
 ## 4. 防回歸
 
-移植後補 tests/gemini/test_gemini_auth.py。
+`tests/gemini/test_gemini_auth.py`（17 項單元與 HTTP/MCP/UI 整合測試）。

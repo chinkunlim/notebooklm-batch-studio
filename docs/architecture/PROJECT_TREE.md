@@ -66,7 +66,8 @@ notebooklm-batch-studio/
 │   │   │   ├── scripts/
 │   │   │   │   └── tdd_runner.py
 │   │   │   └── SKILL.md
-│   │   └── catalog.json                    # [Skills 目錄] 各 skill 的分層 (core/stack/optional)、觸發時機與指令
+│   │   ├── catalog.json                    # [Skills 目錄] 各 skill 的分層 (core/stack/optional)、觸發時機與指令
+│   │   └── catalog.json.template
 │   ├── tasks/                              # [任務卡] 建立、接手、交接、完成 (agentctl task)
 │   │   ├── TASK-001-phase-1a-notebooklm-technical-sp.json
 │   │   ├── TASK-002-phase-1b-domain-parallel-queue.json
@@ -97,7 +98,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-027-integrate-note-studio-phase-2-st.json
 │   │   ├── TASK-028-security-hardening-and-code-revi.json
 │   │   ├── TASK-029-records-audit-port-source-projec.json
-│   │   └── TASK-030-close-security-hardening-http-40.json
+│   │   ├── TASK-030-close-security-hardening-http-40.json
+│   │   └── TASK-031-resolve-issue-053-port-gemini-we.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -272,9 +274,11 @@ notebooklm-batch-studio/
 │   │   │   └── install_and_update.md
 │   │   ├── testing/
 │   │   │   ├── empirical_evidence.md
+│   │   │   ├── sdd_bdd_tdd.md
 │   │   │   └── virtual_testing.md
 │   │   ├── web/
 │   │   │   ├── fastapi_mcp.md
+│   │   │   ├── modern_web_guidance.md
 │   │   │   └── taste_design.md
 │   │   ├── ARCHITECTURE_RULES.md           # 分層依賴與系統架構守則
 │   │   ├── CODING_PRINCIPLES.md            # 註解規範、Karpathy 原則、SOLID、DRY、Atomic
@@ -287,7 +291,8 @@ notebooklm-batch-studio/
 │   │   └── TESTING_AND_QUALITY.md          # 測試金字塔與 DoD 驗收清單
 │   ├── superpowers/
 │   │   └── plans/
-│   │       └── 2026-11-14-notebook-qa-notes-and-tag-system.md
+│   │       ├── 2026-11-14-notebook-qa-notes-and-tag-system.md
+│   │       └── 2026-11-24-study-library-and-learning-record.md
 │   └── TEMPLATE_FEEDBACK.md
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
 │   ├── demo/
@@ -321,6 +326,7 @@ notebooklm-batch-studio/
 │       │   │   └── google_fonts.py
 │       │   ├── gemini/
 │       │   │   ├── __init__.py
+│       │   │   ├── auth_runtime.py
 │       │   │   ├── browser_session.py
 │       │   │   ├── chat_actions.py
 │       │   │   ├── chrome_session.py
@@ -393,6 +399,7 @@ notebooklm-batch-studio/
 │       │   │   ├── artifacts.py
 │       │   │   ├── courses.py
 │       │   │   ├── fonts.py
+│       │   │   ├── gemini_auth.py
 │       │   │   ├── learning.py
 │       │   │   ├── literature.py
 │       │   │   ├── literature_files.py
@@ -695,6 +702,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_course_settings.py
 │       │   ├── mcp_extensions.py
 │       │   ├── mcp_fonts.py
+│       │   ├── mcp_gemini_auth.py
 │       │   ├── mcp_job_prompts.py
 │       │   ├── mcp_learning.py
 │       │   ├── mcp_literature.py
@@ -735,6 +743,7 @@ notebooklm-batch-studio/
 │       │   ├── notes/
 │       │   │   ├── __init__.py
 │       │   │   ├── chapter_normalizer.py
+│       │   │   ├── gemini_auth_service.py
 │       │   │   ├── module_composer.py
 │       │   │   ├── module_prompts.py
 │       │   │   ├── note_paths.py
@@ -786,6 +795,7 @@ notebooklm-batch-studio/
 │   │   ├── test_browser_session.py
 │   │   ├── test_chrome_session.py
 │   │   ├── test_gemini_adapter.py
+│   │   ├── test_gemini_auth.py
 │   │   ├── test_gemini_copy_selector.py
 │   │   ├── test_gemini_rename_logs.py
 │   │   ├── test_gemini_response_count_baseline.py
@@ -846,6 +856,7 @@ notebooklm-batch-studio/
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取
 ├── .graphifyignore
+├── .graphifyignore.template
 ├── .mcp.json                               # [AI 工具] Claude Code 的專案 MCP 設定（uv run <名稱>-mcp）
 ├── .python-version                         # [Python 版本釘選] 供 uv / pyenv / mise 自動讀取
 ├── AGENTS.md                               # [AI 協作憲法・唯一規則來源] 所有 AI Agent 共用的開發原則與 Skills 路由

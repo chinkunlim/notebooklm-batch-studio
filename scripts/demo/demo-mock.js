@@ -475,6 +475,15 @@ function demoRoute(url, method, body) {
   }
   if (path === '/api/fonts' && method === 'GET') return demoJson({ fonts: [] });
   if (path.startsWith('/api/fonts')) return demoJson({ detail: '示範版無法下載字型；在本機版輸入 Google Fonts 名稱即可下載。' }, 400);
+  if (path === '/api/notes/gemini/auth-status') return demoJson({ logged_in: false, updated_at: '', cookie_count: 0, retention_days: 30 });
+  if (path === '/api/notes/gemini/login' || path === '/api/notes/gemini/logout') {
+    demoNote('Gemini 網頁版登入管理');
+    return demoJson({ success: false, logged_in: false, message: '示範版無法啟動本機 Chrome。' });
+  }
+  if (path === '/api/notes/prompts') return demoJson({ prompts: [{ step_id: '01_mindmap', title: '心智圖與章節架構', path: 'assets/prompts/modular_specs/01_mindmap_spec.md' }] });
+  if (path === '/api/notes/prompts/preview') return demoJson({ step_id: body.step_id || '01_mindmap', prompt: `# ${body.course_name || 'DEMO'} / ${body.chapter_id || 'ch01'}\n（示範版提示詞預覽）` });
+  if (path.startsWith('/api/notes/chapters/')) return demoJson({ chapters: [] });
+  if (path.startsWith('/api/notes/')) { demoNote('筆記生成'); return demoJson({ exists: false, chapters: {}, content: '', paused: false }); }
   return demoJson({ detail: 'not in demo' }, 404);
 }
 

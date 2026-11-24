@@ -3,7 +3,7 @@
 以一般方式啟動真正的 Google Chrome（專用 profile 在
 DATA_DIR/state/gemini_profile/chrome_user_data/），Playwright 只透過本機除錯埠接上去。
 Google 會拒絕在 Playwright 自己啟動的瀏覽器裡登入，所以登入一律在
-「Gemini 登入」流程完成（services/gemini_auth_service.py，note-studio ISSUE-039）；
+「Gemini 登入」流程完成（services/notes/gemini_auth_service.py，Refs: ISSUE-053, note-studio ISSUE-039）；
 這裡只重用已登入的 profile，不儲存密碼。
 """
 
@@ -281,8 +281,9 @@ class BrowserSessionManager:
         # Signing in here would be rejected by Google: Playwright is attached (note-studio ISSUE-039).
         self._release(browser, context, page)
         raise RuntimeError(
-            "Gemini 尚未登入（或登入已過期）。請先在設定面板按「啟動登入視窗」"
-            "（或執行 note_studio_gemini_login）完成 Google 登入，再重新執行。"
+            "Gemini 尚未登入（或登入已過期）。請先在「筆記生成」頁面按「啟動 Gemini 登入視窗」"
+            "（或呼叫 POST /api/notes/gemini/login / MCP 工具 notes_gemini_login），"
+            "完成 Google 登入後再重新執行。(Refs: ISSUE-053)"
         )
 
     def _create_browser_and_page(

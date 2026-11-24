@@ -30,6 +30,7 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
+from notebooklm_batch_studio.adapters.note_driver_factory import build_gemini_auth_service
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
 from notebooklm_batch_studio.adapters.web_search import search_web_snippets
@@ -39,6 +40,7 @@ from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.entrypoints.http.artifacts import artifacts_router
 from notebooklm_batch_studio.entrypoints.http.courses import courses_router
 from notebooklm_batch_studio.entrypoints.http.fonts import fonts_router
+from notebooklm_batch_studio.entrypoints.http.gemini_auth import gemini_auth_router
 from notebooklm_batch_studio.entrypoints.http.learning import learning_router
 from notebooklm_batch_studio.entrypoints.http.literature import literature_router
 from notebooklm_batch_studio.entrypoints.http.literature_files import literature_files_router
@@ -343,6 +345,7 @@ def _configure_app_state(
             )
 
     app.state.literature_jobs = LiteratureJobRunner(_lit_scope)
+    app.state.gemini_auth = build_gemini_auth_service(cfg)
     app.state.config = cfg
 
 
@@ -363,6 +366,7 @@ _API_ROUTERS = (
     literature_files_router,
     literature_notebook_router,
     notes_router,
+    gemini_auth_router,
 )
 
 
@@ -393,6 +397,7 @@ def _register_routes_and_middlewares(app: FastAPI, cfg: AppConfig) -> None:
         qa_notes=app.state.qa_notes,
         fonts=app.state.fonts,
         literature_jobs=app.state.literature_jobs,
+        gemini_auth=app.state.gemini_auth,
         session_factory=app.state.session_factory,
     )
     app.mount("/mcp", mcp_server.streamable_http_app())

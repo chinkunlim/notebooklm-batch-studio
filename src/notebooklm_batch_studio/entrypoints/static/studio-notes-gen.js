@@ -26,6 +26,68 @@ async function initNoteGenPanel() {
     console.error('Failed to load note prompt specs:', err);
   }
   await loadNoteGenCourses();
+  await refreshGeminiAuthStatus();
+}
+
+/**
+ * Refresh the Gemini Web authentication badge state (`#ngGeminiAuthBadge`).
+ * @param {boolean} [liveCheck=false] Perform a live probe against gemini.google.com.
+ * @returns {Promise<void>}
+ */
+async function refreshGeminiAuthStatus(liveCheck = false) {
+  const badge = document.getElementById('ngGeminiAuthBadge');
+  if (!badge) return;
+  try {
+    const res = await fetch(`/api/notes/gemini/auth-status?live_check=${liveCheck ? 'true' : 'false'}`);
+    const data = await res.json();
+    badge.textContent = data.logged_in
+      ? `Gemini 網頁版：已登入 (${data.cookie_count || 0} cookies)`
+      : 'Gemini 網頁版：未登入';
+  } catch (err) {
+    console.error('Failed to check Gemini Web auth status:', err);
+    badge.textContent = 'Gemini 網頁版：狀態未知';
+  }
+}
+
+/**
+ * Open a real Google Chrome window to sign in to Gemini Web (`gemini_web` backend).
+ * @returns {Promise<void>}
+ */
+async function startGeminiWebLogin() {
+  const banner = document.getElementById('ngStatusBanner');
+  if (banner) banner.textContent = '已啟動真實 Chrome 登入視窗，請在跳出的視窗完成 Google 登入…';
+  try {
+    const res = await fetch('/api/notes/gemini/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timeout_seconds: 300 }),
+    });
+    const data = await res.json();
+    if (banner) banner.textContent = data.message || (data.logged_in ? 'Gemini 登入成功。' : '未完成登入。');
+    await refreshGeminiAuthStatus(false);
+  } catch (err) {
+    if (banner) banner.textContent = `啟動登入視窗失敗：${err.message}`;
+  }
+}
+
+/**
+ * Clear persisted local Gemini Web Chrome session credentials.
+ * @returns {Promise<void>}
+ */
+async function logoutGeminiWeb() {
+  const banner = document.getElementById('ngStatusBanner');
+  try {
+    const res = await fetch('/api/notes/gemini/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true }),
+    });
+    const data = await res.json();
+    if (banner) banner.textContent = data.message || '已更新 Gemini 會話狀態。';
+    await refreshGeminiAuthStatus(false);
+  } catch (err) {
+    if (banner) banner.textContent = `登出失敗：${err.message}`;
+  }
 }
 
 /**

@@ -7,6 +7,7 @@ import logging
 from contextlib import contextmanager
 from typing import Any, Callable, Generator
 
+from notebooklm_batch_studio.adapters.gemini.auth_runtime import ChromeGeminiLoginRuntime
 from notebooklm_batch_studio.adapters.gemini.browser_session import (
     BrowserSessionManager,
     DriverOptions,
@@ -15,6 +16,7 @@ from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.notebooklm.note_driver import NotebookLMNoteDriver
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.note_pipeline import DriverUnavailableError, NoteBackend
+from notebooklm_batch_studio.services.notes.gemini_auth_service import GeminiAuthService
 
 logger = logging.getLogger(__name__)
 
@@ -82,3 +84,17 @@ def build_note_upload_fn(cfg: AppConfig) -> Callable[[str, str], str]:
         return str(asyncio.run(adapter.upload_source(notebook_id, pdf_path)))
 
     return _upload
+
+
+def build_gemini_auth_service(cfg: AppConfig) -> GeminiAuthService:
+    """Create `GeminiAuthService` wired with the real-Chrome login runtime (Refs: ISSUE-053).
+
+    Args:
+        cfg: Application configuration.
+
+    Returns:
+        Configured `GeminiAuthService` instance.
+    """
+    profile_dir = cfg.data_dir / "state" / "gemini_profile"
+    runtime = ChromeGeminiLoginRuntime(profile_dir=profile_dir, chrome_path=cfg.chrome_path)
+    return GeminiAuthService(data_dir=cfg.data_dir, chrome_path=cfg.chrome_path, login_runtime=runtime)
