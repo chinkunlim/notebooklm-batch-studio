@@ -1,6 +1,6 @@
 # ADR-011：整合 literature-fetch 與統一學習目錄結構 (<學年>-<學期>/<科目>/<分類>)
 
-- **狀態**：Accepted
+- **狀態**：Accepted（部分由 ADR-014 修訂）
 - **日期**：2026-11-22
 - **Agent**：`antigravity`
 - **任務**：`TASK-025`

@@ -15,7 +15,7 @@
 - 📅 **學生研讀計畫**（SPEC-007）：動態規劃今日研讀「Today」清單、考前倒數天數、AI 詳解自動快取與間隔複習排程。
 - ⚙️ **產出細部自訂**（SPEC-006）：支援個別產出覆寫題目數、難度、語言、圖表風格與投影片格式（PDF/PPTX），三層設定自動繼承。
 - 🎨 **研讀工作室與外觀自訂**（SPEC-009 / ADR-008 / ADR-009）：黑膠擬態與多視覺唱盤（支持迷你浮動與曲線飛行動畫）、雙欄研讀可於右側原地切換「課程目錄 / 研讀工具」、工作台統一檢視 9 大產出物、側欄分頁與獨立「設計與自訂」分頁、雙軌 RWD 及資料庫持久化介面偏好與離線字型。
-- 📖 **學術文獻收集與 Gemini 文獻總庫**（SPEC-012 / ADR-011）：完整整合 `literature-fetch`，支援 APA/DOI/自由文字核對（Crossref / OpenAlex / OpenLibrary / 華藝）、OA / EBSCO / OpenAthens 授權下載、人工驗證模式、`scratch/literature/` 暫存與統一學習目錄（`<term>/<subject>/01 Material..05 Assignments`）歸檔、PDF.js 內嵌預覽、Excel 式多欄排序篩選、APA 7 清單匯出，以及自動同步至 Gemini `Literature Library` 跨文獻問答與 7 段式 Literature Review 生成（含配額等待自動續傳）。
+- 📖 **學術文獻收集與 Gemini 文獻總庫**（SPEC-012 / ADR-011 / ADR-014）：完整整合 `literature-fetch`，支援 APA/DOI/自由文字核對（Crossref / OpenAlex / OpenLibrary / 華藝）、OA / EBSCO / OpenAthens 授權下載、人工驗證模式、`scratch/literature/` 暫存與統一學習目錄（`study/<學期>/<課程>/01 Materials..05 Assignments`）歸檔、PDF.js 內嵌預覽、Excel 式多欄排序篩選、APA 7 清單匯出，以及自動同步至 Gemini `Literature Library` 跨文獻問答與 7 段式 Literature Review 生成（含配額等待自動續傳）。
 - 📝 **note-studio 模組化學習筆記**（SPEC-013 / ADR-012）：7 個可自行修改的模組提示詞（心智圖、詳細大綱、QEC、康乃爾、比較矩陣、費曼、複習題），以 Gemini 網頁版為主（內建三端 Chrome CDP 登入／登出入口，ISSUE-053）、Gemini Notebook 為備用，生成並縫合成每章一份保留語意標記的 `.md`，存到 `<study_dir>/03 Notes/NoteStudio/`；可推回筆記本來源、匯入舊 note-studio 筆記。
 - 🛡️ **本機安全模型**（ADR-013）：講義、文獻與 AI 回覆一律當資料處理（HTML 跳脫、連結白名單、CSP），全庫 57 支變更類 MCP 工具於 `confirm=False` 時統一回傳 `{"confirmed": false, "warning": ...}`，路徑只能落在 `DATA_DIR` / 學習資料夾內，文獻背景工作由 `RunLock` 跨程序鎖保護（ISSUE-057），瀏覽器設定檔權限 700 / 憑證 600。
 - 🌐 **三大操作入口**：完整 CLI 指令集（含 `literature` 與 `migrate-study-layout`）、FastAPI 本機儀表板（`127.0.0.1:8768`），以及供 Claude Code、Antigravity、Open WebUI 呼叫的 MCP 伺服器集群與 OpenAPI 路由。
@@ -49,11 +49,16 @@ OPENATHENS_DOMAIN=
 EBSCO_PROFILE=
 ```
 
-4. 安裝依賴（uv sync 到專案內 `.venv/`）：
+4. 安裝依賴與初始化資料夾（`uv sync` 到專案內 `.venv/`，並建立 `study/` 與 `scratch/` 結構）：
 
 ```bash
 python3 scripts/agentctl.py setup --install
+uv run notebooklm-batch-studio init-data
 ```
+
+資料目錄結構（位於專案資料夾外的 `DATA_DIR`）：
+- `DATA_DIR/study/<學期>/<課程資料夾>/<分類>/`：唯一課程資料夾（預設分類 `01 Materials`、`02 Handouts`、`03 Notes`、`04 Homework`、`05 Assignments`，可用 `.env` 的 `STUDY_CATEGORIES` 自訂；只有 `02 Handouts` 內的 PDF 會成為講次）。
+- `DATA_DIR/scratch/<種類>/`：未歸檔與撤銷歸檔暫存區（`literature`、`notes`、`outputs`、`uploads`、`unarchived`）。
 
 5. 登入 Gemini Notebook（會開啟瀏覽器，由你親自登入 Google 帳號一次；憑證保存於 `~/.config/notebooklm-batch-studio/`，權限 600）：
 
@@ -102,7 +107,7 @@ uv run notebooklm-batch-studio resume
 
 ### 4. 目錄即時監看 (Watcher)
 
-監聽 `DATA_DIR/input/courses/` 底下所有課程資料夾（不需要也不接受路徑參數），當有新講義 PDF 存入且寫入完成時自動加入處理：
+監聽 `DATA_DIR/study/` 底下所有已登錄課程的 `02 Handouts/` 分類資料夾（含子資料夾；不需要也不接受路徑參數），當有新講義 PDF 存入且寫入完成時自動加入處理；`04 Homework/`、`01 Materials/` 與非課程資料夾不會觸發：
 
 ```bash
 uv run notebooklm-batch-studio watch
@@ -196,8 +201,8 @@ uv run python -m unittest discover -s tests -v
 - [`.agents/handoff/LATEST.md`](.agents/handoff/LATEST.md) — 即時交接看板與歷史記錄
 - [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) — 系統架構圖、五層依賴與核心流程
 - [`docs/architecture/PROJECT_TREE.md`](docs/architecture/PROJECT_TREE.md) — 完整目錄樹與檔案標記
-- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-010）
-- [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-009）
-- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-038）
+- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-014）
+- [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-014）
+- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-065）
 - [`docs/standards/PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) — 本專案特有規則（領域名詞、埠號 8768、安全禁忌）
 - [`alembic/DB.md`](alembic/DB.md) — 資料庫模型遷移與 11 張實體資料表綱要指南 (SQLite / SQLAlchemy)

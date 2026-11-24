@@ -145,9 +145,9 @@
 
 **Files:** Create `docs/specs/014-study-library-and-learning-record.md`、`docs/adr/014-course-identity-and-study-layout.md`；Modify `docs/specs/SPECS.md`、`docs/adr/011-unified-study-hierarchy-and-literature-fetch.md`（狀態加「部分由 ADR-014 修訂」）、`docs/standards/PROJECT_RULES.md` §1、§2（命名與位置改為 study／scratch）、§3（若有例外寫理由）、`README.md`（快速開始的資料夾說明、監看一節）
 
-- [ ] **Step 1:** SPEC-014（依核心規則 16 與 `docs/standards/testing/sdd_bdd_tdd.md`）：§1–§3 寫入「需求」7 條與 Global Constraints；§4 介面表取自 Task 13；§5 以 `Given / When / Then` 寫驗收情境，每個情境標出對應的測試名稱（本計畫各任務 Step 1 的測試）；§6 未決問題放 Q1–Q5。
-- [ ] **Step 2:** ADR-014：方案 A 學期＋課號（採用）／B 自訂代碼／C UUID；決策含代碼格式、分類預設與別名、講次只取 `02 Handouts`、`record-only`、`scratch/<種類>`、刪除課程改為建議封存。
-- [ ] **Step 3:** `python3 scripts/agentctl.py check` 結束碼 0；Commit `-m "docs: add SPEC-014 and ADR-014, update project rules for study library"`
+- [x] **Step 1:** SPEC-014（依核心規則 16 與 `docs/standards/testing/sdd_bdd_tdd.md`）：§1–§3 寫入「需求」7 條與 Global Constraints；§4 介面表取自 Task 13；§5 以 `Given / When / Then` 寫驗收情境，每個情境標出對應的測試名稱（本計畫各任務 Step 1 的測試）；§6 未決問題放 Q1–Q5。
+- [x] **Step 2:** ADR-014：方案 A 學期＋課號（採用）／B 自訂代碼／C UUID；決策含代碼格式、分類預設與別名、講次只取 `02 Handouts`、`record-only`、`scratch/<種類>`、刪除課程改為建議封存。
+- [x] **Step 3:** `python3 scripts/agentctl.py check` 結束碼 0；Commit `-m "docs: add SPEC-014 and ADR-014, update project rules for study library"`
 
 ### Task 2: 課程身分（domain）
 

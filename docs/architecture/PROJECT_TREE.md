@@ -171,6 +171,7 @@ notebooklm-batch-studio/
 │   │   ├── 011-unified-study-hierarchy-and-literature-fetch.md
 │   │   ├── 012-note-studio-phase1-markdown-pipeline.md
 │   │   ├── 013-local-security-model.md
+│   │   ├── 014-course-identity-and-study-layout.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -269,6 +270,7 @@ notebooklm-batch-studio/
 │   │   ├── 011-notebook-qa-notes-and-tag-system.md
 │   │   ├── 012-literature-fetch-and-study-hierarchy.md
 │   │   ├── 013-note-studio-markdown-notes.md
+│   │   ├── 014-study-library-and-learning-record.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
