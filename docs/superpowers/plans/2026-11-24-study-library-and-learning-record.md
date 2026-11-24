@@ -14,7 +14,7 @@
 
 - **計畫狀態：** Claude Code 撰寫，已對照兩次審查與你的 6 筆 commit（`3976c94`…`3e2536d`）更新；下方「盤點項目對照表」中標 ✅ 的不需再做。
 - **開工前的現況（2026-11-24 實測）：**
-  - 課程資料夾解析是錯的：`services/course_parser.py::parse_course_folder_name("CP__30000-團體諮商")` 回傳 `('CP', '30000-團體諮商')`，所有 `CP__` 課程都會拿到代碼 `CP` 而互相覆蓋。**Task 2 完成前，不要用真實的 `study/115-1/CP__…` 資料夾登錄課程**。舊函式的呼叫端：`course_parser.py:182`、`services/__init__.py:7,19`、`tests/test_course_parser.py:11-40`（Task 7 改用 `domain/course_identity.parse_course_folder`；舊函式留給 `BIO101 普通生物學`、`115-1 心理學研究法` 這類舊命名，測試要同時涵蓋兩種）。
+  - 課程資料夾解析是錯的：`services/course_parser.py::parse_course_folder_name("CP__30000-團體諮商")` 回傳 `('CP', '30000-團體諮商')`，所有 `CP__` 課程都會拿到代碼 `CP` 而互相覆蓋。**Task 7 完成前，不要用真實的 `study/115-1/CP__…` 資料夾登錄課程**（`scan_course_directory` 於 Task 7 才切換至 `domain/course_identity.parse_course_folder`）。舊函式的呼叫端：`course_parser.py:182`、`services/__init__.py:7,19`、`tests/test_course_parser.py:11-40`（Task 7 改用 `domain/course_identity.parse_course_folder`；舊函式留給 `BIO101 普通生物學`、`115-1 心理學研究法` 這類舊命名，測試要同時涵蓋兩種）。
   - 閃卡跨課程讀取仍在 `services/study_service.py:213`（Task 6）。
   - 仍存在的數量（含註解，僅供對照）：舊佈局 `courses_input_dir`／`courses_output_dir` 31 處、單數分類字面 32 處、`config` 外寫死 DATA_DIR 子路徑 22 處、`entrypoints`／`config` 外 `load_config()` 12 個檔案。
 - **超出本計畫範圍（不要順手做）：** SPEC-001 的「完成時 macOS 通知」尚未實作，另開任務；11 條「待實機」驗收由使用者處理。
