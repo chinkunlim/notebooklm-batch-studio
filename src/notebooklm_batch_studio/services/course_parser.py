@@ -10,6 +10,12 @@ from typing import Any
 
 import tomli
 
+from notebooklm_batch_studio.domain.course_identity import (
+    TERM_PATTERN,
+    make_course_code,
+    parse_course_folder,
+    split_course_code,
+)
 from notebooklm_batch_studio.domain.models import Course, Lecture, ProfileName
 from notebooklm_batch_studio.domain.study_hierarchy import parse_term_subject
 from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
@@ -124,16 +130,17 @@ def _find_candidate_pdfs(
     return candidates
 
 
-def _collect_unique_lectures(course_dir: Path) -> list[Lecture]:
+def _collect_unique_lectures(course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT) -> list[Lecture]:
     """Scan and deduplicate PDF files in a course directory.
 
     Args:
         course_dir: Directory containing lecture PDF files.
+        layout: Study category layout configuration.
 
     Returns:
         List of deduplicated Lecture domain objects.
     """
-    candidates = _find_candidate_pdfs(course_dir)
+    candidates = _find_candidate_pdfs(course_dir, layout=layout)
     lectures: list[Lecture] = []
     seen_hashes: set[str] = set()
 
@@ -160,42 +167,79 @@ def _collect_unique_lectures(course_dir: Path) -> list[Lecture]:
     return lectures
 
 
-def scan_course_directory(course_dir: Path, custom_code: str | None = None) -> Course:
-    """Scan a folder of lecture PDFs and construct a Course domain entity.
+def _resolve_course_identity(
+    course_dir: Path, custom_code: str | None, explicit_term: str
+) -> tuple[str, str, str, str, str]:
+    """Infer course code, display name, term, subject, and course_no from directory metadata.
+
+    Args:
+        course_dir: Root directory of the course.
+        custom_code: Optional explicit course code override.
+        explicit_term: Optional semester term override (e.g. '115-1').
+
+    Returns:
+        Tuple of `(code, name, term, subject, course_no)`.
+    """
+    parent_term = course_dir.parent.name.replace("_", "-")
+    resolved_term = explicit_term.strip().replace("_", "-")
+    if not resolved_term and TERM_PATTERN.match(parent_term):
+        resolved_term = parent_term
+
+    folder_info = parse_course_folder(course_dir.name)
+    if folder_info.is_course:
+        inferred_name = folder_info.name
+        course_no = folder_info.course_no
+        inferred_code = make_course_code(resolved_term, course_no) if resolved_term else course_no
+        subject = inferred_name
+    else:
+        inferred_code, inferred_name = parse_course_folder_name(course_dir.name)
+        course_no = ""
+        parsed_term, parsed_subject = parse_term_subject(course_dir.name)
+        resolved_term = resolved_term or parsed_term
+        subject = course_dir.name if TERM_PATTERN.match(parent_term) else (parsed_subject or inferred_name)
+
+    code = custom_code or inferred_code
+    split_term, split_no = split_course_code(code)
+    if split_term and not course_no:
+        course_no = split_no
+        resolved_term = resolved_term or split_term
+    return code, inferred_name, resolved_term, subject, course_no
+
+
+def scan_course_directory(
+    course_dir: Path, custom_code: str | None = None, term: str = "", layout: StudyLayout = DEFAULT_LAYOUT
+) -> Course:
+    """Scan lecture PDFs in a folder and construct a Course domain entity.
+
+    Supports school folders (`CP__30000-團體諮商`) and legacy names (`BIO101 普通生物學`).
 
     Args:
         course_dir: Directory containing lecture PDF files.
         custom_code: Optional override for the course code.
+        term: Optional semester term identifier (e.g. `115-1`).
+        layout: Study category layout configuration.
 
     Returns:
         Constructed domain Course entity with sorted lectures.
-
-    Raises:
-        FileNotFoundError: When course_dir does not exist.
     """
     if not course_dir.is_dir():
         raise FileNotFoundError(f"Course directory not found: {course_dir}")
-
-    inferred_code, inferred_name = parse_course_folder_name(course_dir.name)
-    code = custom_code or inferred_code
-    lectures = _collect_unique_lectures(course_dir)
-    term, subject = parse_term_subject(course_dir.name)
-    if re.match(r"^\d{2,4}[-_]\d{1,2}$", course_dir.parent.name):
-        term = course_dir.parent.name.replace("_", "-")
-        subject = course_dir.name
-    has_study_layout = any(DEFAULT_LAYOUT.category_dirs(course_dir, role) for role in CategoryRole)
-
-    logger.info("Scanned course %s (%s): found %d lecture PDFs", code, inferred_name, len(lectures))
+    code, name, resolved_term, subject, course_no = _resolve_course_identity(course_dir, custom_code, term)
+    lectures = _collect_unique_lectures(course_dir, layout=layout)
+    resolved_dir = str(course_dir.resolve())
+    has_study_layout = any(layout.category_dirs(course_dir, role) for role in CategoryRole)
+    logger.info("Scanned course %s (%s): found %d lecture PDFs", code, name, len(lectures))
     return Course(
         code=code,
-        name=inferred_name,
-        source_dir=str(course_dir.resolve()),
+        name=name,
+        source_dir=resolved_dir,
         profile=ProfileName.FULL,
         language="zh-TW",
         lectures=lectures,
-        term=term,
+        term=resolved_term,
         subject=subject,
-        study_dir=str(course_dir.resolve()) if has_study_layout else "",
+        study_dir=resolved_dir if has_study_layout else "",
+        course_no=course_no,
     )
 
 

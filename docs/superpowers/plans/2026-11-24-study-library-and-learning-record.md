@@ -331,9 +331,9 @@ def test_no_new_writes_to_old_layout(self):
 - `CourseCandidate(term, folder, code, name, lecture_count, registered)`、`TermEntry(term, courses: list[CourseCandidate], others: list[str])`
 - `StudyLibraryService(config, course_repo)`：`.scan() -> list[TermEntry]`、`.register(codes: list[str], archive: bool = True) -> list[dict[str, Any]]`、`.register_folder(term: str, folder: str, course_no: str) -> dict[str, Any]`（給 `專題` 等非標準資料夾）
 
-- [ ] **Step 1: 失敗測試**：掃描回 `["113-1","115-1"]`、`115-1` 課程 `["115-1_CP30000"]`、others `["Course Outline","Holland學習單.docx","專題"]`；register 後 `profile=RECORD_ONLY`、`status=ARCHIVED`、`term="113-1"`、無工作、重複登錄回 `{"skipped": "already registered"}`；重修兩學期 study_dir 不同；`register_folder("115-1","專題","PROJ1151")` 得代碼 `115-1_PROJ1151`、課名 `專題`。
-- [ ] **Step 2–4:** 失敗 → 實作（不呼叫 `enqueue_course_artifacts`、不碰 NotebookLM）→ 通過
-- [ ] **Step 5:** Commit `-m "feat(study): scan study tree by term, register past courses record-only"`
+- [x] **Step 1: 失敗測試**：掃描回 `["113-1","115-1"]`、`115-1` 課程 `["115-1_CP30000"]`、others `["Course Outline","Holland學習單.docx","專題"]`；register 後 `profile=RECORD_ONLY`、`status=ARCHIVED`、`term="113-1"`、無工作、重複登錄回 `{"skipped": "already registered"}`；重修兩學期 study_dir 不同；`register_folder("115-1","專題","PROJ1151")` 得代碼 `115-1_PROJ1151`、課名 `專題`。
+- [x] **Step 2–4:** 失敗 → 實作（不呼叫 `enqueue_course_artifacts`、不碰 NotebookLM）→ 通過
+- [x] **Step 5:** Commit `-m "feat(study): scan study tree by term, register past courses record-only"`
 
 ### Task 8: 本學期新增課程落在 study 樹；課本可選擇作為來源
 

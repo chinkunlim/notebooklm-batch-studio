@@ -795,6 +795,7 @@ notebooklm-batch-studio/
 │       │   ├── reporter.py
 │       │   ├── reverse_import.py
 │       │   ├── source_manager.py
+│       │   ├── study_library.py
 │       │   ├── study_migration.py
 │       │   ├── study_plan_service.py
 │       │   ├── study_service.py
@@ -876,6 +877,7 @@ notebooklm-batch-studio/
 │   ├── test_services_and_cli.py
 │   ├── test_settings_paths.py
 │   ├── test_study_layout.py
+│   ├── test_study_library.py
 │   ├── test_study_plan.py
 │   ├── test_study_service.py
 │   └── test_versions_and_options.py

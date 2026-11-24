@@ -80,6 +80,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(domain): parse school course folders into term-scoped course codes (by `@antigravity`)
 - feat(domain): configurable plural study categories with aliases; remove hardcoded names (updated legacy 01 Material lecture scan test) (by `@antigravity`)
 - feat(db): course status, course number, record-only profile, plural literature default (by `@antigravity`)
+- feat(study): scan study tree by term, register past courses record-only (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
