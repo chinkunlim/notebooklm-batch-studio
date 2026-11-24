@@ -58,6 +58,9 @@ class AddCoursesRequest(BaseModel):
     paused: bool = Field(default=False, description="Hold the course until it is started")
     reuse_notebook: bool = Field(default=True, description="Reuse a Gemini Notebook with the same title")
     options: dict[str, Any] | None = Field(default=None, description="Generation options to set first")
+    term: str = Field(default="", description="Optional semester term (e.g. 115-1) to place folder in study/")
+    course_no: str = Field(default="", description="Optional school course number (e.g. CP30000)")
+    course_name: str = Field(default="", description="Optional human-readable course title override")
 
 
 class UpdateProfileRequest(BaseModel):
@@ -125,6 +128,9 @@ class CourseSummaryResponse(BaseModel):
     progress_percent: float
     counts: dict[str, int]
     paused: bool = False
+    status: str = "active"
+    term: str = ""
+    course_no: str = ""
     study_state: str = "not_started"
 
 

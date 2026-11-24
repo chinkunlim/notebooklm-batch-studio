@@ -339,9 +339,9 @@ def test_no_new_writes_to_old_layout(self):
 
 **Files:** Modify `services/course_onboarding.py:400-456`（`_register_single_course_folder`：資料夾在 `study_root_dir` 外時，需 `term`、`course_no`、`name`，複製 PDF 到 `study/<term>/<課號資料夾>/02 Handouts/` 後再掃描；在 study 樹內則直接用）、`entrypoints/static/studio-wizard.js`（加學期、課號欄位，預設從資料夾名解析）、`services/job_planner.py`（`generation_options["materials_as_source"]` 為真時把 `01 Materials` 的 PDF 列為整門課來源）；Test `tests/test_study_library.py`（追加）
 
-- [ ] **Step 1: 失敗測試**：外部資料夾 `~/tmp/Downloads/團諮` 加入 → 檔案出現在 `study/115-1/CP__30000-團體諮商/02 Handouts/`、原資料夾不變；study 內資料夾加入 → 不複製；`materials_as_source=False` 時課本不上傳。
-- [ ] **Step 2–4:** 失敗 → 實作 → 通過
-- [ ] **Step 5:** Commit `-m "feat(courses): new courses are placed in the study tree; optional textbook source"`
+- [x] **Step 1: 失敗測試**：外部資料夾 `~/tmp/Downloads/團諮` 加入 → 檔案出現在 `study/115-1/CP__30000-團體諮商/02 Handouts/`、原資料夾不變；study 內資料夾加入 → 不複製；`materials_as_source=False` 時課本不上傳。
+- [x] **Step 2–4:** 失敗 → 實作 → 通過
+- [x] **Step 5:** Commit `-m "feat(courses): new courses are placed in the study tree; optional textbook source"`
 
 ### Task 9: 監看 study 樹、匯入筆記本進學期、Scratch 種類
 

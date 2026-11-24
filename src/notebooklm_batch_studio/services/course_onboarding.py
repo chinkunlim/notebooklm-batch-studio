@@ -2,27 +2,23 @@
 
 from __future__ import annotations
 
-import dataclasses
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from notebooklm_batch_studio.domain.exceptions import (
-    CourseNotFoundError,
-    SourceLimitExceededError,
-)
-from notebooklm_batch_studio.domain.models import (
-    Course,
-    JobStatus,
-    Lecture,
-    ProfileName,
-)
+from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError, SourceLimitExceededError
+from notebooklm_batch_studio.domain.models import Course, JobStatus, Lecture, ProfileName
 from notebooklm_batch_studio.domain.study_hierarchy import (
     resolve_course_output_root,
     resolve_lecture_pdf_path,
 )
 from notebooklm_batch_studio.domain.study_plan import compute_course_study_state
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
+from notebooklm_batch_studio.services.course_placement import (
+    prepare_course_for_registration,
+    upload_material_sources,
+)
+from notebooklm_batch_studio.services.job_planner import list_material_source_pdfs
 from notebooklm_batch_studio.services.job_views import (
     calc_job_progress,
     format_jobs_data,
@@ -192,6 +188,11 @@ class CourseOnboardingMixin:
         notebook_id, existing_sources = await self._ensure_notebook_id(course)
         for lec in course.lectures:
             await self._upload_single_lecture(course, notebook_id, lec, existing_sources)
+        material_pdfs = list_material_source_pdfs(course, self.config.study_layout)
+        if material_pdfs:
+            await upload_material_sources(
+                self.notebooklm_client, notebook_id, material_pdfs, existing_sources
+            )
 
         updated = self.course_repo.get_course(course_code)
         return updated or course
@@ -206,9 +207,12 @@ class CourseOnboardingMixin:
             SourceLimitExceededError: When lectures exceed the account's source limit.
         """
         limit = await self.notebooklm_client.get_source_limit()
-        if limit is not None and len(course.lectures) > limit:
+        total_sources = len(course.lectures) + len(
+            list_material_source_pdfs(course, self.config.study_layout)
+        )
+        if limit is not None and total_sources > limit:
             raise SourceLimitExceededError(
-                f"Course {course.code} has {len(course.lectures)} lectures but this Gemini Notebook "
+                f"Course {course.code} has {total_sources} sources but this Gemini Notebook "
                 f"account allows {limit} sources per notebook; split the course folder"
             )
 
@@ -416,17 +420,8 @@ class CourseOnboardingMixin:
         Returns:
             Summary dict for the registered course.
         """
-        path = Path(raw).expanduser().resolve()
         paused = bool(opts.get("paused", False))
-        course = dataclasses.replace(
-            scan_course_directory(path),
-            profile=prof_enum,
-            language=str(opts.get("language", "zh-TW")),
-            selected_chapter_artifacts=opts.get("chapter_artifacts") or [],
-            selected_course_artifacts=opts.get("course_artifacts") or [],
-            paused=paused,
-            reuse_notebook=bool(opts.get("reuse_notebook", True)),
-        )
+        course = prepare_course_for_registration(raw, prof_enum, opts, self.config)
         self.course_repo.save_course(course)
         # Hold the course while settings are applied, so no job starts with the old ones.
         self.course_repo.set_course_paused(course.code, True)

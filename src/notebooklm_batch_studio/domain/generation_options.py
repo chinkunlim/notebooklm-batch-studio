@@ -36,6 +36,7 @@ class GenerationOptions:
             (job level), e.g. "the exam is mostly essays".
         video_style_prompt: Free-text visual style for videos (ignored for short videos).
         chapter_range: Lectures a course-wide output covers, e.g. "1-3" or "1,3,5-6"; empty = all.
+        materials_as_source: Whether to upload `01 Materials` textbook PDFs as whole-course sources.
     """
 
     infographic_orientation: str = "portrait"
@@ -56,6 +57,7 @@ class GenerationOptions:
     extra_instructions: str = ""
     video_style_prompt: str = ""
     chapter_range: str = ""
+    materials_as_source: bool = False
 
 
 # Allowed values per GenerationOptions field (None = boolean field).
@@ -95,6 +97,7 @@ GENERATION_OPTION_CHOICES: dict[str, tuple[str, ...] | None] = {
     "flashcards_quantity": ("fewer", "standard", "more"),
     "flashcards_difficulty": ("easy", "medium", "hard"),
     "device_exports": None,
+    "materials_as_source": None,
     "quiz_difficulty": ("auto", "easy", "medium", "hard"),
 }
 

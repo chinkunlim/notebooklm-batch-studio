@@ -776,6 +776,7 @@ notebooklm-batch-studio/
 │       │   ├── course_onboarding.py
 │       │   ├── course_options.py
 │       │   ├── course_parser.py
+│       │   ├── course_placement.py
 │       │   ├── course_settings.py
 │       │   ├── cram_service.py
 │       │   ├── folder_browser.py

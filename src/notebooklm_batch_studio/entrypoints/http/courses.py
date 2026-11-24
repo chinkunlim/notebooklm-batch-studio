@@ -106,6 +106,9 @@ def add_courses(req: AddCoursesRequest, request: Request) -> list[dict[str, Any]
             paused=req.paused,
             reuse_notebook=req.reuse_notebook,
             options=req.options,
+            term=req.term,
+            course_no=req.course_no,
+            course_name=req.course_name,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

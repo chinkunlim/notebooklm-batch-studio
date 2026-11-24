@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from pathlib import Path
 
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
@@ -12,6 +13,7 @@ from notebooklm_batch_studio.domain.models import (
     JobStatus,
     ProfileName,
 )
+from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 
 logger = logging.getLogger(__name__)
@@ -158,6 +160,32 @@ def _generate_profile_jobs(course: Course, prompt_gen: PromptGenerator) -> list[
 
     logger.info("Generated %d jobs for course %s (profile=%s)", len(jobs), course.code, course.profile.value)
     return jobs
+
+
+def list_material_source_pdfs(course: Course, layout: StudyLayout = DEFAULT_LAYOUT) -> list[Path]:
+    """Return `01 Materials` textbook PDFs when `materials_as_source` is enabled for the course.
+
+    Materials remain separate from lecture chapters; they never become lecture rows or per-lecture
+    jobs, and are uploaded as course-wide reference sources only when the course explicitly opts in.
+
+    Args:
+        course: Registered Course domain entity.
+        layout: Study category layout resolving `CategoryRole.MATERIALS` aliases.
+
+    Returns:
+        Sorted list of PDF paths under `MATERIALS`, or an empty list when disabled or missing.
+    """
+    if not course.generation_options.materials_as_source or not course.study_dir:
+        return []
+    course_dir = Path(course.study_dir)
+    if not course_dir.is_dir():
+        return []
+    found: list[Path] = []
+    for mat_dir in layout.category_dirs(course_dir, CategoryRole.MATERIALS):
+        for pdf in sorted(mat_dir.rglob("*"), key=lambda p: str(p).lower()):
+            if pdf.is_file() and not pdf.name.startswith(".") and pdf.suffix.lower() == ".pdf":
+                found.append(pdf)
+    return found
 
 
 def generate_jobs_for_course(course: Course) -> list[ArtifactJob]:

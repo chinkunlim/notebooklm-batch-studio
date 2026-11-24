@@ -10,6 +10,7 @@ const OPTION_LABELS = {
   infographic_detail: ['資訊圖表詳細程度', { concise: '精簡', standard: '標準', detailed: '詳細' }],
   infographic_style: ['資訊圖表風格', { auto_select: '自動', sketch_note: '手繪筆記', professional: '專業', bento_grid: '便當格', editorial: '雜誌', instructional: '教學', bricks: '積木', clay: '黏土', anime: '動漫', kawaii: '可愛', scientific: '科學' }],
   device_exports: ['資訊圖表另存裝置版本（A4 PDF / iPad Air 4 / MacBook Pro 14）', null],
+  materials_as_source: ['將 01 Materials（課本／文獻）作為整門課來源', null],
   audio_format: ['語音形式', { deep_dive: '深度對談', brief: '簡短摘要', critique: '評論', debate: '辯論' }],
   audio_length: ['語音長度', { short: '短', default: '標準', long: '長' }],
   slide_format: ['投影片形式', { detailed_deck: '詳細版（自學）', presenter_slides: '講者版（上台）' }],

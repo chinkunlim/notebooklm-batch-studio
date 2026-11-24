@@ -67,10 +67,33 @@ function removePickedFolder(idx) {
   renderPickedFolders();
 }
 
+/**
+ * Infer default term, course number, and course name from a picked folder path.
+ * @param {string} folderPath Selected folder path
+ */
+function prefillCourseIdentityFromPath(folderPath) {
+  const parts = String(folderPath || '').replace(/\\/g, '/').split('/').filter(Boolean);
+  const base = parts[parts.length - 1] || '';
+  const parent = parts[parts.length - 2] || '';
+  const termEl = document.getElementById('addTerm');
+  const noEl = document.getElementById('addCourseNo');
+  const nameEl = document.getElementById('addCourseName');
+  if (!termEl || !noEl || !nameEl) return;
+  if (!termEl.value && /^\d{2,4}-\d{1,2}$/.test(parent)) termEl.value = parent;
+  const m = base.match(/^([A-Za-z]{1,6})_{1,2}([0-9A-Za-z]+)-(.+)$/);
+  if (m) {
+    if (!noEl.value) noEl.value = `${m[1]}${m[2]}`.toUpperCase();
+    if (!nameEl.value) nameEl.value = m[3];
+  } else if (!nameEl.value) {
+    nameEl.value = base;
+  }
+}
+
 /** Draw the picked folders. */
 function renderPickedFolders() {
   document.getElementById('folderPaths').value = pickedFolders.join('\n');
   document.getElementById('btnConfirmAdd').disabled = true;
+  if (pickedFolders.length === 1) prefillCourseIdentityFromPath(pickedFolders[0]);
   document.getElementById('pickedFolders').innerHTML = pickedFolders.length ? pickedFolders.map((p, i) =>
     `<span class="badge">${escHtml(p.split('/').pop())}<button type="button" onclick="removePickedFolder(${i})" aria-label="移除">✕</button></span>`).join('')
     : '<span class="muted small">（還沒選）</span>';
@@ -80,6 +103,10 @@ function renderPickedFolders() {
 function closeAddModal() {
   document.getElementById('addModal').style.display = 'none';
   document.getElementById('previewResults').style.display = 'none';
+  ['addTerm', 'addCourseNo', 'addCourseName'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   pickedFolders = [];
   renderPickedFolders();
 }
@@ -168,6 +195,9 @@ async function confirmAddFolders() {
         paused: !autoStart,
         reuse_notebook: reuseNotebook,
         options: changedAddOptions(),
+        term: (document.getElementById('addTerm')?.value || '').trim(),
+        course_no: (document.getElementById('addCourseNo')?.value || '').trim(),
+        course_name: (document.getElementById('addCourseName')?.value || '').trim(),
       }),
     });
     const data = await res.json();
