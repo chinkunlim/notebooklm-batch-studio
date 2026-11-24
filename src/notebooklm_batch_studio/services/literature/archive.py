@@ -11,11 +11,13 @@ from dataclasses import replace
 from pathlib import Path
 
 from notebooklm_batch_studio.domain.literature.tracker import ItemStatus, TrackedItem
+from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.domain.study_hierarchy import (
     DEFAULT_LITERATURE_CATEGORY,
     DEFAULT_LITERATURE_SUBFOLDER,
     resolve_literature_dir,
 )
+from notebooklm_batch_studio.services.filing import FilingService, FilingTarget
 from notebooklm_batch_studio.services.literature.manager_base import LiteratureManagerBase
 
 logger = logging.getLogger(__name__)
@@ -104,6 +106,29 @@ class LiteratureArchiveMixin(LiteratureManagerBase):
             raise ValueError("PDF has not been downloaded yet.")
         return item, target_code, src_pdf
 
+    def _move_item_to_target(self, item: TrackedItem, updated: TrackedItem, src_pdf: Path) -> Path:
+        """Move `src_pdf` to `updated` destination via `FilingService` and sync its review sidecar.
+
+        Args:
+            item: Original literature item before update.
+            updated: Literature item carrying target course/category/subfolder.
+            src_pdf: Current downloaded PDF path.
+
+        Returns:
+            Destination PDF path after move.
+        """
+        role = self.config.study_layout.role_of(updated.target_category)
+        if role is None:
+            return _move_pdf_with_review(item, src_pdf, self.resolve_target_dir(updated))
+        dest_pdf = FilingService(self.config, self.course_repo).file(
+            src_pdf, FilingTarget(str(updated.course_code), role, updated.target_subfolder)
+        )
+        if src_pdf.parent.resolve() != dest_pdf.parent.resolve():
+            move_review_file(
+                item.key, src_pdf.parent / "reviews", dest_pdf.parent / "reviews", item.review_markdown
+            )
+        return dest_pdf
+
     def import_to_course(
         self,
         key: str,
@@ -132,7 +157,7 @@ class LiteratureArchiveMixin(LiteratureManagerBase):
             target_category=category or item.target_category,
             target_subfolder=subfolder if subfolder is not None else item.target_subfolder,
         )
-        dest_pdf = _move_pdf_with_review(item, src_pdf, self.resolve_target_dir(updated_item))
+        dest_pdf = self._move_item_to_target(item, updated_item, src_pdf)
         saved = replace(updated_item, file=dest_pdf.name, imported_to_course=True)
         self.lit_repo.upsert_item(saved)
         logger.info("Archived literature %s into course %s (%s)", key, target_code, dest_pdf)
@@ -156,8 +181,11 @@ class LiteratureArchiveMixin(LiteratureManagerBase):
         src_pdf = self.resolve_pdf_path(key)
         unarchived_dir = self.config.scratch_kind_dir("literature")
         unarchived_dir.mkdir(parents=True, exist_ok=True)
-        if src_pdf is not None and src_pdf.is_file():
-            _move_pdf_with_review(item, src_pdf, unarchived_dir)
+        if src_pdf is not None and src_pdf.is_file() and not is_within(src_pdf, unarchived_dir):
+            dest_pdf = FilingService(self.config, self.course_repo).unfile(src_pdf, dest_dir=unarchived_dir)
+            move_review_file(
+                item.key, src_pdf.parent / "reviews", dest_pdf.parent / "reviews", item.review_markdown
+            )
         saved = replace(item, course_code=None, imported_to_course=False)
         self.lit_repo.upsert_item(saved)
         logger.info("Moved literature %s back to unarchived folder", key)

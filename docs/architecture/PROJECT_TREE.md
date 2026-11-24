@@ -779,6 +779,7 @@ notebooklm-batch-studio/
 │       │   ├── course_placement.py
 │       │   ├── course_settings.py
 │       │   ├── cram_service.py
+│       │   ├── filing.py
 │       │   ├── folder_browser.py
 │       │   ├── font_service.py
 │       │   ├── job_planner.py
@@ -851,6 +852,7 @@ notebooklm-batch-studio/
 │   ├── test_domain_and_queue.py
 │   ├── test_dummy_user_simulation.py
 │   ├── test_failed_job_rerun.py
+│   ├── test_filing.py
 │   ├── test_fonts.py
 │   ├── test_guides_and_reports.py
 │   ├── test_job_settings.py

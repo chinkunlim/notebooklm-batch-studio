@@ -362,9 +362,9 @@ def test_no_new_writes_to_old_layout(self):
   - `.unfile(path: Path) -> Path`（移到 `scratch/unarchived/<課程代碼>/`）
 - 來源必須在 `scratch_dir` 或某課程 study 資料夾內（`ensure_within_roots`）；目的地同名 → 加 `-2`、`-3` 後綴，不覆寫；`NOTES` 角色只能放進子資料夾，不得覆寫使用者檔案。
 
-- [ ] **Step 1: 失敗測試**：scratch 檔歸到 `05 Assignments/期中` 後在新位置、scratch 不再有；同名不覆寫；`unfile` 回到 `scratch/unarchived/115-1_CP30000/`；`/etc/hosts` 拒絕（`PathSafetyError`）；文獻既有 `import_to_course`／`unarchive_item` 測試照過。
-- [ ] **Step 2–4:** 失敗 → 實作 → 通過
-- [ ] **Step 5:** Commit `-m "feat(study): generic file/unfile between scratch and course categories"`
+- [x] **Step 1: 失敗測試**：scratch 檔歸到 `05 Assignments/期中` 後在新位置、scratch 不再有；同名不覆寫；`unfile` 回到 `scratch/unarchived/115-1_CP30000/`；`/etc/hosts` 拒絕（`PathSafetyError`）；文獻既有 `import_to_course`／`unarchive_item` 測試照過。
+- [x] **Step 2–4:** 失敗 → 實作 → 通過
+- [x] **Step 5:** Commit `-m "feat(study): generic file/unfile between scratch and course categories"`
 
 ## Phase 2：課程生命週期
 

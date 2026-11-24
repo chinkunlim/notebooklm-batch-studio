@@ -83,6 +83,8 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(study): scan study tree by term, register past courses record-only (by `@antigravity`)
 - feat(courses): new courses are placed in the study tree; optional textbook source (by `@antigravity`)
 - feat(study): watch study tree, import notebooks into terms, scratch kinds (by `@antigravity`)
+- feat(study): generic file/unfile between scratch and course categories (by `@antigravity`)
+- feat(study): generic file/unfile between scratch and course categories (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
