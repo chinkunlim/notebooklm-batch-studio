@@ -17,6 +17,7 @@ from notebooklm_batch_studio.adapters.db.literature_repository import Literature
 from notebooklm_batch_studio.adapters.db.models import (
     ArtifactJobRecord,
     CourseQANoteRecord,
+    CourseRecord,
     ExplanationRecord,
     KeyPointsRecord,
     LectureRecord,
@@ -32,6 +33,7 @@ from notebooklm_batch_studio.adapters.db.repository import CourseRepository, Que
 from notebooklm_batch_studio.adapters.db.review_repository import ReviewRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, make_session_factory
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
+from notebooklm_batch_studio.adapters.locks import RunLock
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
@@ -612,6 +614,178 @@ class CourseArchiveAndRenameTests(unittest.TestCase):
             self.assertFalse((self.cfg.notes_state_dir / "115-1_CP31000.json").exists())
             self.assertTrue((self.cfg.notes_state_dir / "115-1.pause.json").is_file())
             self.assertTrue((self.cfg.scratch_kind_dir("notes") / "115-1" / "draft.md").is_file())
+
+    def test_rename_moves_fallback_output_and_needs_review_and_serves_http_200(self) -> None:
+        """Scenario 11h: rename moves legacy output/courses and needs_review dirs, updating DB output_file."""
+        with self.session_factory() as session:
+            c_repo, q_repo = CourseRepository(session), QueueRepository(session)
+            c_repo.save_course(Course(code="115-1", name="舊制課程", source_dir="/tmp/in", study_dir=""))
+            legacy_out = self.cfg.courses_output_dir / "115-1" / "01_ch1"
+            legacy_out.mkdir(parents=True, exist_ok=True)
+            (legacy_out / "audio.mp3").write_bytes(b"mp3")
+            review_dir = self.cfg.needs_review_dir / "115-1_ch01_quiz"
+            review_dir.mkdir(parents=True, exist_ok=True)
+            quiz_path = review_dir / "quiz.json"
+            quiz_path.write_text('{"questions": []}', encoding="utf-8")
+            session.add(
+                ArtifactJobRecord(
+                    id="j-nr",
+                    course_code="115-1",
+                    lecture_no=1,
+                    artifact_type="quiz_1",
+                    status="needs_review",
+                    output_file=str(quiz_path),
+                )
+            )
+            session.commit()
+
+            lifecycle = CourseLifecycleService(c_repo, q_repo, CourseIdentityRepository(session), self.cfg)
+            preview = lifecycle.rename("115-1", "115-1_CP31000")
+            self.assertEqual(preview["files"]["course_output"], 1)
+            self.assertEqual(preview["files"]["needs_review"], 1)
+            self.assertTrue((self.cfg.courses_output_dir / "115-1").is_dir())
+            self.assertTrue(review_dir.is_dir())
+
+            # Target collision in output/courses rejects rename before touching anything.
+            colliding = self.cfg.courses_output_dir / "115-1_CP31000"
+            colliding.mkdir(parents=True, exist_ok=True)
+            with self.assertRaises(ValueError):
+                lifecycle.rename("115-1", "115-1_CP31000", dry_run=False)
+            colliding.rmdir()
+
+            lifecycle.rename("115-1", "115-1_CP31000", dry_run=False)
+            self.assertFalse((self.cfg.courses_output_dir / "115-1").exists())
+            self.assertTrue(
+                (self.cfg.courses_output_dir / "115-1_CP31000" / "01_ch1" / "audio.mp3").is_file()
+            )
+            self.assertFalse(review_dir.exists())
+            moved_quiz = self.cfg.needs_review_dir / "115-1_CP31000_ch01_quiz" / "quiz.json"
+            self.assertTrue(moved_quiz.is_file())
+            job_row = session.get(ArtifactJobRecord, "j-nr")
+            assert job_row is not None
+            self.assertEqual(job_row.output_file, str(moved_quiz))
+
+            studio = BatchStudioService(c_repo, q_repo, mock.MagicMock(), self.cfg)
+            client = TestClient(create_app(config=self.cfg, service=studio, study_service=mock.MagicMock()))
+            resp = client.get(
+                "/api/artifacts/115-1_CP31000/download/_needs_review/115-1_CP31000_ch01_quiz/quiz.json"
+            )
+            self.assertEqual(resp.status_code, 200)
+
+    def test_rename_rewrites_scratch_stitched_path_but_keeps_study_dir_path(self) -> None:
+        """Scenario 11i: stitched_path under scratch/notes rewrites while study_dir path stays intact."""
+        with self.session_factory() as session:
+            study_dir = self._seed_full_course(session, "115-1")
+            c_repo, q_repo = CourseRepository(session), QueueRepository(session)
+            scratch_note = self.cfg.scratch_kind_dir("notes") / "115-1" / "ch01_t_學習筆記.md"
+            scratch_note.write_text("# ch01", encoding="utf-8")
+            study_note_dir = study_dir / "03 Notes" / "NoteStudio"
+            study_note_dir.mkdir(parents=True, exist_ok=True)
+            study_note = study_note_dir / "ch02_t_學習筆記.md"
+            study_note.write_text("# ch02", encoding="utf-8")
+            (self.cfg.notes_state_dir / "115-1.json").write_text(
+                json.dumps(
+                    {
+                        "course_key": "115-1",
+                        "chapters": {
+                            "ch01": {"status": "done", "stitched_path": str(scratch_note)},
+                            "ch01_rel": {"status": "done", "stitched_path": "115-1/ch01_t_學習筆記.md"},
+                            "ch02": {"status": "done", "stitched_path": str(study_note)},
+                        },
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            lifecycle = CourseLifecycleService(c_repo, q_repo, CourseIdentityRepository(session), self.cfg)
+            lifecycle.rename("115-1", "115-1_CP31000", dry_run=False)
+
+            updated = json.loads(
+                (self.cfg.notes_state_dir / "115-1_CP31000.json").read_text(encoding="utf-8")
+            )
+            expected_abs = str(self.cfg.scratch_kind_dir("notes") / "115-1_CP31000" / "ch01_t_學習筆記.md")
+            self.assertEqual(updated["chapters"]["ch01"]["stitched_path"], expected_abs)
+            self.assertTrue(Path(updated["chapters"]["ch01"]["stitched_path"]).is_file())
+            self.assertEqual(
+                updated["chapters"]["ch01_rel"]["stitched_path"], "115-1_CP31000/ch01_t_學習筆記.md"
+            )
+            self.assertEqual(updated["chapters"]["ch02"]["stitched_path"], str(study_note))
+
+    def test_rename_refused_during_note_generation_or_locked_literature_run(self) -> None:
+        """Scenario 11j: active note chapter or locked literature job with linked items refuses rename."""
+        with self.session_factory() as session:
+            self._seed_full_course(session, "115-1")
+            c_repo, q_repo = CourseRepository(session), QueueRepository(session)
+            lifecycle = CourseLifecycleService(c_repo, q_repo, CourseIdentityRepository(session), self.cfg)
+
+            # Case 1: note state has a running chapter -> refused.
+            (self.cfg.notes_state_dir / "115-1.json").write_text(
+                json.dumps({"course_key": "115-1", "chapters": {"ch01": {"status": "running"}}}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                lifecycle.rename("115-1", "115-1_CP31000", dry_run=False)
+            self.assertIsNotNone(c_repo.get_course("115-1"))
+
+            # Reset note state to done.
+            (self.cfg.notes_state_dir / "115-1.json").write_text(
+                json.dumps({"course_key": "115-1", "chapters": {"ch01": {"status": "done"}}}),
+                encoding="utf-8",
+            )
+
+            # Case 2: literature RunLock held while course has linked literature_items -> refused.
+            with RunLock(self.cfg.literature_job_lock_path):
+                with self.assertRaises(ValueError):
+                    lifecycle.rename("115-1", "115-1_CP31000", dry_run=False)
+                self.assertIsNotNone(c_repo.get_course("115-1"))
+
+            # Case 3: RunLock held without linked literature_items for that course -> allowed.
+            session.query(LiteratureItemRecord).filter_by(course_code="115-1").delete()
+            session.commit()
+            with RunLock(self.cfg.literature_job_lock_path):
+                res = lifecycle.rename("115-1", "115-1_CP31000", dry_run=False)
+            self.assertEqual(res["new_code"], "115-1_CP31000")
+
+    def test_rename_midway_failure_rolls_back_fallback_output_and_needs_review(self) -> None:
+        """Scenario 11h rollback: failure after moving output/courses and needs_review restores both dirs."""
+        with self.session_factory() as session:
+            self._seed_full_course(session, "115-1")
+            c_repo, q_repo = CourseRepository(session), QueueRepository(session)
+            row = session.get(CourseRecord, "115-1")
+            assert row is not None
+            row.study_dir = ""
+            session.commit()
+            legacy_out = self.cfg.courses_output_dir / "115-1" / "01_ch1"
+            legacy_out.mkdir(parents=True, exist_ok=True)
+            (legacy_out / "audio.mp3").write_bytes(b"mp3")
+            review_dir = self.cfg.needs_review_dir / "115-1_ch01_quiz"
+            review_dir.mkdir(parents=True, exist_ok=True)
+            (review_dir / "quiz.json").write_text("{}", encoding="utf-8")
+
+            moved_seen = False
+
+            def _fail_after_moves(*_args: object, **_kwargs: object) -> int:
+                nonlocal moved_seen
+                moved_seen = (self.cfg.courses_output_dir / "115-1_CP31000").is_dir() and (
+                    self.cfg.needs_review_dir / "115-1_CP31000_ch01_quiz"
+                ).is_dir()
+                raise OSError("disk full")
+
+            lifecycle = CourseLifecycleService(c_repo, q_repo, CourseIdentityRepository(session), self.cfg)
+            with mock.patch(
+                "notebooklm_batch_studio.services.course_lifecycle._sync_qa_notes_frontmatter",
+                side_effect=_fail_after_moves,
+            ):
+                with self.assertRaises(OSError):
+                    lifecycle.rename("115-1", "115-1_CP31000", dry_run=False)
+
+            self.assertTrue(moved_seen)
+
+            self.assertIsNotNone(c_repo.get_course("115-1"))
+            self.assertTrue((legacy_out / "audio.mp3").is_file())
+            self.assertFalse((self.cfg.courses_output_dir / "115-1_CP31000").exists())
+            self.assertTrue((review_dir / "quiz.json").is_file())
+            self.assertFalse((self.cfg.needs_review_dir / "115-1_CP31000_ch01_quiz").exists())
 
 
 if __name__ == "__main__":

@@ -222,13 +222,43 @@ class CourseIdentityRepository:
                     .values(key=f"audio:{new_code}:{suffix}")
                 )
 
-    def rename_code(self, old_code: str, new_code: str, *, commit: bool = True) -> dict[str, int]:
+    def _rewrite_job_output_paths(self, course_code: str, path_rewrites: list[tuple[str, str]]) -> None:
+        """Update `artifact_jobs.output_file` prefixes moved during rename (Refs: ISSUE-067).
+
+        Args:
+            course_code: New course code.
+            path_rewrites: Ordered `(old_prefix, new_prefix)` directory prefix pairs.
+        """
+        if not path_rewrites:
+            return
+        jobs = self.session.scalars(
+            select(ArtifactJobRecord).where(
+                ArtifactJobRecord.course_code == course_code,
+                ArtifactJobRecord.output_file.is_not(None),
+            )
+        ).all()
+        for job in jobs:
+            val = job.output_file or ""
+            for old_prefix, new_prefix in path_rewrites:
+                if val == old_prefix or val.startswith(f"{old_prefix}/") or val.startswith(f"{old_prefix}\\"):
+                    job.output_file = new_prefix + val[len(old_prefix) :]
+                    break
+
+    def rename_code(
+        self,
+        old_code: str,
+        new_code: str,
+        *,
+        commit: bool = True,
+        path_rewrites: list[tuple[str, str]] | None = None,
+    ) -> dict[str, int]:
         """Rename `old_code` to `new_code` across `courses`, 11 child tables, and `ui_preferences`.
 
         Args:
             old_code: Current course code.
             new_code: Replacement course code.
             commit: Commit immediately when True; leave open for caller orchestration when False.
+            path_rewrites: Optional `(old_prefix, new_prefix)` pairs to rewrite `artifact_jobs.output_file`.
 
         Returns:
             Mapping of table name to affected row count.
@@ -240,6 +270,8 @@ class CourseIdentityRepository:
             self.session.execute(
                 update(model).where(model.course_code == old_code).values(course_code=new_code)
             )
+        if path_rewrites:
+            self._rewrite_job_output_paths(new_code, path_rewrites)
         self._update_composite_rows(old_code, new_code)
         self._update_preferences(old_code, new_code)
         self.session.execute(delete(CourseRecord).where(CourseRecord.code == old_code))

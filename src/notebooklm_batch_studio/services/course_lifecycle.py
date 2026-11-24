@@ -16,6 +16,15 @@ from notebooklm_batch_studio.domain.models import Course, CourseStatus
 from notebooklm_batch_studio.domain.path_safety import validate_path_segment
 from notebooklm_batch_studio.domain.repositories import CourseRepositoryProtocol, QueueRepositoryProtocol
 from notebooklm_batch_studio.domain.study_layout import CategoryRole
+from notebooklm_batch_studio.services.course_rename_files import (
+    build_path_rewrites,
+    build_rename_target_bundle,
+    check_active_locks,
+    collect_legacy_and_review_pairs,
+    collect_state_pairs,
+    move_dir_pairs,
+    rewrite_migrated_state_stitched_paths,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +46,21 @@ class CourseIdentityRepositoryProtocol(Protocol):
         """
         ...
 
-    def rename_code(self, old_code: str, new_code: str, *, commit: bool = True) -> dict[str, int]:
+    def rename_code(
+        self,
+        old_code: str,
+        new_code: str,
+        *,
+        commit: bool = True,
+        path_rewrites: list[tuple[str, str]] | None = None,
+    ) -> dict[str, int]:
         """Apply rename inside the DB session.
 
         Args:
             old_code: Current course code.
             new_code: Proposed replacement course code.
             commit: Whether to commit immediately.
+            path_rewrites: Optional `(old_prefix, new_prefix)` pairs to rewrite `artifact_jobs.output_file`.
 
         Returns:
             Table-name to affected row-count mapping.
@@ -270,13 +287,23 @@ def _sync_all_files(
     scratch_src, scratch_dst = targets["scratch_src"], targets["scratch_dst"]
     toml_n = _sync_course_toml(targets["toml"], old_code, new_code, undo)
     state_n = _sync_notes_state_files(targets["state_files"], old_code, new_code, undo)
+    rewrite_migrated_state_stitched_paths(targets["state_files"], old_code, new_code, scratch_dst.parent)
     scratch_n = _move_scratch_dir(scratch_src, scratch_dst, undo)
+    out_n = move_dir_pairs(targets["output_pairs"], undo, "後備輸出")
+    rev_n = move_dir_pairs(targets["review_pairs"], undo, "needs_review ")
     qa_files = [
         scratch_dst / p.relative_to(scratch_src) if scratch_src and p.is_relative_to(scratch_src) else p
         for p in targets["qa_files"]
     ]
     qa_n = _sync_qa_notes_frontmatter(qa_files, old_code, new_code, undo)
-    return {"course_toml": toml_n, "notes_state": state_n, "scratch_notes": scratch_n, "qa_notes": qa_n}
+    return {
+        "course_toml": toml_n,
+        "notes_state": state_n,
+        "scratch_notes": scratch_n,
+        "course_output": out_n,
+        "needs_review": rev_n,
+        "qa_notes": qa_n,
+    }
 
 
 class CourseLifecycleService:
@@ -369,31 +396,22 @@ class CourseLifecycleService:
         toml_path = (
             study_root / "course.toml" if study_root and (study_root / "course.toml").is_file() else None
         )
-        old_key, new_key = _safe_note_state_key(old_code), _safe_note_state_key(new_code)
-        state_files: list[tuple[Path, Path]] = []
-        for ext in (".json", ".pause.json"):
-            src = self.config.notes_state_dir / f"{old_key}{ext}"
-            if src.is_file():
-                state_files.append((src, self.config.notes_state_dir / f"{new_key}{ext}"))
+        state_files = collect_state_pairs(self.config.notes_state_dir, old_code, new_code)
         scratch_root = self.config.scratch_kind_dir("notes")
-        scratch_candidate = scratch_root / old_code
-        scratch_src = scratch_candidate if scratch_candidate.is_dir() else None
-        scratch_dst = scratch_root / new_code
+        scratch_src = scratch_root / old_code if (scratch_root / old_code).is_dir() else None
+        output_pairs, review_pairs = collect_legacy_and_review_pairs(self.config, course, old_code, new_code)
         qa_files = self._collect_qa_files(study_root, scratch_src, old_code)
-        counts = {
-            "course_toml": 1 if toml_path is not None else 0,
-            "notes_state": len(state_files),
-            "scratch_notes": 1 if scratch_src is not None else 0,
-            "qa_notes": len(qa_files),
-        }
-        return {
-            "toml": toml_path,
-            "state_files": state_files,
-            "scratch_src": scratch_src,
-            "scratch_dst": scratch_dst,
-            "qa_files": qa_files,
-            "counts": counts,
-        }
+        return build_rename_target_bundle(
+            {
+                "toml": toml_path,
+                "state_files": state_files,
+                "scratch_src": scratch_src,
+                "scratch_dst": scratch_root / new_code,
+                "output_pairs": output_pairs,
+                "review_pairs": review_pairs,
+                "qa_files": qa_files,
+            }
+        )
 
     def _collect_qa_files(
         self, study_root: Path | None, scratch_src: Path | None, old_code: str
@@ -431,6 +449,7 @@ class CourseLifecycleService:
         """
         validate_path_segment(new_code, "course_code")
         table_counts = self.identity_repo.preview_rename(old_code, new_code)
+        check_active_locks(self.config, old_code, table_counts.get("literature_items", 0))
         course = self._require_course(old_code)
         targets = self._collect_file_targets(course, old_code, new_code)
         if dry_run:
@@ -455,8 +474,11 @@ class CourseLifecycleService:
             Result dictionary with applied counts.
         """
         undo: list[Callable[[], None]] = []
+        path_rewrites = build_path_rewrites(targets)
         try:
-            table_counts = self.identity_repo.rename_code(old_code, new_code, commit=False)
+            table_counts = self.identity_repo.rename_code(
+                old_code, new_code, commit=False, path_rewrites=path_rewrites
+            )
             file_counts = _sync_all_files(targets, old_code, new_code, undo)
             self.identity_repo.commit()
         except Exception:

@@ -256,6 +256,7 @@ notebooklm-batch-studio/
 │   │   ├── 064-flashcards-cross-course-glob.md
 │   │   ├── 065-delete-course-silently-drops-learning-records.md
 │   │   ├── 066-auto-keypoints-422-before-upload.md
+│   │   ├── 067-rename-course-misses-fallback-output-needs-review-and-active-locks.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -780,6 +781,7 @@ notebooklm-batch-studio/
 │       │   ├── course_options.py
 │       │   ├── course_parser.py
 │       │   ├── course_placement.py
+│       │   ├── course_rename_files.py
 │       │   ├── course_settings.py
 │       │   ├── cram_service.py
 │       │   ├── filing.py

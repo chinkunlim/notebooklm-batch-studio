@@ -154,6 +154,18 @@
   - **When** 呼叫 `CourseLifecycleService.rename(old, new, dry_run=False)`
   - **Then** 拋出例外，資料庫整筆交易回滾（舊代碼與 11 張表保留、新代碼不存在），已更動之本機檔案全數還原至改碼前狀態
   - 對應測試：`tests/test_course_lifecycle.py::CourseArchiveAndRenameTests::test_rename_midway_failure_rolls_back_db_and_files`
+  - **Given（場景 11h：改代碼一併搬移後備輸出與 `needs_review` 並可 HTTP 200 讀取）** 課程沒有 `study_dir`、於 `output/courses/<old>/` 與 `needs_review/<old>_*` 有檔案，且 `artifact_jobs.output_file` 指向 `needs_review/<old>_*`
+  - **When** 執行 `CourseLifecycleService.rename(old, new)`（`dry_run=True` 再 `dry_run=False`）
+  - **Then** dry-run 計入 `files.course_output` 與 `files.needs_review`（目標已存在則拒絕）；apply 後兩者皆搬至新代碼、`artifact_jobs.output_file` 更新，且 `GET /api/artifacts/<new>/download/_needs_review/<new>_.../<file>` 回傳 200；中途失敗時兩者皆搬回原處
+  - 對應測試：`test_rename_moves_fallback_output_and_needs_review_and_serves_http_200`、`test_rename_midway_failure_rolls_back_fallback_output_and_needs_review`
+  - **Given（場景 11i：改代碼改寫筆記 `stitched_path` 暫存路徑但保留 `study_dir` 路徑）** 筆記狀態某章 `stitched_path` 指向 `scratch/notes/<old>/...`（含相對 `<old>/...`），另一章指向 `study_dir/...`
+  - **When** 呼叫 `CourseLifecycleService.rename(old, new, dry_run=False)`
+  - **Then** 指向 `scratch/notes/<old>/` 的 `stitched_path` 改寫為新代碼且指向實際存在檔案；`study_dir` 路徑維持不變
+  - 對應測試：`test_rename_rewrites_scratch_stitched_path_but_keeps_study_dir_path`
+  - **Given（場景 11j：筆記生成中或含關聯文獻的文獻鎖持有中拒絕改代碼）** 筆記狀態有章節 `status == "running"`，或 `literature_job.lock` 被持有且課程有 `literature_items`
+  - **When** 呼叫 `CourseLifecycleService.rename(old, new)`
+  - **Then** 拋出 `ValueError`，資料庫與所有檔案原封不動
+  - 對應測試：`test_rename_refused_during_note_generation_or_locked_literature_run`
   - **Given（場景 11b：未封存不能刪除）** 課程狀態為 `active`（含透過 HTTP 與 `confirm=True` 呼叫 MCP `delete_course`）
   - **When** 執行 `delete_course`
   - **Then** 服務拋出 `ValueError("請先封存課程，封存後才能刪除")`、HTTP 回 `409`、MCP 回 `{"confirmed": false, ...}`，資料庫與本機檔案皆不變
