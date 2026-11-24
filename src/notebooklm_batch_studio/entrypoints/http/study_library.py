@@ -340,12 +340,15 @@ def get_learning_record(request: Request, term: str | None = None) -> dict[str, 
         term: Optional semester filter.
 
     Returns:
-        Dictionary with sorted `terms` entries.
+        Dictionary with sorted `terms` entries and active `layout` folder names.
     """
     cfg = request.app.state.config
     with _session(request) as db:
         terms = _record_service(cfg, db).build(term=term)
-    return {"terms": [asdict(t) for t in terms]}
+    return {
+        "terms": [asdict(t) for t in terms],
+        "layout": {role.value: cfg.study_layout.names[role] for role in CategoryRole},
+    }
 
 
 @study_library_router.get(
@@ -375,7 +378,10 @@ def export_learning_record(request: Request, term: str | None = None, format: st
                 media_type="text/markdown; charset=utf-8",
                 headers={"Content-Disposition": 'attachment; filename="learning-record.md"'},
             )
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        cfg.tmp_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            dir=cfg.tmp_dir, prefix="learning-record-", suffix=".pdf", delete=False
+        ) as tmp:
             tmp_path = Path(tmp.name)
         try:
             svc.export_pdf(term=term, out=tmp_path)

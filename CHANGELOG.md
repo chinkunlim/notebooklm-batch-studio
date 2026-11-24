@@ -188,6 +188,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(courses): require archived status before delete, preserve study files, report removed records (updated existing delete tests to archive first) (by `@antigravity`)
 - fix(ui): style modal text inputs and skip auto key-points before upload (ISSUE-066) (by `@antigravity`)
 - fix(courses): rename moves fallback output and needs-review folders, rewrites note stitched paths, refuses during note/literature runs (by `@antigravity`)
+- fix(record): show category folder labels and keep PDF export temp file inside DATA_DIR (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

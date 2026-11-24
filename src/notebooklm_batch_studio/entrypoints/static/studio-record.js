@@ -112,6 +112,7 @@ async function loadStudyLayoutOptions() {
     const data = await res.json();
     const roles = Array.isArray(data.roles) ? data.roles : [];
     const names = data.names || {};
+    window.STUDY_CATEGORY_NAMES = names;
     const list = roles.map(r => names[r]).filter(Boolean);
     if (!list.length) return;
     window.STUDY_CATEGORIES = list;
@@ -228,14 +229,17 @@ function _syncRecordExportLinks(term) {
 /**
  * Render one course card inside a term block of 學習紀錄.
  * @param {object} course CourseRecordView payload
+ * @param {object} [layoutMap] Role-to-folder-name mapping returned by `/api/study/record` or `/api/study/layout`
  * @returns {string} HTML string
  */
-function _recordCourseHtml(course) {
+function _recordCourseHtml(course, layoutMap) {
   const badge = _STATUS_BADGE[course.status] || { text: course.status, cls: 'badge-neutral' };
   const s = course.stats || {};
   const cats = (course.categories || []).map(cat => {
     const fileList = (cat.files || []).map(f => `<li class="small">${escHtml(f)}</li>`).join('');
-    return `<details class="rec-cat"><summary>${escHtml(cat.role)}（${(cat.files || []).length}）</summary><ul>${fileList}</ul></details>`;
+    const folderName = (layoutMap && layoutMap[cat.role]) || (window.STUDY_CATEGORY_NAMES && window.STUDY_CATEGORY_NAMES[cat.role]) || cat.role;
+    const label = _formatCategoryLabel(cat.role, folderName);
+    return `<details class="rec-cat"><summary>${escHtml(label)}（${(cat.files || []).length}）</summary><ul>${fileList}</ul></details>`;
   }).join('');
   return `<article class="card rec-course" style="margin-bottom:12px">
     <div class="card-head">
@@ -272,6 +276,8 @@ async function loadLearningRecordView(term) {
     const res = await fetch(url);
     if (!res.ok) throw new Error('無法載入學習紀錄');
     const data = await res.json();
+    const layoutMap = data.layout || window.STUDY_CATEGORY_NAMES || {};
+    if (data.layout) window.STUDY_CATEGORY_NAMES = { ...(window.STUDY_CATEGORY_NAMES || {}), ...data.layout };
     const terms = data.terms || [];
     if (filterSel && !chosen) {
       const prev = filterSel.value;
@@ -289,7 +295,7 @@ async function loadLearningRecordView(term) {
         : '';
       return `<section class="rec-term" style="margin-bottom:20px">
         <h2 class="h2" style="margin-bottom:10px">${escHtml(t.term)}</h2>
-        ${(t.courses || []).map(_recordCourseHtml).join('') || '<div class="small muted">此學期尚無課程</div>'}
+        ${(t.courses || []).map(c => _recordCourseHtml(c, layoutMap)).join('') || '<div class="small muted">此學期尚無課程</div>'}
         ${others}
       </section>`;
     }).join('');

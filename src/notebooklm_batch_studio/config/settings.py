@@ -268,6 +268,24 @@ class AppConfig:
         return self.logs_dir
 
     @property
+    def tmp_dir(self) -> Path:
+        """Directory inside `DATA_DIR` for transient files such as PDF export buffers.
+
+        Returns:
+            `<data_dir>/tmp`.
+        """
+        return self.data_dir / "tmp"
+
+    @property
+    def diagnostics_reports_dir(self) -> Path:
+        """Directory inside `DATA_DIR` for diagnostic JSON reports such as consolidation plans.
+
+        Returns:
+            `<data_dir>/diagnostics`.
+        """
+        return self.data_dir / "diagnostics"
+
+    @property
     def deleted_dir(self) -> Path:
         """Recoverable trash folder for deleted course legacy artifacts.
 

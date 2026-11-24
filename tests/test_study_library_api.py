@@ -19,8 +19,10 @@ from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, make_session_factory
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.models import Course, CourseStatus, Lecture
+from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
+from notebooklm_batch_studio.services.learning_record import LearningRecordService
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
 
@@ -289,6 +291,58 @@ class StudyLibraryApiAndMcpTests(unittest.TestCase):
                 )
                 checked.append(name)
         self.assertGreaterEqual(len(checked), 20)
+
+    def test_learning_record_returns_layout_mapping_and_frontend_uses_format_category_label(self) -> None:
+        """GET /api/study/record includes role->folder mapping and UI formats category headings."""
+        rec = self.client.get("/api/study/record")
+        self.assertEqual(rec.status_code, 200)
+        payload = rec.json()
+        self.assertIn("layout", payload)
+        self.assertEqual(payload["layout"]["handouts"], "02 Handouts")
+
+        custom_cfg = AppConfig(
+            data_dir=self.cfg.data_dir,
+            database_url=self.cfg.database_url,
+            http_allowed_hosts=("127.0.0.1", "localhost", "testserver"),
+            study_categories="01 Books, 02 Slides, 03 MyNotes, 04 HW, 05 Projects",
+        )
+        custom_client = TestClient(create_app(config=custom_cfg))
+        custom_rec = custom_client.get("/api/study/record")
+        self.assertEqual(custom_rec.status_code, 200)
+        self.assertEqual(custom_rec.json()["layout"]["handouts"], "02 Slides")
+
+        js_text = (
+            Path(__file__).resolve().parents[1]
+            / "src"
+            / "notebooklm_batch_studio"
+            / "entrypoints"
+            / "static"
+            / "studio-record.js"
+        ).read_text(encoding="utf-8")
+        body = js_text.split("function _recordCourseHtml", 1)[1].split("function ", 1)[0]
+        self.assertIn("_formatCategoryLabel(cat.role", body)
+
+    def test_pdf_export_writes_temp_file_inside_data_dir_tmp_and_cleans_up(self) -> None:
+        """PDF export writes its transient PDF inside DATA_DIR/tmp and removes it after streaming."""
+        captured: list[Path] = []
+        orig_export_pdf = LearningRecordService.export_pdf
+
+        def _spy_export_pdf(service: LearningRecordService, *, term: str | None = None, out: Path) -> Path:
+            captured.append(out)
+            return orig_export_pdf(service, term=term, out=out)
+
+        with mock.patch.object(
+            LearningRecordService, "export_pdf", autospec=True, side_effect=_spy_export_pdf
+        ):
+            resp = self.client.get("/api/study/record/export", params={"format": "pdf"})
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.content.startswith(b"%PDF"))
+        self.assertEqual(len(captured), 1)
+        out = captured[0]
+        self.assertEqual(out.parent, self.cfg.tmp_dir)
+        self.assertTrue(is_within(out, self.cfg.data_dir))
+        self.assertFalse(out.exists())
 
 
 if __name__ == "__main__":
