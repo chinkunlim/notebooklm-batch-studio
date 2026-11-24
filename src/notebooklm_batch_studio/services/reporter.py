@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 
 from notebooklm_batch_studio.domain.models import Course, JobStatus, Lecture
+from notebooklm_batch_studio.domain.study_hierarchy import resolve_course_output_root
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +177,7 @@ class CourseReporter:
         Returns:
             Tuple of (summary_md_path, summary_html_path).
         """
-        course_dir = self.output_root / course.code
+        course_dir = resolve_course_output_root(self.output_root, course.code, course.study_dir)
         course_dir.mkdir(parents=True, exist_ok=True)
 
         md_path = course_dir / "summary.md"

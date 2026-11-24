@@ -184,7 +184,8 @@ def _resolve_study_service(
     eng = engine or create_db_engine(cfg.database_url)
     session = _request_scoped(sessionmaker(bind=eng, expire_on_commit=False))
     study_repo = StudyRepository(cast(Session, session))
-    return StudyTrackerService(study_repo=study_repo, config=cfg)
+    course_repo = CourseRepository(cast(Session, session))
+    return StudyTrackerService(study_repo=study_repo, config=cfg, course_repo=course_repo)
 
 
 def _build_lifespan(service: BatchStudioService, cfg: AppConfig) -> Callable[[FastAPI], Any]:

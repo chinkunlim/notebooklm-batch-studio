@@ -27,6 +27,7 @@ from notebooklm_batch_studio.domain.models import (
 )
 from notebooklm_batch_studio.domain.naming import label_for
 from notebooklm_batch_studio.domain.repositories import CourseRepositoryProtocol, QueueRepositoryProtocol
+from notebooklm_batch_studio.domain.study_hierarchy import resolve_course_output_root
 from notebooklm_batch_studio.services.course_options import (
     apply_job_settings as apply_job_settings,
 )
@@ -436,11 +437,12 @@ class CourseSettingsService:
         Returns:
             Removed job count and where the output files were moved (None when there were none).
         """
-        self._course(code)
+        course = self._course(code)
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         target = self.config.deleted_dir / f"{code}-{stamp}"
         moved: str | None = None
-        sources = [self.config.courses_output_dir / code, *self.config.needs_review_dir.glob(f"{code}_*")]
+        output_root = resolve_course_output_root(self.config.courses_output_dir, code, course.study_dir)
+        sources = [output_root, *self.config.needs_review_dir.glob(f"{code}_*")]
         for folder in (f for f in sources if f.exists()):
             target.mkdir(parents=True, exist_ok=True)
             shutil.move(str(folder), str(target / folder.name))

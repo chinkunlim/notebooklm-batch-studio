@@ -98,7 +98,7 @@ class TestQANotesService(unittest.IsolatedAsyncioTestCase):
             source_scene="quiz_explain",
             personal_memo="老師強調常考",
         )
-        notes_dir = self.config.courses_output_dir / "BIO101" / "notes"
+        notes_dir = self.config.scratch_kind_dir("notes") / "BIO101"
         md_files = list(notes_dir.glob("*.md"))
         self.assertEqual(len(md_files), 1)
         content = md_files[0].read_text(encoding="utf-8")

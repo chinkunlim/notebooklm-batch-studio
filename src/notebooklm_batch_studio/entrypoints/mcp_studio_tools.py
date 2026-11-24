@@ -373,7 +373,7 @@ def _register_folder_and_type_read_tools(mcp: MCPServer, active_service: BatchSt
             JSON string with the folder, its parent and sub-folders.
         """
         try:
-            data = browse_folders(path or None, active_service.config.courses_input_dir)
+            data = browse_folders(path or None, active_service.config)
             return json.dumps(data, ensure_ascii=False, indent=2)
         except ValueError as exc:
             return json.dumps({"error": str(exc)}, ensure_ascii=False)

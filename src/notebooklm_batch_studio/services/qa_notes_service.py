@@ -21,6 +21,8 @@ from notebooklm_batch_studio.domain.qa_notes import (
     QANoteRepositoryProtocol,
 )
 from notebooklm_batch_studio.domain.repositories import CourseRepositoryProtocol
+from notebooklm_batch_studio.domain.study_hierarchy import QA_NOTES_SUBFOLDER
+from notebooklm_batch_studio.domain.study_layout import CategoryRole
 from notebooklm_batch_studio.services.converters.note_pdf_renderer import render_markdown_to_pdf
 from notebooklm_batch_studio.services.qa_notes_formatter import (
     SCENE_TAG_MAP,
@@ -119,11 +121,33 @@ class QANotesService:
         """
         course = self.course_repo.get_course(course_code)
         if course and course.study_dir:
-            path = Path(course.study_dir) / "03 Notes" / "QA_Notes"
+            path = (
+                self.config.study_layout.primary_dir(Path(course.study_dir), CategoryRole.NOTES)
+                / QA_NOTES_SUBFOLDER
+            )
         else:
-            path = self.config.courses_output_dir / course_code / "notes"
+            path = self.config.scratch_kind_dir("notes") / course_code
         path.mkdir(parents=True, exist_ok=True)
         return path
+
+    def _upload_pdf_dir(self, course: Course) -> Path:
+        """Return directory for uploaded note PDFs under `<HANDOUTS>/_uploaded` or `scratch/uploads`.
+
+        Args:
+            course: Target Course domain entity.
+
+        Returns:
+            Existing destination directory path.
+        """
+        if course.study_dir:
+            pdf_dir = (
+                self.config.study_layout.primary_dir(Path(course.study_dir), CategoryRole.HANDOUTS)
+                / "_uploaded"
+            )
+        else:
+            pdf_dir = self.config.scratch_kind_dir("uploads") / course.code
+        pdf_dir.mkdir(parents=True, exist_ok=True)
+        return pdf_dir
 
     def _write_note_markdown(self, note: CourseQANote) -> Path:
         """Persist or overwrite the Markdown file for a CourseQANote on disk.
@@ -374,7 +398,7 @@ class QANotesService:
             raise ValueError(f"Note {note_id} not found for course {course_code}")
         await self._check_upload_capacity(course)
 
-        pdf_dir = self.config.courses_input_dir / course_code / "_uploaded_sources"
+        pdf_dir = self._upload_pdf_dir(course)
         pdf_path = pdf_dir / f"{note.id}_{slugify_note_title(note.title)}.pdf"
         render_markdown_to_pdf(note.title, render_note_file_text(note), pdf_path)
 
@@ -426,7 +450,7 @@ class QANotesService:
         await self._check_upload_capacity(course)
 
         included, combined_md = self._collect_bundle_notes(course_code, note_ids)
-        pdf_dir = self.config.courses_input_dir / course_code / "_uploaded_sources"
+        pdf_dir = self._upload_pdf_dir(course)
         pdf_path = pdf_dir / f"bundle_{slugify_note_title(title)}_{uuid4().hex[:6]}.pdf"
         render_markdown_to_pdf(title, combined_md, pdf_path)
 

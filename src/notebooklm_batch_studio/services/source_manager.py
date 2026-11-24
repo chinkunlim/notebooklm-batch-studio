@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.models import Course, Lecture
-from notebooklm_batch_studio.domain.path_safety import ensure_within_roots
+from notebooklm_batch_studio.domain.path_safety import ensure_within_roots, validate_path_segment
+from notebooklm_batch_studio.domain.study_layout import CategoryRole
 from notebooklm_batch_studio.services.job_views import lecture_to_dict
 
 if TYPE_CHECKING:
@@ -328,8 +329,26 @@ class CourseSourceMixin:
             raise ValueError("Only .pdf files can be uploaded as sources")
         return candidate
 
+    def _upload_dest_dir(self, course_code: str) -> Path:
+        """Resolve upload destination inside `<HANDOUTS>/_uploaded` or `scratch/uploads/<code>`.
+
+        Args:
+            course_code: Course identifier.
+
+        Returns:
+            Directory path for uploaded custom PDF sources.
+        """
+        validate_path_segment(course_code, "course_code")
+        course = self.course_repo.get_course(course_code)
+        if course and course.study_dir:
+            return (
+                self.config.study_layout.primary_dir(Path(course.study_dir), CategoryRole.HANDOUTS)
+                / "_uploaded"
+            )
+        return self.config.scratch_kind_dir("uploads") / course_code
+
     def _save_uploaded_base64_pdf(self, course_code: str, filename: str, content_base64: str) -> Path:
-        """Decode and store a browser-uploaded PDF under DATA_DIR without modifying course source_dir.
+        """Decode and store a browser-uploaded PDF under `<HANDOUTS>/_uploaded` or `scratch/uploads`.
 
         Args:
             course_code: Course identifier.
@@ -337,7 +356,7 @@ class CourseSourceMixin:
             content_base64: Base64-encoded (or data-URI) PDF payload.
 
         Returns:
-            Path to the written PDF file under `courses_input_dir/<course_code>/_uploaded_sources/`.
+            Path to the written PDF file.
 
         Raises:
             ValueError: When filename is invalid, base64 is malformed, or content is not a PDF.
@@ -356,7 +375,7 @@ class CourseSourceMixin:
         if not data.startswith(b"%PDF"):
             raise ValueError("Uploaded file is not a valid PDF document")
 
-        dest_dir = self.config.courses_input_dir / course_code / "_uploaded_sources"
+        dest_dir = self._upload_dest_dir(course_code)
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_path = dest_dir / safe_name
         dest_path.write_bytes(data)

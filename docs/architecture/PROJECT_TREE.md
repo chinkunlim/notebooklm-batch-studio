@@ -860,6 +860,7 @@ notebooklm-batch-studio/
 │   ├── test_note_pipeline_phase2.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
+│   ├── test_old_layout_retired.py
 │   ├── test_port_check.py
 │   ├── test_preferences.py
 │   ├── test_qa_notes_api.py

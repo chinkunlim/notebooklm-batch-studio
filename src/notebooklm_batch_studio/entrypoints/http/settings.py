@@ -225,7 +225,7 @@ def get_folders(
         HTTPException: 400 when the folder is outside the home directory or unreadable.
     """
     try:
-        return browse_folders(path, request.app.state.config.courses_input_dir)
+        return browse_folders(path, request.app.state.config)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

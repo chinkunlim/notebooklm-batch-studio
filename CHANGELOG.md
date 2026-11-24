@@ -175,6 +175,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(security,mcp): close path-safety, HTTP 400, XSS, and MCP confirm gaps (TASK-030, ISSUE-045, ISSUE-046, ISSUE-048) (by `@antigravity`)
 - fix(literature): close stale running jobs on runner startup and worker interrupt (TASK-032, ISSUE-054) (by `@antigravity`)
 - fix(literature): guard stale job cleanup with cross-process RunLock (TASK-034, ISSUE-057) (by `@antigravity`)
+- fix(layout): retire input/output course folders, scope flashcards to their course (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

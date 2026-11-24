@@ -236,23 +236,31 @@ class FolderBrowserTest(unittest.TestCase):
     """Clickable folder picker stays inside the home directory."""
 
     def test_shortcuts_listing_and_boundary(self) -> None:
-        """Shortcuts list the input folder; sub-folders show PDF counts; outside paths are refused."""
+        """Shortcuts list study/scratch/legacy folders; sub-folders show PDF counts; outside paths fail."""
         with tempfile.TemporaryDirectory() as tmp_name:
             home = Path(tmp_name).resolve()
-            courses = home / "data" / "input" / "courses"
+            cfg = AppConfig(data_dir=home / "data", log_to_file=False)
+            cfg.ensure_data_dirs()
+            courses = cfg.courses_input_dir
             course = courses / "115-1 心理學研究法"
             course.mkdir(parents=True)
             (course / "Ch01.pdf").write_bytes(b"%PDF")
             (home / "Desktop").mkdir()
-            top = browse_folders(None, courses, home=home)
+            top = browse_folders(None, cfg, home=home)
             self.assertEqual(
-                [f["path"] for f in top["folders"]], [str(courses.resolve()), str(home / "Desktop")]
+                [f["path"] for f in top["folders"]],
+                [
+                    str(cfg.study_root_dir.resolve()),
+                    str(cfg.scratch_dir.resolve()),
+                    str(courses.resolve()),
+                    str(home / "Desktop"),
+                ],
             )
-            inside = browse_folders(str(courses), courses, home=home)
+            inside = browse_folders(str(courses), cfg, home=home)
             self.assertEqual(inside["folders"][0]["pdf_count"], 1)
             self.assertEqual(inside["parent"], str((home / "data" / "input").resolve()))
             with self.assertRaises(ValueError):
-                browse_folders("/", courses, home=home)
+                browse_folders("/", cfg, home=home)
 
 
 class WeeklyQuotaTest(unittest.TestCase):

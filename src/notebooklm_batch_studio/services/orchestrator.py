@@ -79,7 +79,7 @@ class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
         self.queue_repo = queue_repo
         self.notebooklm_client = notebooklm_client
         self.config = raw_config
-        self.reporter = CourseReporter(self.config.courses_output_dir)
+        self.reporter = CourseReporter(self.config.scratch_kind_dir("outputs"))
         self.runner = ArtifactRunner(self.notebooklm_client, self.config)
         self.queue_provider: QueueSessionProvider = queue_provider or self._default_queue_provider
         self.ollama_client = ollama_client

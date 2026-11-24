@@ -188,16 +188,14 @@ def resolve_lecture_pdf_path(source_dir: str | Path, filename: str, relative_pat
     return base / filename
 
 
-def resolve_course_output_root(
-    default_courses_output_dir: Path, course_code: str, study_dir: str = ""
-) -> Path:
+def resolve_course_output_root(fallback_output_root: Path, course_code: str, study_dir: str = "") -> Path:
     """Resolve the NotebookLM output root for a course.
 
     When `study_dir` is configured, returns `<study_dir>/03 Notes/NotebookLM`; otherwise
-    returns the legacy `<courses_output_dir>/<course_code>`.
+    returns `<fallback_output_root>/<course_code>`.
 
     Args:
-        default_courses_output_dir: Legacy `<data_dir>/output/courses` root.
+        fallback_output_root: Fallback output root when `study_dir` is empty.
         course_code: Course identifier.
         study_dir: Optional unified study directory path.
 
@@ -206,7 +204,7 @@ def resolve_course_output_root(
     """
     if study_dir:
         return resolve_notebooklm_notes_dir(Path(study_dir))
-    return default_courses_output_dir / course_code
+    return fallback_output_root / course_code
 
 
 @dataclass(frozen=True)

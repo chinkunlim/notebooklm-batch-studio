@@ -282,7 +282,7 @@ def test_no_hardcoded_category_literals_left(self):
 - Modify `services/folder_browser.py:47-83`、`entrypoints/http/settings.py:228`、`entrypoints/mcp_studio_tools.py:359`（第一個捷徑改為 `study_root_dir`，第二個 `scratch_dir`；`input/courses` 存在時列為「舊課程資料夾（待整併）」）
 - Test `tests/test_old_layout_retired.py`
 
-- [ ] **Step 1: 失敗測試**
+- [x] **Step 1: 失敗測試**
 
 ```python
 def test_flashcards_never_read_another_course(self):
@@ -318,8 +318,8 @@ def test_no_new_writes_to_old_layout(self):
 
 （`browse_folders` 簽章改為 `browse_folders(path: str | None, config: AppConfig, home: Path | None = None)`）
 
-- [ ] **Step 2–4:** 失敗 → 實作 → 全部測試通過
-- [ ] **Step 5:** Commit `-m "fix(layout): retire input/output course folders, scope flashcards to their course"`
+- [x] **Step 2–4:** 失敗 → 實作 → 全部測試通過
+- [x] **Step 5:** Commit `-m "fix(layout): retire input/output course folders, scope flashcards to their course"`
 
 ## Phase 1：學期樹、本學期新課程、監看與歸檔
 

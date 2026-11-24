@@ -11,7 +11,8 @@ from typing import Any
 
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.models import QuizAttempt, QuizMistake
-from notebooklm_batch_studio.domain.repositories import StudyRepositoryProtocol
+from notebooklm_batch_studio.domain.repositories import CourseRepositoryProtocol, StudyRepositoryProtocol
+from notebooklm_batch_studio.domain.study_hierarchy import resolve_course_output_root
 from notebooklm_batch_studio.services.converters.flashcard_converter import parse_notebooklm_flashcards
 
 logger = logging.getLogger(__name__)
@@ -78,15 +79,18 @@ class StudyTrackerService:
         self,
         study_repo: StudyRepositoryProtocol,
         config: AppConfig | None = None,
+        course_repo: CourseRepositoryProtocol | None = None,
     ) -> None:
         """Initialize the study tracker service.
 
         Args:
             study_repo: Data repository implementing StudyRepositoryProtocol.
             config: Optional application configuration.
+            course_repo: Optional course repository used to scope outputs to `course.study_dir`.
         """
         self.study_repo = study_repo
         self.config = config
+        self.course_repo = course_repo
 
     def record_quiz_attempt(self, course_code: str, lecture_no: int | None, **payload: Any) -> QuizAttempt:
         """Record a completed quiz attempt and individual mistakes.
@@ -207,11 +211,11 @@ class StudyTrackerService:
 
         # Flashcards live in the lecture folder "<NN>_<topic>/flashcards[_vN].json"; the lecture
         # number is in the folder name, not the file name. Newest version first. Refs: ISSUE-020
-        course_dir = self.config.courses_output_dir / course_code
+        # Scoped strictly to this course's output root (no cross-course glob). Refs: ISSUE-064
+        course = self.course_repo.get_course(course_code) if self.course_repo else None
+        study_dir = course.study_dir if course else ""
+        course_dir = resolve_course_output_root(self.config.courses_output_dir, course_code, study_dir)
         candidates = list(course_dir.glob(f"{lecture_no:02d}_*/flashcards*.json"))
-        if not candidates and self.config.study_root_dir.is_dir():
-            pattern = f"*/*/03 Notes/NotebookLM/{lecture_no:02d}_*/flashcards*.json"
-            candidates = list(self.config.study_root_dir.glob(pattern))
         matches = sorted(
             candidates,
             key=lambda f: int(f.stem.rpartition("_v")[2]) if "_v" in f.stem else 1,

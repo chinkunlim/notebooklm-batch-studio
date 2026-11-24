@@ -363,7 +363,7 @@ class CourseSourceManagementTest(Fixture):
             "/api/courses/BIO101/sources", json={"filename": "notes.pdf", "content_base64": b64_pdf}
         )
         self.assertEqual((by_b64.status_code, by_b64.json()["filename"]), (200, "notes.pdf"))
-        uploaded_copy = self.config.courses_input_dir / "BIO101" / "_uploaded_sources" / "notes.pdf"
+        uploaded_copy = self.config.scratch_kind_dir("uploads") / "BIO101" / "notes.pdf"
         self.assertTrue(uploaded_copy.exists())
         self.assertEqual(self.http.post("/api/courses/BIO101/sources", json={}).status_code, 422)
         bad_path = {"file_path": "/etc/outside.pdf"}

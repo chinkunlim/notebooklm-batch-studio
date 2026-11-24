@@ -408,7 +408,7 @@ def _resolve_mcp_services(
         c_repo, q_repo, s_repo = CourseRepository(session), QueueRepository(session), StudyRepository(session)
         adapter, ollama = NotebookLMAdapter(cfg), OllamaClient(config=cfg)
         active_service = service or BatchStudioService(c_repo, q_repo, adapter, cfg, ollama_client=ollama)
-        active_study = study_service or StudyTrackerService(study_repo=s_repo, config=cfg)
+        active_study = study_service or StudyTrackerService(study_repo=s_repo, config=cfg, course_repo=c_repo)
         deps = StudyPlanDeps(c_repo, q_repo, s_repo, ReviewRepository(session), adapter)
         plan = overrides.get("study_plan") or StudyPlanService(deps)
         learn = overrides.get("learning") or LearningService(c_repo, LearningRepository(session), adapter)
