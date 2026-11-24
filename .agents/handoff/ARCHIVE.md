@@ -341,3 +341,11 @@
 ### [2026-11-22 14:27 UTC] 完成任務 `TASK-025` — Integrate literature-fetch and unified study folder hierarchy (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Integrated literature-fetch (APA/DOI/Crossref/OpenAlex/Airiti/EBSCO/OpenAthens + interactive mode + APA 7 export + course import), unified <term>/<subject>/<category> study hierarchy, Web UI sidebar page, HTTP/MCP parity, and migrated existing DATA_DIR courses.
+
+### [2026-11-22 16:04 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: Complete literature-fetch integration, unified study folder hierarchy, Gemini Literature Library & Review generation, and Literature UI polish (inline PDF.js pr
+- **錯誤與根因**: 1) Inline PDF iframe triggered download due to attachment headers -> replaced with PDF.js canvas rendering via /api/literature/items/{key}/pdf. 2) Topbar course
+- **下一步**: 1) Retire standalone literature-fetch repo if no longer needed. 2) Test Literature Collection Excel-style filtering, PDF preview, and Gemini Literature Review g
+- **交接備註**: literature-fetch fully integrated & UI polished; all tests & checks pass, pushed to origin/main.
+- **本機對話紀錄**: `.agents/conversations/2026-11-23-0004-antigravity-summary.md`（只在這台電腦）

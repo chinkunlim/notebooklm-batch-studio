@@ -124,7 +124,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `preferences.py`：網頁偏好讀寫與重設（`/api/preferences`，存在 SQLite `ui_preferences`，ADR-009）。
   - `fonts.py`：下載 Google Fonts 到 `DATA_DIR/fonts/` 並離線提供（`/api/fonts`，ADR-009）。
   - `literature.py`、`literature_files.py`、`literature_notebook.py`：文獻新增／處理工作／歸檔，PDF 預覽、APA 7 與報告匯出、學習資料夾遷移，以及 `Literature Library` 筆記本同步、問答與 Literature Review（SPEC-012）。
-  - `notes.py`：note-studio 模組化筆記的提示詞預覽、生成、暫停、讀取、推回來源與舊筆記匯入（`/api/notes/*`，SPEC-013）。
+  - `notes.py` & `gemini_auth.py`：note-studio 模組化筆記的提示詞預覽、生成、暫停、讀取、推回來源、舊筆記匯入（`/api/notes/*`，SPEC-013），以及 Gemini 網頁版真實 Chrome 登入／登出／狀態與憑證保留天數（`/api/notes/gemini/*`，ISSUE-053）。
   - `qa_notes.py`、`reverse_import.py`：問答筆記（SPEC-011）與遠端筆記本反向匯入。
 - `http_middleware.py`：`HostValidationMiddleware`（只收 loopback Host，空 Host 也拒絕）、`SecurityHeadersMiddleware`（CSP、nosniff、no-referrer）與 `NoCacheStaticFiles`（ADR-013）。
 - `entrypoints/static/`：前端使用者介面（純原生 JS，無編譯負擔）：
@@ -151,7 +151,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `mcp_preferences.py` & `mcp_fonts.py`：網頁偏好讀寫重設與 Google Fonts 離線安裝工具。
   - `mcp_extensions.py`：組裝文獻與筆記工具群，提供課程 `study_dir` / `source_dir` 查詢。
   - `mcp_literature.py` & `mcp_literature_notebook.py`：文獻與 `Literature Library` 工具；會改資料者一律 `confirm=True`（ISSUE-048）。
-  - `mcp_notes.py`：note-studio 筆記工具（SPEC-013）。
+  - `mcp_notes.py` & `mcp_gemini_auth.py`：note-studio 筆記工具（SPEC-013）與 Gemini Web 登入／憑證保留控制工具（`notes_gemini_*`，ISSUE-053）。
+  - `mcp_confirm.py`：共用未確認安全守衛；全庫 57 支變更類 MCP 工具於 `confirm=False` 時統一回傳 `{"confirmed": false, "warning": ...}`（TASK-033）。
   - `mcp_qa_notes.py` & `mcp_remote_admin.py`：問答筆記、遠端產出與來源管理。
 - `port_check.py`：啟動前檢查埠號；被佔用時列出佔用程式並停止（與 uvicorn 一樣使用 `SO_REUSEADDR`，ISSUE-027）。全機埠號總表在 `00 init_dev_env/PORTS.md`。
 - `/static` 以 `NoCacheStaticFiles`（`http_middleware.py`）掛載（`Cache-Control: no-cache`），更新後瀏覽器不會沿用舊的 CSS／JS（ISSUE-028）。
@@ -175,7 +176,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `preferences_repository.py` (`PreferencesRepository`)：持久化網頁介面偏好設定 (`ui_preferences`)。
 - `adapters/fonts/google_fonts.py` & `adapters/ollama/client.py`：Google Fonts 下載適配器與本機 Ollama 模型提示詞潤飾客戶端。
 - `adapters/literature/`：Crossref / OpenAlex / 華藝 / EBSCO / OpenAthens 來源、Playwright 下載與舊 `literature-fetch` 資料庫匯入（`legacy_import.py` 只接受不含資料夾的 `.pdf` 檔名，ISSUE-047）。
-- `adapters/gemini/`：以 Chrome 遠端除錯埠操作 Gemini 網頁版（note-studio 主要後端，ADR-012）。
+- `adapters/gemini/`：以 Chrome 遠端除錯埠操作 Gemini 網頁版（note-studio 主要後端，ADR-012），含 `auth_runtime.py`（真實 Chrome CDP 登入、`storage_state.json` 權限 600，ISSUE-053）。
+- `adapters/locks.py`：`RunLock`（`fcntl.flock` 非阻塞排他程序鎖），防止 Web 與 MCP 等不同程序同時啟動或清理仍在執行的文獻工作（ISSUE-057）。
 - `adapters/private_dir.py`：瀏覽器設定檔資料夾一律建立為 700（ADR-013）。
 - 檔案系統操作：資料夾監看與 PDF 寫入完成度偵測在 `services/watcher.py`，課程目錄掃描在 `services/course_parser.py`，下載路由與 PDF 閱讀器的路徑檢核在 `entrypoints/http/artifacts.py` 與 `learning.py`。
 
@@ -205,8 +207,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `anki_exporter.py`：匯出 Anki 專用 CSV 牌組格式，包含標籤與自訂欄位。
 - `reporter.py`：為每門課程產生整體的 `summary.md` 與可離線瀏覽的 `summary.html`。
 - `watcher.py`：監看檔案系統變更，當偵測到新上傳講義且寫入完成後自動加入排程。
-- `literature/`：`manager.py`（新增、辨識、下載）＋ `archive.py`（歸檔、退回、自動登錄 PDF）＋ `export.py`（APA 7、報告、序列化），共用 `manager_base.py`；`jobs.py` 背景工作；`notebook_service.py` 文獻筆記本與 Literature Review（SPEC-012）。
-- `notes/`：note-studio 管線（SPEC-013）：`note_pipeline_service.py`（步驟執行、縫合、封存）、`note_paths.py`（資料夾位置與路徑安全檢查，ISSUE-045）、`module_prompts.py`、`step_validator.py`、`chapter_normalizer.py`、`module_composer.py`、`note_sync.py`、`state_manager.py`。
+- `literature/`：`manager.py`（新增、辨識、下載）＋ `archive.py`（歸檔、退回、自動登錄 PDF）＋ `export.py`（APA 7、報告、序列化），共用 `manager_base.py`；`jobs.py` 背景工作與啟動殘留工作清理（受 `RunLock` 跨程序鎖定保護，ISSUE-054 / ISSUE-057）；`notebook_service.py` 文獻筆記本與 Literature Review（SPEC-012）。
+- `notes/`：note-studio 管線（SPEC-013）：`note_pipeline_service.py`（步驟執行、縫合、封存）、`note_paths.py`（資料夾位置與路徑安全檢查，ISSUE-045）、`gemini_auth_service.py`（Gemini Web 登入與憑證管理，ISSUE-053）、`module_prompts.py`、`step_validator.py`、`chapter_normalizer.py`、`module_composer.py`、`note_sync.py`、`state_manager.py`。
 - `study_migration.py`：把舊課程搬到 `<STUDY_ROOT_DIR>/<term>/<subject>/<category>`（ADR-011）。
 
 ### 2.4 領域模型層 (`domain`)

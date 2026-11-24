@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-24 08:59 UTC`
+- **最後更新時間**: `2026-11-24 09:19 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `8ab99cb docs: complete evidence-backed audit of specs, ADRs, issues, tasks, and changelog (TASK-033) [agent:antigravity]`
+- **最新 Git Commit**: `3e2536d chore(framework,docs): complete v3.6.0 Rule 16 sync and CHANGELOG traceability [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-24 09:19 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: Complete evidence-backed record/spec/MCP audit (TASK-033), port Gemini Web auth (TASK-031/ISSUE-053), fix literature stale-job cleanup and cross-process RunLock
+- **錯誤與根因**: ISSUE-053 (missing Gemini Web login entrypoint -> ported GeminiAuthService + 3-entrypoint login); ISSUE-054 (leftover running literature_jobs -> startup close_s
+- **下一步**: Proceed with real-machine/browser verification items marked 待實機 in SPEC-001..011 or review Claude Code's untracked plan docs/superpowers/plans/2026-11-24-study-
+- **交接備註**: All 441 tests pass, agentctl check 0 warnings, agentctl scan 100/100; TASK-031..034 closed and pushed
+- **本機對話紀錄**: `.agents/conversations/2026-11-24-1719-antigravity-summary.md`（只在這台電腦）
 
 ### [2026-11-24 08:59 UTC] 完成任務 `TASK-034` — Fix ISSUE-054 regression: guard literature stale-job cleanup with RunLock (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -97,11 +105,3 @@
 - **下一步**: 1) Retire standalone literature-fetch repo. 2) Continue live testing or new features in notebooklm-batch-studio.
 - **交接備註**: All literature-fetch tests (108 unit + 5 integration = 333 total), known issues, and docs integrated and pushed to origin/main.
 - **本機對話紀錄**: `.agents/conversations/2026-11-23-1142-antigravity-summary.md`（只在這台電腦）
-
-### [2026-11-22 16:04 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
-- **檢查結果**: 測試與 Code Review Guard 通過
-- **目標**: Complete literature-fetch integration, unified study folder hierarchy, Gemini Literature Library & Review generation, and Literature UI polish (inline PDF.js pr
-- **錯誤與根因**: 1) Inline PDF iframe triggered download due to attachment headers -> replaced with PDF.js canvas rendering via /api/literature/items/{key}/pdf. 2) Topbar course
-- **下一步**: 1) Retire standalone literature-fetch repo if no longer needed. 2) Test Literature Collection Excel-style filtering, PDF preview, and Gemini Literature Review g
-- **交接備註**: literature-fetch fully integrated & UI polished; all tests & checks pass, pushed to origin/main.
-- **本機對話紀錄**: `.agents/conversations/2026-11-23-0004-antigravity-summary.md`（只在這台電腦）

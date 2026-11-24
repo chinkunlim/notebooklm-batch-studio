@@ -190,6 +190,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs: resolve ISSUE-037 and complete TASK-020 (by `@antigravity`)
 - docs: document Study Studio reader, scrolling, and UI fixes in README and CHANGELOG (by `@antigravity`)
 - docs: complete evidence-backed audit of SPEC acceptance criteria, ADR/ISSUE/TASK/CHANGELOG traceability, cross-repo note-studio & literature-fetch mappings, and `StepValidator`/unported-test decisions (`TASK-033`; commit `8ab99cb`) (by `@antigravity`)
+- docs(docs): update docs documentation (ADR-008, ADR-009, ADR-011, ADR-012, ADR-013, ISSUE-027, ISSUE-028, ISSUE-045, ISSUE-047, ISSUE-048, ISSUE-053, ISSUE-054, ISSUE-057, TASK-025, TASK-031, TASK-033, TASK-034) (by `@antigravity`)
 
 ### Testing
 - test(literature): port literature-fetch unit tests, fixtures, known issues (`ISSUE-041`, `ISSUE-042`, `ISSUE-043`, `ISSUE-044`; commit `e57a452`), and docs (by `@antigravity`)
