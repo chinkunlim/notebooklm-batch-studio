@@ -268,9 +268,9 @@ def test_no_hardcoded_category_literals_left(self):
 
 **Files:** Create `alembic/versions/20261125_<rev>_course_status_and_course_no.py`（`down_revision="85aedf6f2f6f"`）；Modify `adapters/db/models.py`（`CourseRecord.status String(20) default/server_default "active"`、`course_no String(50) default ""`；`LiteratureItemRecord.target_category` server_default 改 `"01 Materials"`，既有資料不改）、`domain/models.py`（`CourseStatus`、`Course.status`、`Course.course_no`、`ProfileName.RECORD_ONLY = "record-only"`）、`adapters/db/repository.py`（新欄位；`list_courses(status: CourseStatus | None = None)`）、`services/job_planner.py:19`（`RECORD_ONLY: []`）；Test `tests/test_course_lifecycle.py`
 
-- [ ] **Step 1: 失敗測試**：status/course_no 寫入讀回；`list_courses(status=ARCHIVED)` 過濾；`generate_jobs_for_course(record_only_course) == []`；舊文獻列 `target_category="01 Material"` 讀回後 `DEFAULT_LAYOUT.role_of(...) == MATERIALS`。
-- [ ] **Step 2–4:** 失敗 → 實作 → `uv run alembic upgrade head && uv run alembic check` 輸出 `No new upgrade operations detected.`；測試通過
-- [ ] **Step 5:** Commit `-m "feat(db): course status, course number, record-only profile, plural literature default"`
+- [x] **Step 1: 失敗測試**：status/course_no 寫入讀回；`list_courses(status=ARCHIVED)` 過濾；`generate_jobs_for_course(record_only_course) == []`；舊文獻列 `target_category="01 Material"` 讀回後 `DEFAULT_LAYOUT.role_of(...) == MATERIALS`。
+- [x] **Step 2–4:** 失敗 → 實作 → `uv run alembic upgrade head && uv run alembic check` 輸出 `No new upgrade operations detected.`；測試通過
+- [x] **Step 5:** Commit `-m "feat(db): course status, course number, record-only profile, plural literature default"`
 
 ### Task 6: 讓舊佈局退場（所有讀寫改走課程的 study 資料夾）
 

@@ -37,6 +37,7 @@ _PROFILE_ARTIFACT_TYPES: dict[ProfileName, list[ArtifactType]] = {
         ArtifactType.QUIZ_3,
         ArtifactType.STUDY_GUIDE,
     ],
+    ProfileName.RECORD_ONLY: [],
 }
 
 
@@ -171,6 +172,8 @@ def generate_jobs_for_course(course: Course) -> list[ArtifactJob]:
     Returns:
         List of ready-to-enqueue ArtifactJob objects with unique identifiers.
     """
+    if course.profile == ProfileName.RECORD_ONLY:
+        return []
     prompt_gen = PromptGenerator()
     if course.selected_chapter_artifacts or course.selected_course_artifacts:
         return _generate_granular_jobs(course, prompt_gen)

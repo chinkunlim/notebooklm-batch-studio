@@ -11,6 +11,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    CourseStatus,
     GenerationOptions,
     JobStatus,
     QuizAttempt,
@@ -283,8 +284,11 @@ class CourseRepositoryProtocol(Protocol):
         """
         ...
 
-    def list_courses(self) -> list[Course]:
-        """List all courses.
+    def list_courses(self, status: CourseStatus | None = None) -> list[Course]:
+        """List registered courses, optionally filtered by lifecycle status.
+
+        Args:
+            status: Optional `CourseStatus` filter.
 
         Returns:
             List of domain Course entities.
@@ -384,13 +388,7 @@ class CourseRepositoryProtocol(Protocol):
         """
         ...
 
-    def update_lecture_upload_status(
-        self,
-        code: str,
-        lecture_no: int,
-        status: str,
-        **details: Any,
-    ) -> None:
+    def update_lecture_upload_status(self, code: str, lecture_no: int, status: str, **details: Any) -> None:
         """Update upload state, source ID, and error message for a lecture PDF.
 
         Args:

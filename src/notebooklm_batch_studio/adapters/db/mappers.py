@@ -9,6 +9,7 @@ from notebooklm_batch_studio.domain.models import (
     ArtifactJob,
     ArtifactType,
     Course,
+    CourseStatus,
     GenerationOptions,
     JobStatus,
     Lecture,
@@ -92,6 +93,12 @@ def to_domain_course(record: CourseRecord, lectures: list[Lecture]) -> Course:
         term=getattr(record, "term", "") or "",
         subject=getattr(record, "subject", "") or "",
         study_dir=getattr(record, "study_dir", "") or "",
+        status=(
+            CourseStatus(getattr(record, "status", "active"))
+            if getattr(record, "status", "active") in CourseStatus._value2member_map_
+            else CourseStatus.ACTIVE
+        ),
+        course_no=getattr(record, "course_no", "") or "",
     )
 
 

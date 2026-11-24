@@ -26,7 +26,7 @@ from notebooklm_batch_studio.adapters.db.models import (
     utc_now,
 )
 from notebooklm_batch_studio.adapters.db.queue_repository import QueueRepository as QueueRepository
-from notebooklm_batch_studio.domain.models import Course, GenerationOptions, Lecture
+from notebooklm_batch_studio.domain.models import Course, CourseStatus, GenerationOptions, Lecture
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +124,8 @@ class CourseRepository:
             term=course.term,
             subject=course.subject,
             study_dir=course.study_dir,
+            status=course.status.value,
+            course_no=course.course_no,
         )
         self.session.add(record)
         return record
@@ -162,6 +164,9 @@ class CourseRepository:
             existing.subject = course.subject
         if course.study_dir:
             existing.study_dir = course.study_dir
+        existing.status = course.status.value
+        if course.course_no:
+            existing.course_no = course.course_no
         existing.updated_at = utc_now()
 
     def save_course(self, course: Course) -> None:
@@ -200,13 +205,19 @@ class CourseRepository:
         lectures = [to_domain_lecture(r) for r in self.session.scalars(stmt)]
         return to_domain_course(record, lectures)
 
-    def list_courses(self) -> list[Course]:
-        """List all courses registered in the system.
+    def list_courses(self, status: CourseStatus | None = None) -> list[Course]:
+        """List courses registered in the system, optionally filtered by status.
+
+        Args:
+            status: Optional `CourseStatus` filter (`active` or `archived`).
 
         Returns:
             List of domain Course entities.
         """
-        records = self.session.scalars(select(CourseRecord).order_by(CourseRecord.code.asc())).all()
+        course_stmt = select(CourseRecord).order_by(CourseRecord.code.asc())
+        if status is not None:
+            course_stmt = course_stmt.where(CourseRecord.status == status.value)
+        records = self.session.scalars(course_stmt).all()
         result: list[Course] = []
         for r in records:
             stmt = (

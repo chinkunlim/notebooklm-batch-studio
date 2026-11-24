@@ -89,6 +89,14 @@ class ProfileName(str, Enum):
     FULL = "full"
     QUIZ_ONLY = "quiz-only"
     EXAM_PREP = "exam-prep"
+    RECORD_ONLY = "record-only"
+
+
+class CourseStatus(str, Enum):
+    """Lifecycle status of a registered course."""
+
+    ACTIVE = "active"
+    ARCHIVED = "archived"
 
 
 @dataclass(frozen=True)
@@ -228,6 +236,8 @@ class Course:
         term: Academic term (e.g. `115-1`).
         subject: Subject name (e.g. `心理學研究法`).
         study_dir: Unified study directory path (`<study_root>/<term>/<subject>`).
+        status: Course lifecycle status (`active` or `archived`).
+        course_no: School course number (e.g. `CP30000`).
     """
 
     code: str
@@ -248,6 +258,8 @@ class Course:
     term: str = ""
     subject: str = ""
     study_dir: str = ""
+    status: CourseStatus = CourseStatus.ACTIVE
+    course_no: str = ""
 
 
 def get_lecture_prefix(filename: str, fallback_no: int) -> str:

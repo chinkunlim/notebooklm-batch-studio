@@ -10,6 +10,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from notebooklm_batch_studio.adapters.db.base import Base
 from notebooklm_batch_studio.domain.study_hierarchy import DEFAULT_LITERATURE_CATEGORY as _CAT
 
+_DT = DateTime(timezone=True)
+
 
 def utc_now() -> datetime:
     """Return the current time in UTC (default for timestamp columns).
@@ -38,6 +40,8 @@ class CourseRecord(Base):
         selected_course_artifacts: JSON list of course-wide artifact types chosen in the web app.
         paused: When true, the queue does not start this course's jobs.
         reuse_notebook: Reuse a Gemini Notebook notebook with the same title (and its PDFs) if one exists.
+        status: Lifecycle status (`active` or `archived`).
+        course_no: School course number (e.g. `CP30000`).
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
     """
@@ -61,10 +65,10 @@ class CourseRecord(Base):
     term: Mapped[str] = mapped_column(String(40), nullable=False, default="", server_default="")
     subject: Mapped[str] = mapped_column(String(255), nullable=False, default="", server_default="")
     study_dir: Mapped[str] = mapped_column(String(1024), nullable=False, default="", server_default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", server_default="active")
+    course_no: Mapped[str] = mapped_column(String(50), nullable=False, default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(_DT, nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(_DT, nullable=False, default=utc_now, onupdate=utc_now)
 
 
 class LectureRecord(Base):
@@ -138,10 +142,8 @@ class ArtifactJobRecord(Base):
     cooldown_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
-    )
+    created_at: Mapped[datetime] = mapped_column(_DT, nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(_DT, nullable=False, default=utc_now, onupdate=utc_now)
 
 
 class QuotaRecord(Base):
@@ -391,10 +393,8 @@ class CourseQANoteRecord(Base):
     mastery_status: Mapped[str] = mapped_column(String(20), nullable=False, default="needs_review")
     is_uploaded_as_source: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     uploaded_source_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
-    )
+    created_at: Mapped[datetime] = mapped_column(_DT, nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(_DT, nullable=False, default=utc_now, onupdate=utc_now)
 
 
 class LiteratureItemRecord(Base):
@@ -465,10 +465,8 @@ class LiteratureItemRecord(Base):
     )
     source_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     review_markdown: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
-    )
+    created_at: Mapped[datetime] = mapped_column(_DT, nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(_DT, nullable=False, default=utc_now, onupdate=utc_now)
 
 
 class LiteratureJobRecord(Base):

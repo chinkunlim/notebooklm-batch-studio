@@ -140,7 +140,8 @@ notebooklm-batch-studio/
 │   │   ├── 20261102_89158d42494d_add_ui_preferences.py
 │   │   ├── 20261114_393ba6cc4afd_add_course_qa_notes_table.py
 │   │   ├── 20261122_85aedf6f2f6f_add_review_markdown_to_literature_items.py
-│   │   └── 20261122_8f8dfcf0509e_add_study_hierarchy_and_literature_.py
+│   │   ├── 20261122_8f8dfcf0509e_add_study_hierarchy_and_literature_.py
+│   │   └── 20261125_c4d5e6f7a8b9_course_status_and_course_no.py
 │   ├── DB.md
 │   ├── env.py
 │   └── script.py.mako
@@ -841,6 +842,7 @@ notebooklm-batch-studio/
 │   ├── test_converters.py
 │   ├── test_course_admin.py
 │   ├── test_course_identity.py
+│   ├── test_course_lifecycle.py
 │   ├── test_course_parser.py
 │   ├── test_course_reregistration.py
 │   ├── test_db.py
