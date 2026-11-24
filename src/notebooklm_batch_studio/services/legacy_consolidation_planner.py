@@ -26,6 +26,7 @@ from notebooklm_batch_studio.services.legacy_consolidation_ops import (
     inventory_directory_summary,
     singular_aliases_for,
 )
+from notebooklm_batch_studio.services.notes.note_sync import list_legacy_markdown_files
 
 logger = logging.getLogger(__name__)
 
@@ -467,7 +468,7 @@ def plan_legacy_notes(
     for folder in sorted(ns_root.iterdir()):
         if not folder.is_dir() or folder.name.startswith("."):
             continue
-        mds = [p for p in folder.glob("*.md") if p.is_file() and not p.name.startswith(".")]
+        mds = list_legacy_markdown_files(folder)
         if not mds:
             continue
         target_course = _match_notes_course(folder.name, request, code_to_dir, courses)

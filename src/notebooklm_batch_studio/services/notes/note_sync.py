@@ -105,17 +105,39 @@ def push_chapter_note_to_source(
     }
 
 
+def list_legacy_markdown_files(source_dir: Path) -> list[Path]:
+    """Return sorted relative paths of non-hidden, non-symlink `.md` files under `source_dir`.
+
+    Args:
+        source_dir: Root directory of legacy NoteStudio outputs.
+
+    Returns:
+        Sorted list of relative `.md` paths inside `source_dir`.
+    """
+    if not source_dir.is_dir():
+        return []
+    results: list[Path] = []
+    for path in sorted(source_dir.rglob("*.md")):
+        if path.is_symlink() or not path.is_file():
+            continue
+        rel = path.relative_to(source_dir)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        results.append(rel)
+    return results
+
+
 def import_legacy_notes(
     source_dir: Path,
     target_notes_dir: Path,
     overwrite: bool = False,
 ) -> dict[str, Any]:
-    """Copy existing `.md` notes from standalone `note-studio` into `03 Notes/NoteStudio`.
+    """Copy existing `.md` notes recursively from standalone `note-studio` into `03 Notes/NoteStudio`.
 
     Args:
-        source_dir: Source folder containing `.md` notes.
+        source_dir: Source folder containing `.md` notes (flat or nested subdirectories).
         target_notes_dir: Destination `03 Notes/NoteStudio` directory.
-        overwrite: Whether to overwrite existing files with the same name.
+        overwrite: Whether to overwrite existing files at the same relative path.
 
     Returns:
         Summary dictionary with `copied`, `skipped`, and `target_dir`.
@@ -128,13 +150,15 @@ def import_legacy_notes(
     target_notes_dir.mkdir(parents=True, exist_ok=True)
     copied: list[str] = []
     skipped: list[str] = []
-    for src in sorted(source_dir.glob("*.md")):
-        dst = target_notes_dir / src.name
+    for rel in list_legacy_markdown_files(source_dir):
+        src = source_dir / rel
+        dst = target_notes_dir / rel
         if dst.exists() and not overwrite:
-            skipped.append(src.name)
+            skipped.append(rel.as_posix())
             continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
-        copied.append(src.name)
+        copied.append(rel.as_posix())
     logger.info(
         "Imported %d legacy .md notes into %s (skipped %d)", len(copied), target_notes_dir, len(skipped)
     )

@@ -529,6 +529,38 @@ class LegacyConsolidationTests(unittest.TestCase):
         self.assertEqual((dest_notes / "STYLE_GUIDE.md").read_text(encoding="utf-8"), "# Style Guide")
         self.assertTrue((dest_notes / "output" / "ch01.html").is_file())
 
+    def test_legacy_notes_imports_nested_md_preserving_relative_paths(self) -> None:
+        """Legacy note-studio folders with nested .md trees (zero top-level .md) plan and copy recursively."""
+        nested_ns = self.legacy_notes_root / "115-1 心理學研究法"
+        nested_file = nested_ns / "學習筆記" / "原稿" / "Ch01_導論_學習筆記.md"
+        nested_file.parent.mkdir(parents=True, exist_ok=True)
+        nested_file.write_text("# Nested Ch01 Note", encoding="utf-8")
+        hidden_file = nested_ns / ".hidden" / "secret.md"
+        hidden_file.parent.mkdir(parents=True, exist_ok=True)
+        hidden_file.write_text("# Should Skip", encoding="utf-8")
+        pdf_file = nested_ns / "學習筆記" / "Ch01_導論.pdf"
+        pdf_file.write_bytes(b"%PDF-note")
+
+        req = ConsolidationRequest(
+            note_course_maps={"115-1 心理學研究法": "115-1_CP30210"},
+        )
+        with self.session_factory() as session:
+            steps = plan_consolidation(self.cfg, req, repo=ConsolidationRepository(session))
+            import_steps = [
+                s for s in steps if s.action == "import_notes" and s.source.endswith("115-1 心理學研究法")
+            ]
+            self.assertEqual(len(import_steps), 1, steps)
+            self.assertIn("1 份", import_steps[0].note)
+            apply_consolidation(self.cfg, steps, deps=self._deps(session))
+
+        notes_root = self.research_dir / "03 Notes" / "NoteStudio"
+        dest_note = notes_root / "學習筆記" / "原稿" / "Ch01_導論_學習筆記.md"
+        self.assertTrue(dest_note.is_file())
+        self.assertEqual(dest_note.read_text(encoding="utf-8"), "# Nested Ch01 Note")
+        self.assertTrue(nested_file.is_file())
+        self.assertFalse((notes_root / ".hidden" / "secret.md").exists())
+        self.assertFalse((notes_root / "學習筆記" / "Ch01_導論.pdf").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
