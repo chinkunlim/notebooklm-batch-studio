@@ -59,6 +59,17 @@ class LiteratureJobRunner:
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._live: _LiveProgress | None = None
+        self._close_stale_on_startup()
+
+    def _close_stale_on_startup(self) -> None:
+        """Close leftover `running` jobs from a previously terminated process (Refs: ISSUE-054)."""
+        try:
+            with self._manager_scope() as manager:
+                closed = manager.lit_repo.close_stale_jobs("前次程序已中斷，工作未完成")
+            if closed:
+                logger.warning("Closed %d stale running literature job(s) on startup", closed)
+        except Exception as exc:
+            logger.debug("Skipped stale literature job cleanup on startup: %s", exc)
 
     def is_running(self) -> bool:
         """Return True when a background literature job is active.
@@ -175,10 +186,12 @@ class LiteratureJobRunner:
             with self._manager_scope() as manager:
                 processed = manager.process_items(self._batch_options(manager, job_id, opts))
                 manager.lit_repo.finish_job(job_id, JobState.DONE, f"已完成 {len(processed)} 筆文獻")
-        except Exception as exc:
+        except BaseException as exc:
             logger.exception("Literature background job %d failed: %s", job_id, exc)
             with self._manager_scope() as manager:
-                manager.lit_repo.finish_job(job_id, JobState.FAILED, str(exc))
+                manager.lit_repo.finish_job(job_id, JobState.FAILED, str(exc) or type(exc).__name__)
+            if not isinstance(exc, Exception):
+                raise
         finally:
             with self._lock:
                 self._live = None

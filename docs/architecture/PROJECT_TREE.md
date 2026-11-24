@@ -99,7 +99,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-028-security-hardening-and-code-revi.json
 │   │   ├── TASK-029-records-audit-port-source-projec.json
 │   │   ├── TASK-030-close-security-hardening-http-40.json
-│   │   └── TASK-031-resolve-issue-053-port-gemini-we.json
+│   │   ├── TASK-031-resolve-issue-053-port-gemini-we.json
+│   │   └── TASK-032-resolve-issue-054-close-stale-ru.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -812,6 +813,7 @@ notebooklm-batch-studio/
 │   │   ├── test_literature.py
 │   │   ├── test_literature_repository.py
 │   │   ├── test_markdown_files.py
+│   │   ├── test_stale_jobs.py
 │   │   └── test_tracker.py
 │   ├── __init__.py
 │   ├── dummy_client.py

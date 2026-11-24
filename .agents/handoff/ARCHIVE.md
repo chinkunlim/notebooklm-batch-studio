@@ -305,3 +305,15 @@
 ### [2026-11-14 09:27 UTC] 建立任務 `TASK-024`: SPEC-011: Gemini Notebook exploration Q&A, notes repo, and tag system (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-14 09:41 UTC] 完成任務 `TASK-024` — SPEC-011: Gemini Notebook exploration Q&A, notes repo, and tag system (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Implemented SPEC-011: exploratory QA drawer (Cmd+J), multi-turn NotebookLM synthesis, 4-dimension hierarchical Obsidian tags, quiz explanation collector, full QA notes studio tab with cross-course search, and single/bundled PDF push back to Gemini sources.
+
+### [2026-11-19 05:10 UTC] Session Closeout (結束對話收尾) (by `Antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: Fix iPad PDF reader JS error, tablet toolbar overlap, and Safari static asset caching
+- **錯誤與根因**: studio-reader.js passed currentStudyCourse object and undeclared currentStudyLectureNo to initReaderPencilLayers causing PDF load failure -> fixed to currentStu
+- **下一步**: Verify the refreshed iPad Safari layout and PDF rendering at http://127.0.0.1:8768 (or Tailscale URL)
+- **交接備註**: Fixed PDF reader crash (currentStudyLectureNo), tablet toolbar overlap, and Safari cache busting; all 220 tests pass.
+- **本機對話紀錄**: `.agents/conversations/2026-11-19-1310-Antigravity-summary.md`（只在這台電腦）

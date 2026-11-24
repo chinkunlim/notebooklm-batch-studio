@@ -1,0 +1,28 @@
+{
+  "id": "TASK-032",
+  "title": "Resolve ISSUE-054: close stale running literature jobs on startup",
+  "status": "done",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Closed stale running literature_jobs as failed on LiteratureJobRunner startup, handled BaseException in worker, and ported StaleJobTest (ISSUE-054)",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-24 08:02 UTC",
+  "updated_at": "2026-11-24 08:04 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-24 08:02 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-24 08:04 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Closed stale running literature_jobs as failed on LiteratureJobRunner startup, handled BaseException in worker, and ported StaleJobTest (ISSUE-054)"
+    }
+  ],
+  "summary": "Closed stale running literature_jobs as failed on LiteratureJobRunner startup, handled BaseException in worker, and ported StaleJobTest (ISSUE-054)"
+}

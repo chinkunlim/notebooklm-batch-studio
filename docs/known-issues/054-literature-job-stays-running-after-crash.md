@@ -1,9 +1,9 @@
 # ISSUE-054：伺服器中斷後文獻工作紀錄永遠停在 running
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
-- **Agent**：`claude-code`
-- **任務**：`TASK-029`
+- **Agent**：`antigravity`
+- **任務**：`TASK-029`（發現）、`TASK-032`（修復）
 
 ## 1. 現象
 
@@ -19,8 +19,10 @@ LiteratureJobRunner 的執行狀態只存在記憶體，啟動時沒有清理資
 
 ## 3. 修正或規避方式
 
-待辦（交由 Antigravity）：比照 literature-fetch ISSUE-005 與其 test_web.py::test_new_runner_closes_jobs_and_steps_left_by_a_stopped_process，在 runner 建立或 web 啟動時把殘留 running 工作標為 failed。（相關程式碼註解加 `Refs: ISSUE-054`）
+已於 `TASK-032` 移植 `literature-fetch ISSUE-005` 修復機制：
+- `adapters/db/literature_repository.py::close_stale_jobs` 與 `services/literature/protocols.py`：批次將資料庫殘留的 `state=running` 工作更新為 `state=failed`、寫入失敗原因與 `finished_at`。
+- `services/literature/jobs.py::LiteratureJobRunner`：在 `__init__` 呼叫 `_close_stale_on_startup()` 自動清理前次中斷殘留的工作；`_run_worker()` 改為捕捉 `BaseException` 以確保中斷訊號也會標記 `JobState.FAILED`（Refs: `ISSUE-054`）。
 
 ## 4. 防回歸
 
-移植上述測試。
+`tests/literature/test_stale_jobs.py::StaleJobTest`（含 `test_new_runner_closes_jobs_and_steps_left_by_a_stopped_process` 與 `test_worker_base_exception_marks_job_failed`）。

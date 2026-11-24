@@ -109,6 +109,17 @@ class LiteratureRepoProtocol(Protocol):
         """
         ...
 
+    def close_stale_jobs(self, message: str = "前次程序已中斷，工作未完成") -> int:
+        """Mark leftover `running` jobs as failed on startup (Refs: ISSUE-054).
+
+        Args:
+            message: Status message recorded on closed jobs.
+
+        Returns:
+            Number of closed jobs.
+        """
+        ...
+
 
 class LiteratureRuntimeProtocol(Protocol):
     """Adapter-provided runtime for HTTP/Playwright sources and Markdown/APA formatting."""

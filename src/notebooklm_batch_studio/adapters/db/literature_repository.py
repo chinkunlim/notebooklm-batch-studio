@@ -7,7 +7,7 @@ import logging
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from notebooklm_batch_studio.adapters.db.models import LiteratureItemRecord, LiteratureJobRecord
@@ -262,6 +262,26 @@ class LiteratureRepository:
         stmt = select(LiteratureJobRecord).order_by(LiteratureJobRecord.id.desc()).limit(1)
         row = self.session.scalars(stmt).first()
         return _to_domain_job(row) if row is not None else None
+
+    def close_stale_jobs(self, message: str = "前次程序已中斷，工作未完成") -> int:
+        """Mark leftover `running` literature jobs as failed (Refs: ISSUE-054).
+
+        Called on runner startup when no background worker thread is active.
+
+        Args:
+            message: Explanation recorded on closed jobs.
+
+        Returns:
+            Number of stale jobs marked failed.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        result = self.session.execute(
+            update(LiteratureJobRecord)
+            .where(LiteratureJobRecord.state == JobState.RUNNING.value)
+            .values(state=JobState.FAILED.value, message=message, finished_at=now)
+        )
+        self.session.commit()
+        return int(result.rowcount or 0)  # type: ignore[attr-defined]
 
     def _next_position(self) -> int:
         """Compute the next sequential display position.
