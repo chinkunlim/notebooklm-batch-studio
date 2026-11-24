@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import ExitStack
+from contextlib import AbstractContextManager, ExitStack
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -132,6 +132,17 @@ class LiteratureRuntimeProtocol(Protocol):
 
         Returns:
             Configured WorkResolver.
+        """
+        ...
+
+    def open_run_lock(self, path: Path) -> AbstractContextManager[Any]:
+        """Create a cross-process run lock context manager for `path` (Refs: ISSUE-057).
+
+        Args:
+            path: Lock file path provided by configuration.
+
+        Returns:
+            Context manager enforcing mutual exclusion across OS processes.
         """
         ...
 

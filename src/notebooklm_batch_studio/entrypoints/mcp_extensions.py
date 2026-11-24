@@ -18,6 +18,7 @@ from notebooklm_batch_studio.adapters.db.literature_repository import Literature
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
+from notebooklm_batch_studio.adapters.locks import RunLock
 from notebooklm_batch_studio.adapters.note_driver_factory import (
     build_gemini_auth_service,
     build_note_driver_factory,
@@ -89,7 +90,7 @@ def _literature_runner(cfg: AppConfig, session_factory: Any) -> LiteratureJobRun
                 cfg, LiteratureRepository(session), CourseRepository(session), AdapterLiteratureRuntime(cfg)
             )
 
-    return LiteratureJobRunner(_lit_scope)
+    return LiteratureJobRunner(_lit_scope, lock_path=cfg.literature_job_lock_path, lock_factory=RunLock)
 
 
 def _note_service(cfg: AppConfig, session_factory: Any, override: Any) -> NotePipelineService:

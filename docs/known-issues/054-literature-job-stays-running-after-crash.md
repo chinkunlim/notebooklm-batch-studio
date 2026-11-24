@@ -22,6 +22,7 @@ LiteratureJobRunner 的執行狀態只存在記憶體，啟動時沒有清理資
 已於 `TASK-032` 移植 `literature-fetch ISSUE-005` 修復機制：
 - `adapters/db/literature_repository.py::close_stale_jobs` 與 `services/literature/protocols.py`：批次將資料庫殘留的 `state=running` 工作更新為 `state=failed`、寫入失敗原因與 `finished_at`。
 - `services/literature/jobs.py::LiteratureJobRunner`：在 `__init__` 呼叫 `_close_stale_on_startup()` 自動清理前次中斷殘留的工作；`_run_worker()` 改為捕捉 `BaseException` 以確保中斷訊號也會標記 `JobState.FAILED`（Refs: `ISSUE-054`）。
+- **回歸追縱**：此初版修法因尚未移植 `RunLock` 程序鎖而引發跨程序誤殺回歸，詳見 [ISSUE-057](057-literature-stale-cleanup-kills-live-process-job.md)（`TASK-034`）。
 
 ## 4. 防回歸
 

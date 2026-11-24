@@ -1,0 +1,28 @@
+{
+  "id": "TASK-034",
+  "title": "Fix ISSUE-054 regression: guard literature stale-job cleanup with RunLock",
+  "status": "done",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Ported RunLock (fcntl.flock) to adapters/locks.py, added AppConfig.literature_job_lock_path, guarded LiteratureJobRunner stale cleanup & job execution with cross-process lock, and wired api.py and mcp_extensions.py (ISSUE-057).",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-24 08:56 UTC",
+  "updated_at": "2026-11-24 08:59 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-24 08:56 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-24 08:59 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Ported RunLock (fcntl.flock) to adapters/locks.py, added AppConfig.literature_job_lock_path, guarded LiteratureJobRunner stale cleanup & job execution with cross-process lock, and wired api.py and mcp_extensions.py (ISSUE-057)."
+    }
+  ],
+  "summary": "Ported RunLock (fcntl.flock) to adapters/locks.py, added AppConfig.literature_job_lock_path, guarded LiteratureJobRunner stale cleanup & job execution with cross-process lock, and wired api.py and mcp_extensions.py (ISSUE-057)."
+}

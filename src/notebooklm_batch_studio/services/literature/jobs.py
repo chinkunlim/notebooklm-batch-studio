@@ -7,6 +7,8 @@ import threading
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from notebooklm_batch_studio.domain.literature.tracker import AlreadyRunningError, Job, JobState
 from notebooklm_batch_studio.services.literature.manager import LiteratureManager, ProcessBatchOptions
@@ -49,25 +51,80 @@ class _LiveProgress:
 class LiteratureJobRunner:
     """Runs at most one background literature fetch job at a time."""
 
-    def __init__(self, manager_scope: Callable[[], AbstractContextManager[LiteratureManager]]) -> None:
+    def __init__(
+        self,
+        manager_scope: Callable[[], AbstractContextManager[LiteratureManager]],
+        lock_path: Path | None = None,
+        lock_factory: Callable[[Path], AbstractContextManager[Any]] | None = None,
+    ) -> None:
         """Initialize the job runner with a context-managed `LiteratureManager` factory.
 
         Args:
             manager_scope: Callable returning a context manager that yields `LiteratureManager`.
+            lock_path: Optional lock file path; defaults to `config.literature_job_lock_path`.
+            lock_factory: Optional cross-process lock factory accepting `Path`.
         """
         self._manager_scope = manager_scope
+        self._lock_path = lock_path
+        self._lock_factory = lock_factory
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._live: _LiveProgress | None = None
         self._close_stale_on_startup()
 
+    def _build_run_lock(self, manager: LiteratureManager) -> AbstractContextManager[Any] | None:
+        """Build the OS run lock from injected factory or adapter runtime (Refs: ISSUE-057).
+
+        Args:
+            manager: Scoped `LiteratureManager` carrying config and runtime.
+
+        Returns:
+            Lock context manager, or None if unavailable.
+        """
+        path = self._lock_path or manager.config.literature_job_lock_path
+        if self._lock_factory is not None:
+            return self._lock_factory(path)
+        open_lock = getattr(manager.runtime, "open_run_lock", None)
+        return open_lock(path) if callable(open_lock) else None
+
+    @staticmethod
+    def _release_run_lock(run_lock: AbstractContextManager[Any] | None) -> None:
+        """Release a held OS run lock if present (Refs: ISSUE-057).
+
+        Args:
+            run_lock: Lock context manager acquired prior to execution, or None.
+        """
+        if run_lock is None:
+            return
+        try:
+            run_lock.__exit__(None, None, None)
+        except Exception as exc:  # pragma: no cover - defensive cleanup
+            logger.warning("Failed to release literature run lock: %s", exc)
+
+    def _close_stale_in_manager(self, manager: LiteratureManager) -> int:
+        """Close stale `running` jobs only after acquiring the process lock (Refs: ISSUE-057).
+
+        Args:
+            manager: Scoped `LiteratureManager`.
+
+        Returns:
+            Count of stale jobs closed.
+        """
+        run_lock = self._build_run_lock(manager)
+        if run_lock is None:
+            return manager.lit_repo.close_stale_jobs("前次程序已中斷，工作未完成")
+        with run_lock:
+            return manager.lit_repo.close_stale_jobs("前次程序已中斷，工作未完成")
+
     def _close_stale_on_startup(self) -> None:
-        """Close leftover `running` jobs from a previously terminated process (Refs: ISSUE-054)."""
+        """Close leftover `running` jobs only if no live runner owns the lock (Refs: ISSUE-054, ISSUE-057)."""
         try:
             with self._manager_scope() as manager:
-                closed = manager.lit_repo.close_stale_jobs("前次程序已中斷，工作未完成")
+                closed = self._close_stale_in_manager(manager)
             if closed:
                 logger.warning("Closed %d stale running literature job(s) on startup", closed)
+        except AlreadyRunningError:
+            logger.info("Another process holds the literature run lock; skipping stale job cleanup")
         except Exception as exc:
             logger.debug("Skipped stale literature job cleanup on startup: %s", exc)
 
@@ -91,6 +148,30 @@ class LiteratureJobRunner:
                 return "", ""
             return self._live.current_key, self._live.stage
 
+    def _acquire_and_create_job(
+        self, kind: str, opts: JobRunOptions
+    ) -> tuple[Job, AbstractContextManager[Any] | None]:
+        """Acquire the cross-process lock before creating the `running` job record (Refs: ISSUE-057).
+
+        Args:
+            kind: Job kind label.
+            opts: Execution options.
+
+        Returns:
+            Tuple of `(created_job, acquired_run_lock)`.
+        """
+        with self._manager_scope() as manager:
+            run_lock = self._build_run_lock(manager)
+            if run_lock is not None:
+                run_lock.__enter__()
+            try:
+                total = len(opts.keys) if opts.keys is not None else len(manager.lit_repo.list_items())
+                job = manager.lit_repo.start_job(kind=kind, total=total, message="準備處理文獻…")
+            except BaseException:
+                self._release_run_lock(run_lock)
+                raise
+            return job, run_lock
+
     def start(self, kind: str, opts: JobRunOptions | None = None) -> Job:
         """Start a background literature job if none is currently running.
 
@@ -108,23 +189,34 @@ class LiteratureJobRunner:
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
                 raise AlreadyRunningError("Another literature fetch job is already running.")
-            with self._manager_scope() as manager:
-                total = (
-                    len(active_opts.keys)
-                    if active_opts.keys is not None
-                    else len(manager.lit_repo.list_items())
-                )
-                job = manager.lit_repo.start_job(kind=kind, total=total, message="準備處理文獻…")
-            self._live = _LiveProgress(job_id=job.id, total=total)
+            job, run_lock = self._acquire_and_create_job(kind, active_opts)
+            self._live = _LiveProgress(job_id=job.id, total=job.total)
             thread = threading.Thread(
                 target=self._run_worker,
-                args=(job.id, active_opts),
+                args=(job.id, active_opts, run_lock),
                 daemon=True,
                 name=f"lit-job-{job.id}",
             )
             self._thread = thread
-            thread.start()
+            try:
+                thread.start()
+            except BaseException:
+                self._release_run_lock(run_lock)
+                self._mark_job_failed(job.id, "工作執行緒啟動失敗")
+                self._live = None
+                self._thread = None
+                raise
             return job
+
+    def _mark_job_failed(self, job_id: int, message: str) -> None:
+        """Record `JobState.FAILED` in the repository for a failed worker job.
+
+        Args:
+            job_id: Persisted job ID.
+            message: Failure message.
+        """
+        with self._manager_scope() as manager:
+            manager.lit_repo.finish_job(job_id, JobState.FAILED, message)
 
     def _record_progress(self, lit_repo: LiteratureRepoProtocol, job_id: int, done: int, label: str) -> None:
         """Update in-memory and DB progress for the active job.
@@ -175,12 +267,15 @@ class LiteratureJobRunner:
             progress_cb=_progress,
         )
 
-    def _run_worker(self, job_id: int, opts: JobRunOptions) -> None:
-        """Execute the literature batch inside a worker thread.
+    def _run_worker(
+        self, job_id: int, opts: JobRunOptions, run_lock: AbstractContextManager[Any] | None = None
+    ) -> None:
+        """Execute the literature batch inside a worker thread, releasing `run_lock` on exit.
 
         Args:
             job_id: Persisted job ID.
             opts: Execution options.
+            run_lock: Acquired cross-process run lock to release in `finally`.
         """
         try:
             with self._manager_scope() as manager:
@@ -188,11 +283,11 @@ class LiteratureJobRunner:
                 manager.lit_repo.finish_job(job_id, JobState.DONE, f"已完成 {len(processed)} 筆文獻")
         except BaseException as exc:
             logger.exception("Literature background job %d failed: %s", job_id, exc)
-            with self._manager_scope() as manager:
-                manager.lit_repo.finish_job(job_id, JobState.FAILED, str(exc) or type(exc).__name__)
+            self._mark_job_failed(job_id, str(exc) or type(exc).__name__)
             if not isinstance(exc, Exception):
                 raise
         finally:
+            self._release_run_lock(run_lock)
             with self._lock:
                 self._live = None
             if opts.on_done is not None:

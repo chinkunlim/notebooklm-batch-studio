@@ -26,6 +26,7 @@ from notebooklm_batch_studio.adapters.literature.tracker_md import (
     source_name,
     translate_note,
 )
+from notebooklm_batch_studio.adapters.locks import RunLock
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.literature.tracker import ItemStatus, TrackedItem
 from notebooklm_batch_studio.services.literature.literature import PublisherFetcher, Sources
@@ -60,6 +61,17 @@ class AdapterLiteratureRuntime:
             httpx.Client(headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=60)
         )
         return CombinedResolver([CrossrefResolver(client), OpenAlexResolver(client)])
+
+    def open_run_lock(self, path: Path) -> RunLock:
+        """Create an OS-level `RunLock` at `path` for background job runners (Refs: ISSUE-057).
+
+        Args:
+            path: Lock file path from configuration.
+
+        Returns:
+            Configured `RunLock` context manager.
+        """
+        return RunLock(path)
 
     def open_batch_context(
         self, stack: ExitStack, need_browser: bool, interactive: bool

@@ -101,7 +101,8 @@ notebooklm-batch-studio/
 │   │   ├── TASK-030-close-security-hardening-http-40.json
 │   │   ├── TASK-031-resolve-issue-053-port-gemini-we.json
 │   │   ├── TASK-032-resolve-issue-054-close-stale-ru.json
-│   │   └── TASK-033-audit-records-unify-mcp-confirm-.json
+│   │   ├── TASK-033-audit-records-unify-mcp-confirm-.json
+│   │   └── TASK-034-fix-issue-054-regression-guard-l.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -243,6 +244,7 @@ notebooklm-batch-studio/
 │   │   ├── 054-literature-job-stays-running-after-crash.md
 │   │   ├── 055-quiz-response-course-code-key.md
 │   │   ├── 056-notes-form-lecture-fields.md
+│   │   ├── 057-literature-stale-cleanup-kills-live-process-job.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -366,6 +368,7 @@ notebooklm-batch-studio/
 │       │   │   ├── __init__.py
 │       │   │   └── client.py
 │       │   ├── __init__.py
+│       │   ├── locks.py
 │       │   ├── note_driver_factory.py
 │       │   ├── private_dir.py
 │       │   └── web_search.py
@@ -814,6 +817,7 @@ notebooklm-batch-studio/
 │   │   ├── test_free_text.py
 │   │   ├── test_literature.py
 │   │   ├── test_literature_repository.py
+│   │   ├── test_locks.py
 │   │   ├── test_markdown_files.py
 │   │   ├── test_stale_jobs.py
 │   │   └── test_tracker.py

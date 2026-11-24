@@ -333,3 +333,11 @@
 - **下一步**: 1) 可在母版執行 collect_feedback.py 決策 docs/TEMPLATE_FEEDBACK.md 中 16 條待決定建議；2) 持續於 iPad 實機驗證 Apple Pencil 研讀體驗；3) 功能收斂後可執行 python3 scripts/agentctl.py finish --tag 發
 - **交接備註**: 專案健康度 100 分 A+、220 項測試全數通過、審計 0 殘留 TODO；ADR-010、SPEC-011、ISSUE-039/040 與 8 項母版架構建議皆已整理並同步至 GitHub。
 - **本機對話紀錄**: `.agents/conversations/2026-11-22-2129-antigravity-summary.md`（只在這台電腦）
+
+### [2026-11-22 14:11 UTC] 建立任務 `TASK-025`: Integrate literature-fetch and unified study folder hierarchy (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-22 14:27 UTC] 完成任務 `TASK-025` — Integrate literature-fetch and unified study folder hierarchy (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Integrated literature-fetch (APA/DOI/Crossref/OpenAlex/Airiti/EBSCO/OpenAthens + interactive mode + APA 7 export + course import), unified <term>/<subject>/<category> study hierarchy, Web UI sidebar page, HTTP/MCP parity, and migrated existing DATA_DIR courses.

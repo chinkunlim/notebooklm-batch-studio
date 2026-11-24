@@ -231,6 +231,15 @@ class AppConfig:
         """
         return self.state_dir / "literature_browser_profile"
 
+    @property
+    def literature_job_lock_path(self) -> Path:
+        """Cross-process OS lock path guarding active background literature jobs.
+
+        Returns:
+            `<data_dir>/state/literature_job.lock`.
+        """
+        return self.state_dir / "literature_job.lock"
+
 
 def _csv(value: str) -> tuple[str, ...]:
     """Split a comma-separated setting.

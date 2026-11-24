@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-24 08:18 UTC`
+- **最後更新時間**: `2026-11-24 08:59 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `9d6ef12 refactor(mcp): unify confirm warning payload and remove unused outline helper (TASK-033) [agent:antigravity]`
+- **最新 Git Commit**: `8ab99cb docs: complete evidence-backed audit of specs, ADRs, issues, tasks, and changelog (TASK-033) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-24 08:59 UTC] 完成任務 `TASK-034` — Fix ISSUE-054 regression: guard literature stale-job cleanup with RunLock (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Ported RunLock (fcntl.flock) to adapters/locks.py, added AppConfig.literature_job_lock_path, guarded LiteratureJobRunner stale cleanup & job execution with cross-process lock, and wired api.py and mcp_extensions.py (ISSUE-057).
+
+### [2026-11-24 08:56 UTC] 建立任務 `TASK-034`: Fix ISSUE-054 regression: guard literature stale-job cleanup with RunLock (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-24 08:18 UTC] 完成任務 `TASK-033` — Audit records, unify MCP confirm format, and document cross-repo decisions (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -97,11 +105,3 @@
 - **下一步**: 1) Retire standalone literature-fetch repo if no longer needed. 2) Test Literature Collection Excel-style filtering, PDF preview, and Gemini Literature Review g
 - **交接備註**: literature-fetch fully integrated & UI polished; all tests & checks pass, pushed to origin/main.
 - **本機對話紀錄**: `.agents/conversations/2026-11-23-0004-antigravity-summary.md`（只在這台電腦）
-
-### [2026-11-22 14:27 UTC] 完成任務 `TASK-025` — Integrate literature-fetch and unified study folder hierarchy (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Integrated literature-fetch (APA/DOI/Crossref/OpenAlex/Airiti/EBSCO/OpenAthens + interactive mode + APA 7 export + course import), unified <term>/<subject>/<category> study hierarchy, Web UI sidebar page, HTTP/MCP parity, and migrated existing DATA_DIR courses.
-
-### [2026-11-22 14:11 UTC] 建立任務 `TASK-025`: Integrate literature-fetch and unified study folder hierarchy (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`

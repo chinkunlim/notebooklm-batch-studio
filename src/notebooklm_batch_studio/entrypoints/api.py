@@ -30,6 +30,7 @@ from notebooklm_batch_studio.adapters.db.session import create_db_engine, sessio
 from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.adapters.fonts.google_fonts import GoogleFontsClient
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
+from notebooklm_batch_studio.adapters.locks import RunLock
 from notebooklm_batch_studio.adapters.note_driver_factory import build_gemini_auth_service
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
@@ -344,7 +345,9 @@ def _configure_app_state(
                 cfg, LiteratureRepository(session), CourseRepository(session), AdapterLiteratureRuntime(cfg)
             )
 
-    app.state.literature_jobs = LiteratureJobRunner(_lit_scope)
+    app.state.literature_jobs = LiteratureJobRunner(
+        _lit_scope, lock_path=cfg.literature_job_lock_path, lock_factory=RunLock
+    )
     app.state.gemini_auth = build_gemini_auth_service(cfg)
     app.state.config = cfg
 
