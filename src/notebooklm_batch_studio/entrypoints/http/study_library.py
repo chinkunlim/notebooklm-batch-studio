@@ -20,6 +20,7 @@ from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.domain.study_layout import CategoryRole
+from notebooklm_batch_studio.services.adopt_outputs import AdoptOutputsService
 from notebooklm_batch_studio.services.course_lifecycle import CourseLifecycleService
 from notebooklm_batch_studio.services.filing import FilingService, FilingTarget
 from notebooklm_batch_studio.services.learning_record import LearningRecordService, RecordRepos
@@ -65,6 +66,12 @@ class RenameCourseRequest(BaseModel):
 
     new_code: str = Field(..., description="Replacement course code")
     dry_run: bool = Field(True, description="Preview impact without changing DB or files when True")
+
+
+class AdoptOutputsRequest(BaseModel):
+    """Body for previewing or applying local NotebookLM output adoption."""
+
+    dry_run: bool = Field(True, description="Preview matches without creating artifact_jobs when True")
 
 
 def _session(request: Request) -> Any:
@@ -328,6 +335,33 @@ def rename_course_code(code: str, body: RenameCourseRequest, request: Request) -
             )
             return svc.rename(code, body.new_code, dry_run=body.dry_run)
     except (PathSafetyError, ValueError) as exc:
+        raise _map_error(exc) from exc
+
+
+@study_library_router.post(
+    "/api/courses/{code}/adopt-outputs", tags=["Courses"], operation_id="adopt_existing_outputs"
+)
+def adopt_course_outputs(
+    code: str, request: Request, body: AdoptOutputsRequest | None = None
+) -> dict[str, Any]:
+    """Adopt pre-existing local NotebookLM outputs into `done` jobs (defaults to `dry_run=True`).
+
+    Args:
+        code: Registered course identifier.
+        request: Incoming HTTP request.
+        body: Optional request payload toggling `dry_run`.
+
+    Returns:
+        Summary payload with per-lecture matches, `unmapped_files`, and counters.
+    """
+    cfg = request.app.state.config
+    dry_run = True if body is None else body.dry_run
+    try:
+        with _session(request) as db:
+            return AdoptOutputsService(cfg, CourseRepository(db), QueueRepository(db)).adopt_existing_outputs(
+                code, dry_run=dry_run
+            )
+    except (CourseNotFoundError, PathSafetyError, ValueError) as exc:
         raise _map_error(exc) from exc
 
 

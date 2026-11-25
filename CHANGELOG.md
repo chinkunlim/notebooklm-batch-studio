@@ -93,6 +93,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(cli): support non-destructive copy restore from deleted/ in consolidate (by `@antigravity`)
 - feat(cli): inventory non-PDF subfolders like study-notes under input/courses in consolidate (by `@antigravity`)
 - feat(study): add adopt_existing_outputs service reusing artifact naming rules (by `@antigravity`)
+- feat(api): expose adopt_existing_outputs via HTTP, MCP, and Web UI (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

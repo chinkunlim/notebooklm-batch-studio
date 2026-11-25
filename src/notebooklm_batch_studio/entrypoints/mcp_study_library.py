@@ -17,6 +17,7 @@ from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.study_layout import CategoryRole
 from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
+from notebooklm_batch_studio.services.adopt_outputs import AdoptOutputsService
 from notebooklm_batch_studio.services.course_lifecycle import CourseLifecycleService
 from notebooklm_batch_studio.services.filing import FilingService, FilingTarget
 from notebooklm_batch_studio.services.learning_record import LearningRecordService, RecordRepos
@@ -373,8 +374,40 @@ def _register_rename_tool(mcp: MCPServer, cfg: AppConfig, session_factory: Any) 
         return _dumps({"confirmed": True, **res})
 
 
+def _register_adopt_outputs_tool(mcp: MCPServer, cfg: AppConfig, session_factory: Any) -> None:
+    """Register `adopt_existing_outputs` MCP tool with `confirm` guard.
+
+    Args:
+        mcp: MCPServer instance.
+        cfg: Application configuration.
+        session_factory: SQLAlchemy session factory.
+    """
+
+    @mcp.tool()
+    def adopt_existing_outputs(code: str, dry_run: bool = True, confirm: bool = False) -> str:
+        """Preview (`dry_run=True`) or adopt existing local NotebookLM files into `done` jobs.
+
+        Args:
+            code: Registered course identifier.
+            dry_run: Preview matches without modifying DB when True.
+            confirm: Must be True to proceed.
+
+        Returns:
+            JSON confirmation payload or adoption summary.
+        """
+        if not confirm:
+            return confirm_warning(
+                "Pass confirm=True to run adopt_existing_outputs.", code=code, dry_run=dry_run
+            )
+        with session_factory() as db:
+            res = AdoptOutputsService(cfg, CourseRepository(db), QueueRepository(db)).adopt_existing_outputs(
+                code, dry_run=dry_run
+            )
+        return _dumps({"confirmed": True, **res})
+
+
 def register_study_library_tools(mcp: MCPServer, cfg: AppConfig, session_factory: Any) -> None:
-    """Register all 11 Task 13 MCP tools on `mcp`.
+    """Register all Task 13+ SPEC-015 MCP tools on `mcp`.
 
     Args:
         mcp: MCPServer instance.
@@ -390,4 +423,5 @@ def register_study_library_tools(mcp: MCPServer, cfg: AppConfig, session_factory
     _register_unfile_tool(mcp, cfg, session_factory)
     _register_archive_tool(mcp, cfg, session_factory)
     _register_rename_tool(mcp, cfg, session_factory)
-    logger.debug("Registered study library, filing, lifecycle, and learning record MCP tools")
+    _register_adopt_outputs_tool(mcp, cfg, session_factory)
+    logger.debug("Registered study library, filing, lifecycle, and adopt outputs MCP tools")

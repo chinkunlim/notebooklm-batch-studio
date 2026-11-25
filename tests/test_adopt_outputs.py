@@ -8,7 +8,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from fastapi.testclient import TestClient
+from sqlalchemy import func, select
+
 from notebooklm_batch_studio.adapters.db.base import Base
+from notebooklm_batch_studio.adapters.db.models import QuizAttemptRecord
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, make_session_factory
 from notebooklm_batch_studio.config.settings import AppConfig
@@ -21,6 +25,8 @@ from notebooklm_batch_studio.domain.models import (
     Lecture,
     ProfileName,
 )
+from notebooklm_batch_studio.entrypoints.api import create_app
+from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.adopt_outputs import AdoptOutputsService
 
 REAL_CH01_FILENAMES = (
@@ -240,6 +246,81 @@ class AdoptOutputsTests(unittest.TestCase):
             p.relative_to(self.nlm_root).as_posix() for p in self.nlm_root.rglob("*") if p.is_file()
         )
         self.assertEqual(after_file_set, original_file_set)
+
+    def test_adopted_outputs_update_learning_record_enable_quiz_attempts_and_stay_out_of_queue(self) -> None:
+        """Scenario 15c: learning record counts adopted outputs, quiz works & records attempt, queue skips."""
+        with self.session_factory() as session:
+            AdoptOutputsService(
+                self.cfg, CourseRepository(session), QueueRepository(session)
+            ).adopt_existing_outputs(self.course_code, dry_run=False)
+            self.assertIsNone(QueueRepository(session).claim_next_job("worker-1"))
+
+        client = TestClient(create_app(config=self.cfg), base_url="http://127.0.0.1:8768")
+        rec_res = client.get("/api/study/record")
+        self.assertEqual(rec_res.status_code, 200)
+        course_rec = next(
+            c for t in rec_res.json()["terms"] for c in t["courses"] if c["code"] == self.course_code
+        )
+        self.assertEqual(course_rec["stats"]["artifacts_done"], 11)
+
+        quiz_res = client.get(f"/api/courses/{self.course_code}/lectures/1/quiz/quiz_1")
+        self.assertEqual(quiz_res.status_code, 200)
+        self.assertIn("Q1?", quiz_res.json()["markdown"])
+
+        attempt_res = client.post(
+            f"/api/courses/{self.course_code}/study/quiz-attempts",
+            json={
+                "lecture_no": 1,
+                "quiz_variant": "quiz_1",
+                "score": 1,
+                "total_questions": 1,
+                "mistakes": [],
+            },
+        )
+        self.assertEqual(attempt_res.status_code, 200)
+        with self.session_factory() as session:
+            count = session.scalar(
+                select(func.count())
+                .select_from(QuizAttemptRecord)
+                .where(QuizAttemptRecord.course_code == self.course_code)
+            )
+            self.assertEqual(count, 1)
+
+    def test_http_mcp_and_web_ui_adopt_outputs_entrypoints(self) -> None:
+        """Scenario 15d: HTTP dry-run/404, MCP confirm guard + apply, and Web UI preview flow."""
+        client = TestClient(create_app(config=self.cfg), base_url="http://127.0.0.1:8768")
+        self.assertEqual(
+            client.post("/api/courses/UNKNOWN/adopt-outputs", json={"dry_run": True}).status_code, 404
+        )
+
+        http_dry = client.post(f"/api/courses/{self.course_code}/adopt-outputs", json={})
+        self.assertEqual(http_dry.status_code, 200)
+        self.assertTrue(http_dry.json()["dry_run"])
+        self.assertEqual(http_dry.json()["would_create"], 11)
+
+        mcp = build_mcp_server(config=self.cfg)
+        tool = mcp._tool_manager._tools["adopt_existing_outputs"]  # type: ignore[attr-defined]
+        unconfirmed = json.loads(tool.fn(self.course_code, dry_run=True, confirm=False))
+        self.assertIs(unconfirmed["confirmed"], False)
+
+        mcp_dry = json.loads(tool.fn(self.course_code, dry_run=True, confirm=True))
+        self.assertTrue(mcp_dry["dry_run"])
+        self.assertEqual(mcp_dry["would_create"], 11)
+
+        mcp_apply = json.loads(tool.fn(self.course_code, dry_run=False, confirm=True))
+        self.assertFalse(mcp_apply["dry_run"])
+        self.assertEqual(mcp_apply["created"], 11)
+
+        static_dir = (
+            Path(__file__).resolve().parents[1] / "src" / "notebooklm_batch_studio" / "entrypoints" / "static"
+        )
+        batch_js = (static_dir / "studio-batch.js").read_text(encoding="utf-8")
+        record_js = (static_dir / "studio-record.js").read_text(encoding="utf-8")
+        self.assertIn("從既有檔案建立產出紀錄", batch_js)
+        self.assertIn("openAdoptOutputsFlow", batch_js)
+        self.assertIn("adopt-outputs", record_js)
+        self.assertIn("dry_run: true", record_js)
+        self.assertIn("dry_run: false", record_js)
 
 
 if __name__ == "__main__":

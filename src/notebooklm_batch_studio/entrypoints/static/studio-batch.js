@@ -323,6 +323,7 @@ function courseActionsHtml(code, paused, status = 'active') {
     : `<button class="btn btn-soft btn-sm" onclick="setCoursePaused(${jsAttr(code)}, true)">暫停這門課</button>`) +
     `<details class="more-menu"><summary class="btn btn-ghost btn-sm">進階工具</summary><div class="menu">
       <button class="btn btn-ghost" onclick="syncFromNotebookLM(${jsAttr(code)})">從 Gemini Notebook 同步網頁上做的產出</button>
+      <button class="btn btn-ghost" onclick="openAdoptOutputsFlow(${jsAttr(code)})">從既有檔案建立產出紀錄</button>
       <button class="btn btn-ghost" onclick="refinePrompts(${jsAttr(code)})">用本機模型潤飾 Prompt</button>
       ${archiveBtn}
       ${renameBtn}

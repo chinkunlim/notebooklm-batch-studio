@@ -335,8 +335,66 @@ async function loadSignInStatus() {
   }
 }
 
+/**
+ * Format dry-run preview message for adopting existing local outputs into DB jobs.
+ * @param {string} code Target course code
+ * @param {object} preview Dry-run JSON payload from `/adopt-outputs`
+ * @returns {string} Confirmation prompt text
+ */
+function _formatAdoptOutputsConfirmMessage(code, preview) {
+  const lines = (preview.lectures || []).map(lec => {
+    const scope = lec.lecture_no === null ? '全課程彙整' : `L${String(lec.lecture_no).padStart(2, '0')}`;
+    const createCnt = (lec.matched || []).filter(m => m.status === 'create').length;
+    const skipCnt = (lec.matched || []).filter(m => m.status === 'skip').length;
+    return `${scope}（${lec.folder}）：新增 ${createCnt}、略過 ${skipCnt}`;
+  });
+  const unmapped = (preview.unmapped_files || []).length;
+  return (
+    `【從既有檔案建立產出紀錄（Dry-Run）】\n課程：${code}\n` +
+    `預計建立：${preview.would_create || 0} 筆 done 工作｜已存在略過：${preview.would_skip || 0} 筆｜未對應檔：${unmapped} 個\n\n` +
+    `${lines.join('\n') || '未偵測到任何講次產出'}\n\n` +
+    '不呼叫 Gemini Notebook、不改動檔案、不排入生成佇列。確定建立嗎？'
+  );
+}
+
+/**
+ * Preview via dry-run and optionally confirm adopting local outputs into done jobs.
+ * @param {string} code Existing course code
+ * @returns {Promise<void>}
+ */
+async function openAdoptOutputsFlow(code) {
+  try {
+    const dryRes = await fetch(`/api/courses/${encodeURIComponent(code)}/adopt-outputs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: true }),
+    });
+    const preview = await dryRes.json().catch(() => ({}));
+    if (!dryRes.ok) throw new Error(preview.detail || '無法預覽既有產出紀錄');
+    if (!window.confirm(_formatAdoptOutputsConfirmMessage(code, preview))) return;
+    if ((preview.would_create || 0) === 0) {
+      showToast('沒有需要新增的產出紀錄。', 'info');
+      return;
+    }
+    const applyRes = await fetch(`/api/courses/${encodeURIComponent(code)}/adopt-outputs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: false }),
+    });
+    const applied = await applyRes.json().catch(() => ({}));
+    if (!applyRes.ok) throw new Error(applied.detail || '建立產出紀錄失敗');
+    showToast(`已建立 ${applied.created || 0} 筆 done 產出紀錄（略過 ${applied.skipped || 0} 筆）`, 'success');
+    await fetchCourses();
+    if (typeof viewCourseDetail === 'function' && activeCourseCode === code) await viewCourseDetail(code, true);
+    if (typeof loadLearningRecordView === 'function') await loadLearningRecordView();
+  } catch (e) {
+    showToast(e.message || '從既有檔案建立產出紀錄失敗', 'error');
+  }
+}
+
 window.loadStudyLayoutOptions = loadStudyLayoutOptions;
 window.loadLearningRecordView = loadLearningRecordView;
 window.loadSignInStatus = loadSignInStatus;
 window.toggleCourseArchived = toggleCourseArchived;
 window.openRenameCourseFlow = openRenameCourseFlow;
+window.openAdoptOutputsFlow = openAdoptOutputsFlow;
