@@ -99,6 +99,7 @@
 - **分層**：services 不能 import adapters；需要外部功能時由 entrypoints 注入（例：`course_complete_hook(cfg, send_notification)`）。
 - **DATA_DIR 子路徑**只能在 `config/`（`config/data_paths.py` 的 mixin 放新路徑）。
 - **check 誤報**：CSS 的 `#id` 選擇器被當成刪除註解；commit 後就消失。
+- **ruff 也會格式化 Markdown 裡的 Python 程式碼區塊**：計畫或規格文件裡的 ```python 範例沒排好，`agentctl check` 會失敗（2026-11-25 學習網頁計畫就因此讓 check exit 1）。寫完文件先跑 `uv run ruff format <檔案>`。
 - **網頁上路徑一律用選的**（`tests/test_path_pickers.py` 會擋手打路徑的欄位）。
 - **按鈕路由測試**（`tests/test_button_routes.py`）不接受 `/api/...${變數}` 這種字串拼接，前端呼叫要寫完整路徑。
 - **macOS `/var` 是 `/private/var` 的連結**：比較路徑前先 `resolve()`。
@@ -108,9 +109,13 @@
 
 ## 5. 補充：仔細檢查後補上的遺漏項目
 
-- **待補紀錄（核心規則 4，開工後先做）**：
-  - 新增 known-issue：notebooklm-py 的 `_reject_html_download` 會把 HTML 產出誤判為登入頁而拒絕下載（學習網頁必須自行下載）；狀態「已規避」，對應 SPEC-021 Task 3。
-  - `docs/TEMPLATE_FEEDBACK.md` 記一筆：code-review-guard 把 CSS 的 `#id` 選擇器當成「刪除註解」誤報。
+- **待補紀錄（核心規則 4）— 2026-11-25 第二個對話已完成**：
+  - [x] [ISSUE-070](../../known-issues/070-notebooklm-py-rejects-html-download.md)：notebooklm-py 的 `_reject_html_download` 把 HTML 產出誤判為登入頁（已規避，對應 SPEC-021 Task 3；實作時加 `Refs: ISSUE-070` 並補 KNOWN_ISSUES 總表的測試欄）。
+  - [x] `docs/TEMPLATE_FEEDBACK.md`：code-review-guard 把 CSS `#id`、Markdown `#` 標題當成「刪除註解」誤報。
+- **第二次盤點補上的小項目（2026-11-25）**：
+  - Antigravity 的 MCP 伺服器也要重新載入才會用到新程式（之前只寫了 Claude Code 這邊）。
+  - 未推送 commit 已增為 7 筆（另加 `f3366e1`、`8ef2eee`），D1 以 `git log origin/main..HEAD` 為準。
+  - `DATA_DIR/output/` 實際只剩兩個 `.DS_Store`；`midterm-submission/`、`input/courses/` 已不存在，不用再處理。
 - **TASK-036 清單第 1 節的整理工作**（不在表格裡，容易漏）：關閉舊對話（舊 MCP 程序）、用平常方式啟動伺服器、刪除空的 `DATA_DIR/output/`（0 個檔案、資料庫沒有指向它，使用者尚未決定）、整理 `backups/`。
 - **尚未實測**：
   - 學習網頁提示詞 **B 版（整本書）** 只寫好、沒在真實 Gemini Notebook 跑過；W1 驗收時要各跑一次 A、B（耗額度，先問）。

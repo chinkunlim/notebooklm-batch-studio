@@ -72,9 +72,14 @@ class TypesTest(unittest.TestCase):
         self.assertEqual(ArtifactType.COURSE_LEARNING_SITE.value, "course_learning_site")
         self.assertEqual(label_for("learning_site"), "學習網頁")
         self.assertEqual(label_for("course_learning_site"), "整本書學習網頁")
-        self.assertEqual(get_artifact_english_title(ArtifactType.LEARNING_SITE, "[L01]"), "[L01] Learning Site")
+        self.assertEqual(
+            get_artifact_english_title(ArtifactType.LEARNING_SITE, "[L01]"), "[L01] Learning Site"
+        )
         self.assertEqual(action_kind_for(ArtifactType.COURSE_LEARNING_SITE), "canvas")
-        self.assertEqual(SIMPLE_OUTPUTS[ArtifactType.LEARNING_SITE][1:], ("learning_site.html", "course_learning_site.html"))
+        self.assertEqual(
+            SIMPLE_OUTPUTS[ArtifactType.LEARNING_SITE][1:],
+            ("learning_site.html", "course_learning_site.html"),
+        )
         self.assertIn("course_learning_site", COURSE_TYPES)
         js = (STATIC / "studio-queue.js").read_text(encoding="utf-8")
         self.assertIn("{ value: 'learning_site', label: '學習網頁' }", js)
@@ -105,24 +110,36 @@ class TypesTest(unittest.TestCase):
 ```python
 class PromptTest(unittest.TestCase):
     def test_chapter_prompt_fills_section_a(self) -> None:
-        text = render_site_prompt(course, lecture1)          # lecture1: no=1, topic="Career-Counseling-A-Life"
+        text = render_site_prompt(course, lecture1)  # lecture1: no=1, topic="Career-Counseling-A-Life"
         self.assertTrue(text.startswith("make me a site"))
         self.assertIn("「生涯諮商與實務」第 1 講「Career Counseling A Life」", text)
         self.assertNotIn("{{", text)
         self.assertNotIn("整本書的互動學習網頁", text)
+
     def test_book_prompt_uses_section_b_with_range(self) -> None:
-        text = render_site_prompt(course, None)               # lectures 1–6, 13, 14, 16, 17
+        text = render_site_prompt(course, None)  # lectures 1–6, 13, 14, 16, 17
         self.assertIn("整本書的互動學習網頁", text)
         self.assertIn("第 1–17 講（共 10 講）", text)
+
     def test_extra_instructions_are_appended(self) -> None:
-        self.assertTrue(render_site_prompt(course, lecture1, extra="多舉諮商實例").rstrip().endswith("補充要求：多舉諮商實例"))
+        self.assertTrue(
+            render_site_prompt(course, lecture1, extra="多舉諮商實例")
+            .rstrip()
+            .endswith("補充要求：多舉諮商實例")
+        )
+
     def test_full_custom_prompt_is_used_verbatim(self) -> None:
         custom = "make me a site\n只做 3 題測驗"
         self.assertEqual(render_site_prompt(course, lecture1, extra=custom), custom)
+
     def test_planned_site_jobs_have_no_generic_prompt(self) -> None:
         # job_planner otherwise stores PromptGenerator's generic fallback "請為【…】生成高品質學術產出物。",
         # which the runner would append as 補充要求
-        course = replace(course, selected_chapter_artifacts=["learning_site"], selected_course_artifacts=["course_learning_site"])
+        course = replace(
+            course,
+            selected_chapter_artifacts=["learning_site"],
+            selected_course_artifacts=["course_learning_site"],
+        )
         jobs = generate_jobs_for_course(course)
         self.assertTrue(jobs)
         self.assertTrue(all(j.custom_prompt is None for j in jobs))
