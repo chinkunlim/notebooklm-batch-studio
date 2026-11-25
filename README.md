@@ -49,12 +49,10 @@ OPENATHENS_DOMAIN=
 EBSCO_PROFILE=
 ```
 
-4. 一鍵完成套件安裝、資料庫遷移與資料目錄初始化（建立 `study/` 與 5 個 `scratch/<kind>/`）：
+4. **【全新安裝】一個指令完成**：檢查工具、建立 `.env` 與 `DATA_DIR`（不覆蓋既有設定）、依 `uv.lock` 安裝依賴、資料庫遷移、建立 `study/` 與 5 個 `scratch/<kind>/`。重複執行是安全的：
 
 ```bash
-python3 scripts/agentctl.py setup --install
-uv run alembic upgrade head
-uv run notebooklm-batch-studio init-data
+./scripts/install.sh
 ```
 
 資料目錄結構（位於專案資料夾外的 `DATA_DIR`）：
@@ -66,11 +64,10 @@ uv run notebooklm-batch-studio init-data
 
 更新程式時會完整保留專案外的 `DATA_DIR`、`db/app.db` 學習紀錄與本機 `.env` 設定，不會覆蓋既有課程資料：
 
+**【後期更新】一個指令完成**（先關閉網頁伺服器）：只快轉 `git pull --ff-only`、同步依賴、把資料庫備份到 `DATA_DIR/backups/db-<時間>/`，再遷移資料庫並補建資料夾。程式已是最新時可加 `--no-pull`：
+
 ```bash
-git pull
-uv sync
-uv run alembic upgrade head
-uv run notebooklm-batch-studio init-data
+./scripts/update.sh
 ```
 
 - 若本機還留有舊版 `input/courses`、`output/courses`、`midterm-submission` 或 `LEGACY_NOTE_STUDIO_DIR` 舊資料，先用 `--dry-run` 預覽整併計畫表，確認無誤後才加 `--apply`：
