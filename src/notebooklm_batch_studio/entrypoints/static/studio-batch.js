@@ -239,9 +239,10 @@ function renderActiveJobs(jobs, code) {
  * @param {object} j Job
  * @param {string} code Course code
  * @param {object} versionsBySlot Newest version per "lecture|type"
+ * @param {boolean} [isRecordOnly=false] Whether course runs in record-only mode (Refs: ISSUE-068)
  * @returns {string} HTML
  */
-function jobRowHtml(j, code, versionsBySlot) {
+function jobRowHtml(j, code, versionsBySlot, isRecordOnly = false) {
   const st = STATUS_LABELS[j.status] || { text: j.status, cls: '' };
   const scope = j.lecture_no ? `L${pad2(j.lecture_no)}` : '全課程';
   const target = j.rel_path || (j.output_file ? j.output_file.split('/').pop() : null);
@@ -257,8 +258,11 @@ function jobRowHtml(j, code, versionsBySlot) {
   const lecArg = j.lecture_no === null ? 'null' : j.lecture_no;
   const retryBtn = (j.status === 'failed' || j.status === 'needs_review')
     ? `<button class="btn btn-primary btn-sm" onclick="retryJob(${jsAttr(j.id)}, ${jsAttr(code)})">重試</button>` : '';
-  const regenBtn = (j.status === 'done' || j.status === 'needs_review' || j.status === 'failed') && j.version === total
-    ? `<button class="btn btn-soft btn-sm" onclick="regenerateArtifact(${jsAttr(code)}, ${lecArg}, ${jsAttr(j.artifact_type)}, { label: ${jsAttr(j.label || j.artifact_type)}, nextVersion: ${total + 1} })">重新生成</button>` : '';
+  const canRegen = (j.status === 'done' || j.status === 'needs_review' || j.status === 'failed') && j.version === total;
+  const regenBtn = !canRegen ? ''
+    : isRecordOnly
+      ? '<button class="btn btn-soft btn-sm" disabled title="record-only 課程未連結筆記本，無法重新生成" style="opacity:.55;cursor:not-allowed">重新生成</button>'
+      : `<button class="btn btn-soft btn-sm" onclick="regenerateArtifact(${jsAttr(code)}, ${lecArg}, ${jsAttr(j.artifact_type)}, { label: ${jsAttr(j.label || j.artifact_type)}, nextVersion: ${total + 1} })">重新生成</button>`;
   return `<tr><td><strong>${escHtml(j.label || j.artifact_type)}</strong><div class="job-sub"><code>${j.artifact_type}</code>　${scope}</div></td><td>${ver}</td>
     <td><span class="badge ${st.cls}">${st.text}</span>${statusExtra}</td>
     <td><button class="btn btn-ghost btn-sm" onclick="openPromptEditor(${jsAttr(j.id)}, ${jsAttr(`${scope} - ${j.artifact_type}`)})">Prompt</button><button class="btn btn-ghost btn-sm" onclick="openJobOptions(${jsAttr(j.id)})" title="只調整這一份產出的設定">設定${hasOwn}</button></td>
@@ -287,6 +291,7 @@ function jobGroupsHtml(data, code) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(j);
   });
+  const isRecordOnly = data.profile === 'record-only'; // Refs: ISSUE-068
   const topicOf = no => ((data.lectures || []).find(l => l.no === no) || {}).topic || '';
   return [...groups.entries()].sort((a, b) => (a[0] === 'course') - (b[0] === 'course') || a[0] - b[0]).map(([key, list]) => {
     const done = list.filter(j => j.status === 'done').length;
@@ -294,8 +299,8 @@ function jobGroupsHtml(data, code) {
     const busy = list.some(j => ['running', 'pending', 'quota_wait'].includes(j.status));
     const title = key === 'course' ? '整門課' : `第 ${pad2(key)} 講・${escHtml(topicOf(key))}`;
     const badge = attention ? 'badge-danger' : !list.length ? '' : done === list.length ? 'badge-success' : 'badge-warning';
-    const body = list.length ? `${tableHead}${list.map(j => jobRowHtml(j, code, versionsBySlot)).join('')}</tbody></table>` : '<p class="small muted">目前尚未排入此範圍的產出項目。</p>';
-    const addBar = typeof addArtifactBarHtml === 'function' ? addArtifactBarHtml(code, key, list) : '';
+    const body = list.length ? `${tableHead}${list.map(j => jobRowHtml(j, code, versionsBySlot, isRecordOnly)).join('')}</tbody></table>` : '<p class="small muted">目前尚未排入此範圍的產出項目。</p>';
+    const addBar = !isRecordOnly && typeof addArtifactBarHtml === 'function' ? addArtifactBarHtml(code, key, list) : '';
     return `<details class="job-group" ${attention || busy ? 'open' : ''}>
       <summary><span>${title}</span><span class="badge ${badge}">${done} / ${list.length} 完成${attention ? '・需處理' : ''}</span></summary>
       <div>${body}${addBar}</div></details>`;

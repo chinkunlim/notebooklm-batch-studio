@@ -6,6 +6,20 @@ All notable changes to **notebooklm-batch-studio** are documented here
 ## [Unreleased]
 
 ### Added
+- feat(study,api,mcp,ui): add `AdoptOutputsService` (`adopt_existing_outputs`), `POST /api/courses/{code}/adopt-outputs`, MCP tool with `confirm` guard, and dry-run-first Web UI preview flow to adopt existing local `03 Notes/NotebookLM/` deliverables as `done` jobs without Gemini Notebook calls or file edits; applied to `115-1_CP30210` (48 done jobs) (SPEC-015, by `@antigravity`)
+
+### Changed
+- style: wrap a long usage guide line (by `@claude-code`)
+- style: wrap the memory-strength usage line (by `@claude-code`)
+- style(ui): refine course catalog typography and compact layout in split sidebar (by `@antigravity`)
+- style(ui): align new controls with DESIGN.md pure-text capsules and 8pt grid (by `@antigravity`)
+- style(ui): unify gentle animations across popovers, panels, and micro-interactions (by `@antigravity`)
+- refactor(mcp): unify `confirm=False` warning payload via `mcp_confirm.py` across all 57 mutating MCP tools and remove unused `calculate_outline_words` helper (`TASK-033`; commit `9d6ef12`) (by `@antigravity`)
+- refactor(config): centralize data paths, drop implicit load_config, init study/scratch (by `@antigravity`)
+
+### Fixed
+- fix(notes): search both top-level `03 Notes/NoteStudio/` and nested `學習筆記/原稿/` case-insensitively in `list_chapter_notes` / `find_chapter_note` / `read_stitched_note`, preferring top-level generated notes without duplicates (by `@antigravity`)
+- fix(courses): reject `regenerate` (`422`) and disable regenerate UI controls for `record-only` courses without linked notebooks (`ISSUE-068`, by `@antigravity`)
 - feat(literature,hierarchy): integrate full `literature-fetch` workflow (APA/DOI/Crossref/OpenAlex/Airiti/EBSCO/OpenAthens + interactive verification mode + selective APA 7 export + VoR refresh + legacy DB import), unified `<term>/<subject>/<category>` study folder hierarchy, inline PDF.js preview with zoom controls, Excel-style multi-column sort & filter headers (with live keyword filter on APA 7th), and Gemini `Literature Library` notebook sync, Q&A search, and 7-section Literature Review generation with quota-wait auto-resume (TASK-025, ADR-011, SPEC-012) (by `@antigravity`)
 - docs(specs): add SPEC-009 for Study Studio UI Redesign, 9-tool matrix, dedicated customize tab, luxury turntable, and avatar customization (ADR-007) (by `@antigravity`)
 - feat(skills): add design-psychology-master cognitive audit tool (by `@antigravity`)
@@ -94,17 +108,6 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(cli): inventory non-PDF subfolders like study-notes under input/courses in consolidate (by `@antigravity`)
 - feat(study): add adopt_existing_outputs service reusing artifact naming rules (by `@antigravity`)
 - feat(api): expose adopt_existing_outputs via HTTP, MCP, and Web UI (by `@antigravity`)
-
-### Changed
-- style: wrap a long usage guide line (by `@claude-code`)
-- style: wrap the memory-strength usage line (by `@claude-code`)
-- style(ui): refine course catalog typography and compact layout in split sidebar (by `@antigravity`)
-- style(ui): align new controls with DESIGN.md pure-text capsules and 8pt grid (by `@antigravity`)
-- style(ui): unify gentle animations across popovers, panels, and micro-interactions (by `@antigravity`)
-- refactor(mcp): unify `confirm=False` warning payload via `mcp_confirm.py` across all 57 mutating MCP tools and remove unused `calculate_outline_words` helper (`TASK-033`; commit `9d6ef12`) (by `@antigravity`)
-- refactor(config): centralize data paths, drop implicit load_config, init study/scratch (by `@antigravity`)
-
-### Fixed
 - fix(ui,reader): keep split-pane Study Studio sticky with 12px top/bottom framing across Safari/fullscreen, restore global wheel scrolling across all pages, style keypoint header actions as balanced 1-or-2 line pill buttons, switch `課程目錄`/`研讀` in the right column only, resolve exact PDF page & paragraph on first keypoint click, and re-layout PDF textLayer highlights on container resize (by `@antigravity`)
 - fix(web): resolve mobile simulator viewport mismatch when toggling iPhone 416px on desktop displays (ISSUE-026) (by `@antigravity`)
 - fix(runner,quiz,sync): resolve quiz variant overwrite, forward custom prompts, fix artifact downloads, and fix SQLite multi-thread session handling (TASK-007) (by `@antigravity`)
@@ -197,6 +200,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(notes): scan and import nested markdown files recursively from legacy note-studio (by `@antigravity`)
 - fix(notes): import current notes and final PDFs from note-studio, skip version history and layout files (by `@antigravity`)
 - fix(notes): discover nested raw NoteStudio chapter notes with top-level precedence (by `@antigravity`)
+- fix(courses): guard regenerate on record-only courses, record ISSUE-068 and update CHANGELOG (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

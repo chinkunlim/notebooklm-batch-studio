@@ -322,6 +322,36 @@ class AdoptOutputsTests(unittest.TestCase):
         self.assertIn("dry_run: true", record_js)
         self.assertIn("dry_run: false", record_js)
 
+    def test_record_only_course_refuses_regenerate_and_disables_button(self) -> None:
+        """Refs ISSUE-068: record-only courses refuse POST /jobs/regenerate (422) and disable UI button."""
+        with self.session_factory() as session:
+            AdoptOutputsService(
+                self.cfg, CourseRepository(session), QueueRepository(session)
+            ).adopt_existing_outputs(self.course_code, dry_run=False)
+
+        client = TestClient(create_app(config=self.cfg), base_url="http://127.0.0.1:8768")
+        res = client.post(
+            f"/api/courses/{self.course_code}/jobs/regenerate",
+            json={"lecture_no": 1, "artifact_type": "study_guide"},
+        )
+        self.assertEqual(res.status_code, 422)
+        self.assertIn("record-only", res.json()["detail"])
+
+        with self.session_factory() as session:
+            jobs = QueueRepository(session).list_jobs(course_code=self.course_code)
+            self.assertEqual(len(jobs), 11)
+
+        batch_js = (
+            Path(__file__).resolve().parents[1]
+            / "src"
+            / "notebooklm_batch_studio"
+            / "entrypoints"
+            / "static"
+            / "studio-batch.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("record-only", batch_js)
+        self.assertIn("重新生成", batch_js)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,6 +23,7 @@ from notebooklm_batch_studio.domain.models import (
     Course,
     CourseStatus,
     JobStatus,
+    ProfileName,
     effective_options,
     merge_generation_options,
 )
@@ -262,6 +263,11 @@ class CourseSettingsService:
             ValueError: When the artifact type is unknown, scope mismatches, or lecture is missing.
         """
         course = self._course(code)
+        if course.profile == ProfileName.RECORD_ONLY:  # Refs: ISSUE-068
+            raise ValueError(
+                "此課程為 record-only 模式且未連結 Gemini Notebook，"
+                "請先變更產出模式並完成筆記本設定後再重新生成"
+            )
         art_type = ArtifactType(artifact_type)
         if (lecture_no is None) != (art_type.value in COURSE_TYPES):
             raise ValueError(f"Scope mismatch for {artifact_type} with lecture_no={lecture_no}")
