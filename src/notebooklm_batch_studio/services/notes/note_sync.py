@@ -17,24 +17,57 @@ _RE_CHAPTER_STEM = re.compile(r"^(ch\d+)_(.+?)_學習筆記$", re.IGNORECASE)
 _LEGACY_EXCLUDED_DIRS = frozenset({"版本", "手動生成提示詞"})
 _LEGACY_LAYOUT_PREFIX = ("學習筆記", "PDF", "layout")
 _LEGACY_PDF_SUBDIR = Path("學習筆記") / "PDF"
+_LEGACY_RAW_NOTES_SUBDIR = Path("學習筆記") / "原稿"
 
 
-def list_chapter_notes(notes_dir: Path) -> list[dict[str, Any]]:
-    """List stitched chapter `.md` notes inside a NoteStudio directory.
+def _chapter_search_dirs(notes_dir: Path) -> list[Path]:
+    """Return NoteStudio directories searched for stitched chapter notes in priority order.
 
     Args:
         notes_dir: Course NoteStudio directory (`03 Notes/NoteStudio` or `scratch/notes/<key>`).
 
     Returns:
-        Sorted list of note metadata dictionaries.
+        Existing directories ordered `[notes_dir, notes_dir/學習筆記/原稿]`.
+    """
+    candidates = (notes_dir, notes_dir / _LEGACY_RAW_NOTES_SUBDIR)
+    return [d for d in candidates if d.is_dir() and not d.is_symlink()]
+
+
+def _iter_chapter_candidates(notes_dir: Path) -> list[tuple[str, str, Path]]:
+    """Collect deduplicated stitched chapter notes preferring top-level files over nested raw notes.
+
+    Args:
+        notes_dir: Course NoteStudio directory.
+
+    Returns:
+        List of `(chapter_id, title, path)` sorted by `chapter_id`.
+    """
+    found: dict[str, tuple[str, Path]] = {}
+    for search_dir in _chapter_search_dirs(notes_dir):
+        for md_path in sorted(search_dir.glob("*_學習筆記.md")):
+            if md_path.is_symlink() or not md_path.is_file() or md_path.name.startswith("."):
+                continue
+            match = _RE_CHAPTER_STEM.match(md_path.stem)
+            chapter_id = match.group(1).lower() if match else md_path.stem.lower()
+            title = match.group(2) if match else md_path.stem
+            if chapter_id not in found:
+                found[chapter_id] = (title, md_path)
+    return [(cid, title, path) for cid, (title, path) in sorted(found.items())]
+
+
+def list_chapter_notes(notes_dir: Path) -> list[dict[str, Any]]:
+    """List stitched chapter `.md` notes inside `notes_dir` and nested `學習筆記/原稿/`.
+
+    Args:
+        notes_dir: Course NoteStudio directory (`03 Notes/NoteStudio` or `scratch/notes/<key>`).
+
+    Returns:
+        Sorted list of note metadata dictionaries (top-level notes take precedence per chapter).
     """
     if not notes_dir.is_dir():
         return []
     items: list[dict[str, Any]] = []
-    for md_path in sorted(notes_dir.glob("*_學習筆記.md")):
-        match = _RE_CHAPTER_STEM.match(md_path.stem)
-        chapter_id = match.group(1).lower() if match else md_path.stem
-        title = match.group(2) if match else md_path.stem
+    for chapter_id, title, md_path in _iter_chapter_candidates(notes_dir):
         stat = md_path.stat()
         items.append(
             {
@@ -50,22 +83,26 @@ def list_chapter_notes(notes_dir: Path) -> list[dict[str, Any]]:
 
 
 def find_chapter_note(notes_dir: Path, chapter_id: str) -> Path:
-    """Find the stitched `<chapter_id>_*_學習筆記.md` note for a chapter.
+    """Find the stitched `<chapter_id>_*_學習筆記.md` note case-insensitively.
+
+    Searches top-level `notes_dir` first, then falls back to `學習筆記/原稿/`.
 
     Args:
         notes_dir: Course NoteStudio directory.
-        chapter_id: Chapter identifier such as `ch01`.
+        chapter_id: Chapter identifier such as `ch01` or `Ch01`.
 
     Returns:
-        Path of the first matching note.
+        Path of the highest-precedence matching chapter `.md` note.
 
     Raises:
         FileNotFoundError: When no stitched note matches `chapter_id`.
     """
-    matches = sorted(notes_dir.glob(f"{chapter_id}_*_學習筆記.md")) if notes_dir.is_dir() else []
-    if not matches:
-        raise FileNotFoundError(f"找不到 {chapter_id} 的縫合筆記 .md 檔案（{notes_dir}）。")
-    return matches[0]
+    target = chapter_id.strip().lower()
+    if notes_dir.is_dir():
+        for cid, _title, md_path in _iter_chapter_candidates(notes_dir):
+            if cid == target or md_path.stem.lower().startswith(f"{target}_"):
+                return md_path
+    raise FileNotFoundError(f"找不到 {chapter_id} 的縫合筆記 .md 檔案（{notes_dir}）。")
 
 
 def push_chapter_note_to_source(

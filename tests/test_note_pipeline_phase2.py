@@ -130,3 +130,33 @@ class NotePipelinePhase2Tests(unittest.TestCase):
         )
         self.assertFalse(confirm_msg["confirmed"])
         self.assertIn("confirm", confirm_msg["warning"].lower())
+
+    def test_list_and_read_chapters_finds_nested_raw_notes_and_prefers_top_level(self) -> None:
+        """Find nested 學習筆記/原稿/*_學習筆記.md, skip drafts, and prefer top-level notes."""
+        nested_study = self.data_dir / "study" / "115-1" / "心理學研究法_nested"
+        nested_notes = nested_study / "03 Notes" / "NoteStudio"
+        raw_dir = nested_notes / "學習筆記" / "原稿"
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        nested_ch01 = raw_dir / "Ch01_科學研究導論_學習筆記.md"
+        nested_ch01.write_text("# Nested Ch01", encoding="utf-8")
+        (raw_dir / "00_總覽與跨章整合筆記.md").write_text("# Overview", encoding="utf-8")
+        draft = nested_notes / "章節" / "ch01" / "目前" / "目前 x.md"
+        draft.parent.mkdir(parents=True, exist_ok=True)
+        draft.write_text("# Draft Module", encoding="utf-8")
+
+        svc = NotePipelineService(self.cfg, study_dir_resolver=lambda _: nested_study)
+        chapters = svc.list_chapters("CP30210")
+        self.assertEqual([c["chapter_id"] for c in chapters], ["ch01"])
+        self.assertEqual(Path(chapters[0]["path"]), nested_ch01)
+
+        read_nested = svc.read_stitched_note("CP30210", "ch01")
+        self.assertTrue(read_nested["exists"])
+        self.assertEqual(read_nested["content"], "# Nested Ch01")
+
+        # Top-level generated note takes precedence over nested raw note without duplicating ch01.
+        top_ch01 = nested_notes / "ch01_科學研究導論_學習筆記.md"
+        top_ch01.write_text("# Top Level Ch01", encoding="utf-8")
+        chapters_with_top = svc.list_chapters("CP30210")
+        self.assertEqual([c["chapter_id"] for c in chapters_with_top], ["ch01"])
+        self.assertEqual(Path(chapters_with_top[0]["path"]), top_ch01)
+        self.assertEqual(svc.read_stitched_note("CP30210", "ch01")["content"], "# Top Level Ch01")

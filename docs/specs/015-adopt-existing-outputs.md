@@ -114,6 +114,7 @@
   - **Then** HTTP 與 MCP 行為正確、`confirm=False` 回傳 `{"confirmed": false, ...}`、前端包含先 dry-run 預覽再確認的「從既有檔案建立產出紀錄」流程
   - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_http_mcp_and_web_ui_adopt_outputs_entrypoints`
 
-## 6. 未決問題
+## 6. 未決問題 / 後續待辦
 
-- 無（若日後支援多版本檔案 `*_v2.*` 反查，可於後續版本擴充）。
+- **多版本產出反查**：若日後支援多版本檔案 `*_v2.*` 反查，可於後續版本擴充。
+- **NoteStudio 非章節檔案瀏覽（建議 ②）**：`list_chapter_notes`／`find_chapter_note` 已涵蓋頂層與 `學習筆記/原稿/` 之縫合章節；針對 `00_總覽與跨章整合筆記.md`、`學習筆記/PDF/*.pdf` 與 `章節/**/目前/*.md` 等非縫合檔案，日後可補 `list_note_files`／`read_note_file` 依相對路徑瀏覽，不混入章節清單。

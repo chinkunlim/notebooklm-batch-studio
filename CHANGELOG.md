@@ -196,6 +196,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(record): show category folder labels and keep PDF export temp file inside DATA_DIR (by `@antigravity`)
 - fix(notes): scan and import nested markdown files recursively from legacy note-studio (by `@antigravity`)
 - fix(notes): import current notes and final PDFs from note-studio, skip version history and layout files (by `@antigravity`)
+- fix(notes): discover nested raw NoteStudio chapter notes with top-level precedence (by `@antigravity`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

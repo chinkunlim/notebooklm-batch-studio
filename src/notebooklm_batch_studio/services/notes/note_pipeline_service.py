@@ -32,6 +32,7 @@ from notebooklm_batch_studio.services.notes.module_prompts import (
 )
 from notebooklm_batch_studio.services.notes.note_paths import ChapterNoteRequest, NotePathResolver
 from notebooklm_batch_studio.services.notes.note_sync import (
+    find_chapter_note,
     import_legacy_notes,
     list_chapter_notes,
     push_chapter_note_to_source,
@@ -388,10 +389,10 @@ class NotePipelineService:
         """
         validate_path_segment(chapter_id, "chapter_id")
         course_dir = self.paths.notes_course_dir(course_key, study_dir)
-        matches = sorted(course_dir.glob(f"{chapter_id}_*_學習筆記.md")) if course_dir.is_dir() else []
-        if not matches:
+        try:
+            target = find_chapter_note(course_dir, chapter_id)
+        except FileNotFoundError:
             return {"exists": False, "path": "", "content": ""}
-        target = matches[0]
         return {"exists": True, "path": str(target), "content": target.read_text(encoding="utf-8")}
 
     def list_chapters(self, course_key: str, study_dir: Path | None = None) -> list[dict[str, Any]]:
