@@ -1,0 +1,29 @@
+{
+  "id": "TASK-040",
+  "title": "Learning-site artifacts (per lecture and whole book) via Gemini Notebook chat and Studio download",
+  "status": "open",
+  "agent": "",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [
+    "docs/specs/021-learning-site-artifacts.md",
+    "docs/superpowers/plans/2026-11-25-learning-site-artifacts.md"
+  ],
+  "done_items": "",
+  "todo_items": "依 docs/superpowers/plans/2026-11-25-learning-site-artifacts.md 實作 Task 1–6（SPEC-021）。Task 6 Step 2 真實資料驗收會用 Gemini Notebook 額度，需使用者同意。",
+  "blockers": "",
+  "created_at": "2026-11-25 08:49 UTC",
+  "updated_at": "2026-11-25 08:49 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-25 08:49 UTC",
+      "action": "created",
+      "agent": "system"
+    },
+    {
+      "timestamp": "2026-11-25 08:49 UTC",
+      "action": "plan_recorded",
+      "agent": "claude-code"
+    }
+  ]
+}

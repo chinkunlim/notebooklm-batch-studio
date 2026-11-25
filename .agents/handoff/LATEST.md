@@ -5,20 +5,25 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-25 05:13 UTC`
-- **最近操作 Agent**: `claude-code`
+- **最後更新時間**: `2026-11-25 08:49 UTC`
+- **最近操作 Agent**: `system`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `0f5ca7c fix(textbook): match literature-parser chapter file naming (commas, length limits) [agent:claude-code]`
+- **最新 Git Commit**: `dae1dcd docs(prompts): require per-section misconceptions, drag-and-drop exercises and saved progress (tested on CP31000 ch1) [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
 | **TASK-036**<br/>User manual verification and housekeeping checklist | ⚪ `open` | `-` | `-` | - | - | **TODO**: 使用者實機確認與整理清單，見 .agents/tasks/TASK-036-checklist.md（逐項勾選並附證據）。 |
+| **TASK-040**<br/>Learning-site artifacts (per lecture and whole book) via Gemini Notebook chat and Studio download | ⚪ `open` | `-` | `-` | `docs/specs/021-learning-site-artifacts.md`, `docs/superpowers/plans/2026-11-25-learning-site-artifacts.md` | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-25 08:49 UTC] 建立任務 `TASK-040`: Learning-site artifacts (per lecture and whole book) via Gemini Notebook chat and Studio download (by `system`)
+- **狀態**: `open`
+- **相關範圍**: `docs/specs/021-learning-site-artifacts.md, docs/superpowers/plans/2026-11-25-learning-site-artifacts.md`
 
 ### [2026-11-25 05:13 UTC] 完成任務 `TASK-037` — Textbook chapters as lecture source and auto-split full textbooks in 01 Materials (by `claude-code`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -103,7 +108,3 @@
 ### [2026-11-24 07:58 UTC] 建立任務 `TASK-031`: Resolve ISSUE-053: port Gemini Web auth service and 3-entrypoint login (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
-
-### [2026-11-24 05:48 UTC] 完成任務 `TASK-030` — Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Closed path-safety gaps (import_legacy, source_manager), notes HTTP 400 handling, frontend XSS/escHtml/URL guards, and unified MCP confirm format with synced specs

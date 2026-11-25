@@ -393,3 +393,7 @@
 ### [2026-11-24 05:43 UTC] 建立任務 `TASK-030`: Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-24 05:48 UTC] 完成任務 `TASK-030` — Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Closed path-safety gaps (import_legacy, source_manager), notes HTTP 400 handling, frontend XSS/escHtml/URL guards, and unified MCP confirm format with synced specs
