@@ -146,6 +146,51 @@ class StudyHierarchyAndMigrationTest(unittest.TestCase):
                 self.assertEqual(row.subject, "心理學研究法")
                 self.assertEqual(row.study_dir, str(target_dir))
 
+    def test_migration_leaves_courses_already_in_study_root_alone(self) -> None:
+        """A course already in a school-named study folder is not moved when `subject` differs (ISSUE-069)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp) / "data"
+            cfg = AppConfig(
+                data_dir=data_dir,
+                database_url=f"sqlite:///{data_dir / 'db' / 'app.db'}",
+                http_allowed_hosts=("127.0.0.1", "localhost", "testserver"),
+            )
+            cfg.db_dir.mkdir(parents=True, exist_ok=True)
+            engine = create_db_engine(cfg.database_url)
+            Base.metadata.create_all(engine)
+            session_factory = make_session_factory(engine)
+
+            school_dir = cfg.study_root_dir / "115-1" / "CP__30210-心理學研究法"
+            ensure_course_study_tree(school_dir)
+            (school_dir / "02 Handouts" / "Ch01.pdf").write_bytes(b"%PDF-1.4\nx")
+
+            with session_factory() as session:
+                session.add(
+                    CourseRecord(
+                        code="115-1_CP30210",
+                        name="心理學研究法",
+                        source_dir=str(school_dir),
+                        term="115-1",
+                        subject="心理學研究法",
+                        study_dir=str(school_dir),
+                    )
+                )
+                session.commit()
+
+                for dry_run in (True, False):
+                    result = migrate_courses_to_study_hierarchy(
+                        StudyMigrationRepository(session), cfg, dry_run=dry_run
+                    )
+                    item = result["items"][0]
+                    self.assertEqual(item["status"], "already_migrated")
+                    self.assertEqual(item["new_study_dir"], str(school_dir))
+
+                self.assertTrue((school_dir / "02 Handouts" / "Ch01.pdf").is_file())
+                self.assertFalse((cfg.study_root_dir / "115-1" / "心理學研究法").exists())
+                row = session.get(CourseRecord, "115-1_CP30210")
+                assert row is not None
+                self.assertEqual(row.study_dir, str(school_dir))
+
 
 class LiteratureIntegrationTest(unittest.TestCase):
     """Verify LiteratureManager, HTTP routes, MCP tools, and Web UI exposure."""

@@ -199,6 +199,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - fix(notes): scan and import nested current NoteStudio `.md` notes and final PDFs recursively while skipping `版本/` and `layout/` (commits `8966502`, `1325e28`) (by `@antigravity`)
 - fix(notes): discover nested raw NoteStudio chapter notes under `學習筆記/原稿/` with top-level precedence (commit `2d50632`) (by `@antigravity`)
 - fix(courses): reject `regenerate` (`422`) and disable UI regenerate/add-bar on `record-only` courses (`ISSUE-068`; commit `33e8321`) (by `@antigravity`)
+- fix(study): keep courses already in study root during layout migration (ISSUE-069) (by `@claude-code`)
 
 ### Documentation
 - docs: synchronize ARCHITECTURE.md, DB.md, README.md, and PROJECT_RULES with SPEC-006~008 and new DB models (by `@antigravity`)

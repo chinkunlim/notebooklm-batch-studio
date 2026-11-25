@@ -259,6 +259,7 @@ notebooklm-batch-studio/
 │   │   ├── 066-auto-keypoints-422-before-upload.md
 │   │   ├── 067-rename-course-misses-fallback-output-needs-review-and-active-locks.md
 │   │   ├── 068-record-only-regenerate-without-notebook.md
+│   │   ├── 069-migrate-moves-school-named-study-folders.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

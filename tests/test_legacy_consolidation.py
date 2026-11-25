@@ -275,7 +275,7 @@ class LegacyConsolidationTests(unittest.TestCase):
             assert course is not None
             self.assertEqual(course.study_dir, str(new_career_dir))
             self.assertEqual(course.source_dir, str(new_career_dir))
-            self.assertEqual(course.subject, "CP__31000-生涯諮商與實務")
+            self.assertEqual(course.subject, "生涯諮商與實務")  # ISSUE-069: course title, not folder name
             job = session.get(ArtifactJobRecord, "job-1")
             assert job is not None
             self.assertTrue((job.output_file or "").startswith(str(new_career_dir)))

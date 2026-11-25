@@ -85,3 +85,4 @@
 ## 跨專案整合既有預防紀錄（不需重複建檔）
 
 - **原 `literature-fetch ISSUE-006`（系統環境已有 `DATA_DIR` 如 `~/open-webui-data` 時蓋過本專案 `.env`）**：本專案已透過框架層與 `config/settings.py:41` 的 `PROJECT_FILE_WINS = ("DATA_DIR",)` + `load_dotenv_file()`（`config/settings.py:60-61` 直接寫入 `os.environ[key] = value` 強制以專案 `.env` 為主）根治；`python3 scripts/agentctl.py doctor` 實測顯示 `✅ 已忽略終端機的 DATA_DIR=~/open-webui-data（例如 Open WebUI 設定的），使用專案 .env 的設定`。
+| [ISSUE-069](069-migrate-moves-school-named-study-folders.md) | 🟢 已根治 (Resolved) | 遷移學習資料夾會把已在 study/ 的校方命名課程搬到純課名資料夾 | 在真實資料上預覽 POST /api/courses/migrate-study-layout（dry_run=true）時，115-1_CP30210 與 115-1_GC68210 顯示 planned，目標為 study/115-1/心理學研究法 與 study/115-1/和 AI 一起寫程式；若實際執行（網頁 API 或 MCP migrate_study_layout confirm=True），會把課程搬離校方命名的 CP__30210-… / GC__68210-… 資料夾。115-1_CP31000 只因 subject 剛好等於資料夾名稱而未受影響。 | src/notebooklm_batch_studio/services/study_migration.py, src/notebooklm_batch_studio/services/legacy_consolidation_ops.py |

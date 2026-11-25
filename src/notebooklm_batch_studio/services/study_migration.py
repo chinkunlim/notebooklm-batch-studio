@@ -125,6 +125,22 @@ def _resolve_target(config: AppConfig, course: MigratableCourseLike) -> tuple[st
     return term, subject, resolve_course_study_dir(config.study_root_dir, term, subject, course.code)
 
 
+def _is_inside_study_root(config: AppConfig, study_dir: str) -> bool:
+    """Return True when `study_dir` is an existing folder under `config.study_root_dir`.
+
+    Args:
+        config: Application configuration.
+        study_dir: Course study directory stored in the database (may be empty).
+
+    Returns:
+        Whether the course already lives in the unified study tree.
+    """
+    if not study_dir:
+        return False
+    path = Path(study_dir)
+    return path.is_dir() and path.resolve().is_relative_to(config.study_root_dir.resolve())
+
+
 def _move_legacy_outputs(legacy_out: Path, study_dir: Path, dry_run: bool) -> int:
     """Move legacy outputs (`notes/` and generated artifacts) into `03 Notes`.
 
@@ -201,6 +217,11 @@ def _migrate_one_course(
     term, subject, study_dir = _resolve_target(config, course)
     src_dir = Path(course.source_dir) if course.source_dir else (config.courses_input_dir / course.code)
     legacy_out = config.courses_output_dir / course.code
+    if _is_inside_study_root(config, course.study_dir):
+        # Refs: ISSUE-069 — never move a course out of its existing (e.g. school-named) study folder.
+        logger.info("Skip migration for %s: already in %s", course.code, course.study_dir)
+        existing = (course.code, course.name, term, subject, str(src_dir), course.study_dir)
+        return CourseMigrationItem(*existing, 0, 0, "already_migrated")
     summary = (course.code, course.name, term, subject, str(src_dir), str(study_dir))
 
     if bool(course.study_dir) and Path(course.study_dir) == study_dir and src_dir == study_dir:

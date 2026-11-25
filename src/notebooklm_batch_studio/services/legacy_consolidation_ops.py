@@ -390,7 +390,8 @@ def apply_folder_rename_step(notes_state_dir: Path, repo: Any, source: str, targ
     if dst_dir.exists():
         raise FileExistsError(f"目標課程資料夾已存在，拒絕覆寫：{dst_dir}")
     parsed = parse_course_folder(dst_dir.name)
-    meta: dict[str, str] = {"subject": dst_dir.name}
+    # Refs: ISSUE-069 — subject is the course title (e.g. 生涯諮商與實務), not the `CP__31000-…` folder name.
+    meta: dict[str, str] = {"subject": parsed.name if parsed and parsed.is_course else dst_dir.name}
     if parsed and parsed.course_no:
         meta["course_no"] = parsed.course_no
     dst_dir.parent.mkdir(parents=True, exist_ok=True)
