@@ -1,21 +1,28 @@
 {
   "id": "TASK-035",
   "title": "Study library, course identity and learning record",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "",
+  "done_items": "Completed SPEC-014 study library unification, learning record, legacy consolidation, SPEC-015 adopt_existing_outputs, ISSUE-068 guard, demo update, and Task 17 documentation closeout.",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-24 09:21 UTC",
-  "updated_at": "2026-11-24 09:21 UTC",
+  "updated_at": "2026-11-25 01:08 UTC",
   "history": [
     {
       "timestamp": "2026-11-24 09:21 UTC",
       "action": "created_and_claimed",
       "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-25 01:08 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Completed SPEC-014 study library unification, learning record, legacy consolidation, SPEC-015 adopt_existing_outputs, ISSUE-068 guard, demo update, and Task 17 documentation closeout."
     }
-  ]
+  ],
+  "summary": "Completed SPEC-014 study library unification, learning record, legacy consolidation, SPEC-015 adopt_existing_outputs, ISSUE-068 guard, demo update, and Task 17 documentation closeout."
 }

@@ -5,20 +5,23 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-24 09:21 UTC`
+- **最後更新時間**: `2026-11-25 01:08 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `26c871c docs(docs): update docs documentation (ADR-008, ADR-009, ADR-011, ADR-012, ADR-013, ISSUE-027, ISSUE-028, ISSUE-045, ISSUE-047, ISSUE-048, ISSUE-053, ISSUE-054, ISSUE-057, TASK-025, TASK-031, TASK-033, TASK-034) [agent:antigravity]`
+- **最新 Git Commit**: `131ef70 feat(demo): add term grouping, record-only course, and adopted outputs to demo [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
-|---|---|---|---|---|---|---|
-| **TASK-035**<br/>Study library, course identity and learning record | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
+> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-25 01:08 UTC] 完成任務 `TASK-035` — Study library, course identity and learning record (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Completed SPEC-014 study library unification, learning record, legacy consolidation, SPEC-015 adopt_existing_outputs, ISSUE-068 guard, demo update, and Task 17 documentation closeout.
+- **交接備註**: 本機 `main` 尚有未推送 commits 等待使用者確認後推送；`agentctl update` 依使用者指示暫緩至計畫結束後處理；使用者實機確認清單已列於 Task 17 回報。
 
 ### [2026-11-24 09:21 UTC] 建立任務 `TASK-035`: Study library, course identity and learning record (by `antigravity`)
 - **狀態**: `in_progress`
@@ -99,7 +102,3 @@
 ### [2026-11-23 07:40 UTC] 完成任務 `TASK-026` — Integrate note-studio Phase 1: modular markdown note generation pipeline (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Integrated note-studio Phase 1 dual-backend markdown pipeline under <study_dir>/03 Notes/NoteStudio (ADR-012)
-
-### [2026-11-23 06:42 UTC] 建立任務 `TASK-026`: Integrate note-studio Phase 1: modular markdown note generation pipeline (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`

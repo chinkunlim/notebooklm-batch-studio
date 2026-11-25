@@ -357,3 +357,7 @@
 - **下一步**: 1) Retire standalone literature-fetch repo. 2) Continue live testing or new features in notebooklm-batch-studio.
 - **交接備註**: All literature-fetch tests (108 unit + 5 integration = 333 total), known issues, and docs integrated and pushed to origin/main.
 - **本機對話紀錄**: `.agents/conversations/2026-11-23-1142-antigravity-summary.md`（只在這台電腦）
+
+### [2026-11-23 06:42 UTC] 建立任務 `TASK-026`: Integrate note-studio Phase 1: modular markdown note generation pipeline (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
