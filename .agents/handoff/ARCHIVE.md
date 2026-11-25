@@ -361,3 +361,23 @@
 ### [2026-11-23 06:42 UTC] 建立任務 `TASK-026`: Integrate note-studio Phase 1: modular markdown note generation pipeline (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-23 07:40 UTC] 完成任務 `TASK-026` — Integrate note-studio Phase 1: modular markdown note generation pipeline (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Integrated note-studio Phase 1 dual-backend markdown pipeline under <study_dir>/03 Notes/NoteStudio (ADR-012)
+
+### [2026-11-23 07:44 UTC] 建立任務 `TASK-027`: Integrate note-studio Phase 2: study studio integration, course auto-fill, and notebook push-back (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-23 07:47 UTC] 完成任務 `TASK-027` — Integrate note-studio Phase 2: study studio integration, course auto-fill, and notebook push-back (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Integrated note-studio Phase 2: course/lecture auto-fill, chapter listing, PDF push-to-source, and legacy note import
+
+### [2026-11-24 01:49 UTC] 建立任務 `TASK-028`: Security hardening and code-review zero-violation cleanup (by `claude-code`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-24 02:13 UTC] 完成任務 `TASK-028` — Security hardening and code-review zero-violation cleanup (by `claude-code`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Security hardening (path traversal, prompt-injection XSS, CSP, MCP confirm, browser profile perms, library credentials), artifact study_dir 404 fix, zero code-review warnings, SPEC-013, ADR-013, ISSUE-045..051

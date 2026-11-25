@@ -1,0 +1,26 @@
+{
+  "id": "TASK-036",
+  "title": "User manual verification and housekeeping checklist",
+  "status": "open",
+  "agent": "",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "使用者實機確認與整理清單，見 .agents/tasks/TASK-036-checklist.md（逐項勾選並附證據）。",
+  "blockers": "",
+  "created_at": "2026-11-25 04:34 UTC",
+  "updated_at": "2026-11-25 04:36 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-25 04:34 UTC",
+      "action": "created",
+      "agent": "system"
+    },
+    {
+      "timestamp": "2026-11-25 04:36 UTC",
+      "action": "todo_recorded",
+      "agent": "claude-code"
+    }
+  ]
+}
