@@ -46,6 +46,7 @@
 ### W1：學習網頁產出（TASK-040，SPEC-021）— 主要工作
 
 > **2026-11-25 第二個對話進度**：Task 1–5 已完成並 commit（`6b54d01`、`efc5341`、`0fbfc10`、`8bef9c0`、`44348b0`），Task 6 文件已更新；剩 Task 6 Step 2 真實資料驗收（耗額度，待使用者同意）。
+> **Task 6 Step 2（A 版）已通過**：2026-11-25 生涯諮商第 1 講真實產生並下載（約 16 分鐘，job `ecc8815d`）。驗收時發現兩件事：①「重新生成」與 Ollama 精修會把通用提示詞塞進網頁工作，已修（`1d85b27`）；②課程若是暫停狀態，佇列不會領取工作（設計如此），驗收時暫時啟動課程、領取後立刻恢復暫停。剩 B 版（整本書）真實驗收。
 > 與原計畫不同處：Task 5 改用 CSP `sandbox`＋儲存轉接器（使用者定案，ADR-016），因為原做法可經 `window.open` 取得同源頁面而呼叫 API。
 
 - **計畫**：`docs/superpowers/plans/2026-11-25-learning-site-artifacts.md`（6 個任務，全部 TDD；Global Constraints、Review Focus 都寫在裡面）。
