@@ -13,7 +13,7 @@
 | R1 | 筆記排程跨程序同時寫入 | 網頁與 MCP 同一瞬間加入排程時，可能漏掉一筆 | 中 |
 | R2 | notebooklm-py 內部 API | 升級套件時學習網頁可能壞掉 | 中（升級前必做） |
 | R3 | 同一門課有兩本課本資料夾 | 切割時用「PDF 同名資料夾」判斷，可能放錯資料夾 | 低 |
-| R4 | 講次同時用老師講義與課本章節（「both」） | 用課本章節當講次的課，只要 `02 Handouts` 放進一份 PDF，掃描就整個改用講義當講次（`course_parser.py:124-126`），課本章節不再是候選；既有講次會怎樣尚未驗證 | 中（防護必做；完整「both」有需要時再做） |
+| R4 | 講次同時用老師講義與課本章節（「both」） | 用課本章節當講次的課，只要 `02 Handouts` 放進一份 PDF，掃描就整個改用講義當講次（`course_parser.py:124-126`），課本章節不再是候選；既有講次會怎樣尚未驗證 | R4a 已完成（ISSUE-073）；完整「both」有需要時再做 |
 
 ## 2. 使用情境
 
@@ -26,7 +26,7 @@
 
 - **必須 (Must)**：
   - **R1 跨程序檔案鎖**：`services/notes/note_scheduler.py` 的 `_update` 與 `status` 目前只用 `threading.Lock`（同一程序內有效）；網頁伺服器與 MCP 伺服器是不同程序，各自讀、改、寫 `DATA_DIR/state/note_schedule.json`，後寫的會蓋掉先寫的。改為在 `threading.Lock` 之外再加檔案鎖（`fcntl.flock` 鎖 `note_schedule.json.lock`，逾時 10 秒拋錯並記 log）；鎖的實作放 adapters 或 config 允許的工具層，由 entrypoints 注入，維持單向分層。
-  - **R4a 講次來源切換防護**：`course_parser` 目前在 `02 Handouts` 有任何 PDF 時只用講義、否則才用課本章節。先寫測試重現「課本章節課程放入一份講義後重新掃描」的結果（講次是否被標為遺失、編號是否改變、是否排入新工作）。在完整「both」實作前，改為：課程已有來自課本章節的講次時，`02 Handouts` 新出現的 PDF 不改變講次來源，只記 log 並在網頁課程卡片提示「偵測到講義，但本課以課本章節為講次」；`watch` 對這種課程的 `02 Handouts` 事件也不排程。
+  - **R4a 講次來源切換防護（已完成，ISSUE-073）**：重現結果：章節講次被整批換成講義，並排入 10 件產出工作。`course_parser` 目前在 `02 Handouts` 有任何 PDF 時只用講義、否則才用課本章節。先寫測試重現「課本章節課程放入一份講義後重新掃描」的結果（講次是否被標為遺失、編號是否改變、是否排入新工作）。在完整「both」實作前，改為：課程已有來自課本章節的講次時，`02 Handouts` 新出現的 PDF 不改變講次來源，只記 log 並在網頁課程卡片提示「偵測到講義，但本課以課本章節為講次」；`watch` 對這種課程的 `02 Handouts` 事件也不排程。
   - **R2 升級把關**：學習網頁用到的 notebooklm-py 內部介面（`client.artifacts._list_raw` 的列格式：類型代碼 10、`row[24]` 檔名與網址；`chat.ask` 觸發網頁生成；`artifacts.rename`；`_reject_html_download` 的行為）集中在一個 adapter，並以 fixture 測試（`tests/test_learning_site.py`、`tests/fixtures/notebooklm/site_row.json`）。在 `docs/standards/PROJECT_RULES.md` 加一條：升級 notebooklm-py 前後都要跑 `uv run python -m pytest tests/test_learning_site.py`，並用真實帳號列一次 Studio（唯讀）比對列格式；`uv.lock` 維持鎖定版本 0.8.6。
 - **可選 (Nice to have)**：
   - **R3 多本課本**：`textbook_split._chapter_folder` 遇到兩個以上帶 `.textbook.json` 的資料夾時，不再預設用 PDF 同名資料夾，而是在預覽回應加 `folder_choices`，網頁「預覽並切割」對話框用下拉選單讓使用者選輸出資料夾（預設選章節檔名最相符的一個）。
@@ -45,7 +45,7 @@
 - [ ] R1：Given 鎖被另一程序持有超過逾時，Then 拋出可辨識的錯誤，HTTP 回 503。
 - [ ] R2：PROJECT_RULES 已加升級步驟；`tests/test_learning_site.py` 覆蓋列格式、改名、HTML 下載三處。
 - [ ] R3（若做）：Given 兩個課本資料夾，When dry-run 切割，Then 回 `folder_choices` 兩筆，未指定 `target_folder` 時不寫入。
-- [ ] R4a：Given 課程有 3 個課本章節講次，When `02 Handouts` 放入 1 份 PDF 並重新掃描，Then 講次仍是那 3 個、編號不變、佇列沒有新工作，並出現提示。
+- [x] R4a（2026-11-25，`tests/test_lecture_source_guard.py`，ISSUE-073）：Given 課程有 3 個課本章節講次，When `02 Handouts` 放入 1 份 PDF 並重新掃描，Then 講次仍是那 3 個、編號不變、佇列沒有新工作，並出現提示。
 - [ ] R4（若做）：Given `both`，Then 既有講次編號不變，新講次接在最後。
 
 ## 6. 未決問題

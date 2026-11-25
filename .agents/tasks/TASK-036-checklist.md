@@ -14,7 +14,7 @@
 
 ## 2. 實機確認（依花費時間由少到多）
 
-> 2026-11-25：逐步測試步驟與過時項目更正見 [SPEC-026](../../docs/specs/026-pending-acceptance-and-manual-tests.md)。**#9 不要把測試 PDF 放進課本課程的 `02 Handouts/`**（會改變講次來源，SPEC-025 R4a）；#19 依 SPEC-026 A2。
+> 2026-11-25：逐步測試步驟與過時項目更正見 [SPEC-026](../../docs/specs/026-pending-acceptance-and-manual-tests.md)。#9 的預期結果已改（課本課程放講義不排程，ISSUE-073）；#19 依 SPEC-026 A2。
 
 | # | 項目 | 怎麼測 | 預期結果 | 狀態 |
 |---|---|---|---|---|

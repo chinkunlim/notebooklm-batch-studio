@@ -12,6 +12,7 @@ from notebooklm_batch_studio.adapters.pdf_textbook import PypdfTextbookTools
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.models import CourseStatus
 from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
+from notebooklm_batch_studio.services.course_parser import ignored_handout_rows
 from notebooklm_batch_studio.services.textbook_split import TextbookService
 
 if TYPE_CHECKING:
@@ -86,7 +87,7 @@ def _register_pending_tool(mcp: MCPServer, run: Runner) -> None:
         """List unsplit textbooks in active courses' 01 Materials folders with chapter counts.
 
         Returns:
-            JSON string with `pending`.
+            JSON string with `pending` and `ignored_handouts`.
         """
 
         def scan(svc: TextbookService) -> dict[str, Any]:
@@ -96,10 +97,13 @@ def _register_pending_tool(mcp: MCPServer, run: Runner) -> None:
                 svc: Textbook service.
 
             Returns:
-                `{"pending": [...]}`.
+                `{"pending": [...], "ignored_handouts": [...]}`.
             """
-            codes = [c.code for c in svc.course_repo.list_courses(status=CourseStatus.ACTIVE)]  # type: ignore[attr-defined]
-            return {"pending": svc.pending_textbooks(codes)}
+            courses = svc.course_repo.list_courses(status=CourseStatus.ACTIVE)  # type: ignore[attr-defined]
+            return {
+                "pending": svc.pending_textbooks([c.code for c in courses]),
+                "ignored_handouts": ignored_handout_rows(courses, svc.config.study_layout),  # SPEC-025 R4a
+            }
 
         return run(scan)
 

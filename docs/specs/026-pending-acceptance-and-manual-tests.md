@@ -57,7 +57,7 @@
 
 依 `.agents/tasks/TASK-036-checklist.md` §2 的「怎麼測」欄操作。以下兩項的說明已過時，以這裡為準：
 
-- **#9 watch 監看**：兩門課現在都以課本章節當講次（`02 Handouts` 是空的）。執行 `uv run notebooklm-batch-studio watch` 後，把 PDF 放進 `01 Materials/`、`04 Homework/` 應**不會**觸發排程；**不要**把測試 PDF 放進這兩門課的 `02 Handouts/`（會改變講次來源，見 SPEC-025 R4a），要測 `02 Handouts` 請用一門測試課程。
+- **#9 watch 監看**：兩門課現在都以課本章節當講次（`02 Handouts` 是空的）。執行 `uv run notebooklm-batch-studio watch` 後，把 PDF 放進 `01 Materials/`、`04 Homework/` 應**不會**觸發排程；把 PDF 放進這兩門課的 `02 Handouts/` 也**不會**排程，終端機會顯示「以課本章節為講次，講義不會變成講次」，批次排程頁出現「偵測到講義，但本課以課本章節為講次」提示卡（SPEC-025 R4a、ISSUE-073）。測完把那份 PDF 移走即可。
 - **#19 切割整本課本**：改依本規格 A2。
 
 ## 5. 驗收標準

@@ -131,6 +131,29 @@ async function dismissPendingTextbook(code, relativePath) {
 }
 
 /**
+ * Dismiss key for an ignored-handouts notice; new files bring the notice back.
+ * @param {{course_code: string, files: Array<string>}} r Row from `ignored_handouts`
+ * @returns {string} Key stored with the dismissed textbooks
+ */
+function _handoutKey(r) {
+  return `${r.course_code}|handouts:${(r.files || []).join(',')}`;
+}
+
+/**
+ * Card telling the user that 02 Handouts PDFs are not lectures in a textbook course (SPEC-025 R4a).
+ * @param {{course_code: string, course_name: string, files: Array<string>}} r Row from `ignored_handouts`
+ * @returns {string} Card HTML
+ */
+function _ignoredHandoutCard(r) {
+  const names = r.files.map(f => escHtml(String(f).split('/').pop())).join('、');
+  return `<article class="card" style="margin-bottom:12px"><div class="row" style="justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+    <div style="min-width:0"><b>偵測到講義，但本課以課本章節為講次</b>（${escHtml(r.course_name)}）<br>
+    <span class="small muted">02 Handouts 的 ${r.files.length} 份 PDF 不會變成講次、也不會排程：${names}</span></div>
+    <button class="btn btn-ghost btn-sm" onclick="dismissPendingTextbook(${jsAttr(r.course_code)}, ${jsAttr('handouts:' + r.files.join(','))})">知道了</button>
+  </div></article>`;
+}
+
+/**
  * Show a card on 批次排程 for every textbook found in 01 Materials that has not been split (SPEC-020).
  * @returns {Promise<void>}
  */
@@ -141,8 +164,10 @@ async function loadPendingTextbooks() {
     const res = await fetch('/api/textbooks/pending');
     if (!res.ok) return;
     const skip = new Set(_dismissedTextbooks());
-    const rows = ((await res.json()).pending || []).filter(r => !skip.has(`${r.course_code}|${r.relative_path}`));
-    host.innerHTML = rows.map(r => {
+    const data = await res.json();
+    const rows = (data.pending || []).filter(r => !skip.has(`${r.course_code}|${r.relative_path}`));
+    const ignored = (data.ignored_handouts || []).filter(r => !skip.has(_handoutKey(r)));
+    host.innerHTML = ignored.map(_ignoredHandoutCard).join('') + rows.map(r => {
       const name = String(r.relative_path).split('/').pop();
       const info = r.error
         ? `<span class="small muted">${escHtml(r.error)}</span>`

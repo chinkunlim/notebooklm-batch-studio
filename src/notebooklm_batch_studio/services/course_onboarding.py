@@ -13,7 +13,7 @@ from notebooklm_batch_studio.domain.study_hierarchy import (
     resolve_lecture_pdf_path,
 )
 from notebooklm_batch_studio.domain.study_plan import compute_course_study_state
-from notebooklm_batch_studio.services.course_parser import scan_course_directory
+from notebooklm_batch_studio.services.course_parser import keep_lecture_source, scan_course_directory
 from notebooklm_batch_studio.services.course_placement import (
     prepare_course_for_registration,
     upload_material_sources,
@@ -70,7 +70,10 @@ class CourseOnboardingMixin:
             The saved domain Course entity.
         """
         path = Path(folder_path)
-        course = scan_course_directory(path)
+        scanned = scan_course_directory(path, layout=self.config.study_layout)
+        course = keep_lecture_source(
+            scanned, self.course_repo.get_course(scanned.code), self.config.study_layout
+        )
         self.course_repo.save_course(course)
         logger.info("Registered course %s with %d lectures", course.code, len(course.lectures))
         return course
@@ -421,7 +424,9 @@ class CourseOnboardingMixin:
             Summary dict for the registered course.
         """
         paused = bool(opts.get("paused", False))
-        course = prepare_course_for_registration(raw, prof_enum, opts, self.config)
+        prepared = prepare_course_for_registration(raw, prof_enum, opts, self.config)
+        existing = self.course_repo.get_course(prepared.code)
+        course = keep_lecture_source(prepared, existing, self.config.study_layout)  # SPEC-025 R4a
         self.course_repo.save_course(course)
         # Hold the course while settings are applied, so no job starts with the old ones.
         self.course_repo.set_course_paused(course.code, True)

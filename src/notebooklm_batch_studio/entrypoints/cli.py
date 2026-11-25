@@ -29,7 +29,7 @@ from notebooklm_batch_studio.domain.models import CourseStatus, JobStatus, Profi
 from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.services.completion_notice import course_complete_hook
-from notebooklm_batch_studio.services.course_parser import scan_course_directory
+from notebooklm_batch_studio.services.course_parser import scan_course_directory, uses_textbook_lectures
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.watcher import CourseWatcher
 from notebooklm_batch_studio.services.worker_pool import WorkerPool
@@ -248,6 +248,12 @@ def _on_pdf_detected(course_dir: Path, pdf_path: Path, env: _BatchEnv) -> None:
         repo = CourseRepository(session)
         resolved_dir = str(course_dir.resolve())
         existing = next((c for c in repo.list_courses() if c.study_dir == resolved_dir), None)
+        if existing and uses_textbook_lectures(existing, env.config.study_layout):  # SPEC-025 R4a
+            logger.warning(
+                "Skipping handout %s: course %s uses textbook chapters", pdf_path.name, existing.code
+            )
+            print(f"⏭️  {existing.code} 以課本章節為講次，講義不會變成講次，也不排程。")
+            return
         srv = BatchStudioService(repo, QueueRepository(session), env.adapter, env.config)
         course = scan_course_directory(
             course_dir,

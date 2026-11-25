@@ -21,7 +21,7 @@ from notebooklm_batch_studio.domain.textbook_sections import (
     PageRangeJob,
     find_chapter_sections,
 )
-from notebooklm_batch_studio.services.course_parser import _collect_unique_lectures
+from notebooklm_batch_studio.services.course_parser import _collect_unique_lectures, uses_textbook_lectures
 
 logger = logging.getLogger(__name__)
 
@@ -411,14 +411,17 @@ class TextbookService:
         _write_marker(out_dir, pdf.name, [p.name for p in out_dir.glob("Ch*.pdf")])
 
     def _sync_textbook_lectures(self, course: Course, course_dir: Path) -> None:
-        """Refresh lectures from textbook chapters when `02 Handouts` has no PDFs (keeps upload state).
+        """Refresh lectures from textbook chapters when the course uses them (keeps upload state).
+
+        Chapters stay the lectures even if a handout PDF sits in `02 Handouts` (SPEC-025 R4a).
 
         Args:
             course: Registered course.
             course_dir: Course study directory.
         """
         layout = self.config.study_layout
-        lectures = _collect_unique_lectures(course_dir, layout=layout)
+        textbook_only = uses_textbook_lectures(course, layout)
+        lectures = _collect_unique_lectures(course_dir, layout=layout, textbook_only=textbook_only)
         if lectures and all(lec.category in layout.all_names(CategoryRole.MATERIALS) for lec in lectures):
             self.course_repo.save_course(replace(course, lectures=lectures))
             logger.info("Synced %d textbook lectures for %s", len(lectures), course.code)

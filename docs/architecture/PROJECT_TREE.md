@@ -275,6 +275,7 @@ notebooklm-batch-studio/
 │   │   ├── 070-notebooklm-py-rejects-html-download.md
 │   │   ├── 071-site-rename-becomes-filename.md
 │   │   ├── 072-textbook-split-duplicates-relocated-chapters.md
+│   │   ├── 073-handout-replaces-textbook-lectures.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -943,6 +944,7 @@ notebooklm-batch-studio/
 │   ├── test_learning.py
 │   ├── test_learning_record.py
 │   ├── test_learning_site.py
+│   ├── test_lecture_source_guard.py
 │   ├── test_legacy_consolidation.py
 │   ├── test_literature_and_hierarchy.py
 │   ├── test_needs_review_and_ollama.py

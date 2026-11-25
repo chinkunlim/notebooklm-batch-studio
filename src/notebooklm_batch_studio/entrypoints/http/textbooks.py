@@ -15,6 +15,7 @@ from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.models import CourseStatus
 from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.services.course_folders import list_category_subfolders
+from notebooklm_batch_studio.services.course_parser import ignored_handout_rows
 from notebooklm_batch_studio.services.textbook_split import TextbookService
 
 logger = logging.getLogger(__name__)
@@ -140,19 +141,24 @@ def list_pending_textbooks(request: Request) -> dict[str, Any]:
         request: Incoming HTTP request.
 
     Returns:
-        `{"pending": [...]}` with chapter counts or the reason a book cannot be split.
+        `{"pending": [...], "ignored_handouts": [...]}`: chapter counts or why a book cannot be split,
+        and handouts that are not lectures because the course uses textbook chapters (SPEC-025 R4a).
     """
 
-    def scan(svc: TextbookService) -> list[dict[str, Any]]:
-        """Collect pending textbooks for every active course.
+    def scan(svc: TextbookService) -> dict[str, Any]:
+        """Collect pending textbooks and ignored handouts for every active course.
 
         Args:
             svc: Textbook service bound to the request session.
 
         Returns:
-            Pending rows.
+            `{"pending": [...], "ignored_handouts": [...]}`.
         """
-        codes = [c.code for c in svc.course_repo.list_courses(status=CourseStatus.ACTIVE)]  # type: ignore[attr-defined]
-        return svc.pending_textbooks(codes)
+        courses = svc.course_repo.list_courses(status=CourseStatus.ACTIVE)  # type: ignore[attr-defined]
+        return {
+            "pending": svc.pending_textbooks([c.code for c in courses]),
+            "ignored_handouts": ignored_handout_rows(courses, svc.config.study_layout),  # SPEC-025 R4a
+        }
 
-    return {"pending": _run(request, scan)}
+    result: dict[str, Any] = _run(request, scan)
+    return result

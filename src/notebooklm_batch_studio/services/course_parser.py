@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import logging
 import re
@@ -101,7 +102,7 @@ def _is_visible_pdf(path: Path) -> bool:
 
 
 def _find_candidate_pdfs(
-    course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT
+    course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT, textbook_only: bool = False
 ) -> list[tuple[Path, str, str]]:
     """Find candidate PDF files in a course directory (supporting study hierarchy).
 
@@ -112,6 +113,7 @@ def _find_candidate_pdfs(
     Args:
         course_dir: Root directory of the course.
         layout: Study category layout configuration.
+        textbook_only: Use the textbook chapter folders even when `02 Handouts` has PDFs (SPEC-025 R4a).
 
     Returns:
         Sorted list of `(pdf_path, category, relative_path)` tuples.
@@ -121,7 +123,11 @@ def _find_candidate_pdfs(
     if not has_study_layout:
         return sorted(top_level, key=lambda item: item[2].lower())
 
-    handouts = _role_pdfs(course_dir, layout.category_dirs(course_dir, CategoryRole.HANDOUTS), recursive=True)
+    handouts = (
+        []
+        if textbook_only
+        else _role_pdfs(course_dir, layout.category_dirs(course_dir, CategoryRole.HANDOUTS), recursive=True)
+    )
     if not handouts:  # Refs: SPEC-018 — textbook chapters are the lecture source when 02 Handouts is empty
         handouts = _role_pdfs(course_dir, textbook_chapter_dirs(course_dir, layout), recursive=False)
     candidates = top_level + handouts
@@ -168,17 +174,20 @@ def _role_pdfs(course_dir: Path, folders: list[Path], recursive: bool) -> list[t
     return out
 
 
-def _collect_unique_lectures(course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT) -> list[Lecture]:
+def _collect_unique_lectures(
+    course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT, textbook_only: bool = False
+) -> list[Lecture]:
     """Scan and deduplicate PDF files in a course directory.
 
     Args:
         course_dir: Directory containing lecture PDF files.
         layout: Study category layout configuration.
+        textbook_only: Take lectures from the textbook chapter folders only (SPEC-025 R4a).
 
     Returns:
         List of deduplicated Lecture domain objects.
     """
-    candidates = _find_candidate_pdfs(course_dir, layout=layout)
+    candidates = _find_candidate_pdfs(course_dir, layout=layout, textbook_only=textbook_only)
     lectures: list[Lecture] = []
     seen_hashes: set[str] = set()
 
@@ -203,6 +212,81 @@ def _collect_unique_lectures(course_dir: Path, layout: StudyLayout = DEFAULT_LAY
 
     lectures.sort(key=lambda lec: lec.no)
     return lectures
+
+
+def uses_textbook_lectures(course: Course, layout: StudyLayout = DEFAULT_LAYOUT) -> bool:
+    """Return True when the course's lectures come from textbook chapter folders in `01 Materials`.
+
+    Args:
+        course: Stored course.
+        layout: Study category layout configuration.
+
+    Returns:
+        True when any lecture lives under the MATERIALS category.
+    """
+    return any(
+        layout.role_of(lec.relative_path.split("/", 1)[0]) == CategoryRole.MATERIALS
+        for lec in course.lectures
+    )
+
+
+def keep_lecture_source(
+    scanned: Course, existing: Course | None, layout: StudyLayout = DEFAULT_LAYOUT
+) -> Course:
+    """Keep textbook-chapter lectures when a rescan would switch the course to `02 Handouts`.
+
+    A course that uses textbook chapters must not lose them because one handout PDF appeared;
+    its lectures stay the chapters until the full "both" source exists. Refs: SPEC-025 R4a, ISSUE-073
+
+    Args:
+        scanned: Freshly scanned course.
+        existing: The stored course, or None for a new course.
+        layout: Study category layout configuration.
+
+    Returns:
+        `scanned`, or a copy whose lectures are the textbook chapters.
+    """
+    if existing is None or not uses_textbook_lectures(existing, layout):
+        return scanned
+    course_dir = Path(scanned.study_dir or scanned.source_dir)
+    chapters = _collect_unique_lectures(course_dir, layout=layout, textbook_only=True)
+    if [lec.relative_path for lec in chapters] == [lec.relative_path for lec in scanned.lectures]:
+        return scanned
+    logger.warning("Course %s uses textbook chapters; ignoring 02 Handouts PDFs as lectures", scanned.code)
+    return dataclasses.replace(scanned, lectures=chapters)
+
+
+def ignored_handouts(course: Course, layout: StudyLayout = DEFAULT_LAYOUT) -> list[str]:
+    """List `02 Handouts` PDFs that are not lectures because the course uses textbook chapters.
+
+    Args:
+        course: Stored course.
+        layout: Study category layout configuration.
+
+    Returns:
+        Course-relative paths, sorted; empty for courses that use handouts.
+    """
+    if not uses_textbook_lectures(course, layout):
+        return []
+    course_dir = Path(course.study_dir or course.source_dir)
+    found = _role_pdfs(course_dir, layout.category_dirs(course_dir, CategoryRole.HANDOUTS), recursive=True)
+    return sorted(rel for _p, _cat, rel in found)
+
+
+def ignored_handout_rows(courses: list[Course], layout: StudyLayout = DEFAULT_LAYOUT) -> list[dict[str, Any]]:
+    """Summarize, per course, the `02 Handouts` PDFs ignored because the course uses textbook chapters.
+
+    Args:
+        courses: Courses to inspect.
+        layout: Study category layout configuration.
+
+    Returns:
+        `[{course_code, course_name, files}]` for courses with ignored handouts.
+    """
+    rows = [
+        {"course_code": c.code, "course_name": c.name, "files": ignored_handouts(c, layout)} for c in courses
+    ]
+    return [row for row in rows if row["files"]]
 
 
 def _resolve_course_identity(
