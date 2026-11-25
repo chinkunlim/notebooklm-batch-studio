@@ -276,6 +276,7 @@ notebooklm-batch-studio/
 │   │   ├── 071-site-rename-becomes-filename.md
 │   │   ├── 072-textbook-split-duplicates-relocated-chapters.md
 │   │   ├── 073-handout-replaces-textbook-lectures.md
+│   │   ├── 074-confirm-dialog-overflows-viewport.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -926,6 +927,7 @@ notebooklm-batch-studio/
 │   ├── test_auth_status.py
 │   ├── test_auto_schedule.py
 │   ├── test_button_routes.py
+│   ├── test_confirm_dialog_scroll.py
 │   ├── test_converters.py
 │   ├── test_course_admin.py
 │   ├── test_course_identity.py

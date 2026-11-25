@@ -1054,9 +1054,9 @@ img, iframe, video, audio { max-width: 100%; }
 
 /* Confirm dialog, toasts, offline banner */
 #confirmOverlay, #pickOverlay { position: fixed; inset: 0; background: rgba(10, 14, 12, .45); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; z-index: 2500; padding: 16px; }
-#confirmBox, #pickBox { background: var(--surface); color: var(--ink); border-radius: var(--radius-l); padding: var(--s5); max-width: 460px; width: 100%; box-shadow: 0 30px 80px rgba(0,0,0,.35); animation: viewIn var(--dur-slide) var(--ease); }
-#confirmText, #pickText { white-space: pre-line; line-height: 1.7; margin-bottom: var(--s4); }
-#confirmBox .actions, #pickBox .actions { display: flex; justify-content: flex-end; gap: var(--s2); }
+#confirmBox, #pickBox { background: var(--surface); color: var(--ink); border-radius: var(--radius-l); padding: var(--s5); max-width: 460px; width: 100%; max-height: calc(100dvh - 32px); display: flex; flex-direction: column; box-shadow: 0 30px 80px rgba(0,0,0,.35); animation: viewIn var(--dur-slide) var(--ease); }
+#confirmText, #pickText { white-space: pre-line; line-height: 1.7; margin-bottom: var(--s4); overflow-y: auto; min-height: 0; overflow-wrap: anywhere; } /* ISSUE-074: long lists scroll, buttons stay visible */
+#confirmBox .actions, #pickBox .actions { flex-shrink: 0; display: flex; justify-content: flex-end; gap: var(--s2); }
 #pickSelect { width: 100%; margin-bottom: var(--s4); }
 #toastStack { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 3000; width: min(460px, calc(100vw - 32px)); pointer-events: none; }
 .note { background: var(--surface); color: var(--ink); border-radius: var(--radius-l); padding: 12px 20px; box-shadow: 0 20px 50px rgba(0,0,0,.22); font-size: 14px; line-height: 1.6; white-space: pre-line; display: flex; align-items: center; gap: 12px; pointer-events: auto; animation: viewIn var(--dur-slide) var(--ease); }
