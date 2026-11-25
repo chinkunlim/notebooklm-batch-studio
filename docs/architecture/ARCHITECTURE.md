@@ -116,7 +116,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ### 2.1 入口層 (`entrypoints`)
 負責協調外部使用者與外部代理人的請求輸入，不包含業務規則：
-- `cli.py` & `cli_consolidate.py`：命令列工具入口，支援 `login`、`init-data`（冪等建立 `study/` 與 5 個 `scratch/<kind>/`）、`batch`、`status`、`resume`、`watch`（只監看 `study/` 下各課程 `02 Handouts/`）、`consolidate`（舊資料整併，預設 `--dry-run`）、`migrate-study-layout`、`literature` 與 `web`。
+- `cli.py` & `cli_consolidate.py`：命令列工具入口，支援 `login`、`init-data`（冪等建立 `study/` 與 5 個 `scratch/<kind>/`）、`batch`、`status`、`resume`、`watch`（只監看 `study/` 下各課程 `02 Handouts/`）、`consolidate`（舊資料整併，預設 `--dry-run`）、`literature` 與 `web`（`migrate-study-layout` 已停用，HTTP 回 410，SPEC-023）。
 - `api.py` 與 `entrypoints/http/`：FastAPI 應用程式，切分為職責分明的子路由：
   - `courses.py`：課程列表（含 `term`/`course_no`/`status`/`profile`）、註冊掃描、講次清單。
   - `study_library.py`：學習庫掃描與只登錄不生成 (`/api/study/library`、`/register`、`/register-folder`)、分類設定 (`/api/study/layout`)、`scratch/` 歸檔與撤銷歸檔 (`/api/study/unfiled`、`/file`、`/unfile`)、封存／恢復與改代碼 (`/api/courses/{code}/archive|restore|rename`)、既有產出納管 (`/api/courses/{code}/adopt-outputs`)、跨學期學習紀錄查詢與 Markdown/PDF 匯出 (`/api/study/record*`)、三組登入狀態 (`/api/system/sign-ins`)。
@@ -222,7 +222,6 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 - `watcher.py`：監看檔案系統變更，當偵測到新上傳講義且寫入完成後自動加入排程。
 - `literature/`：`manager.py`（新增、辨識、下載）＋ `archive.py`（歸檔、退回、自動登錄 PDF）＋ `export.py`（APA 7、報告、序列化），共用 `manager_base.py`；`jobs.py` 背景工作與啟動殘留工作清理（受 `RunLock` 跨程序鎖定保護，ISSUE-054 / ISSUE-057）；`notebook_service.py` 文獻筆記本與 Literature Review（SPEC-012）。
 - `notes/`：note-studio 管線（SPEC-013）：`note_pipeline_service.py`（步驟執行、縫合、封存）、`note_paths.py`（資料夾位置與路徑安全檢查，ISSUE-045）、`gemini_auth_service.py`（Gemini Web 登入與憑證管理，ISSUE-053）、`module_prompts.py`、`step_validator.py`、`chapter_normalizer.py`、`module_composer.py`、`note_sync.py`、`state_manager.py`。
-- `study_migration.py`：把舊課程搬到 `<STUDY_ROOT_DIR>/<term>/<subject>/<category>`（ADR-011）。
 
 ### 2.4 領域模型層 (`domain`)
 純 Python 商業物件，無任何外部第三方相依：

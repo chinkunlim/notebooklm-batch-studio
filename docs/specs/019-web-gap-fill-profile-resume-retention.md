@@ -25,7 +25,7 @@
   2. 無效的產出模式回 `422`（原本是未處理的例外）。
   3. 筆記生成頁「暫停」旁新增「繼續」，呼叫 `POST /api/notes/resume/{course_key}` 並重新整理狀態。
   4. 筆記生成頁新增保留天數輸入（0 = 跟隨 Google 到期日，最大 3650），值由 `GET /api/notes/gemini/auth-status` 的 `retention_days` 帶入，按「儲存」以 `confirm: true` 送出。
-- **不做 (Out of scope)**：舊版資料夾遷移（`migrate-study-layout`，一次性且有 ISSUE-069 風險）與 note-studio 舊筆記匯入（已由 `consolidate` 取代）不放到網頁。
+- **不做 (Out of scope)**：舊版資料夾遷移（`migrate-study-layout`，已由 SPEC-023 停用，一次性且有 ISSUE-069 風險）與 note-studio 舊筆記匯入（已由 `consolidate` 取代）不放到網頁。
 
 ## 4. 介面 / API
 

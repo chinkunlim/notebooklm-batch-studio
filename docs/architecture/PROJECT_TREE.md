@@ -187,6 +187,7 @@ notebooklm-batch-studio/
 │   │   ├── 015-consolidation-exclusive-guard.md
 │   │   ├── 016-untrusted-learning-site-html.md
 │   │   ├── 017-real-chrome-for-notebook-and-library.md
+│   │   ├── 018-retire-migrate-study-layout.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -376,7 +377,6 @@ notebooklm-batch-studio/
 │       │   │   ├── repository.py
 │       │   │   ├── review_repository.py
 │       │   │   ├── session.py
-│       │   │   ├── study_migration_repo.py
 │       │   │   └── study_repository.py
 │       │   ├── fonts/
 │       │   │   ├── __init__.py
@@ -882,7 +882,6 @@ notebooklm-batch-studio/
 │       │   ├── reverse_import.py
 │       │   ├── source_manager.py
 │       │   ├── study_library.py
-│       │   ├── study_migration.py
 │       │   ├── study_plan_service.py
 │       │   ├── study_service.py
 │       │   ├── sync_service.py
@@ -955,6 +954,7 @@ notebooklm-batch-studio/
 │   ├── test_legacy_consolidation.py
 │   ├── test_literature_and_hierarchy.py
 │   ├── test_literature_chrome_cdp.py
+│   ├── test_migrate_study_layout_retired.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_note_pipeline_behaviors.py
 │   ├── test_note_pipeline_phase1.py

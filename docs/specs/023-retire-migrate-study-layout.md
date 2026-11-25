@@ -1,6 +1,6 @@
 # SPEC-023：停用舊的「遷移學習資料夾」（migrate-study-layout），改用 consolidate
 
-- **狀態**：Draft（等使用者決定 D5）<!-- Draft | Approved | Implemented | Deprecated -->
+- **狀態**：Implemented（使用者 2026-11-26 同意停用，ADR-018）<!-- Draft | Approved | Implemented | Deprecated -->
 - **日期**：2026-11-25
 - **相關任務 / ADR**：TASK-043（決策 D5）／ISSUE-069／ADR-015（整併只在伺服器停止時套用）／SPEC-012
 
@@ -27,7 +27,7 @@
 - **必須 (Must)**：
   1. HTTP `POST /api/courses/migrate-study-layout` 改回 **410 Gone**，`detail` 說明「此功能已停用，請改用 `uv run notebooklm-batch-studio consolidate`（先預覽）」；OpenAPI 標記 `deprecated=True`，請求內容不再解析，不呼叫任何服務。
   2. 移除 MCP 工具 `migrate_study_layout`（`_register_migrate_tool` 與註冊呼叫）。
-  3. 刪除 `migrate_courses_to_study_hierarchy` 與只服務它的輔助函式；`consolidate` 有用到的共用函式保留（實作前先用 grep 確認呼叫者）。
+  3. 刪除 `migrate_courses_to_study_hierarchy` 與只服務它的輔助函式（實作：整個 `services/study_migration.py` 與 `adapters/db/study_migration_repo.py` 都只服務它，一併刪除）；`consolidate` 有用到的共用函式保留（實作前先用 grep 確認呼叫者）。
   4. 測試：移除舊工具的測試（`tests/test_literature_and_hierarchy.py` 中 migrate 相關的兩個），新增 410 路由測試與「MCP 工具清單不含 `migrate_study_layout`」測試；確認 `consolidate` 已有對應覆蓋（平鋪 `input/courses` → `study/` 的案例），沒有就補。
   5. 文件：README 第 21 行移除 `migrate-study-layout`；SPEC-003、SPEC-012、SPEC-019 加註「已由 SPEC-023 停用」；寫 ADR（停用原因、替代方案）。
 - **可選 (Nice to have)**：無。
@@ -43,12 +43,13 @@
 
 ## 5. 驗收標準
 
-- [ ] Given 任何請求內容，When 呼叫 `POST /api/courses/migrate-study-layout`，Then 回 410 且檔案系統與資料庫都沒有變動。
-- [ ] Given MCP 伺服器啟動，Then 工具清單沒有 `migrate_study_layout`。
-- [ ] Given 平鋪的舊 `input/courses`，When 執行 `consolidate`（預覽），Then 計畫包含搬到 `study/<學期>/<課程>/` 的項目（既有或新增測試）。
-- [ ] `grep -rn migrate_courses_to_study_hierarchy src tests` 無結果；`agentctl check` 0 警告；ADR 已寫。
+- [x] Given 任何請求內容，When 呼叫 `POST /api/courses/migrate-study-layout`，Then 回 410 且檔案系統與資料庫都沒有變動。
+- [x] Given MCP 伺服器啟動，Then 工具清單沒有 `migrate_study_layout`。
+- [x] Given 平鋪的舊 `input/courses`，When 執行 `consolidate`（預覽），Then 計畫包含搬到 `study/<學期>/<課程>/` 的項目（既有或新增測試）。
+- [x] `grep -rn migrate_courses_to_study_hierarchy src tests` 無結果；`agentctl check` 0 警告；ADR 已寫。
 - [ ] 重新載入 Claude Code 與 Antigravity 的 MCP 伺服器後，工具清單不再出現舊工具。
 
 ## 6. 未決問題
 
-- 使用者是否同意停用（D5）。同意前本規格維持 Draft，不實作。
+- ~~使用者是否同意停用（D5）~~：2026-11-26 同意。實作時另發現舊 HTTP 路由預設 `dry_run=False`（一呼叫就搬），停用更有必要。
+- 重新載入 Claude Code／Antigravity 的 MCP 伺服器後確認工具清單（使用者端）。

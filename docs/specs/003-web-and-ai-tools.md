@@ -59,7 +59,7 @@
 
 | 工具群 | 讀取（不需 confirm） | 會改資料（需 `confirm=True`） | 規格 |
 |---|---|---|---|
-| 文獻 | `list_literature`、`export_literature_apa`、`query_literature_notebook` | `add_literature`、`process_literature`、`refresh_literature`、`import_literature_to_course`、`unarchive_literature`、`delete_literature`、`migrate_study_layout`（`dry_run=False` 時）、`sync_literature_notebook`、`generate_literature_review` | SPEC-012 |
+| 文獻 | `list_literature`、`export_literature_apa`、`query_literature_notebook` | `add_literature`、`process_literature`、`refresh_literature`、`import_literature_to_course`、`unarchive_literature`、`delete_literature`、`sync_literature_notebook`、`generate_literature_review` | SPEC-012（`migrate_study_layout` 已由 SPEC-023 停用） |
 | note-studio 筆記 | `notes_list_prompts`、`notes_preview_prompt`、`notes_get_status`、`notes_read_chapter`、`notes_list_chapters`、`notes_gemini_auth_status` | `notes_generate_chapter`、`notes_pause_course`、`notes_push_to_source`、`notes_import_legacy`、`notes_gemini_login`、`notes_gemini_logout`、`notes_set_gemini_retention` | SPEC-013 |
 | 問答筆記 | `list_course_notes`、`ask_notebook_question` | `save_qa_note`、`push_note_to_source`、`delete_remote_artifact`、`import_remote_notebook` | SPEC-011 |
 

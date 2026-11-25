@@ -7,24 +7,15 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, PlainTextResponse
-from pydantic import BaseModel
 
-from notebooklm_batch_studio.adapters.db.study_migration_repo import StudyMigrationRepository
 from notebooklm_batch_studio.entrypoints.http.literature import with_literature_manager
-from notebooklm_batch_studio.services.study_migration import migrate_courses_to_study_hierarchy
 
 logger = logging.getLogger(__name__)
+MIGRATE_RETIRED_DETAIL = (
+    "migrate-study-layout 已停用，請改用 `uv run notebooklm-batch-studio consolidate`"
+    "（先預覽，確認後加 --apply）"
+)
 literature_files_router = APIRouter()
-
-
-class StudyMigrateRequest(BaseModel):
-    """Request body for migrating legacy courses to `<term>/<subject>/<category>`.
-
-    Attributes:
-        dry_run: When True, return planned moves without modifying disk or DB.
-    """
-
-    dry_run: bool = False
 
 
 @literature_files_router.get(
@@ -104,19 +95,19 @@ def export_literature_report_endpoint(request: Request, course_code: str | None 
 
 
 @literature_files_router.post(
-    "/api/courses/migrate-study-layout", tags=["Courses"], operation_id="migrate_study_layout"
+    "/api/courses/migrate-study-layout",
+    tags=["Courses"],
+    operation_id="migrate_study_layout",
+    deprecated=True,
+    status_code=410,
 )
-def migrate_study_layout_endpoint(req: StudyMigrateRequest, request: Request) -> dict[str, Any]:
-    """Migrate existing legacy courses into `<STUDY_ROOT_DIR>/<term>/<subject>/<category>`.
+def migrate_study_layout_endpoint() -> None:
+    """Retired: answer 410 and point to `consolidate` without reading the body or touching files.
 
-    Args:
-        req: Migration options (`dry_run`).
-        request: HTTP request context.
+    The old tool moved folders by default (dry_run defaulted to False) and once nearly moved courses
+    out of their school-named folders (ISSUE-069). Refs: SPEC-023, ADR-018
 
-    Returns:
-        Summary of migrated or planned courses.
+    Raises:
+        HTTPException: Always 410 Gone.
     """
-    with request.app.state.session_factory() as session:
-        return migrate_courses_to_study_hierarchy(
-            StudyMigrationRepository(session), request.app.state.config, dry_run=req.dry_run
-        )
+    raise HTTPException(status_code=410, detail=MIGRATE_RETIRED_DETAIL)

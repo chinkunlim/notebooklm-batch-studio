@@ -29,3 +29,4 @@
 | [ADR-015](015-consolidation-exclusive-guard.md) | 整併工具 --apply 獨占防護：要求停止伺服器並暫停資料夾監看器 | Accepted | 2026-11-25 | src/notebooklm_batch_studio/services/legacy_consolidation.py, src/notebooklm_batch_studio/services/watcher.py, src/notebooklm_batch_studio/entrypoints/cli_consolidate.py |
 | [ADR-016](016-untrusted-learning-site-html.md) | 學習網頁以沙箱 CSP 檢視，進度經 postMessage 存回研讀工作室 | Accepted | 2026-11-25 | `entrypoints/http/learning_site.py`, `static/site-storage-shim.js`, `static/studio-site-viewer.js` |
 | [ADR-017](017-real-chrome-for-notebook-and-library.md) | Gemini Notebook 登入與文獻瀏覽器改用真的 Chrome（獨立資料夾＋CDP） | Accepted | 2026-11-25 | TODO |
+| [ADR-018](018-retire-migrate-study-layout.md) | 停用 migrate-study-layout，舊資料整併一律用 consolidate | Accepted | 2026-11-26 | TODO |

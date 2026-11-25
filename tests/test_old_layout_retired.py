@@ -118,12 +118,9 @@ class OldLayoutRetiredTests(unittest.TestCase):
             for f in Path("src/notebooklm_batch_studio").rglob("*.py")
             if re.search(r"courses_(input|output)_dir\s*/", f.read_text(encoding="utf-8"))
         ]
-        allowed = {
-            "src/notebooklm_batch_studio/services/study_migration.py",
-            "src/notebooklm_batch_studio/services/legacy_consolidation.py",
-        }
+        # study_migration.py was removed with migrate-study-layout (SPEC-023); consolidate is the only mover.
+        allowed = {"src/notebooklm_batch_studio/services/legacy_consolidation.py"}
         self.assertTrue(set(writers) <= allowed, writers)
-        self.assertIn("src/notebooklm_batch_studio/services/study_migration.py", writers)
 
 
 if __name__ == "__main__":

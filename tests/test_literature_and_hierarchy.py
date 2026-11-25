@@ -14,7 +14,6 @@ from notebooklm_batch_studio.adapters.db.literature_repository import Literature
 from notebooklm_batch_studio.adapters.db.models import CourseRecord
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, make_session_factory
-from notebooklm_batch_studio.adapters.db.study_migration_repo import StudyMigrationRepository
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.literature.literature import Reference, ReferenceKind, WorkMeta
@@ -30,7 +29,6 @@ from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.literature.manager import LiteratureManager
-from notebooklm_batch_studio.services.study_migration import migrate_courses_to_study_hierarchy
 
 
 class _FakeResolver:
@@ -94,102 +92,6 @@ class StudyHierarchyAndMigrationTest(unittest.TestCase):
             filenames = [lec.filename for lec in course.lectures]
             self.assertEqual(filenames, ["02_Slides.pdf"])
             self.assertTrue(all(lec.relative_path.startswith("02 Handouts/") for lec in course.lectures))
-
-    def test_legacy_migration_moves_files_and_updates_db(self) -> None:
-        """Legacy flat `input/courses` + `output/courses` migrate cleanly into `study_root_dir`."""
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp) / "data"
-            cfg = AppConfig(
-                data_dir=data_dir,
-                database_url=f"sqlite:///{data_dir / 'db' / 'app.db'}",
-                http_allowed_hosts=("127.0.0.1", "localhost", "testserver"),
-            )
-            cfg.db_dir.mkdir(parents=True, exist_ok=True)
-            engine = create_db_engine(cfg.database_url)
-            Base.metadata.create_all(engine)
-            session_factory = make_session_factory(engine)
-
-            legacy_in = cfg.courses_input_dir / "115-1 心理學研究法"
-            legacy_out = cfg.courses_output_dir / "PSYC101"
-            legacy_in.mkdir(parents=True, exist_ok=True)
-            (legacy_out / "01_導論").mkdir(parents=True, exist_ok=True)
-            (legacy_in / "01_導論.pdf").write_bytes(b"%PDF-1.4\nhello")
-            (legacy_out / "01_導論" / "audio.m4a").write_bytes(b"audio")
-
-            with session_factory() as session:
-                session.add(
-                    CourseRecord(
-                        code="PSYC101",
-                        name="115-1 心理學研究法",
-                        source_dir=str(legacy_in),
-                    )
-                )
-                session.commit()
-
-                preview = migrate_courses_to_study_hierarchy(
-                    StudyMigrationRepository(session), cfg, dry_run=True
-                )
-                self.assertEqual(preview["items"][0]["status"], "planned")
-                self.assertTrue((legacy_in / "01_導論.pdf").is_file())
-
-                result = migrate_courses_to_study_hierarchy(
-                    StudyMigrationRepository(session), cfg, dry_run=False
-                )
-                self.assertEqual(result["items"][0]["status"], "migrated")
-
-                target_dir = cfg.study_root_dir / "115-1" / "心理學研究法"
-                self.assertTrue((target_dir / "02 Handouts" / "01_導論.pdf").is_file())
-                self.assertTrue((target_dir / "03 Notes" / "NotebookLM" / "01_導論" / "audio.m4a").is_file())
-                row = session.get(CourseRecord, "PSYC101")
-                assert row is not None
-                self.assertEqual(row.term, "115-1")
-                self.assertEqual(row.subject, "心理學研究法")
-                self.assertEqual(row.study_dir, str(target_dir))
-
-    def test_migration_leaves_courses_already_in_study_root_alone(self) -> None:
-        """A course already in a school-named study folder is not moved when `subject` differs (ISSUE-069)."""
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp) / "data"
-            cfg = AppConfig(
-                data_dir=data_dir,
-                database_url=f"sqlite:///{data_dir / 'db' / 'app.db'}",
-                http_allowed_hosts=("127.0.0.1", "localhost", "testserver"),
-            )
-            cfg.db_dir.mkdir(parents=True, exist_ok=True)
-            engine = create_db_engine(cfg.database_url)
-            Base.metadata.create_all(engine)
-            session_factory = make_session_factory(engine)
-
-            school_dir = cfg.study_root_dir / "115-1" / "CP__30210-心理學研究法"
-            ensure_course_study_tree(school_dir)
-            (school_dir / "02 Handouts" / "Ch01.pdf").write_bytes(b"%PDF-1.4\nx")
-
-            with session_factory() as session:
-                session.add(
-                    CourseRecord(
-                        code="115-1_CP30210",
-                        name="心理學研究法",
-                        source_dir=str(school_dir),
-                        term="115-1",
-                        subject="心理學研究法",
-                        study_dir=str(school_dir),
-                    )
-                )
-                session.commit()
-
-                for dry_run in (True, False):
-                    result = migrate_courses_to_study_hierarchy(
-                        StudyMigrationRepository(session), cfg, dry_run=dry_run
-                    )
-                    item = result["items"][0]
-                    self.assertEqual(item["status"], "already_migrated")
-                    self.assertEqual(item["new_study_dir"], str(school_dir))
-
-                self.assertTrue((school_dir / "02 Handouts" / "Ch01.pdf").is_file())
-                self.assertFalse((cfg.study_root_dir / "115-1" / "心理學研究法").exists())
-                row = session.get(CourseRecord, "115-1_CP30210")
-                assert row is not None
-                self.assertEqual(row.study_dir, str(school_dir))
 
 
 class LiteratureIntegrationTest(unittest.TestCase):
@@ -330,7 +232,7 @@ class LiteratureIntegrationTest(unittest.TestCase):
             self.assertIn("process_literature", tools)
             self.assertIn("import_literature_to_course", tools)
             self.assertIn("delete_literature", tools)
-            self.assertIn("migrate_study_layout", tools)
+            self.assertNotIn("migrate_study_layout", tools)  # retired (SPEC-023)
             self.assertIn("sync_literature_notebook", tools)
             self.assertIn("query_literature_notebook", tools)
             self.assertIn("generate_literature_review", tools)

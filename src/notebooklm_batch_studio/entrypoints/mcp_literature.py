@@ -15,7 +15,6 @@ from pydantic import BaseModel
 
 from notebooklm_batch_studio.adapters.db.literature_repository import LiteratureRepository
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
-from notebooklm_batch_studio.adapters.db.study_migration_repo import StudyMigrationRepository
 from notebooklm_batch_studio.adapters.literature.factory import AdapterLiteratureRuntime
 from notebooklm_batch_studio.domain.literature.tracker import AlreadyRunningError
 from notebooklm_batch_studio.domain.study_hierarchy import (
@@ -24,7 +23,6 @@ from notebooklm_batch_studio.domain.study_hierarchy import (
 )
 from notebooklm_batch_studio.services.literature.jobs import JobRunOptions, LiteratureJobRunner
 from notebooklm_batch_studio.services.literature.manager import LiteratureManager
-from notebooklm_batch_studio.services.study_migration import migrate_courses_to_study_hierarchy
 
 if TYPE_CHECKING:
     from mcp.server.mcpserver import MCPServer
@@ -359,34 +357,6 @@ def _register_delete_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
             return json.dumps({"deleted": deleted, "key": key}, ensure_ascii=False)
 
 
-def _register_migrate_tool(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
-    """Register `migrate_study_layout` MCP tool guarded by `confirm=True`.
-
-    Args:
-        mcp: FastMCP server instance.
-        deps: Bundled literature dependencies.
-    """
-
-    @mcp.tool()
-    def migrate_study_layout(dry_run: bool = True, confirm: bool = False) -> str:
-        """Migrate legacy course folders into `<STUDY_ROOT_DIR>/<term>/<subject>/<category>`.
-
-        Args:
-            dry_run: Preview planned moves without modifying disk or DB (default True).
-            confirm: Must be True when `dry_run=False`.
-
-        Returns:
-            JSON string with migration plan or results.
-        """
-        if not dry_run and not confirm:
-            return confirm_required("migrate when dry_run=False")
-        with deps.session_factory() as session:
-            res = migrate_courses_to_study_hierarchy(
-                StudyMigrationRepository(session), deps.config, dry_run=dry_run
-            )
-            return _to_json(res)
-
-
 def register_literature_tools(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
     """Register literature and study-hierarchy MCP tools (Notebook tools live in `mcp_literature_notebook`).
 
@@ -401,4 +371,4 @@ def register_literature_tools(mcp: MCPServer, deps: LiteratureToolDeps) -> None:
     _register_import_tool(mcp, deps)
     _register_unarchive_tool(mcp, deps)
     _register_delete_tool(mcp, deps)
-    _register_migrate_tool(mcp, deps)
+    # migrate_study_layout was retired; use the `consolidate` CLI (SPEC-023, ADR-018).
