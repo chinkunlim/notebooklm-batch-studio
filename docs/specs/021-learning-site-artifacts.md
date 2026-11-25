@@ -1,8 +1,8 @@
 # SPEC-021：學習網頁產出（每講／整本書，經 Gemini Notebook 對話產生、從 Studio 取回）
 
-- **狀態**：Draft <!-- Draft | Approved | Implemented | Deprecated -->
+- **狀態**：Implemented <!-- Draft | Approved | Implemented | Deprecated -->
 - **日期**：2026-11-25
-- **相關任務 / ADR**：TASK-040、ADR-016（待寫：不可信 HTML 的檢視與經對話觸發的產出）、提示詞 `assets/prompts/notebook_site/learning_site.md`
+- **相關任務 / ADR**：TASK-040、ADR-016（學習網頁以沙箱 CSP 檢視）、ISSUE-070（notebooklm-py 拒絕 HTML 下載）、提示詞 `assets/prompts/notebook_site/learning_site.md`
 
 ## 1. 目標
 
@@ -30,18 +30,26 @@
   4. 等待規則：送出後 5 分鐘內沒有出現新項目 → 若 Gemini 回覆含額度相關字詞則視為額度用完（`QuotaExceededError`，交給既有的等待額度機制），否則失敗並記錄回覆內容；出現後最多再等 30 分鐘；項目狀態為失敗時直接失敗。
   5. 下載：只連 Google 網域（`*.google.com`、`*.googleusercontent.com`），跟隨最多 6 次轉址；回應是 Google 登入頁時視為登入過期；內容必須是 HTML 才寫入，原子寫入。
   6. 額度：產生前依用量表的 `canvas` 項目預檢。
-  7. **安全檢視**：學習網頁是 Gemini 產生的不可信 HTML，只能經 `GET /api/artifacts/{code}/site/{path}` 開啟，回應附嚴格 CSP（禁止任何網路請求、表單送出與外部資源）；下載路由對學習網頁一律以附件下載，不在本站來源直接執行。
+  7. **安全檢視**：學習網頁是 Gemini 產生的不可信 HTML，只能經 `GET /api/artifacts/{code}/site/{path}` 開啟，回應附嚴格 CSP（禁止任何網路請求、表單送出與外部資源）並以 CSP `sandbox` 給予不透明來源，網頁無法經 `window.open`／`parent` 碰到本站頁面；下載路由對學習網頁一律以附件下載，不在本站來源直接執行。作答進度由注入的儲存轉接器經 `postMessage` 存回研讀工作室（ADR-016，2026-11-25 使用者定案）。
   8. 研讀工作室新增「學習網頁」入口；課程產出選擇清單出現兩個新類型；「從既有檔案建立產出紀錄」能認得 `learning_site*.html`。
   9. 不改既有 MCP／HTTP 工具介面：課程產出類型、重新生成等既有入口自動支援新類型。
 - **不做 (Out of scope)**：同步 Gemini Notebook 網頁上手動做的網頁（`sync_service`）；把網頁加入預設 profile；改寫或修正網頁內容。
 
 ## 4. 介面 / API
 
-- `GET /api/artifacts/{code}/site/{file_path}` → `text/html`，標頭 `Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'`；非 `.html` 回 415。
+- `GET /api/artifacts/{code}/site/{file_path}` → `text/html`，標頭 `Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; sandbox allow-scripts allow-modals allow-downloads`，另附 `X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer`、`Cache-Control: no-store`；`<head>` 後注入 `static/site-storage-shim.js`；非 `.html` 回 415。
 
 ## 5. 驗收標準
 
-見實作計畫 `docs/superpowers/plans/2026-11-25-learning-site-artifacts.md` 各任務的測試；真實資料以生涯諮商與實務第 1 講排一個工作驗收（需使用者同意，會用到額度）。
+見實作計畫 `docs/superpowers/plans/2026-11-25-learning-site-artifacts.md` 各任務的測試（`tests/test_learning_site.py`，24 項）。
+
+- [x] 型別、命名、額度項目 `canvas`、網頁選項（Task 1）
+- [x] 提示詞 A／B 版、自訂提示詞規則、排程不帶通用提示詞（Task 2）
+- [x] Studio 原始列解析、只連 Google 的下載、登入頁判定、原子寫入、每本筆記本一把鎖（Task 3）
+- [x] 送出 → 等新網頁 → 等完成 → 下載；額度／失敗對應；`ArtifactRunner` 分派且不改名（Task 4）
+- [x] 沙箱路由、下載一律附件、研讀工作室「學習網頁」入口；無頭 Chromium 驗證 fetch／popup／parent 皆被擋、進度重新載入後延續（Task 5）
+- [ ] 真實資料：生涯諮商與實務第 1 講排一個學習網頁工作（需使用者同意，會用到額度）
+- [ ] 真實資料：整本書版（B）跑一次（需使用者同意，會用到額度）
 
 ## 6. 未決問題
 

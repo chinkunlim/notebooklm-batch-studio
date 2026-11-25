@@ -8,7 +8,7 @@
 - **課程**：`DATA_DIR/study/<學期>/<課程資料夾>`（例 `115-1/CP__30000-團體諮商`）對應一門課與一本 Gemini Notebook；課程代碼為 `<學期>_<課號>`（例 `115-1_CP30000`），筆記本標題為 `[<課號>] <課名> (<學期>)`。
 - **分類與講次**：標準五分類為 `01 Materials`（課本與文獻）、`02 Handouts`（老師教材）、`03 Notes`（AI 筆記與個人隨筆）、`04 Homework`（作業）、`05 Assignments`（報告），可用 `.env` 的 `STUDY_CATEGORIES` 自訂；讀取相容 `01 Material`/`02 Handout` 別名。**講次來源**：`02 Handouts`（含子資料夾）內的 PDF 為講次；`02 Handouts` 沒有 PDF 時，改用 `01 Materials/<課本名>/` 中有 `.textbook.json` 標記的課本章節（SPEC-018），講次編號取自檔名 `ChNN`／`NN_`；`01 Materials` 預設不上傳（僅勾選「課本作為整門課來源」時納入）。
 - **未歸檔區 (`scratch/`)**：`DATA_DIR/scratch/<種類>/`（`literature`、`notes`、`outputs`、`uploads`、`unarchived`）集中存放未歸檔或撤銷歸檔的檔案。
-- **產出**：audio (`.m4a`)、quiz（×3：1 基礎、2 理解、3 模擬考，各 30 題）、infographic、mind map、flashcards、study guide、concept explanation report；整門課另有模擬考與全課程 mind map。
+- **產出**：audio (`.m4a`)、quiz（×3：1 基礎、2 理解、3 模擬考，各 30 題）、infographic、mind map、flashcards、study guide、concept explanation report、學習網頁（`learning_site.html`，經 Gemini Notebook 對話產生，SPEC-021）；整門課另有模擬考、全課程 mind map 與整本書學習網頁（`course_learning_site.html`）。學習網頁只經沙箱路由 `/api/artifacts/{code}/site/…` 開啟（ADR-016）。
 - **產出組合（profile）**：`full`、`quiz-only`、`exam-prep`（見 SPEC-001）以及不排程生成的 `record-only`（過去學期只登錄建立學習紀錄；可透過 SPEC-015 `adopt_existing_outputs` 將既有的 `03 Notes/NotebookLM/` 檔納管為 `done` 工作，且禁止對無筆記本的 `record-only` 課程觸發 `regenerate`，ISSUE-068）。可於 Web 介面自由切換個別項目開關。
 - **版本化重新生成**：重新生成時不覆蓋舊檔案，Gemini Notebook 遠端標題後綴 `(v2)`，本機檔名後綴 `_v2`（歷史紀錄於 `job_versions`）。
 - **多裝置資訊圖表**：資訊圖表預設為直式，並由 `image_fitter` 同步輸出 A4 PDF、iPad Air 4 (2360x1640) 與 MacBook Pro 14 吋 (3024x1964) 規格。

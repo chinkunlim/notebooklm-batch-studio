@@ -45,6 +45,9 @@
 
 ### W1：學習網頁產出（TASK-040，SPEC-021）— 主要工作
 
+> **2026-11-25 第二個對話進度**：Task 1–5 已完成並 commit（`6b54d01`、`efc5341`、`0fbfc10`、`8bef9c0`、`44348b0`），Task 6 文件已更新；剩 Task 6 Step 2 真實資料驗收（耗額度，待使用者同意）。
+> 與原計畫不同處：Task 5 改用 CSP `sandbox`＋儲存轉接器（使用者定案，ADR-016），因為原做法可經 `window.open` 取得同源頁面而呼叫 API。
+
 - **計畫**：`docs/superpowers/plans/2026-11-25-learning-site-artifacts.md`（6 個任務，全部 TDD；Global Constraints、Review Focus 都寫在裡面）。
 - **依 D2 選擇的方式執行**。
 - 已驗證的關鍵事實（不要再重新摸索）：

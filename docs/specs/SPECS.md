@@ -30,4 +30,4 @@
 | [018-textbook-split-and-lecture-source](018-textbook-split-and-lecture-source.md) | Implemented | 課本依書籤切割成章節 PDF（pypdf，移植 literature-parser）、`02 Handouts` 為空時以 `.textbook.json` 標記的章節資料夾為講次、把誤放講義資料夾的章節搬到 `01 Materials/<課本>/`（保留講次編號與來源） | TASK-037 |
 | [019-web-gap-fill-profile-resume-retention](019-web-gap-fill-profile-resume-retention.md) | Implemented | 網頁補齊：課程「變更產出模式…」、筆記生成「繼續」、Gemini 憑證保留天數；無效產出模式回 422 | 網頁整合盤點 |
 | [020-textbook-detect-note-schedule-quota-resume](020-textbook-detect-note-schedule-quota-resume.md) | Implemented | 課本放進 01 Materials 自動偵測並提示切割、Gemini 筆記背景排程（允許一次後依序生成）、Gemini 額度用完記下重置時間到點續跑、Gemini Notebook 佇列顯示預計繼續時間 | 使用者 2026-11-25 定案 |
-| [021-learning-site-artifacts](021-learning-site-artifacts.md) | Draft | 學習網頁產出：每講與整本書經 Gemini Notebook 對話「make me a site」產生、從 Studio（類型 10、text/html）下載、以嚴格 CSP 安全開啟 | TASK-040 |
+| [021-learning-site-artifacts](021-learning-site-artifacts.md) | Implemented | 學習網頁產出：每講與整本書經 Gemini Notebook 對話「make me a site」產生、從 Studio（類型 10、text/html）下載、以沙箱 CSP 開啟並把作答進度存回研讀工作室（真實資料驗收待使用者同意） | TASK-040、ADR-016 |
