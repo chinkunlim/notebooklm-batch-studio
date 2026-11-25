@@ -45,7 +45,7 @@ from notebooklm_batch_studio.services.course_options import (
 from notebooklm_batch_studio.services.course_options import (
     option_choices as option_choices,
 )
-from notebooklm_batch_studio.services.job_planner import generate_jobs_for_course
+from notebooklm_batch_studio.services.job_planner import blueprint_or_none, generate_jobs_for_course
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 
 CHAPTER_TYPES = [t.value for t in ArtifactType if not t.value.startswith("course_")]
@@ -236,7 +236,7 @@ class CourseSettingsService:
         # Always start from the current blueprint: an older version's stored prompt may predate
         # prompt fixes (e.g. the 10-question quizzes, ISSUE-017). Edit the queued job to customize.
         topic = lecture.topic if lecture else f"{course.code} 全範圍整合"
-        prompt = PromptGenerator().get_base_blueprint_prompt(art_type, topic, course.name, course.language)
+        prompt = blueprint_or_none(PromptGenerator(), art_type, topic, course)
         return ArtifactJob(
             id=str(uuid.uuid4()),
             course_code=course.code,

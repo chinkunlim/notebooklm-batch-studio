@@ -264,6 +264,18 @@ class RegenerateAndOptionsTest(ServiceFixture):
         with self.assertRaises(ValueError):
             self.service.course_settings.regenerate("BIO101", 9, "infographic")
 
+    def test_regenerated_and_refined_site_jobs_keep_no_prompt(self) -> None:
+        """Learning-site jobs never store a generic or Ollama prompt (it becomes 補充要求). SPEC-021"""
+        result = self.service.course_settings.regenerate("BIO101", 1, "learning_site")
+        self.assertIsNone(self.queue_repo.get_job(result["job_id"]).custom_prompt)  # type: ignore[union-attr]
+        self.service.ollama_client = mock.Mock(is_available=mock.Mock(return_value=True))
+        with mock.patch(
+            "notebooklm_batch_studio.services.prompt_generator.PromptGenerator.generate_refined_prompt",
+            return_value="refined",
+        ):
+            self.service.refine_course_prompts_with_ollama("BIO101")
+        self.assertIsNone(self.queue_repo.get_job(result["job_id"]).custom_prompt)  # type: ignore[union-attr]
+
     def test_regenerate_uses_current_blueprint_not_stale_prompt(self) -> None:
         """A regenerated quiz gets today's 30-question prompt, not the older version's stored prompt."""
         old_job = ArtifactJob(

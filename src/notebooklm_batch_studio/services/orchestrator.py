@@ -20,6 +20,7 @@ from notebooklm_batch_studio.domain.exceptions import (
     OllamaUnavailableError,
 )
 from notebooklm_batch_studio.domain.models import (
+    LEARNING_SITE_TYPES,
     ArtifactJob,
     Course,
     JobStatus,
@@ -436,7 +437,12 @@ class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
 
         prompt_gen = PromptGenerator(self.ollama_client)
         skip = (JobStatus.DONE, JobStatus.RUNNING)
-        jobs = [j for j in self.queue_repo.list_jobs(course_code=course_code) if j.status not in skip]
+        # Learning sites render their own fixed prompt; a refined one would become 補充要求 (SPEC-021).
+        jobs = [
+            j
+            for j in self.queue_repo.list_jobs(course_code=course_code)
+            if j.status not in skip and j.artifact_type not in LEARNING_SITE_TYPES
+        ]
         updated_count = 0
         for j in jobs:
             lec = next((item for item in course.lectures if item.no == j.lecture_no), None)

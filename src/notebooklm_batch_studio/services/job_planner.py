@@ -103,7 +103,7 @@ def _parse_artifact_names(names: list[str], label: str) -> list[ArtifactType]:
     return parsed
 
 
-def _blueprint_or_none(
+def blueprint_or_none(
     prompt_gen: PromptGenerator, art_type: ArtifactType, topic: str, course: Course
 ) -> str | None:
     """Return the generic blueprint prompt for a job, or None for learning sites.
@@ -140,12 +140,12 @@ def _generate_granular_jobs(course: Course, prompt_gen: PromptGenerator) -> list
     jobs: list[ArtifactJob] = []
     for lec in course.lectures:
         for art_type in chapter_types:
-            p = _blueprint_or_none(prompt_gen, art_type, lec.topic, course)
+            p = blueprint_or_none(prompt_gen, art_type, lec.topic, course)
             jobs.append(_make_job(course.code, lec.no, art_type, custom_prompt=p))
 
     course_scope = f"{course.code} 全範圍整合"
     for course_art in course_types:
-        p = _blueprint_or_none(prompt_gen, course_art, course_scope, course)
+        p = blueprint_or_none(prompt_gen, course_art, course_scope, course)
         jobs.append(_make_job(course.code, None, course_art, custom_prompt=p))
 
     logger.info(
