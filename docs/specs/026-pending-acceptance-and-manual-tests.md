@@ -67,6 +67,8 @@
 - **#9 watch 監看**：兩門課現在都以課本章節當講次（`02 Handouts` 是空的）。執行 `uv run notebooklm-batch-studio watch` 後，把 PDF 放進 `01 Materials/`、`04 Homework/` 應**不會**觸發排程；把 PDF 放進這兩門課的 `02 Handouts/` 也**不會**排程，終端機會顯示「以課本章節為講次，講義不會變成講次」，批次排程頁出現「偵測到講義，但本課以課本章節為講次」提示卡（SPEC-025 R4a、ISSUE-073）。測完把那份 PDF 移走即可。
 - **#19 切割整本課本**：改依本規格 A2。
 
+> 2026-11-26：TASK-036 第一類與第二類 Claude 已驗證，結果與待你測試的項目統一記在 `.agents/tasks/TASK-036-checklist.md` §5「待你測試（追蹤表）」。
+
 ## 5. 驗收標準
 
 - [ ] A1–A5 每項都有「已證實」紀錄（附截圖、log 或資料庫查詢）或對應的 known-issue。

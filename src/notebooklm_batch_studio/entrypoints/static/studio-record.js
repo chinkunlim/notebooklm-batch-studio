@@ -185,7 +185,7 @@ function _formatRenameConfirmMessage(code, newCode, preview) {
  * @returns {Promise<void>}
  */
 async function openRenameCourseFlow(code) {
-  const input = window.prompt(`請輸入「${code}」的新課程代碼（例：115-1_CP31000）：`, code);
+  const input = await askText(`請輸入「${code}」的新課程代碼（例：115-1_CP31000）：`, { value: code, okLabel: '預覽影響範圍' });
   if (!input || !input.trim() || input.trim() === code) return;
   const newCode = input.trim();
   try {
@@ -196,7 +196,7 @@ async function openRenameCourseFlow(code) {
     });
     const preview = await dryRes.json().catch(() => ({}));
     if (!dryRes.ok) throw new Error(preview.detail || '無法預覽改代碼影響範圍');
-    if (!window.confirm(_formatRenameConfirmMessage(code, newCode, preview))) return;
+    if (!(await askConfirm(_formatRenameConfirmMessage(code, newCode, preview), { okLabel: '改代碼' }))) return;
     const applyRes = await fetch(`/api/courses/${encodeURIComponent(code)}/rename`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -397,7 +397,7 @@ async function openAdoptOutputsFlow(code) {
     });
     const preview = await dryRes.json().catch(() => ({}));
     if (!dryRes.ok) throw new Error(preview.detail || '無法預覽既有產出紀錄');
-    if (!window.confirm(_formatAdoptOutputsConfirmMessage(code, preview))) return;
+    if (!(await askConfirm(_formatAdoptOutputsConfirmMessage(code, preview), { okLabel: '建立紀錄' }))) return;
     if ((preview.would_create || 0) === 0) {
       showToast('沒有需要新增的產出紀錄。', 'info');
       return;

@@ -72,22 +72,27 @@ def browse_folders(path: str | None, config: AppConfig, home: Path | None = None
     Args:
         path: Absolute folder path to open, or None for the shortcuts.
         config: Application configuration (first shortcuts are `study_root_dir` and `scratch_dir`).
-        home: Allowed root (defaults to the user's home directory; tests pass a temp folder).
+        home: Allowed root (defaults to the user's home directory; tests pass a temp folder). The
+            configured study and scratch folders are always allowed too.
 
     Returns:
         Dictionary with `path` (None for shortcuts), `parent` (None at the top), `pdf_count`
         and `folders` (name, path, pdf_count for each visible sub-folder, sorted by name).
 
     Raises:
-        ValueError: When the path is outside the allowed root or is not a folder.
+        ValueError: When the path is outside the allowed roots or is not a folder.
     """
     root = (home or Path.home()).resolve()
     if not path:
         return _shortcut_response(config, root)
 
     folder = Path(path).expanduser().resolve()
-    if not folder.is_relative_to(root) or not folder.is_dir():
+    # The study/scratch shortcuts must open even when DATA_DIR lives outside home (ISSUE-078).
+    roots = [root, config.study_root_dir.resolve(), config.scratch_dir.resolve()]
+    allowed = [r for r in roots if folder.is_relative_to(r)]
+    if not allowed or not folder.is_dir():
         raise ValueError(f"Folder not available: {path}")
+    root = max(allowed, key=lambda r: len(r.parts))  # going "up" stops at the closest allowed root
     try:
         children = sorted(
             (c for c in folder.iterdir() if c.is_dir() and not c.name.startswith(".")),

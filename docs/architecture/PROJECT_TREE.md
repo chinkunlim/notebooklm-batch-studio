@@ -280,6 +280,9 @@ notebooklm-batch-studio/
 │   │   ├── 073-handout-replaces-textbook-lectures.md
 │   │   ├── 074-confirm-dialog-overflows-viewport.md
 │   │   ├── 075-note-schedule-cross-process-writes.md
+│   │   ├── 076-native-dialogs-broken-in-app-browser.md
+│   │   ├── 077-unfiled-card-cannot-file-into-notes.md
+│   │   ├── 078-folder-browser-blocks-data-dir-outside-home.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -944,6 +947,7 @@ notebooklm-batch-studio/
 │   ├── test_dummy_user_simulation.py
 │   ├── test_failed_job_rerun.py
 │   ├── test_filing.py
+│   ├── test_folder_browser_data_roots.py
 │   ├── test_fonts.py
 │   ├── test_guides_and_reports.py
 │   ├── test_install_scripts.py
@@ -957,6 +961,7 @@ notebooklm-batch-studio/
 │   ├── test_literature_chrome_cdp.py
 │   ├── test_migrate_study_layout_retired.py
 │   ├── test_needs_review_and_ollama.py
+│   ├── test_no_native_dialogs.py
 │   ├── test_note_pipeline_behaviors.py
 │   ├── test_note_pipeline_phase1.py
 │   ├── test_note_pipeline_phase2.py
@@ -991,6 +996,7 @@ notebooklm-batch-studio/
 │   ├── test_study_service.py
 │   ├── test_textbook_folder_choice.py
 │   ├── test_textbook_split.py
+│   ├── test_unfiled_subfolder.py
 │   ├── test_versions_and_options.py
 │   └── test_web_gap_fill.py
 ├── .editorconfig

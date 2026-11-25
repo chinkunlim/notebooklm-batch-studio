@@ -89,7 +89,7 @@ async function registerLibraryCourses(codes, archive) {
  * @returns {Promise<void>}
  */
 async function registerLibraryFolder(term, folder) {
-  const courseNo = window.prompt(`為「${term}/${folder}」輸入課號（例：CP30000）：`, '');
+  const courseNo = await askText(`為「${term}/${folder}」輸入課號（例：CP30000）：`, { placeholder: 'CP30000', okLabel: '登錄' });
   if (!courseNo || !courseNo.trim()) return;
   try {
     const data = await _libJson('/api/study/library/register-folder', 'POST', { term, folder, course_no: courseNo.trim() });
@@ -146,14 +146,36 @@ async function loadUnfiledCard() {
     host.innerHTML = `<details class="card" style="margin-bottom:16px"><summary class="card-head" style="cursor:pointer"><b>未歸檔檔案（scratch/）</b><span class="small muted">${items.length} 個・點開歸檔</span></summary>
       ${items.map((it, i) => `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
         <span class="small" style="min-width:0;flex:1;word-break:break-all">${escHtml(it.relative_path || it.name)}</span>
-        <select id="unfCourse${i}" class="select">${courseOpts}</select>
-        <select id="unfRole${i}" class="select">${roleOpts}</select>
+        <select id="unfCourse${i}" class="select" onchange="_refreshUnfiledSub(${i})" aria-label="課程">${courseOpts}</select>
+        <select id="unfRole${i}" class="select" onchange="_refreshUnfiledSub(${i})" aria-label="分類">${roleOpts}</select>
+        <select id="unfSub${i}" class="select" onchange="onSubfolderPick(this)" aria-label="子資料夾"></select>
         <button class="btn btn-soft btn-sm" onclick="fileLibraryItem(${jsAttr(it.path)}, ${i})">歸檔</button></div>`).join('')}
     </details>`;
+    await Promise.all(items.map((_, i) => _refreshUnfiledSub(i)));
   } catch (e) {
     host.innerHTML = '';
     console.warn('Could not load unfiled items:', e);
   }
+}
+
+/**
+ * Refill one unfiled row's subfolder picker for its chosen course and category.
+ * Categories other than 03 Notes may also be filed at their top level.
+ * @param {number} idx Row index
+ * @returns {Promise<void>}
+ */
+async function _refreshUnfiledSub(idx) {
+  const sel = document.getElementById(`unfSub${idx}`);
+  const code = document.getElementById(`unfCourse${idx}`)?.value || '';
+  const role = document.getElementById(`unfRole${idx}`)?.value || '';
+  if (!sel) return;
+  const category = (window.STUDY_CATEGORY_NAMES || {})[role] || '';
+  await loadSubfolderOptions(sel, code, category, '');
+  if (role !== 'notes') {
+    sel.insertAdjacentHTML('afterbegin', '<option value="">（分類最上層）</option>');
+    sel.value = '';
+  }
+  sel.dataset.prev = sel.value;
 }
 
 /**
@@ -165,9 +187,13 @@ async function loadUnfiledCard() {
 async function fileLibraryItem(path, idx) {
   const courseCode = document.getElementById(`unfCourse${idx}`)?.value;
   const role = document.getElementById(`unfRole${idx}`)?.value;
+  const sub = document.getElementById(`unfSub${idx}`)?.value || '';
+  const subfolder = sub === PICK_NEW ? '' : sub;
   if (!courseCode || !role) { showToast('請先選擇課程與分類', 'error'); return; }
+  // 03 Notes keeps personal notes at its top level; filed items go into a subfolder (ISSUE-077).
+  if (role === 'notes' && !subfolder) { showToast('03 Notes 請選擇或新增一個子資料夾', 'error'); return; }
   try {
-    const data = await _libJson('/api/study/file', 'POST', { path, course_code: courseCode, role });
+    const data = await _libJson('/api/study/file', 'POST', { path, course_code: courseCode, role, subfolder });
     showToast(`已歸檔到：${data.dest}`, 'success', 6000);
     await _libRefresh();
     await loadUnfiledCard();
@@ -183,7 +209,7 @@ async function fileLibraryItem(path, idx) {
  */
 async function openCourseDisplayNameFlow(code) {
   const current = ((typeof currentCoursesList !== 'undefined' && currentCoursesList) || []).find(c => c.code === code);
-  const input = window.prompt(`「${code}」的新課程名稱（課程代碼與資料夾不會改變）：`, current ? current.name : '');
+  const input = await askText(`「${code}」的新課程名稱（課程代碼與資料夾不會改變）：`, { value: current ? current.name : '', okLabel: '改名' });
   if (input === null || !input.trim() || (current && input.trim() === current.name)) return;
   try {
     const data = await _libJson(`/api/courses/${encodeURIComponent(code)}/name`, 'PUT', { name: input.trim() });
@@ -263,9 +289,9 @@ const _PROFILE_CHOICES = [
 async function openCourseProfileFlow(code) {
   const course = ((typeof currentCoursesList !== 'undefined' && currentCoursesList) || []).find(c => c.code === code);
   const current = course && course.profile ? course.profile : '';
-  const list = _PROFILE_CHOICES.map(([v, label], i) => `${i + 1}. ${label}${v === current ? '（目前）' : ''}`).join('\n');
-  const pick = window.prompt(`「${code}」要改成哪種產出模式？輸入編號：\n\n${list}`, '');
-  const choice = _PROFILE_CHOICES[Number(pick) - 1];
+  const options = _PROFILE_CHOICES.map(([v, label]) => ({ value: v, label: `${label}${v === current ? '（目前）' : ''}` }));
+  const pick = await askPick(`「${code}」要改成哪種產出模式？`, options, { okLabel: '下一步' });
+  const choice = _PROFILE_CHOICES.find(([v]) => v === pick);
   if (!choice || choice[0] === current) return;
   const [profile, label] = choice;
   const warn = profile === 'record-only'

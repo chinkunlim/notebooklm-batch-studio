@@ -2,6 +2,7 @@
  * Path pickers (project rule 2026-11-25): every file or folder path on the page is chosen from a list.
  * - `loadSubfolderOptions` / `onSubfolderPick`: <select> of existing subfolders + 「＋ 新增資料夾…」.
  * - `askPick`: in-page dialog with a <select>, used where a choice is needed inside a flow.
+ * - `askText`: in-page text dialog (the desktop app's browser pane rejects prompt(), ISSUE-076).
  * - Literature pickers refresh automatically when the course or category changes.
  * Uses escHtml (studio-escape.js) and showToast (studio.js).
  */
@@ -10,11 +11,54 @@ const PICK_NEW = '__new__';
 const _PICK_NEW_LABEL = '＋ 新增資料夾…';
 
 /**
- * Ask for a NEW folder name (the only typed field the path rule allows) and validate it.
- * @returns {string|null} Folder name, or null when cancelled or invalid
+ * In-page text dialog replacing the browser's prompt(), which the desktop app's browser pane rejects (ISSUE-076).
+ * @param {string} message Explanation shown above the field
+ * @param {{value?: string, okLabel?: string, multiline?: boolean, placeholder?: string}} [opts] Initial value,
+ *   button label, textarea instead of a one-line field, placeholder
+ * @returns {Promise<string|null>} Entered text (untrimmed), or null when cancelled
  */
-function _askNewFolderName() {
-  const name = (window.prompt('新資料夾名稱（不可含 / 或 \\，不可用 . 開頭）：', '') || '').trim();
+function askText(message, { value = '', okLabel = '確定', multiline = false, placeholder = '' } = {}) {
+  return new Promise(resolve => {
+    let overlay = document.getElementById('askTextOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'askTextOverlay';
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `<div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="askTextMsg">
+        <div id="askTextMsg" style="white-space:pre-line;line-height:1.7"></div>
+        <div id="askTextField"></div>
+        <div class="modal-foot"><button type="button" id="askTextCancel" class="btn btn-ghost">取消</button><button type="button" id="askTextOk" class="btn btn-primary">確定</button></div></div>`;
+      document.body.appendChild(overlay);
+    }
+    document.getElementById('askTextMsg').textContent = message;
+    const host = document.getElementById('askTextField');
+    host.innerHTML = multiline ? '<textarea id="askTextInput" class="input" rows="8" style="width:100%"></textarea>'
+      : '<input id="askTextInput" class="input" type="text" style="width:100%">';
+    const input = document.getElementById('askTextInput');
+    input.value = value;
+    input.placeholder = placeholder;
+    document.getElementById('askTextOk').textContent = okLabel;
+    const close = result => { overlay.style.display = 'none'; resolve(result); };
+    // Escape and backdrop clicks go through studio-core's closeModal, which must also answer the caller.
+    if (typeof MODAL_CLOSERS !== 'undefined') MODAL_CLOSERS.askTextOverlay = () => close(null);
+    document.getElementById('askTextOk').onclick = () => close(input.value);
+    document.getElementById('askTextCancel').onclick = () => close(null);
+    overlay.onclick = e => { if (e.target === overlay) close(null); };
+    input.onkeydown = e => {
+      if (e.key === 'Enter' && !multiline && !e.isComposing) { e.preventDefault(); close(input.value); }
+    };
+    overlay.style.display = 'flex';
+    input.focus();
+    input.select();
+  });
+}
+
+/**
+ * Ask for a NEW folder name (the only typed field the path rule allows) and validate it.
+ * @returns {Promise<string|null>} Folder name, or null when cancelled or invalid
+ */
+async function _askNewFolderName() {
+  const name = ((await askText('新資料夾名稱（不可含 / 或 \\，不可用 . 開頭）：', { okLabel: '建立' })) || '').trim();
   if (!name) return null;
   if (/[\\/]/.test(name) || name.startsWith('.') || name.length > 128) {
     showToast('資料夾名稱不可含 / 或 \\、不可用 . 開頭、最長 128 字', 'error');
@@ -52,10 +96,11 @@ async function loadSubfolderOptions(sel, code, category, current) {
 /**
  * Handle a subfolder <select> change: choosing「＋ 新增資料夾…」asks for a name and adds it.
  * @param {HTMLSelectElement} sel Changed select
+ * @returns {Promise<void>}
  */
-function onSubfolderPick(sel) {
+async function onSubfolderPick(sel) {
   if (sel.value !== PICK_NEW) { sel.dataset.prev = sel.value; return; }
-  const name = _askNewFolderName();
+  const name = await _askNewFolderName();
   if (!name) { sel.value = sel.dataset.prev || ''; return; }
   if (![...sel.options].some(o => o.value === name)) {
     const opt = document.createElement('option');

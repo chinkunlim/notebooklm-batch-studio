@@ -162,9 +162,10 @@ async function suggestRemoteReportsUi(code) {
     const items = data.suggestions || [];
     if (!items.length) { showToast('目前沒有建議報告', 'info'); return; }
     const text = items.map((s, i) => `${i + 1}. ${s.title} (${s.audience_level || 'general'})\n   ${s.description || ''}`).join('\n\n');
-    const pick = window.prompt(`${text}\n\n輸入編號（1–${items.length}）即可直接生成自訂報告，留空取消：`, '');
-    const idx = Number(pick) - 1;
-    if (pick && idx >= 0 && idx < items.length) {
+    const options = items.map((s, i) => ({ value: String(i), label: `${i + 1}. ${s.title}` }));
+    const pick = await askPick(`${text}\n\n要直接生成哪一份自訂報告？`, options, { okLabel: '生成報告' });
+    const idx = pick === null ? -1 : Number(pick);
+    if (idx >= 0 && idx < items.length) {
       await triggerScopedGenerate(code, 'custom_report', null, items[idx].prompt || items[idx].title);
     }
   } catch (err) {
@@ -173,16 +174,35 @@ async function suggestRemoteReportsUi(code) {
 }
 
 /**
+ * Ask which lecture an action applies to, from the course's own lectures (or the whole course).
+ * @param {string} code Course code
+ * @param {string} message Question shown above the list
+ * @returns {Promise<string|null>} Lecture number as text, '' for the whole course, or null when cancelled
+ */
+async function _askLectureScope(code, message) {
+  let lectures = [];
+  try {
+    const res = await fetch(`/api/courses/${encodeURIComponent(code)}`);
+    if (res.ok) lectures = (await res.json()).lectures || [];
+  } catch (e) {
+    console.warn('Could not list lectures:', e);
+  }
+  const options = [{ value: 'all', label: '全課程' }, ...lectures.map(l => ({ value: String(l.no), label: `第 ${l.no} 講　${l.topic || l.filename || ''}` }))];
+  const pick = await askPick(message, options, { okLabel: '下一步' });
+  return pick === null ? null : (pick === 'all' ? '' : pick);
+}
+
+/**
  * Prompt for instructions and optional lecture number to trigger cinematic video generation.
  * @param {string} code Course code
  * @returns {Promise<void>} Resolves when request finishes
  */
 async function generateCinematicVideoUi(code) {
-  const lecRaw = window.prompt('要為第幾講生成電影感影片？（留空代表全課程）：', '');
+  const lecRaw = await _askLectureScope(code, '要為哪一講生成電影感影片？');
   if (lecRaw === null) return;
-  const instructions = window.prompt('請輸入電影感影片的敘事風格或重點指令（可留空使用預設）：', '');
+  const instructions = await askText('請輸入電影感影片的敘事風格或重點指令（可留空使用預設）：', { multiline: true, okLabel: '生成' });
   if (instructions === null) return;
-  const lecNo = lecRaw.trim() ? Number(lecRaw.trim()) : null;
+  const lecNo = lecRaw ? Number(lecRaw) : null;
   try {
     const res = await fetch(`/api/courses/${code}/remote-artifacts/cinematic-video`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -204,9 +224,9 @@ async function generateCinematicVideoUi(code) {
  */
 async function reviseRemoteSlideUi(btn) {
   const { code, id } = btn.dataset;
-  const idxRaw = window.prompt('要微調第幾頁投影片（從 0 開始）？', '0');
+  const idxRaw = await askText('要微調第幾頁投影片（從 0 開始）？', { value: '0', okLabel: '下一步' });
   if (idxRaw === null) return;
-  const prompt = window.prompt('請輸入該頁投影片的微調指令：', '');
+  const prompt = await askText('請輸入該頁投影片的微調指令：', { multiline: true, okLabel: '微調' });
   if (!prompt || !prompt.trim()) return;
   try {
     const res = await fetch(`/api/courses/${code}/remote-artifacts/${encodeURIComponent(id)}/revise-slide`, {
@@ -230,7 +250,7 @@ async function reviseRemoteSlideUi(btn) {
 async function exportRemoteArtifactUi(btn) {
   const { code, id, title, kind } = btn.dataset;
   const exportKind = kind.includes('table') ? 'data_table' : 'report';
-  const docTitle = window.prompt('請輸入匯出至 Google Docs / Sheets 的標題：', title || id);
+  const docTitle = await askText('請輸入匯出至 Google Docs / Sheets 的標題：', { value: title || id, okLabel: '匯出' });
   if (!docTitle || !docTitle.trim()) return;
   try {
     const res = await fetch(`/api/courses/${code}/remote-artifacts/${encodeURIComponent(id)}/export`, {
@@ -272,9 +292,10 @@ async function retryRemoteArtifactUi(btn) {
  * @returns {Promise<void>} Resolves when import finishes
  */
 async function addUrlSourceUi(code) {
-  const url = window.prompt('請輸入網頁或 YouTube 網址：', 'https://');
+  const url = await askText('請輸入網頁或 YouTube 網址：', { value: 'https://', okLabel: '下一步' });
   if (!url || !url.trim() || url.trim() === 'https://') return;
-  const title = window.prompt('自訂來源標題（可留空）：', '');
+  const title = await askText('自訂來源標題（可留空）：', { okLabel: '加入來源' });
+  if (title === null) return;
   try {
     const res = await fetch(`/api/courses/${code}/sources/url`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -295,9 +316,9 @@ async function addUrlSourceUi(code) {
  * @returns {Promise<void>} Resolves when import finishes
  */
 async function addTextSourceUi(code) {
-  const title = window.prompt('請輸入純文字來源標題：', '補充筆記');
+  const title = await askText('請輸入純文字來源標題：', { value: '補充筆記', okLabel: '下一步' });
   if (!title || !title.trim()) return;
-  const content = window.prompt('請貼上來源文字內容：', '');
+  const content = await askText('請貼上來源文字內容：', { multiline: true, okLabel: '加入來源' });
   if (!content || !content.trim()) return;
   try {
     const res = await fetch(`/api/courses/${code}/sources/text`, {
@@ -319,11 +340,12 @@ async function addTextSourceUi(code) {
  * @returns {Promise<void>} Resolves when research and optional import finish
  */
 async function researchSourcesUi(code) {
-  const query = window.prompt('請輸入網路研究關鍵字：', '');
+  const query = await askText('請輸入網路研究關鍵字：', { okLabel: '下一步' });
   if (!query || !query.trim()) return;
-  const modeRaw = window.prompt('請選擇研究模式（fast 或 deep）：', 'fast');
-  if (modeRaw === null) return;
-  const mode = modeRaw.trim().toLowerCase() === 'deep' ? 'deep' : 'fast';
+  const mode = await askPick('請選擇研究模式：', [
+    { value: 'fast', label: '快速（fast）' }, { value: 'deep', label: '深入（deep，較久）' },
+  ], { okLabel: '開始研究' });
+  if (mode === null) return;
   try {
     const res = await fetch(`/api/courses/${code}/sources/research`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -364,7 +386,7 @@ async function importSelectedResearch(code, data) {
  * @returns {Promise<void>} Resolves when generation request finishes
  */
 async function generateCustomReportUi(code) {
-  const instructions = window.prompt('請輸入完全自訂報告的格式與內容指令：', '');
+  const instructions = await askText('請輸入完全自訂報告的格式與內容指令：', { multiline: true, okLabel: '生成報告' });
   if (!instructions || !instructions.trim()) return;
   await triggerScopedGenerate(code, 'custom_report', null, instructions.trim());
 }
@@ -377,12 +399,10 @@ async function generateCustomReportUi(code) {
 async function generateFromSelectedSourcesUi(code) {
   const picked = [...document.querySelectorAll('.src-pick:checked')].map(el => el.value);
   if (!picked.length) { showToast('請先在來源清單勾選至少一個來源', 'info'); return; }
-  const kind = window.prompt(
-    `已選 ${picked.length} 個來源。請輸入產出類型（custom_report / audio / video / cinematic_video / infographic / slide_deck / quiz / flashcards / mind_map / data_table）：`,
-    'custom_report',
-  );
-  if (!kind || !kind.trim()) return;
-  const instructions = window.prompt('請輸入生成指令或重點（可留空）：', '');
+  const kinds = ['custom_report', 'audio', 'video', 'cinematic_video', 'infographic', 'slide_deck', 'quiz', 'flashcards', 'mind_map', 'data_table'];
+  const kind = await askPick(`已選 ${picked.length} 個來源。要產生哪一種產出？`, kinds.map(k => ({ value: k, label: k })), { okLabel: '下一步' });
+  if (!kind) return;
+  const instructions = await askText('請輸入生成指令或重點（可留空）：', { multiline: true, okLabel: '生成' });
   if (instructions === null) return;
   await triggerScopedGenerate(code, kind.trim(), picked, instructions.trim());
 }

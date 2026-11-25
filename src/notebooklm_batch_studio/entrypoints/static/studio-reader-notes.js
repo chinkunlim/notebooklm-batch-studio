@@ -265,10 +265,10 @@ function initReaderSplitter(code, no) {
  * @param {number} no Lecture number
  * @param {number} page Page number
  * @param {string} quote Selected text
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function saveUserPdfHighlight(code, no, page, quote) {
-  const note = window.prompt('為這段文字加上備註（可留空）：', '');
+async function saveUserPdfHighlight(code, no, page, quote) {
+  const note = await askText('為這段文字加上備註（可留空）：', { okLabel: '加入標記' });
   if (note === null) return;
   const st = loadReaderLocal(code, no);
   const item = { id: `u_${Date.now()}`, page, quote: quote.slice(0, 220), note: note.trim(), importance: 4 };

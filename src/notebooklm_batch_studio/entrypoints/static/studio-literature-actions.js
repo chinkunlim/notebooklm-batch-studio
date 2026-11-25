@@ -95,7 +95,7 @@
     const qs = chosen.length > 0 ? `?keys=${encodeURIComponent(chosen.join(','))}` : '';
     const data = await litApi('/api/literature/export/apa' + qs);
     if (!data.count) {
-      alert('目前沒有可產生的 APA 7 參考文獻。');
+      showToast('目前沒有可產生的 APA 7 參考文獻。', 'info');
       return;
     }
     const box = litEl('litApaPreviewBox');
@@ -124,13 +124,13 @@
       const btn = litEl('litNbSyncBtn');
       if (btn) btn.textContent = '同步中…';
       try { await litApi('/api/literature/notebook/sync', { method: 'POST' }); await refreshLiterature(); }
-      catch (e) { alert(e.message); } finally { if (btn) btn.textContent = '同步 PDF 至 Gemini'; }
+      catch (e) { showToast(e.message, 'error', 7000); } finally { if (btn) btn.textContent = '同步 PDF 至 Gemini'; }
     });
     litEl('litBatchReviewBtn')?.addEventListener('click', async () => {
       try {
         await litApi('/api/literature/reviews/batch', { method: 'POST' });
         await refreshLiterature();
-      } catch (e) { alert(e.message); }
+      } catch (e) { showToast(e.message, 'error', 7000); }
     });
     litEl('litNbQueryBtn')?.addEventListener('click', async () => {
       const q = litEl('litNbQueryInput')?.value.trim();
@@ -143,7 +143,7 @@
         });
         const box = litEl('litNbAnswerBox'), body = litEl('litNbAnswerBody');
         if (box && body) { body.textContent = res.answer || '（無回覆）'; box.style.display = 'block'; }
-      } catch (e) { alert(e.message); } finally { if (btn) btn.textContent = '查詢文獻'; }
+      } catch (e) { showToast(e.message, 'error', 7000); } finally { if (btn) btn.textContent = '查詢文獻'; }
     });
     litEl('litNbAnswerClose')?.addEventListener('click', () => {
       const box = litEl('litNbAnswerBox');

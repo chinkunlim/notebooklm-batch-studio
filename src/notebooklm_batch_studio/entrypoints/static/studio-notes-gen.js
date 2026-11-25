@@ -249,7 +249,7 @@ async function startNoteChapterGeneration() {
   const courseName = document.getElementById('ngCourseName')?.value.trim() || courseKey;
   const chapterId = document.getElementById('ngChapterId')?.value.trim() || 'ch01';
   if (!courseKey) {
-    alert('請先填寫課程代碼。');
+    showToast('請先填寫課程代碼。', 'error');
     return;
   }
   const srcRaw = document.getElementById('ngSourceIds')?.value.trim() || '';

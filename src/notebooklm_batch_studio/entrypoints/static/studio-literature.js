@@ -172,7 +172,7 @@
     const subInput = body?.querySelector(`[data-lit-menu-sub="${CSS.escape(key)}"]`);
     const courseCode = courseSel?.getAttribute('data-value') || '';
     if (!courseCode) {
-      alert('請選擇要歸檔的課程！');
+      showToast('請選擇要歸檔的課程！', 'error');
       return;
     }
     await litApi(`/api/literature/${encodeURIComponent(key)}/import-to-course`, {
@@ -285,7 +285,7 @@
     }
     const reidKey = target.getAttribute('data-lit-reid');
     if (reidKey) {
-      const text = prompt('請輸入修正後的 APA、標題或 DOI：');
+      const text = await askText('請輸入修正後的 APA、標題或 DOI：', { okLabel: '重新辨識' });
       if (!text || !text.trim()) return;
       await litApi(`/api/literature/${encodeURIComponent(reidKey)}/reidentify`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.trim() }),
@@ -294,7 +294,7 @@
     }
     const delKey = target.getAttribute('data-lit-del');
     if (delKey) {
-      if (!confirm(`確定要從清單移除「${delKey}」嗎？（磁碟上的 PDF 檔案會保留）`)) return;
+      if (!(await askConfirm(`確定要從清單移除「${delKey}」嗎？（磁碟上的 PDF 檔案會保留）`, { okLabel: '移除' }))) return;
       await litApi(`/api/literature/${encodeURIComponent(delKey)}`, { method: 'DELETE' });
       return refreshLiterature();
     }
@@ -428,15 +428,15 @@
   function bindLiteratureEvents() {
     bindNotebookEvents(refreshLiterature);
     bindFilterAndSelectEvents();
-    litEl('litStartBtn')?.addEventListener('click', () => handleAddAndProcess(false, refreshLiterature).catch(e => alert(e.message)));
-    litEl('litIdentifyBtn')?.addEventListener('click', () => handleAddAndProcess(true, refreshLiterature).catch(e => alert(e.message)));
+    litEl('litStartBtn')?.addEventListener('click', () => handleAddAndProcess(false, refreshLiterature).catch(e => showToast(e.message, 'error', 7000)));
+    litEl('litIdentifyBtn')?.addEventListener('click', () => handleAddAndProcess(true, refreshLiterature).catch(e => showToast(e.message, 'error', 7000)));
     litEl('litLookupMissingBtn')?.addEventListener('click', async () => {
       await litApi('/api/literature/process', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identify_only: true, no_browser: true }),
       });
       await refreshLiterature();
     });
-    litEl('litCopyApaBtn')?.addEventListener('click', () => handleCopyApa(selectedKeys).catch(e => alert(e.message)));
+    litEl('litCopyApaBtn')?.addEventListener('click', () => handleCopyApa(selectedKeys).catch(e => showToast(e.message, 'error', 7000)));
     litEl('litReportBtn')?.addEventListener('click', () => window.open('/api/literature/export/report', '_blank'));
     litEl('litSelectAll')?.addEventListener('change', ev => {
       const checked = Boolean(ev.target?.checked);
@@ -456,7 +456,7 @@
       if (t.checked) selectedKeys.add(key); else selectedKeys.delete(key);
       syncSelectionUi();
     });
-    litEl('litItemsBody')?.addEventListener('click', ev => handleRowAction(ev).catch(e => alert(e.message)));
+    litEl('litItemsBody')?.addEventListener('click', ev => handleRowAction(ev).catch(e => showToast(e.message, 'error', 7000)));
   }
 
   /**
