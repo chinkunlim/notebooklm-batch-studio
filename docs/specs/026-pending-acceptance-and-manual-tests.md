@@ -23,7 +23,7 @@
 | A2 | 整本課本放進 `01 Materials/` 自動偵測並切割（SPEC-018/020、ISSUE-072 修正後） | 使用者 | 待測（TASK-036 #19） |
 | A3 | Gemini 額度用完後到點自動繼續（SPEC-020） | Agent 觀察 | 等真的遇到額度上限 |
 | A4 | 課程全部產出完成的 macOS 通知（SPEC-017） | 使用者 | 等下一次跑完一門課（TASK-036 #20） |
-| A6 | 真 Chrome 登入 Gemini Notebook 與文獻 Cloudflare 網站（SPEC-022） | 使用者 | 待測 |
+| A6 | 真 Chrome 登入 Gemini Notebook 與文獻 Cloudflare 網站（SPEC-022） | 使用者 | ✅ 2026-11-26 通過 |
 | A5 | TASK-036 清單其他項目（#1–#7、#9、#10、#12–#16、#21） | 使用者 | 待測 |
 
 ## 4. 測試步驟

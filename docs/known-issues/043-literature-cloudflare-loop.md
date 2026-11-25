@@ -1,6 +1,6 @@
 # ISSUE-043：Cloudflare 對程式控制的 Chrome 反覆要求驗證
 
-- **狀態**：🟡 已規避 (Mitigated)
+- **狀態**：🟢 已根治 (Resolved)
 - **來源**：整合自 `literature-fetch`（原 `ISSUE-003`，2026-10-20）
 - **任務**：`TASK-025`
 
@@ -16,7 +16,7 @@
 ## 3. 修正或規避方式
 
 - `adapters/literature/browser.py` 的 `_settle` 需連續兩次檢查都不是驗證頁才結束；`_needs_user` 讀標題失敗時視為仍在跳轉。
-- 2026-11-25（SPEC-022、ADR-017）：文獻瀏覽器改為正常啟動真 Chrome、Playwright 只經 CDP 接上，不再帶 `--enable-automation`（`navigator.webdriver=false`）。這是循環最可能的原因；仍需使用者在實際會循環的網站（如 worktribe）驗證，通過後改為已根治。
+- 2026-11-25（SPEC-022、ADR-017）：文獻瀏覽器改為正常啟動真 Chrome、Playwright 只經 CDP 接上，不再帶 `--enable-automation`（`navigator.webdriver=false`）。這是循環最可能的原因；2026-11-26 使用者實機驗證：遇到 Cloudflare 勾選一次即通過，不再循環。
 - 此類網站改由使用者用自己的瀏覽器手動下載 PDF 放入 `<DATA_DIR>/scratch/literature/`，系統會自動掃描並補入追蹤（`LiteratureManager._register_dir_pdfs`）。
 
 ## 4. 防回歸

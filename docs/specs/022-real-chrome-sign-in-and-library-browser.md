@@ -1,6 +1,6 @@
 # SPEC-022：Gemini Notebook 登入與文獻瀏覽器改用真的 Chrome
 
-- **狀態**：Implemented（實機驗收待使用者：Google 登入、Cloudflare 網站）<!-- Draft | Approved | Implemented | Deprecated -->
+- **狀態**：Implemented（2026-11-26 使用者實機驗收通過）<!-- Draft | Approved | Implemented | Deprecated -->
 - **日期**：2026-11-25
 - **相關任務 / ADR**：TASK-042（決策 D3）／ISSUE-043／ADR-011（文獻下載不繞過機器人檢查）／ADR-017（本決策）／ISSUE-053（Gemini 網頁版已改真 Chrome）
 
@@ -63,7 +63,7 @@
 - [x] Given MCP `confirm=False`，Then 不啟動 Chrome，只回說明。
 - [x] Given 文獻瀏覽器啟動，Then 呼叫 `ensure_chrome` 與 `connect_over_cdp`，不再呼叫 `launch_persistent_context`。（單元測試，以假物件記錄呼叫）
 - [x] Given 遇到機器人檢查且 `wait_seconds=0`，Then 拋 `NeedsUserError`，程式沒有任何點擊或填寫。
-- [ ] 實機（使用者）：真 Chrome 登入 Gemini Notebook 成功，佇列可跑一件工作；文獻下載遇 Cloudflare 時勾選一次即通過（記錄網站名稱與結果；不通過就更新 ISSUE-043）。
+- [x] 實機（使用者，2026-11-26 通過：按「登入」即自動完成 Google 登入；文獻遇 Cloudflare 勾選一次即通過）：真 Chrome 登入 Gemini Notebook 成功，佇列可跑一件工作；文獻下載遇 Cloudflare 時勾選一次即通過（記錄網站名稱與結果；不通過就更新 ISSUE-043）。
 - [x] `agentctl check` 0 警告；ADR 已寫；README 與 SPEC-003 的入口表已更新。
 
 實作紀錄（2026-11-25）：`tests/test_notebook_chrome_login.py`（13 項）、`tests/test_literature_chrome_cdp.py`（2 項）。用暫存資料夾實測文獻瀏覽器：真 Chrome 啟動、CDP 連線、`navigator.webdriver=false`、結束後 Chrome 關閉。實作時發現 Gemini Notebook 網域已改為 `notebook.google.com`（舊網域只轉址），登入偵測改看新網域。
