@@ -322,7 +322,9 @@ notebooklm-batch-studio/
 │   ├── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
 │   ├── build_demo.py
 │   ├── build_mac_app.sh
-│   └── launch_app.sh
+│   ├── install.sh
+│   ├── launch_app.sh
+│   └── update.sh
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── notebooklm_batch_studio/
 │       ├── adapters/
@@ -876,6 +878,7 @@ notebooklm-batch-studio/
 │   ├── test_filing.py
 │   ├── test_fonts.py
 │   ├── test_guides_and_reports.py
+│   ├── test_install_scripts.py
 │   ├── test_job_settings.py
 │   ├── test_learning.py
 │   ├── test_learning_record.py
