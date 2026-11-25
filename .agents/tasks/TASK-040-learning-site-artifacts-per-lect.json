@@ -10,7 +10,7 @@
     "docs/superpowers/plans/2026-11-25-learning-site-artifacts.md"
   ],
   "done_items": "",
-  "todo_items": "A 版（每講）已真實驗收並改名（ISSUE-071）。B 版（整本書）使用者 2026-11-25 決定先暫停：耗額度與 token，等使用者說要跑再跑；跑完即可結案。",
+  "todo_items": "A 版（每講）已真實驗收並改名（ISSUE-071）。B 版（整本書）使用者 2026-11-25 決定先暫停：耗額度與 token，等使用者說要跑再跑；跑完即可結案。 B 版驗收步驟：docs/specs/026-pending-acceptance-and-manual-tests.md A1。",
   "blockers": "",
   "created_at": "2026-11-25 08:49 UTC",
   "updated_at": "2026-11-25 14:07 UTC",

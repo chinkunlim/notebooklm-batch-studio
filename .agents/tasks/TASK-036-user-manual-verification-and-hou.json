@@ -7,7 +7,7 @@
   "handed_off_to": "",
   "paths": [],
   "done_items": "",
-  "todo_items": "使用者實機確認與整理清單，見 .agents/tasks/TASK-036-checklist.md（逐項勾選並附證據）。",
+  "todo_items": "使用者實機確認與整理清單，見 .agents/tasks/TASK-036-checklist.md（逐項勾選並附證據）。 測試步驟與過時項目更正：docs/specs/026-pending-acceptance-and-manual-tests.md（#9 不要把測試 PDF 放進課本課程的 02 Handouts）。",
   "blockers": "",
   "created_at": "2026-11-25 04:34 UTC",
   "updated_at": "2026-11-25 04:36 UTC",

@@ -299,6 +299,11 @@ notebooklm-batch-studio/
 │   │   ├── 019-web-gap-fill-profile-resume-retention.md
 │   │   ├── 020-textbook-detect-note-schedule-quota-resume.md
 │   │   ├── 021-learning-site-artifacts.md
+│   │   ├── 022-real-chrome-sign-in-and-library-browser.md
+│   │   ├── 023-retire-migrate-study-layout.md
+│   │   ├── 024-link-record-only-course-to-existing-notebook.md
+│   │   ├── 025-robustness-backlog.md
+│   │   ├── 026-pending-acceptance-and-manual-tests.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)

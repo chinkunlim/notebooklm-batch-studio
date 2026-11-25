@@ -31,3 +31,8 @@
 | [019-web-gap-fill-profile-resume-retention](019-web-gap-fill-profile-resume-retention.md) | Implemented | 網頁補齊：課程「變更產出模式…」、筆記生成「繼續」、Gemini 憑證保留天數；無效產出模式回 422 | 網頁整合盤點 |
 | [020-textbook-detect-note-schedule-quota-resume](020-textbook-detect-note-schedule-quota-resume.md) | Implemented | 課本放進 01 Materials 自動偵測並提示切割、Gemini 筆記背景排程（允許一次後依序生成）、Gemini 額度用完記下重置時間到點續跑、Gemini Notebook 佇列顯示預計繼續時間 | 使用者 2026-11-25 定案 |
 | [021-learning-site-artifacts](021-learning-site-artifacts.md) | Implemented | 學習網頁產出：每講與整本書經 Gemini Notebook 對話「make me a site」產生、從 Studio（類型 10、text/html）下載、以沙箱 CSP 開啟並把作答進度存回研讀工作室（真實資料驗收待使用者同意） | TASK-040、ADR-016 |
+| [022-real-chrome-sign-in-and-library-browser](022-real-chrome-sign-in-and-library-browser.md) | Draft | Gemini Notebook 登入與文獻瀏覽器改用真的 Chrome（獨立資料夾＋CDP），不繞過機器人檢查 | TASK-042、ISSUE-043 |
+| [023-retire-migrate-study-layout](023-retire-migrate-study-layout.md) | Draft | 停用舊的 migrate-study-layout（HTTP 回 410、移除 MCP 工具），改用 consolidate；待使用者決定 D5 | TASK-043 |
+| [024-link-record-only-course-to-existing-notebook](024-link-record-only-course-to-existing-notebook.md) | Draft | 只記錄的課程連結既有 Gemini Notebook（依檔名對來源、不重新上傳），以產生新產出；使用者決定暫停 | TASK-041 |
+| [025-robustness-backlog](025-robustness-backlog.md) | Draft | 穩定性待辦：筆記排程跨程序檔案鎖、notebooklm-py 升級把關、多本課本選資料夾、講次來源切換防護與「both」 | 盤點 2026-11-25 |
+| [026-pending-acceptance-and-manual-tests](026-pending-acceptance-and-manual-tests.md) | Draft | 尚待驗收項目與使用者實機測試步驟（整本書學習網頁、課本切割、額度續跑、完成通知、TASK-036） | TASK-036、TASK-040 |
