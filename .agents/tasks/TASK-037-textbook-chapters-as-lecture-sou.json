@@ -11,10 +11,10 @@
     "src/notebooklm_batch_studio/services/job_planner.py"
   ],
   "done_items": "",
-  "todo_items": "SDD→BDD→TDD 新規格（SPEC-016）。使用者決定：02 Handouts 只放老師講義；完整課本 PDF 放 01 Materials/，切割後自動建立 01 Materials/<課本名>/ 子資料夾放各章 PDF。(1) 移植 literature-parser 的章節偵測：services/core/analyzer.py PDFAnalyzer.get_sections（書籤優先、無書籤時掃頁首文字；front_matter_taxonomy.json 前言分類）與 services/core/splitter.py PDFSplitter.split_chapter（頁碼範圍切割並保留該章書籤）；改用本專案已有的 pypdf（BSD），不要引入 pymupdf（AGPL）與 pdfseparate/pdfunite CLI；依本專案分層與註解規範重寫，純計算放 domain。(2) 切割預設 dry-run 預覽（章名、頁碼範圍、輸出檔名 ChNN-Title.pdf），確認後才寫檔；原始整本 PDF 保留不動；同名不覆寫。(3) 每門課新增『講次來源』設定：handouts（預設）| textbook_chapters | both；course_parser 依設定掃描 02 Handouts 或 01 Materials/<課本名>/。(4) 既有兩門課（115-1_CP31000 10 章、115-1_CP30210 6 章）的章節 PDF 目前誤放在 02 Handouts：提供 dry-run 搬移到 01 Materials/<課本名>/，保留 lecture_no 與 sha256，只更新 lectures.category/relative_path，142 筆 done 工作與 03 Notes 產出不受影響；真實資料先停在 dry-run 等使用者確認。(5) 三入口：HTTP、MCP（confirm）、網頁。(6) watcher：01 Materials 頂層出現新整本 PDF 時只提示可切割，不自動寫檔。",
+  "todo_items": "SDD→BDD→TDD 新規格（SPEC-016）。使用者決定：02 Handouts 只放老師講義；完整課本 PDF 放 01 Materials/，切割後自動建立 01 Materials/<課本名>/ 子資料夾放各章 PDF。(1) 移植 literature-parser 的章節偵測：services/core/analyzer.py PDFAnalyzer.get_sections（書籤優先、無書籤時掃頁首文字；front_matter_taxonomy.json 前言分類）與 services/core/splitter.py PDFSplitter.split_chapter（頁碼範圍切割並保留該章書籤）；改用本專案已有的 pypdf（BSD），不要引入 pymupdf（AGPL）與 pdfseparate/pdfunite CLI；依本專案分層與註解規範重寫，純計算放 domain。(2) 切割預設 dry-run 預覽（章名、頁碼範圍、輸出檔名 ChNN-Title.pdf），確認後才寫檔；原始整本 PDF 保留不動；同名不覆寫。(3) 每門課新增『講次來源』設定：handouts（預設）| textbook_chapters | both；course_parser 依設定掃描 02 Handouts 或 01 Materials/<課本名>/。(4) 既有兩門課（115-1_CP31000 10 章、115-1_CP30210 6 章）的章節 PDF 目前誤放在 02 Handouts：提供 dry-run 搬移到 01 Materials/<課本名>/，保留 lecture_no 與 sha256，只更新 lectures.category/relative_path，142 筆 done 工作與 03 Notes 產出不受影響；真實資料先停在 dry-run 等使用者確認。(5) 三入口：HTTP、MCP（confirm）、網頁。(6) watcher：01 Materials 頂層出現新整本 PDF 時只提示可切割，不自動寫檔。 【2026-11-25 實測】用 projects-data/literature-parser/input/processed/processed-books/Research Methods, Design, and Analysis 13th ed.pdf（433 頁、499 個書籤、Part→Chapter 兩層；即心理學研究法課本，Ch1 第 16-32 頁＝現有 Ch01 PDF 的 17 頁）：pypdf 7.1.1 與 PyMuPDF 2.1 都能正確切出第 1 章 17 頁並保留 30/31 個書籤，文字抽取量相同（約 35,400 字元／10 頁）；pypdf 輸出 382KB、PyMuPDF 320KB。結論：切割用 pypdf 即可。注意 pypdf 7 API 變更（compress_identical_objects 參數改為 remove_duplicates/remove_unreferenced；add_outline_item 需用關鍵字參數）；章節偵測要處理 Part→Chapter 多層大綱。",
   "blockers": "",
   "created_at": "2026-11-25 04:34 UTC",
-  "updated_at": "2026-11-25 04:36 UTC",
+  "updated_at": "2026-11-25 04:42 UTC",
   "history": [
     {
       "timestamp": "2026-11-25 04:34 UTC",
@@ -24,6 +24,11 @@
     {
       "timestamp": "2026-11-25 04:36 UTC",
       "action": "todo_recorded",
+      "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-25 04:42 UTC",
+      "action": "benchmark_recorded",
       "agent": "claude-code"
     }
   ]
