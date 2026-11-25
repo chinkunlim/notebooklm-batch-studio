@@ -182,9 +182,9 @@ class ArtifactRunner:
         """
         art_type = job.artifact_type
         if art_type in LEARNING_SITE_TYPES:
-            # Sites keep the title Gemini Notebook gave them: no Studio rename (SPEC-021)
-            return await self.site_runner.process(job, course, target)
-        if art_type in (ArtifactType.AUDIO, ArtifactType.COURSE_AUDIO):
+            # Renamed like the rest; Gemini Notebook keeps a site's title as a file name. Refs: ISSUE-071
+            result = await self.site_runner.process(job, course, target)
+        elif art_type in (ArtifactType.AUDIO, ArtifactType.COURSE_AUDIO):
             result = await self._process_audio(job, course, target)
         elif art_type in QUIZ_TYPES:
             result = await self.quiz_runner.process_quiz(job, course, target)

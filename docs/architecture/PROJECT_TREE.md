@@ -273,6 +273,7 @@ notebooklm-batch-studio/
 │   │   ├── 068-record-only-regenerate-without-notebook.md
 │   │   ├── 069-migrate-moves-school-named-study-folders.md
 │   │   ├── 070-notebooklm-py-rejects-html-download.md
+│   │   ├── 071-site-rename-becomes-filename.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract

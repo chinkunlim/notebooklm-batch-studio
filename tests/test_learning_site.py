@@ -413,15 +413,19 @@ class RunnerTest(unittest.IsolatedAsyncioTestCase):
             await self._runner(client).process(self.job, COURSE, self.target)
         self.assertEqual(client.downloads, [])
 
-    async def test_artifact_runner_dispatches_and_skips_rename(self) -> None:
-        """ArtifactRunner sends site jobs to its site runner and does not rename the Studio item."""
+    async def test_artifact_runner_dispatches_and_renames(self) -> None:
+        """ArtifactRunner sends site jobs to its site runner, then gives the Studio item the standard title.
+
+        Gemini Notebook stores a site's title as a file name ("[Ch01]_Learning_Site_(v2).html"),
+        which still starts with the lecture prefix like every other output.
+        """
         client = _FakeSiteClient([[], [_row("new", 3)]])
         client.rename_artifact = mock.AsyncMock()  # type: ignore[attr-defined]
         runner = ArtifactRunner(client, mock.Mock())  # type: ignore[arg-type]
         runner.site_runner = self._runner(client)
         path, ids = await runner.process_job_with_ids(self.job, COURSE, self.target)
         self.assertEqual((Path(path).name, ids), ("learning_site_v2.html", ["new"]))
-        client.rename_artifact.assert_not_called()  # type: ignore[attr-defined]
+        client.rename_artifact.assert_awaited_once_with("nb1", "new", "[Ch01] Learning Site (v2)")  # type: ignore[attr-defined]
 
 
 EXPECTED_CSP = (

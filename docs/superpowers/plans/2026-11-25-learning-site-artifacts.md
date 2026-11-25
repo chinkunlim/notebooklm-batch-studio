@@ -42,7 +42,7 @@
 | `src/.../domain/naming.py` (modify) | two `ArtifactNaming` entries (labels, example file names) |
 | `src/.../domain/learning_site.py` (create) | `SiteRow`, `parse_site_row`, `LearningSiteClientProtocol`, constants |
 | `src/.../services/quota_planner.py` (modify) | `("learning_site", "canvas")` action prefix |
-| `src/.../services/artifact_runner.py` (modify) | `SIMPLE_OUTPUTS` file names, dispatch, skip rename |
+| `src/.../services/artifact_runner.py` (modify) | `SIMPLE_OUTPUTS` file names, dispatch, rename (changed 2026-11-25, ISSUE-071) |
 | `src/.../services/learning_site_prompt.py` (create) | render prompt section A/B from the template |
 | `src/.../services/learning_site_runner.py` (create) | request → wait → download, quota/failure mapping |
 | `src/.../adapters/notebooklm/learning_sites.py` (create) | `LearningSiteMixin`: chat request, Studio polling, guarded download, per-notebook lock |
@@ -202,7 +202,7 @@ class AdapterTest(unittest.IsolatedAsyncioTestCase):
 
 **Interfaces:**
 - Consumes: `render_site_prompt` (Task 2), `LearningSiteClientProtocol`/`SiteRow` (Task 3), `versioned_name` (`domain/naming.py`), `JobTarget`/`ProcessResult` (`services/quiz_runner.py`).
-- Produces: `LearningSiteRunner(client: LearningSiteClientProtocol, clock: Callable[[], float] = time.monotonic, sleep: Callable[[float], Awaitable[None]] = asyncio.sleep)`; `async process(job: ArtifactJob, course: Course, target: JobTarget) -> ProcessResult`; constants `APPEAR_SECONDS = 300`, `FINISH_SECONDS = 1800`, `POLL_SECONDS = 20`, `QUOTA_WORDS = ("額度", "上限", "quota", "limit")`. `ArtifactRunner` gains `self.site_runner` and dispatches `LEARNING_SITE_TYPES` **before** the `SIMPLE_OUTPUTS` branch, and skips `rename_after_generation` for those types.
+- Produces: `LearningSiteRunner(client: LearningSiteClientProtocol, clock: Callable[[], float] = time.monotonic, sleep: Callable[[float], Awaitable[None]] = asyncio.sleep)`; `async process(job: ArtifactJob, course: Course, target: JobTarget) -> ProcessResult`; constants `APPEAR_SECONDS = 300`, `FINISH_SECONDS = 1800`, `POLL_SECONDS = 20`, `QUOTA_WORDS = ("額度", "上限", "quota", "limit")`. `ArtifactRunner` gains `self.site_runner` and dispatches `LEARNING_SITE_TYPES` **before** the `SIMPLE_OUTPUTS` branch; those types are renamed through `rename_after_generation` like the rest (changed 2026-11-25 at the user's request, ISSUE-071).
 
 - [ ] **Step 1: Write the failing tests** (fake client with scripted `list_site_rows` results and a fake clock/sleep):
 
@@ -217,8 +217,8 @@ async def test_no_new_site_raises_generation_error(self) -> None
     # chat answer "我無法建立網站" -> RuntimeError whose message contains the answer
 async def test_failed_status_raises(self) -> None
     # new row with status 4 -> RuntimeError
-async def test_artifact_runner_dispatches_and_skips_rename(self) -> None
-    # ArtifactRunner.process_job_with_ids for LEARNING_SITE uses site_runner; rename_artifact not called
+async def test_artifact_runner_dispatches_and_renames(self) -> None
+    # ArtifactRunner.process_job_with_ids for LEARNING_SITE uses site_runner, then rename_artifact
 ```
 
 - [ ] **Step 2: Run** — expect `ModuleNotFoundError`.
