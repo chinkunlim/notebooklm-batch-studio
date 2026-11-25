@@ -44,6 +44,7 @@ from notebooklm_batch_studio.entrypoints.http.courses import courses_router
 from notebooklm_batch_studio.entrypoints.http.fonts import fonts_router
 from notebooklm_batch_studio.entrypoints.http.gemini_auth import gemini_auth_router
 from notebooklm_batch_studio.entrypoints.http.learning import learning_router
+from notebooklm_batch_studio.entrypoints.http.learning_site import learning_site_router
 from notebooklm_batch_studio.entrypoints.http.literature import literature_router
 from notebooklm_batch_studio.entrypoints.http.literature_files import literature_files_router
 from notebooklm_batch_studio.entrypoints.http.literature_notebook import literature_notebook_router
@@ -385,6 +386,7 @@ _API_ROUTERS = (
     study_library_router,
     textbooks_router,
     note_schedule_router,
+    learning_site_router,
 )
 
 

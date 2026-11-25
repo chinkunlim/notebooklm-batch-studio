@@ -96,6 +96,7 @@ def list_artifacts(
 # Files a browser can show directly are sent inline (an <iframe> or new tab displays them);
 # anything else is sent as an attachment.
 INLINE_SUFFIXES = {".html", ".png", ".jpg", ".pdf", ".m4a", ".mp4", ".json", ".md", ".txt"}
+LEARNING_SITE_PREFIXES = ("learning_site", "course_learning_site")
 MEDIA_TYPES = {".m4a": "audio/mp4", ".md": "text/markdown; charset=utf-8"}
 
 
@@ -198,12 +199,14 @@ def download_artifact(code: str, file_path: str, request: Request) -> FileRespon
     """
     target_path = _resolve_artifact_path(request, code, file_path)
     suffix = target_path.suffix.lower()
+    # Learning sites run generated scripts: never inline on the app origin, only via /site/ (SPEC-021)
+    inline = suffix in INLINE_SUFFIXES and not target_path.name.startswith(LEARNING_SITE_PREFIXES)
     # Python guesses audio/mp4a-latm for .m4a, which browsers' <audio> may refuse. Refs: ISSUE-007
     return FileResponse(
         path=target_path,
         filename=target_path.name,
         media_type=MEDIA_TYPES.get(suffix),
-        content_disposition_type="inline" if suffix in INLINE_SUFFIXES else "attachment",
+        content_disposition_type="inline" if inline else "attachment",
     )
 
 

@@ -185,6 +185,7 @@ notebooklm-batch-studio/
 │   │   ├── 013-local-security-model.md
 │   │   ├── 014-course-identity-and-study-layout.md
 │   │   ├── 015-consolidation-exclusive-guard.md
+│   │   ├── 016-untrusted-learning-site-html.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -456,6 +457,7 @@ notebooklm-batch-studio/
 │       │   │   ├── fonts.py
 │       │   │   ├── gemini_auth.py
 │       │   │   ├── learning.py
+│       │   │   ├── learning_site.py
 │       │   │   ├── literature.py
 │       │   │   ├── literature_files.py
 │       │   │   ├── literature_notebook.py
@@ -714,6 +716,7 @@ notebooklm-batch-studio/
 │       │   │   ├── icon-512.png
 │       │   │   ├── index.html
 │       │   │   ├── manifest.webmanifest
+│       │   │   ├── site-storage-shim.js
 │       │   │   ├── studio-app.js
 │       │   │   ├── studio-batch.js
 │       │   │   ├── studio-bench.js
@@ -749,6 +752,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-reverse-import.js
 │       │   │   ├── studio-settings.js
 │       │   │   ├── studio-shell.js
+│       │   │   ├── studio-site-viewer.js
 │       │   │   ├── studio-start.js
 │       │   │   ├── studio-study-extras.js
 │       │   │   ├── studio-study-panels.js

@@ -289,6 +289,7 @@ const REPORT_KINDS = {
   mindmap: { label: '心智圖', types: ['mind_map'] },
   slides: { label: '簡報投影片', types: ['slide_deck'] },
   video: { label: '影片摘要', types: ['video'] },
+  site: { label: '學習網頁', types: ['learning_site'] },
 };
 /** The report kinds shown as choices for the tile that is open (set by studio-shell.js). */
 let currentReportGroup = ['guide', 'concept', 'briefing', 'blog'];
@@ -388,7 +389,8 @@ async function loadReportInViewer(kind) {
   const metaHtml = `<span class="tag">v${job.version || 1}</span>${job.status === 'needs_review' ? '<span class="tag warn">需審查</span>' : ''}
     <a class="reader-pill-btn" href="${dl}" target="_blank" rel="noopener">新分頁 / 下載</a>${readable ? `<button type="button" class="reader-pill-btn" onclick="markStep('guide')">我讀完了</button>` : ''}`;
   if (metaBar) metaBar.innerHTML = metaHtml;
-  if (['md', 'opml', 'json'].includes(ext)) container.innerHTML = `<iframe class="report-frame" src="/api/artifacts/${code}/view/${enc}" title="${escHtml(spec.label)}"></iframe>`;
+  if (kind === 'site') renderLearningSite(container, code, path);
+  else if (['md', 'opml', 'json'].includes(ext)) container.innerHTML = `<iframe class="report-frame" src="/api/artifacts/${code}/view/${enc}" title="${escHtml(spec.label)}"></iframe>`;
   else if (ext === 'png') container.innerHTML = (await renderPngDeviceExtras(code, path)) + `<img class="report-img" src="${dl}" alt="${escHtml(spec.label)}">`;
   else if (ext === 'csv') container.innerHTML = await renderCsvTableHtml(dl);
   else if (['mp4', 'webm', 'mov'].includes(ext)) container.innerHTML = `<video class="report-video" controls preload="metadata" src="${dl}"></video>`;

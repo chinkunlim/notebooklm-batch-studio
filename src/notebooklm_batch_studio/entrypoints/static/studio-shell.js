@@ -143,6 +143,7 @@ darkMQ.addEventListener('change', () => { if (modePref === 'auto') handlers.mode
 const TOOLS = [
   { id: 'notes', name: '講義', group: 0, hue: '--accent' },
   { id: 'video', name: '影片摘要', group: 0, hue: '--h-video' },
+  { id: 'site', name: '學習網頁', group: 0, hue: '--h-infographic' },
   { id: 'report', name: '報告', group: 0, hue: '--h-report' },
   { id: 'mindmap', name: '心智圖', group: 1, hue: '--h-mindmap' },
   { id: 'infographic', name: '資訊圖表', group: 1, hue: '--h-infographic' },
@@ -155,16 +156,16 @@ const TOOLS = [
 ];
 /** Artifact types behind each workbench item (lecture names; course_ is added for the whole course). */
 const TOOL_TYPES = {
-  video: ['video'], report: ['study_guide', 'reports_study_guide', 'reports_concept_explanation', 'reports_briefing', 'reports_blog_post'],
+  video: ['video'], site: ['learning_site'], report: ['study_guide', 'reports_study_guide', 'reports_concept_explanation', 'reports_briefing', 'reports_blog_post'],
   mindmap: ['mind_map'], infographic: ['infographic'], slides: ['slide_deck'], table: ['data_table'],
   quiz: ['quiz_1', 'quiz_2', 'quiz_3', 'quiz_academic', 'quiz_concept', 'mock_exam'], flash: ['flashcards'],
 };
 /** Report viewer kinds (REPORT_KINDS in studio-app.js) offered by each item. */
-const REPORT_GROUPS = { report: ['guide', 'concept', 'briefing', 'blog'], video: ['video'], mindmap: ['mindmap'], infographic: ['infographic'], slides: ['slides'], table: ['table'] };
+const REPORT_GROUPS = { report: ['guide', 'concept', 'briefing', 'blog'], video: ['video'], site: ['site'], mindmap: ['mindmap'], infographic: ['infographic'], slides: ['slides'], table: ['table'] };
 /** Feature panel node for each item (notes uses the reader). */
-const PANEL_FOR = { quiz: 'panelQuiz', flash: 'panelFlash', tutor: 'panelTutor', qa_notes: 'panelQaNotes', video: 'panelReports', report: 'panelReports', mindmap: 'panelReports', infographic: 'panelReports', slides: 'panelReports', table: 'panelReports' };
+const PANEL_FOR = { quiz: 'panelQuiz', flash: 'panelFlash', tutor: 'panelTutor', qa_notes: 'panelQaNotes', video: 'panelReports', site: 'panelReports', report: 'panelReports', mindmap: 'panelReports', infographic: 'panelReports', slides: 'panelReports', table: 'panelReports' };
 /** Older tab names (used by rememberPlace / resumePlace) for each item. */
-const TAB_FOR = { notes: 'reader', quiz: 'quiz', flash: 'flashcards', tutor: 'tutor', qa_notes: 'qa_notes', video: 'reports', report: 'reports', mindmap: 'reports', infographic: 'reports', slides: 'reports', table: 'reports' };
+const TAB_FOR = { notes: 'reader', quiz: 'quiz', flash: 'flashcards', tutor: 'tutor', qa_notes: 'qa_notes', video: 'reports', site: 'reports', report: 'reports', mindmap: 'reports', infographic: 'reports', slides: 'reports', table: 'reports' };
 
 /**
  * One-line status of an item for the current lecture, e.g. "已生成 v2" or "尚未生成".

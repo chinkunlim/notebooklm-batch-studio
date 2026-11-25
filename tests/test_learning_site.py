@@ -12,8 +12,13 @@ from pathlib import Path
 from unittest import mock
 
 import httpx
+from fastapi.testclient import TestClient
 
+from notebooklm_batch_studio.adapters.db.base import Base
+from notebooklm_batch_studio.adapters.db.repository import CourseRepository
+from notebooklm_batch_studio.adapters.db.session import create_db_engine, make_session_factory
 from notebooklm_batch_studio.adapters.notebooklm.learning_sites import LearningSiteMixin
+from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.exceptions import AuthExpiredError, QuotaExceededError
 from notebooklm_batch_studio.domain.learning_site import SiteRow, parse_site_row
 from notebooklm_batch_studio.domain.models import (
@@ -24,6 +29,8 @@ from notebooklm_batch_studio.domain.models import (
     get_artifact_english_title,
 )
 from notebooklm_batch_studio.domain.naming import label_for
+from notebooklm_batch_studio.entrypoints.api import create_app
+from notebooklm_batch_studio.entrypoints.http.learning_site import SITE_CSP, STORAGE_SHIM_MARKER
 from notebooklm_batch_studio.services.artifact_runner import SIMPLE_OUTPUTS, ArtifactRunner
 from notebooklm_batch_studio.services.course_settings import COURSE_TYPES
 from notebooklm_batch_studio.services.job_planner import generate_jobs_for_course
@@ -415,6 +422,89 @@ class RunnerTest(unittest.IsolatedAsyncioTestCase):
         path, ids = await runner.process_job_with_ids(self.job, COURSE, self.target)
         self.assertEqual((Path(path).name, ids), ("learning_site_v2.html", ["new"]))
         client.rename_artifact.assert_not_called()  # type: ignore[attr-defined]
+
+
+EXPECTED_CSP = (
+    "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; "
+    "font-src data:; media-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; "
+    "frame-ancestors 'self'; sandbox allow-scripts allow-modals allow-downloads"
+)
+
+
+class ViewTest(unittest.TestCase):
+    """Task 5: generated sites open only through a sandboxed, CSP-restricted route."""
+
+    def setUp(self) -> None:
+        """Create a course with one downloaded learning site."""
+        self.tmpdir = tempfile.TemporaryDirectory()
+        data_dir = Path(self.tmpdir.name) / "data"
+        cfg = AppConfig(
+            data_dir=data_dir,
+            database_url=f"sqlite:///{data_dir / 'db' / 'app.db'}",
+            http_allowed_hosts=("127.0.0.1", "localhost", "testserver"),
+        )
+        cfg.ensure_data_dirs()
+        self.engine = create_db_engine(cfg.database_url)
+        Base.metadata.create_all(self.engine)
+        course_dir = cfg.study_root_dir / "115-1" / "CP__31000-生涯諮商與實務"
+        lec_dir = course_dir / "03 Notes" / "NotebookLM" / "01_x"
+        lec_dir.mkdir(parents=True)
+        (lec_dir / "learning_site.html").write_text(
+            "<!doctype html><html><head><title>t</title></head><body>學習網頁</body></html>", encoding="utf-8"
+        )
+        (lec_dir / "infographic.png").write_bytes(b"\x89PNG")
+        with make_session_factory(self.engine)() as session:
+            CourseRepository(session).save_course(
+                Course(
+                    code=COURSE.code, name=COURSE.name, source_dir=str(course_dir), study_dir=str(course_dir)
+                )
+            )
+            session.commit()
+        self.client = TestClient(create_app(config=cfg))
+        self.base = f"/api/artifacts/{COURSE.code}"
+
+    def tearDown(self) -> None:
+        """Dispose the engine and remove temporary files."""
+        self.engine.dispose()
+        self.tmpdir.cleanup()
+
+    def test_site_route_sets_strict_csp(self) -> None:
+        """The site is served as HTML with the exact sandboxing CSP and the storage adapter injected."""
+        self.assertEqual(SITE_CSP, EXPECTED_CSP)
+        res = self.client.get(f"{self.base}/site/01_x/learning_site.html")
+        self.assertEqual(res.status_code, 200, res.text)
+        self.assertEqual(res.headers["content-security-policy"], EXPECTED_CSP)
+        self.assertEqual(res.headers["x-content-type-options"], "nosniff")
+        self.assertEqual(res.headers["referrer-policy"], "no-referrer")
+        self.assertTrue(res.headers["content-type"].startswith("text/html"))
+        body = res.text
+        self.assertIn(STORAGE_SHIM_MARKER, body)
+        self.assertIn("學習網頁", body)
+        self.assertLess(body.index(STORAGE_SHIM_MARKER), body.index("<title>"))
+
+    def test_site_route_rejects_non_html_and_traversal(self) -> None:
+        """Non-HTML files get 415; traversal outside the course folder gets 403."""
+        self.assertEqual(self.client.get(f"{self.base}/site/01_x/infographic.png").status_code, 415)
+        # %2F keeps the dots inside the path parameter (a client would collapse a literal "../")
+        traversal = f"{self.base}/site/01_x/..%2F..%2F..%2F..%2F..%2F..%2Fx.html"
+        self.assertEqual(self.client.get(traversal).status_code, 403)
+
+    def test_download_route_attaches_learning_site(self) -> None:
+        """The plain download route never serves a learning site inline on the app origin."""
+        res = self.client.get(f"{self.base}/download/01_x/learning_site.html")
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.headers["content-disposition"].startswith("attachment"))
+
+    def test_study_workspace_opens_site_route_sandboxed(self) -> None:
+        """The workspace has a 學習網頁 tile that frames /site/ with a sandbox and checks message senders."""
+        viewer = (STATIC / "studio-site-viewer.js").read_text(encoding="utf-8")
+        for needle in ("/site/", 'sandbox="allow-scripts allow-modals allow-downloads"', "event.source"):
+            self.assertIn(needle, viewer)
+        self.assertIn("studio-site-viewer.js", (STATIC / "index.html").read_text(encoding="utf-8"))
+        shell = (STATIC / "studio-shell.js").read_text(encoding="utf-8")
+        self.assertIn("{ id: 'site', name: '學習網頁'", shell)
+        panels = (STATIC / "studio-study-panels.js").read_text(encoding="utf-8")
+        self.assertIn("site: { label: '學習網頁', types: ['learning_site'] }", panels)
 
 
 if __name__ == "__main__":
