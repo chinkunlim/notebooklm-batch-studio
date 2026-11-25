@@ -113,6 +113,23 @@ async function loadNoteGenCourses() {
 }
 
 /**
+ * Fill the chapter PDF picker with the course's lecture PDFs (paths are chosen, never typed).
+ * @param {Array<object>} lectures Course detail lectures
+ * @param {string} sourceDir Course folder
+ */
+function _fillNotePdfOptions(lectures, sourceDir) {
+  const sel = document.getElementById('ngPdfPath');
+  if (!sel) return;
+  const opts = sourceDir
+    ? lectures.map((l) => {
+        const rel = l.relative_path || l.filename;
+        return `<option value="${escHtml(`${sourceDir}/${rel}`)}">${String(l.no).padStart(2, '0')} — ${escHtml(rel)}</option>`;
+      })
+    : [];
+  sel.innerHTML = ['<option value="">（不指定 PDF）</option>'].concat(opts).join('');
+}
+
+/**
  * Auto-fill course fields and populate lecture selector when a course is chosen.
  * @returns {Promise<void>}
  */
@@ -122,6 +139,7 @@ async function onNoteGenCourseSelect() {
   if (!code) {
     _ngActiveCourseDetail = null;
     if (lecSel) lecSel.innerHTML = '<option value="">（手動填寫章節）</option>';
+    _fillNotePdfOptions([], '');
     return;
   }
   try {
@@ -144,6 +162,7 @@ async function onNoteGenCourseSelect() {
         )
         .join('');
     }
+    _fillNotePdfOptions(lectures, detail.source_dir || '');
     await previewNotePrompt();
     await loadGeneratedChaptersList();
   } catch (err) {

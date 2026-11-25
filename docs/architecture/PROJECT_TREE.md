@@ -723,6 +723,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-notes-gen.js
 │       │   │   ├── studio-notes-tab.js
 │       │   │   ├── studio-pencil.js
+│       │   │   ├── studio-pickers.js
 │       │   │   ├── studio-player.js
 │       │   │   ├── studio-qa-drawer.js
 │       │   │   ├── studio-queue.js
@@ -811,6 +812,7 @@ notebooklm-batch-studio/
 │       │   ├── backups.py
 │       │   ├── completion_notice.py
 │       │   ├── course_display_name.py
+│       │   ├── course_folders.py
 │       │   ├── course_lifecycle.py
 │       │   ├── course_onboarding.py
 │       │   ├── course_options.py
@@ -915,6 +917,7 @@ notebooklm-batch-studio/
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
 │   ├── test_old_layout_retired.py
+│   ├── test_path_pickers.py
 │   ├── test_port_check.py
 │   ├── test_preferences.py
 │   ├── test_qa_notes_api.py

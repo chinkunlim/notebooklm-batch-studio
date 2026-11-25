@@ -57,7 +57,7 @@
           <button type="button" class="lit-select-btn"><span class="lit-sel-txt">${escapeHtml(defCat)}</span><i class="icon-chevron-down"></i></button>
           <div class="lit-select-menu">${catOpts}</div>
         </div>
-        <input class="input" type="text" value="${escapeHtml(defSub)}" data-lit-menu-sub="${key}" placeholder="子資料夾" />
+        <select class="input" data-lit-menu-sub="${key}" onchange="onSubfolderPick(this)" aria-label="歸檔資料夾"><option value="${escapeHtml(defSub)}">${escapeHtml(defSub)}</option></select>
         <div style="display:flex;gap:6px">
           <button class="btn btn-xs btn-primary" data-lit-confirm-archive="${key}">確認歸檔</button>
           <button class="btn btn-xs btn-soft" data-lit-cancel-archive="${key}">取消</button>

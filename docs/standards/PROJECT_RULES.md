@@ -6,7 +6,7 @@
 ## 1. 領域知識與術語
 
 - **課程**：`DATA_DIR/study/<學期>/<課程資料夾>`（例 `115-1/CP__30000-團體諮商`）對應一門課與一本 Gemini Notebook；課程代碼為 `<學期>_<課號>`（例 `115-1_CP30000`），筆記本標題為 `[<課號>] <課名> (<學期>)`。
-- **分類與講次**：標準五分類為 `01 Materials`（課本與文獻）、`02 Handouts`（老師教材）、`03 Notes`（AI 筆記與個人隨筆）、`04 Homework`（作業）、`05 Assignments`（報告），可用 `.env` 的 `STUDY_CATEGORIES` 自訂；讀取相容 `01 Material`/`02 Handout` 別名。**只有 `02 Handouts`（含子資料夾）內的 PDF 成為講次**，依檔名排序編號 `01, 02, …`；`01 Materials` 預設不上傳（僅勾選「課本作為整門課來源」時納入）。
+- **分類與講次**：標準五分類為 `01 Materials`（課本與文獻）、`02 Handouts`（老師教材）、`03 Notes`（AI 筆記與個人隨筆）、`04 Homework`（作業）、`05 Assignments`（報告），可用 `.env` 的 `STUDY_CATEGORIES` 自訂；讀取相容 `01 Material`/`02 Handout` 別名。**講次來源**：`02 Handouts`（含子資料夾）內的 PDF 為講次；`02 Handouts` 沒有 PDF 時，改用 `01 Materials/<課本名>/` 中有 `.textbook.json` 標記的課本章節（SPEC-018），講次編號取自檔名 `ChNN`／`NN_`；`01 Materials` 預設不上傳（僅勾選「課本作為整門課來源」時納入）。
 - **未歸檔區 (`scratch/`)**：`DATA_DIR/scratch/<種類>/`（`literature`、`notes`、`outputs`、`uploads`、`unarchived`）集中存放未歸檔或撤銷歸檔的檔案。
 - **產出**：audio (`.m4a`)、quiz（×3：1 基礎、2 理解、3 模擬考，各 30 題）、infographic、mind map、flashcards、study guide、concept explanation report；整門課另有模擬考與全課程 mind map。
 - **產出組合（profile）**：`full`、`quiz-only`、`exam-prep`（見 SPEC-001）以及不排程生成的 `record-only`（過去學期只登錄建立學習紀錄；可透過 SPEC-015 `adopt_existing_outputs` 將既有的 `03 Notes/NotebookLM/` 檔納管為 `done` 工作，且禁止對無筆記本的 `record-only` 課程觸發 `regenerate`，ISSUE-068）。可於 Web 介面自由切換個別項目開關。
@@ -27,6 +27,7 @@
 - **操作 Gemini Notebook 只在 `adapters/`**：notebooklm-py 為主、Playwright 補位（ADR-001），語系代碼指定 `zh_Hant`，語音副檔名使用 `.m4a`。
 - **即時額度預檢與防護**：生成前必須讀取配額表（`quota_planner`），配額不足直接標記 `QUOTA_WAIT` 並安全等待，禁止無效重試；碰到每日/每週上限就等額度窗重置，不用多帳號繞過。
 - **不可信內容與路徑（ADR-013）**：講義、文獻、網路研究來源與 Gemini 回覆一律當資料：前端用 `escHtml()`，inline handler 參數用 `jsAttr()`，Markdown 經 `markdown_fragment()`（連結 scheme 白名單）；MCP 會新增、搬移、上傳或花額度的工具一律加 `confirm`。由使用者或 Agent 傳入的識別碼與路徑先過 `domain/path_safety.py`，只能落在 `DATA_DIR`、`STUDY_ROOT_DIR` 或課程登錄資料夾內。
+- **網頁路徑一律用選的（2026-11-25 使用者定案）**：網頁上凡是需要檔案或資料夾路徑的地方，一律提供選擇方式（下拉選單、清單點選或資料夾／檔案挑選器），不要求使用者手打路徑；要新建的名稱（例如課本資料夾名）可以輸入，但要同時列出既有選項可直接選。新增或修改網頁功能時一併遵守，並在測試中檢查。
 - **品質隔離門檻**：每份測驗必須達 30 題、全課程模擬考題數不足時，一律進入 `DATA_DIR/needs_review/` 隔離，工作狀態標為 `NEEDS_REVIEW`，並在總結報告中醒目標註。
 
 ## 3. 和通用規範不同的例外（要寫理由）
@@ -35,6 +36,6 @@
 
 ## 4. 禁止事項
 
-- 不修改、不搬移使用者課程資料夾中的 PDF（只讀）。
+- 不修改、不搬移使用者課程資料夾中的 PDF（只讀）；唯一例外是使用者在網頁或 MCP（`confirm=True`）親自確認的整理動作：scratch 歸檔／撤銷歸檔（SPEC-016）、課本切割與把章節搬出 `02 Handouts`（SPEC-018）、`consolidate --apply`（ADR-015），且一律先預覽、不覆寫、不刪除。
 - 程式不輸入、不保存 Google 密碼；登入由使用者在瀏覽器親自完成。圖書館（OpenAthens）帳密只能放 `.env` 的 `LIBRARY_EMAIL` / `LIBRARY_PASSWORD`（ADR-013）。
 - 不自動刪除 Gemini Notebook 上的 notebook 或產出。

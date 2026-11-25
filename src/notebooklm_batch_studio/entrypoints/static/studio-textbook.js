@@ -41,9 +41,9 @@ async function openTextbookSplitFlow(code) {
     if (!books.length) { showToast('01 Materials 頂層沒有 PDF 課本。先把整本課本放進 01 Materials/。', 'info', 6000); return; }
     let book = books[0];
     if (books.length > 1) {
-      const list = books.map((b, i) => `${i + 1}. ${b.relative_path}${b.split ? '（已切割過）' : ''}`).join('\n');
-      const pick = window.prompt(`要切割哪一本？輸入編號：\n\n${list}`, '1');
-      book = books[Number(pick) - 1];
+      const options = books.map(b => ({ value: b.relative_path, label: `${b.relative_path}${b.split ? '（已切割過）' : ''}` }));
+      const chosen = await askPick('要切割哪一本課本？', options, { okLabel: '預覽章節' });
+      book = books.find(b => b.relative_path === chosen);
       if (!book) return;
     }
     const url = `/api/courses/${encodeURIComponent(code)}/textbooks/split`;
@@ -62,16 +62,35 @@ async function openTextbookSplitFlow(code) {
 }
 
 /**
+ * Choose the textbook folder inside 01 Materials from existing folders and textbook PDFs, or name a new one.
+ * @param {string} code Course code
+ * @returns {Promise<string|null>} Folder name, or null when cancelled
+ */
+async function _pickBookFolder(code) {
+  const enc = encodeURIComponent(code);
+  const [subs, books] = await Promise.all([
+    fetch(`/api/courses/${enc}/subfolders?category=${encodeURIComponent('01 Materials')}`).then(r => (r.ok ? r.json() : {})),
+    fetch(`/api/courses/${enc}/textbooks`).then(r => (r.ok ? r.json() : {})),
+  ]);
+  const names = new Set(subs.subfolders || []);
+  (books.textbooks || []).forEach(b => names.add(String(b.chapters_folder).split('/').pop()));
+  names.delete('Literature_Review');
+  if (!names.size) return _askNewFolderName();
+  const options = [...names].sort().map(n => ({ value: n, label: n }));
+  return askPick('把章節搬到 01 Materials 的哪個課本資料夾？', options, { okLabel: '預覽搬移', allowNew: true });
+}
+
+/**
  * Move chapter PDFs from 02 Handouts into 01 Materials/<book>/ after a preview (lecture numbers kept).
  * @param {string} code Course code
  * @returns {Promise<void>}
  */
 async function openRelocateHandoutsFlow(code) {
-  const name = window.prompt('課本名稱（會建立 01 Materials/<課本名稱>/ 資料夾）：', '');
-  if (!name || !name.trim()) return;
+  const name = await _pickBookFolder(code);
+  if (!name) return;
   const url = `/api/courses/${encodeURIComponent(code)}/textbooks/relocate-handouts`;
   try {
-    const preview = await _tbPost(url, { book_folder: name.trim(), dry_run: true });
+    const preview = await _tbPost(url, { book_folder: name, dry_run: true });
     const moves = preview.moves || [];
     if (!moves.length) { showToast('02 Handouts 裡沒有要搬的講次 PDF。', 'info'); return; }
     const conflicts = moves.filter(m => m.status === 'conflict');
@@ -79,7 +98,7 @@ async function openRelocateHandoutsFlow(code) {
     const list = moves.map(m => `L${m.no}　${m.filename}`).join('\n');
     const msg = `把 ${moves.length} 個章節 PDF 從 02 Handouts 搬到：\n${preview.destination}/\n\n${list}\n\n講次編號、已上傳的來源與已完成的產出都不會改變。`;
     if (!(await askConfirm(msg, { okLabel: `搬移 ${moves.length} 個檔案` }))) return;
-    await _tbPost(url, { book_folder: name.trim(), dry_run: false });
+    await _tbPost(url, { book_folder: name, dry_run: false });
     showToast(`已搬到 ${preview.destination}/`, 'success', 6000);
     await _tbRefresh(code);
   } catch (e) {

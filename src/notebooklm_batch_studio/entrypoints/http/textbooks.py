@@ -12,6 +12,8 @@ from pydantic import BaseModel, Field
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.adapters.pdf_textbook import PypdfTextbookTools
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
+from notebooklm_batch_studio.domain.path_safety import PathSafetyError
+from notebooklm_batch_studio.services.course_folders import list_category_subfolders
 from notebooklm_batch_studio.services.textbook_split import TextbookService
 
 logger = logging.getLogger(__name__)
@@ -103,3 +105,27 @@ def relocate_handouts(code: str, body: RelocateHandoutsRequest, request: Request
         request, lambda svc: svc.relocate_handouts(code, body.book_folder, body.dry_run)
     )
     return result
+
+
+@textbooks_router.get("/api/courses/{code}/subfolders", operation_id="list_course_subfolders")
+def list_course_subfolders(code: str, category: str, request: Request) -> dict[str, Any]:
+    """List existing subfolders of one course category for the web folder pickers.
+
+    Args:
+        code: Course identifier.
+        category: Category folder name such as `01 Materials`.
+        request: Incoming HTTP request.
+
+    Returns:
+        `{"subfolders": [...]}`.
+
+    Raises:
+        HTTPException: 404 for unknown courses, 400 for unsafe category names.
+    """
+    try:
+        with request.app.state.session_factory() as db:
+            return {"subfolders": list_category_subfolders(CourseRepository(db), code, category)}
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PathSafetyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

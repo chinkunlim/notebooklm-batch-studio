@@ -13,6 +13,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat: note files browser, course-complete notification, versioned adoption, backup pruning (SPEC-017) (by `@claude-code`)
 - feat(textbook): split textbooks into chapter PDFs and use them as lecture source (SPEC-018) (by `@claude-code`)
 - feat(web): output mode switch, note-generation resume, Gemini retention setting (SPEC-019) (by `@claude-code`)
+- feat(web): pick every path from a list (chapter PDF, literature subfolder, textbook folder) + guard test (by `@claude-code`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

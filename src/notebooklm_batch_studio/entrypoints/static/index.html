@@ -475,7 +475,7 @@
             <div><label class="small muted">模型</label><br><input id="ngModel" class="input" value="4 Argon" style="width:120px"></div>
           </div>
           <div class="row" style="gap:12px;flex-wrap:wrap;margin-top:10px">
-            <div><label class="small muted">章節 PDF 路徑 (Gemini 網頁版用)</label><br><input id="ngPdfPath" class="input" placeholder="選填：本機 PDF 路徑" style="width:320px"></div>
+            <div><label class="small muted">章節 PDF 路徑 (Gemini 網頁版用)</label><br><select id="ngPdfPath" class="input" style="width:320px"><option value="">（不指定 PDF）</option></select></div>
             <div><label class="small muted">Notebook ID (備用後端用)</label><br><input id="ngNotebookId" class="input" placeholder="選填：Gemini Notebook ID" style="width:220px"></div>
             <div><label class="small muted">Source IDs (逗號分隔)</label><br><input id="ngSourceIds" class="input" placeholder="選填：單章 source_id" style="width:200px"></div>
           </div>
@@ -595,7 +595,7 @@
               </div>
             </div>
             <label class="small">子資料夾 (Subfolder)
-              <input id="litSubfolderInput" class="input" type="text" value="Literature_Review" />
+              <select id="litSubfolderInput" class="input" onchange="onSubfolderPick(this)"><option value="Literature_Review">Literature_Review</option></select>
             </label>
             <div class="small">顯示篩選
               <div class="lit-select" id="litFilterSelectWrap" data-value="all">
@@ -1186,6 +1186,7 @@
 <script src="/static/studio-notes-gen.js"></script>
 <script src="/static/studio-record.js"></script>
 <script src="/static/studio-library.js"></script>
+<script src="/static/studio-pickers.js"></script>
 <script src="/static/studio-textbook.js"></script>
 <script src="/static/studio-nav.js"></script>
 <script src="/static/studio-player.js"></script>
