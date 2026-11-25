@@ -30,6 +30,7 @@
   7. **搬移既有章節**：`relocate_handouts(code, book_folder, dry_run=True)` 把該課程 `02 Handouts` 中屬於講次的 PDF 搬到 `01 Materials/<book_folder>/`，寫 `.textbook.json`；講次只更新 `category` 與 `relative_path`，`no`、`sha256`、`source_id`、`upload_status` 不變；目的地已有同名檔時停止並回錯誤，不覆寫。
   8. **三入口**：HTTP `GET /api/courses/{code}/textbooks`、`POST /api/courses/{code}/textbooks/split {relative_path, dry_run}`、`POST /api/courses/{code}/textbooks/relocate-handouts {book_folder, dry_run}`；MCP `list_textbooks`、`split_textbook(…, dry_run=True, confirm=False)`、`relocate_handouts_to_textbook(…, dry_run=True, confirm=False)`；網頁課程「進階工具」兩個選項，先預覽再確認。
 - **可選 (Nice to have)**：無書籤 PDF 的掃頁首文字偵測（literature-parser `get_sections_from_text`）。
+- **補充（2026-11-26，SPEC-025 R3）**：同一門課有多個課本資料夾時，切割前要選輸出資料夾（預覽會建議章節檔名最相符的一個），未選擇不寫入。
 - **補充（2026-11-25，ISSUE-073）**：課程已用課本章節當講次後，`02 Handouts` 出現 PDF 不會改變講次來源（SPEC-025 R4a）。
 - **不做 (Out of scope)**：同一門課同時用講義與課本章節當講次（「both」）；自動監看 `01 Materials` 新放入的整本課本。
 

@@ -885,6 +885,7 @@ notebooklm-batch-studio/
 │       │   ├── study_plan_service.py
 │       │   ├── study_service.py
 │       │   ├── sync_service.py
+│       │   ├── textbook_folders.py
 │       │   ├── textbook_split.py
 │       │   ├── watcher.py
 │       │   └── worker_pool.py
@@ -987,6 +988,7 @@ notebooklm-batch-studio/
 │   ├── test_study_library_web.py
 │   ├── test_study_plan.py
 │   ├── test_study_service.py
+│   ├── test_textbook_folder_choice.py
 │   ├── test_textbook_split.py
 │   ├── test_versions_and_options.py
 │   └── test_web_gap_fill.py

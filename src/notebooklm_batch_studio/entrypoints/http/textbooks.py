@@ -28,6 +28,9 @@ class SplitTextbookRequest(BaseModel):
 
     relative_path: str = Field(..., description="Course-relative path from GET /textbooks")
     dry_run: bool = Field(True, description="Preview only when True")
+    target_folder: str = Field(
+        "", description="Chapter folder name from folder_choices; required to apply when several exist"
+    )
 
 
 class RelocateHandoutsRequest(BaseModel):
@@ -86,7 +89,7 @@ def split_textbook(code: str, body: SplitTextbookRequest, request: Request) -> d
         Chapter plan or result.
     """
     result: dict[str, Any] = _run(
-        request, lambda svc: svc.split_textbook(code, body.relative_path, body.dry_run)
+        request, lambda svc: svc.split_textbook(code, body.relative_path, body.dry_run, body.target_folder)
     )
     return result
 

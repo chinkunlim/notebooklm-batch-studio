@@ -49,13 +49,23 @@ async function openTextbookSplitFlow(code, relativePath) {
       if (!book) return;
     }
     const url = `/api/courses/${encodeURIComponent(code)}/textbooks/split`;
-    const preview = await _tbPost(url, { relative_path: book.relative_path, dry_run: true });
+    let preview = await _tbPost(url, { relative_path: book.relative_path, dry_run: true });
+    let target_folder = '';
+    if (preview.needs_folder_choice) {
+      // Several textbook folders in this course: the user picks where the chapters go (SPEC-025 R3).
+      const suggested = String(preview.output_dir).split('/').pop();
+      const ordered = [...preview.folder_choices].sort((a, b) => (b.name === suggested) - (a.name === suggested));
+      const options = ordered.map(c => ({ value: c.name, label: `${c.name}（已有 ${c.chapters} 章）${c.name === suggested ? '　建議' : ''}` }));
+      target_folder = await askPick('這門課有多個課本資料夾，要切割到哪一個？', options, { okLabel: '預覽章節' });
+      if (!target_folder) return;
+      preview = await _tbPost(url, { relative_path: book.relative_path, dry_run: true, target_folder });
+    }
     const rows = preview.chapters.map(c => `${c.status === 'exists' ? '（已存在，略過）' : ''}${c.filename}　p.${c.start}-${c.end}`).join('\n');
     const todo = preview.chapters.filter(c => c.status === 'create').length;
     if (!todo) { showToast('所有章節都已切割過，沒有要新增的檔案。', 'info'); return; }
     const msg = `切割「${book.relative_path}」\n輸出到：${preview.output_dir}/\n新增 ${todo} 章（原本整本 PDF 不會動）：\n\n${rows}`;
     if (!(await askConfirm(msg, { okLabel: `切割 ${todo} 章` }))) return;
-    await _tbPost(url, { relative_path: book.relative_path, dry_run: false });
+    await _tbPost(url, { relative_path: book.relative_path, dry_run: false, target_folder });
     showToast(`已切割 ${todo} 章到 ${preview.output_dir}/`, 'success', 6000);
     await _tbRefresh(code);
     await loadPendingTextbooks();

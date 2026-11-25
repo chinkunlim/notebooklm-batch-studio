@@ -22,6 +22,7 @@ from notebooklm_batch_studio.domain.textbook_sections import (
     find_chapter_sections,
 )
 from notebooklm_batch_studio.services.course_parser import _collect_unique_lectures, uses_textbook_lectures
+from notebooklm_batch_studio.services.textbook_folders import chapter_folder, chosen_folder, folder_choices
 
 logger = logging.getLogger(__name__)
 
@@ -136,26 +137,6 @@ def _is_pdf(path: Path) -> bool:
     return path.is_file() and not path.name.startswith(".") and path.suffix.lower() == ".pdf"
 
 
-def _chapter_folder(pdf: Path) -> Path:
-    """Pick the chapter folder a whole-book PDF splits into. Refs: ISSUE-072
-
-    The book's own `<stem>/` folder when it exists; otherwise the course's only marked chapter folder
-    (chapters moved from `02 Handouts` live under the book's real title, which rarely matches the PDF
-    file name), so existing chapters are kept instead of duplicated as new lectures.
-
-    Args:
-        pdf: Textbook PDF in a materials folder.
-
-    Returns:
-        Chapter folder path (may not exist yet).
-    """
-    own = pdf.parent / pdf.stem
-    if own.is_dir():
-        return own
-    marked = [d for d in pdf.parent.iterdir() if d.is_dir() and (d / TEXTBOOK_MARKER).is_file()]
-    return marked[0] if len(marked) == 1 else own
-
-
 def _textbook_row(course_dir: Path, pdf: Path) -> dict[str, Any]:
     """Describe one textbook PDF and its chapter folder.
 
@@ -166,7 +147,7 @@ def _textbook_row(course_dir: Path, pdf: Path) -> dict[str, Any]:
     Returns:
         `{relative_path, chapters_folder, split}`.
     """
-    out = _chapter_folder(pdf)
+    out = chapter_folder(pdf)
     return {
         "relative_path": pdf.relative_to(course_dir).as_posix(),
         "chapters_folder": out.relative_to(course_dir).as_posix(),
@@ -316,7 +297,7 @@ class TextbookService:
         """
         pdf = course_dir / book["relative_path"]
         try:
-            _, plan = self._plan(pdf, _chapter_folder(pdf))
+            _, plan = self._plan(pdf, self._suggested_folder(pdf))
         except Exception as exc:  # unreadable PDF or no chapter bookmarks
             return {"relative_path": book["relative_path"], "chapters": 0, "existing": 0, "error": str(exc)}
         existing = sum(1 for _, status in plan if status == "exists")
@@ -368,20 +349,31 @@ class TextbookService:
         existing = {p.name[:5] for p in out_dir.glob("Ch*.pdf")} if out_dir.is_dir() else set()
         return entries, [(s, "exists" if s.filename[:5] in existing else "create") for s in sections]
 
-    def split_textbook(self, code: str, relative_path: str, dry_run: bool = True) -> dict[str, Any]:
+    def split_textbook(
+        self, code: str, relative_path: str, dry_run: bool = True, target_folder: str = ""
+    ) -> dict[str, Any]:
         """Preview or write chapter PDFs into `01 Materials/<book>/`; existing chapters are skipped.
 
         Args:
             code: Course code.
             relative_path: Course-relative textbook path from `list_textbooks`.
             dry_run: Preview only when True.
+            target_folder: Chapter folder name chosen by the user; required to apply when the course has
+                several chapter folders (SPEC-025 R3).
 
         Returns:
-            `{dry_run, source, output_dir, chapters: [{number, title, start, end, pages, filename, status}]}`.
+            `{dry_run, source, output_dir, needs_folder_choice, folder_choices,
+            chapters: [{number, title, start, end, pages, filename, status}]}`.
+
+        Raises:
+            ValueError: Applying without a needed folder choice, or an invalid choice.
         """
         course, course_dir = self._course(code)
         pdf = self._resolve_textbook(course_dir, relative_path)
-        out_dir = _chapter_folder(pdf)
+        choices = folder_choices(pdf, course_dir)
+        out_dir = chosen_folder(pdf, target_folder) if target_folder else self._suggested_folder(pdf)
+        if choices and not target_folder and not dry_run:
+            raise ValueError("這門課有多個課本資料夾，請先選擇要切割到哪一個")
         entries, plan = self._plan(pdf, out_dir)
         if not dry_run:
             self._write_chapters(pdf, out_dir, entries, plan)
@@ -389,7 +381,29 @@ class TextbookService:
             logger.info("Split %s into %d chapters for %s", pdf.name, len(plan), code)
         rows = [_section_row(s, st) for s, st in plan]
         rel_out = out_dir.relative_to(course_dir).as_posix()
-        return {"dry_run": dry_run, "source": relative_path, "output_dir": rel_out, "chapters": rows}
+        choice = {"needs_folder_choice": bool(choices) and not target_folder, "folder_choices": choices}
+        return {
+            "dry_run": dry_run,
+            "source": relative_path,
+            "output_dir": rel_out,
+            **choice,
+            "chapters": rows,
+        }
+
+    def _suggested_folder(self, pdf: Path) -> Path:
+        """Default chapter folder, ranking several marked folders by the book's chapter file names.
+
+        Args:
+            pdf: Textbook PDF.
+
+        Returns:
+            Suggested chapter folder.
+        """
+        try:
+            names = [s.filename for s in find_chapter_sections(*self.pdf.read_outline(pdf))]
+        except Exception:  # unreadable PDF: _plan reports the real error
+            names = []
+        return chapter_folder(pdf, names)
 
     def _write_chapters(
         self, pdf: Path, out_dir: Path, entries: list[OutlineEntry], plan: list[tuple[ChapterSection, str]]

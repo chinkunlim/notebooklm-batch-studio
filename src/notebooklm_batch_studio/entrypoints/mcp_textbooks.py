@@ -134,6 +134,44 @@ def _register_split_tool(mcp: MCPServer, run: Runner) -> None:
         return run(lambda svc: {"confirmed": True, **svc.split_textbook(code, relative_path, dry_run)})
 
 
+def _register_split_into_folder_tool(mcp: MCPServer, run: Runner) -> None:
+    """Register `split_textbook_into_folder` for courses with several chapter folders (SPEC-025 R3).
+
+    Args:
+        mcp: MCPServer instance.
+        run: Service runner.
+    """
+
+    @mcp.tool()
+    def split_textbook_into_folder(
+        code: str, relative_path: str, target_folder: str, confirm: bool = False
+    ) -> str:
+        """Split a textbook into the chosen chapter folder (requires confirm=True).
+
+        Use when `split_textbook` (preview) returns `needs_folder_choice`; `target_folder` is a `name`
+        from its `folder_choices` (its `output_dir` is the suggested one).
+
+        Args:
+            code: Course identifier.
+            relative_path: Path from `list_textbooks`.
+            target_folder: Chapter folder name inside 01 Materials.
+            confirm: Must be True to write the chapter PDFs.
+
+        Returns:
+            JSON result, or a confirmation warning.
+        """
+        if not confirm:
+            return confirm_warning(
+                "Pass confirm=True to split the textbook into this folder.", code=code, dry_run=False
+            )
+        return run(
+            lambda svc: {
+                "confirmed": True,
+                **svc.split_textbook(code, relative_path, dry_run=False, target_folder=target_folder),
+            }
+        )
+
+
 def _register_relocate_tool(mcp: MCPServer, run: Runner) -> None:
     """Register `relocate_handouts_to_textbook`.
 
@@ -174,5 +212,6 @@ def register_textbook_tools(mcp: MCPServer, cfg: AppConfig, session_factory: Any
     _register_list_tool(mcp, run)
     _register_pending_tool(mcp, run)
     _register_split_tool(mcp, run)
+    _register_split_into_folder_tool(mcp, run)
     _register_relocate_tool(mcp, run)
     logger.debug("Registered textbook MCP tools")
