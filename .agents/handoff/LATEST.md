@@ -5,17 +5,17 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-25 09:09 UTC`
+- **最後更新時間**: `2026-11-25 11:20 UTC`
 - **最近操作 Agent**: `claude-code`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `08265f1 docs(plan): SPEC-021 and implementation plan for learning-site artifacts, with sanitized Studio row fixture [agent:claude-code]`
+- **最新 Git Commit**: `37394d9 docs(records): add ISSUE-070 (notebooklm-py rejects HTML downloads) and guard false-positive feedback; ruff-format learning-site plan [agent:claude-code]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
 | **TASK-036**<br/>User manual verification and housekeeping checklist | ⚪ `open` | `-` | `-` | - | - | **TODO**: 使用者實機確認與整理清單，見 .agents/tasks/TASK-036-checklist.md（逐項勾選並附證據）。 |
-| **TASK-040**<br/>Learning-site artifacts (per lecture and whole book) via Gemini Notebook chat and Studio download | ⚪ `open` | `-` | `-` | `docs/specs/021-learning-site-artifacts.md`, `docs/superpowers/plans/2026-11-25-learning-site-artifacts.md` | - | **TODO**: 依 docs/superpowers/plans/2026-11-25-learning-site-artifacts.md 實作 Task 1–6（SPEC-021）。Task 6 Step 2 真實資料驗收會用 Gemini Notebook 額度，需使用者同意。 |
+| **TASK-040**<br/>Learning-site artifacts (per lecture and whole book) via Gemini Notebook chat and Studio download | 🟢 `in_progress` | `claude-code` | `-` | `docs/specs/021-learning-site-artifacts.md`, `docs/superpowers/plans/2026-11-25-learning-site-artifacts.md` | - | **TODO**: 依 docs/superpowers/plans/2026-11-25-learning-site-artifacts.md 實作 Task 1–6（SPEC-021）。Task 6 Step 2 真實資料驗收會用 Gemini Notebook 額度，需使用者同意。 |
 | **TASK-041**<br/>Link 115-1_CP30210 to its existing Gemini Notebook without re-uploading (decision D4) | ⚪ `open` | `-` | `-` | - | - | **TODO**: 見 docs/superpowers/plans/2026-11-25-next-session-master-plan.md §3 W2；先問使用者 D4。 |
 | **TASK-042**<br/>Investigate blocked Playwright sign-in and move it to real Chrome + CDP (decision D3) | ⚪ `open` | `-` | `-` | - | - | **TODO**: 見總計畫 §3 W3；先問使用者 D3（被擋的是哪一個登入）。 |
 | **TASK-043**<br/>Deprecate migrate-study-layout in favour of consolidate (decision D5) | ⚪ `open` | `-` | `-` | - | - | **TODO**: 見總計畫 §3 W4；先問使用者 D5。 |
@@ -23,6 +23,10 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-25 11:20 UTC] 認領任務 `TASK-040` (Learning-site artifacts (per lecture and whole book) via Gemini Notebook chat and Studio download) (by `claude-code`)
+- **相關範圍**: `docs/specs/021-learning-site-artifacts.md, docs/superpowers/plans/2026-11-25-learning-site-artifacts.md`
+- **延續待辦事項**: 依 docs/superpowers/plans/2026-11-25-learning-site-artifacts.md 實作 Task 1–6（SPEC-021）。Task 6 Step 2 真實資料驗收會用 Gemini Notebook 額度，需使用者同意。
 
 ### [2026-11-25 09:09 UTC] 交接：下一個對話的總實作計畫 (by `claude-code`)
 - **開工先讀**：`docs/superpowers/plans/2026-11-25-next-session-master-plan.md`（狀態快照、決策 D1–D6、工作項目 W1–W7、注意事項）
@@ -110,7 +114,3 @@
 ### [2026-11-24 08:18 UTC] 完成任務 `TASK-033` — Audit records, unify MCP confirm format, and document cross-repo decisions (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Audited SPEC/ADR/ISSUE/TASK/CHANGELOG traceability with verifiable command/git/line evidence, mapped note-studio & literature-fetch cross-repo refs, documented StepValidator/calculate_outline_words/unported tests decisions, unified all 25 mutating MCP confirm=False payloads via mcp_confirm.py, and verified SPEC acceptance criteria.
-
-### [2026-11-24 08:04 UTC] 建立任務 `TASK-033`: Audit records, unify MCP confirm format, and document cross-repo decisions (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`

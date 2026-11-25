@@ -43,6 +43,7 @@ _ACTION_PREFIXES = (
     ("mock_exam", "quiz"),
     ("study_guide", "reports"),
     ("reports", "reports"),
+    ("learning_site", "canvas"),  # SPEC-021: sites count against the usage meter's canvas row
 )
 
 

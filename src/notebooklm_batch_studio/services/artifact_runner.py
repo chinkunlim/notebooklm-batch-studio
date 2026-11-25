@@ -85,6 +85,9 @@ SIMPLE_OUTPUTS: dict[ArtifactType, tuple[str, str, str]] = {
     ArtifactType.COURSE_DATA_TABLE: ("data_table", "data_table.csv", "course_data_table.csv"),
     ArtifactType.VIDEO: ("video", "video.mp4", "course_video.mp4"),
     ArtifactType.COURSE_VIDEO: ("video", "video.mp4", "course_video.mp4"),
+    # SPEC-021: produced by LearningSiteRunner, listed here so adopt_outputs recognises the files
+    ArtifactType.LEARNING_SITE: ("learning_site", "learning_site.html", "course_learning_site.html"),
+    ArtifactType.COURSE_LEARNING_SITE: ("learning_site", "learning_site.html", "course_learning_site.html"),
 }
 MIND_MAP_TYPES = (ArtifactType.MIND_MAP, ArtifactType.COURSE_MIND_MAP)
 

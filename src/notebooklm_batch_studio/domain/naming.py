@@ -69,6 +69,12 @@ _GUIDE: tuple[ArtifactNaming, ...] = (
     ArtifactNaming("slide_deck", "投影片", "可下載 PDF 或 PPTX", "slide_deck.pdf"),
     ArtifactNaming("data_table", "資料表", "比較整理表", "data_table.csv"),
     ArtifactNaming("video", "影片摘要", "講解影片", "video.mp4"),
+    ArtifactNaming(
+        "learning_site",
+        "學習網頁",
+        "互動＋視覺化的單講學習網頁（Gemini Notebook 產生）",
+        "learning_site.html",
+    ),
     ArtifactNaming("reports_briefing", "報告・簡報文件", "Briefing Doc", "<課程>_L01_briefing_doc.md"),
     ArtifactNaming(
         "reports_study_guide", "報告・讀書指南", "Study Guide 格式報告", "<課程>_L01_study_guide.md"
@@ -105,6 +111,12 @@ _GUIDE: tuple[ArtifactNaming, ...] = (
     ArtifactNaming("course_slide_deck", "全課程投影片", "整門課摘要投影片", "course_slide_deck.pdf"),
     ArtifactNaming("course_data_table", "全課程資料表", "整門課總表", "course_data_table.csv"),
     ArtifactNaming("course_video", "全課程影片", "整門課講解影片", "course_video.mp4"),
+    ArtifactNaming(
+        "course_learning_site",
+        "整本書學習網頁",
+        "整本書的互動學習網頁",
+        "_course_synthesis/course_learning_site.html",
+    ),
     ArtifactNaming(
         "course_reports_briefing",
         "全課程報告・簡報文件",

@@ -413,3 +413,7 @@
 ### [2026-11-24 08:04 UTC] 完成任務 `TASK-032` — Resolve ISSUE-054: close stale running literature jobs on startup (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Closed stale running literature_jobs as failed on LiteratureJobRunner startup, handled BaseException in worker, and ported StaleJobTest (ISSUE-054)
+
+### [2026-11-24 08:04 UTC] 建立任務 `TASK-033`: Audit records, unify MCP confirm format, and document cross-repo decisions (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

@@ -49,6 +49,7 @@ class ArtifactType(str, Enum):
     SLIDE_DECK = "slide_deck"
     DATA_TABLE = "data_table"
     VIDEO = "video"
+    LEARNING_SITE = "learning_site"  # Interactive HTML site made via chat (SPEC-021)
     REPORTS_BRIEFING = "reports_briefing"
     REPORTS_STUDY_GUIDE = "reports_study_guide"
     REPORTS_BLOG_POST = "reports_blog_post"
@@ -65,6 +66,7 @@ class ArtifactType(str, Enum):
     COURSE_INFOGRAPHIC = "course_infographic"  # Course-wide infographic
     COURSE_DATA_TABLE = "course_data_table"  # Course-wide data table
     COURSE_VIDEO = "course_video"  # Course-wide cinematic video
+    COURSE_LEARNING_SITE = "course_learning_site"  # Whole-book interactive site (SPEC-021)
     COURSE_REPORTS_BRIEFING = "course_reports_briefing"
     COURSE_REPORTS_STUDY_GUIDE = "course_reports_study_guide"
     COURSE_REPORTS_BLOG_POST = "course_reports_blog_post"
@@ -296,6 +298,12 @@ def get_course_range_prefix(lectures: list[Lecture]) -> str:
     return f"{first_pre}-{last_pre}"
 
 
+# SPEC-021: produced through Gemini Notebook chat + Studio download, not a generate_* call
+LEARNING_SITE_TYPES: tuple[ArtifactType, ...] = (
+    ArtifactType.LEARNING_SITE,
+    ArtifactType.COURSE_LEARNING_SITE,
+)
+
 ENGLISH_ARTIFACT_TITLES: dict[str, str] = {
     ArtifactType.AUDIO.value: "Audio Overview",
     ArtifactType.QUIZ_1.value: "Quiz 1 - Fundamentals",
@@ -310,6 +318,7 @@ ENGLISH_ARTIFACT_TITLES: dict[str, str] = {
     ArtifactType.INFOGRAPHIC.value: "Infographic",
     ArtifactType.DATA_TABLE.value: "Data Table",
     ArtifactType.VIDEO.value: "Video Overview",
+    ArtifactType.LEARNING_SITE.value: "Learning Site",
     ArtifactType.REPORTS_BRIEFING.value: "Reports - Briefing Doc",
     ArtifactType.REPORTS_STUDY_GUIDE.value: "Reports - Study Guide",
     ArtifactType.REPORTS_BLOG_POST.value: "Reports - Blog Post",
@@ -324,6 +333,7 @@ ENGLISH_ARTIFACT_TITLES: dict[str, str] = {
     ArtifactType.COURSE_INFOGRAPHIC.value: "Comprehensive Infographic",
     ArtifactType.COURSE_DATA_TABLE.value: "Master Data Table",
     ArtifactType.COURSE_VIDEO.value: "Course Video Overview",
+    ArtifactType.COURSE_LEARNING_SITE.value: "Whole-Book Learning Site",
     ArtifactType.COURSE_REPORTS_BRIEFING.value: "Course Reports - Briefing Doc",
     ArtifactType.COURSE_REPORTS_STUDY_GUIDE.value: "Course Reports - Synthesis Study Guide",
     ArtifactType.COURSE_REPORTS_BLOG_POST.value: "Course Reports - Blog Post",

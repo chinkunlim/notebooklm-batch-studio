@@ -15,6 +15,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(web): output mode switch, note-generation resume, Gemini retention setting (SPEC-019) (by `@claude-code`)
 - feat(web): pick every path from a list (chapter PDF, literature subfolder, textbook folder) + guard test (by `@claude-code`)
 - feat: textbook detection card, background Gemini note schedule, quota resume at reset time (SPEC-020) (by `@claude-code`)
+- feat(types): add learning_site and course_learning_site artifact types (SPEC-021 Task 1) (by `@claude-code`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
