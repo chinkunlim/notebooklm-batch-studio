@@ -22,6 +22,7 @@ from notebooklm_batch_studio.services.course_display_name import set_course_disp
 from notebooklm_batch_studio.services.course_lifecycle import CourseLifecycleService
 from notebooklm_batch_studio.services.filing import FilingService, FilingTarget
 from notebooklm_batch_studio.services.learning_record import LearningRecordService, RecordRepos
+from notebooklm_batch_studio.services.new_course_folders import find_new_course_folders
 from notebooklm_batch_studio.services.study_library import StudyLibraryService
 
 if TYPE_CHECKING:
@@ -151,6 +152,28 @@ def _register_scan_tools(mcp: MCPServer, cfg: AppConfig, session_factory: Any) -
         with session_factory() as db:
             items = FilingService(cfg, CourseRepository(db)).list_unfiled(kind)
         return _dumps({"items": items})
+
+
+def _register_new_folders_tool(mcp: MCPServer, cfg: AppConfig, session_factory: Any) -> None:
+    """Register `list_new_course_folders` (read-only, SPEC-027).
+
+    Args:
+        mcp: MCPServer instance.
+        cfg: Application configuration.
+        session_factory: SQLAlchemy session factory.
+    """
+
+    @mcp.tool()
+    def list_new_course_folders() -> str:
+        """List course folders created or pasted under study/<term>/ (current term or later) not yet added.
+
+        Add one with `add_courses` (its `path`); nothing is registered or scheduled by this tool.
+
+        Returns:
+            JSON string with `folders`: term, folder, path, code, name, lecture_count.
+        """
+        with session_factory() as db:
+            return _dumps({"folders": find_new_course_folders(cfg, CourseRepository(db))})
 
 
 def _register_record_tools(mcp: MCPServer, cfg: AppConfig, session_factory: Any) -> None:
@@ -446,6 +469,7 @@ def register_study_library_tools(mcp: MCPServer, cfg: AppConfig, session_factory
     """
     _register_layout_tool(mcp, cfg)
     _register_scan_tools(mcp, cfg, session_factory)
+    _register_new_folders_tool(mcp, cfg, session_factory)
     _register_record_tools(mcp, cfg, session_factory)
     _register_past_courses_tool(mcp, cfg, session_factory)
     _register_study_folder_tool(mcp, cfg, session_factory)

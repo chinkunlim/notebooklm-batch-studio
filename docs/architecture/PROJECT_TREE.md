@@ -312,6 +312,7 @@ notebooklm-batch-studio/
 │   │   ├── 024-link-record-only-course-to-existing-notebook.md
 │   │   ├── 025-robustness-backlog.md
 │   │   ├── 026-pending-acceptance-and-manual-tests.md
+│   │   ├── 027-new-course-folders-and-textbook-watch.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -871,6 +872,7 @@ notebooklm-batch-studio/
 │       │   ├── legacy_consolidation.py
 │       │   ├── legacy_consolidation_ops.py
 │       │   ├── legacy_consolidation_planner.py
+│       │   ├── new_course_folders.py
 │       │   ├── notebook_login.py
 │       │   ├── orchestrator.py
 │       │   ├── preferences_service.py
@@ -961,6 +963,7 @@ notebooklm-batch-studio/
 │   ├── test_literature_chrome_cdp.py
 │   ├── test_migrate_study_layout_retired.py
 │   ├── test_needs_review_and_ollama.py
+│   ├── test_new_course_folders.py
 │   ├── test_no_native_dialogs.py
 │   ├── test_note_pipeline_behaviors.py
 │   ├── test_note_pipeline_phase1.py

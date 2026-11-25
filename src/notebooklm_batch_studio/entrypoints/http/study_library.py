@@ -25,6 +25,7 @@ from notebooklm_batch_studio.services.course_display_name import set_course_disp
 from notebooklm_batch_studio.services.course_lifecycle import CourseLifecycleService
 from notebooklm_batch_studio.services.filing import FilingService, FilingTarget
 from notebooklm_batch_studio.services.learning_record import LearningRecordService, RecordRepos
+from notebooklm_batch_studio.services.new_course_folders import find_new_course_folders
 from notebooklm_batch_studio.services.study_library import StudyLibraryService
 
 logger = logging.getLogger(__name__)
@@ -213,6 +214,22 @@ def register_study_folder(body: RegisterFolderRequest, request: Request) -> dict
             )
     except (FileNotFoundError, ValueError, PathSafetyError) as exc:
         raise _map_error(exc) from exc
+
+
+@study_library_router.get(
+    "/api/study/new-course-folders", tags=["StudyLibrary"], operation_id="list_new_course_folders"
+)
+def list_new_course_folders(request: Request) -> dict[str, Any]:
+    """List course folders created or pasted under study/<term>/ (current term or later) not yet added.
+
+    Args:
+        request: Incoming HTTP request.
+
+    Returns:
+        `{"folders": [{term, folder, path, code, name, lecture_count}]}` (SPEC-027).
+    """
+    with _session(request) as db:
+        return {"folders": find_new_course_folders(request.app.state.config, CourseRepository(db))}
 
 
 @study_library_router.get("/api/study/unfiled", tags=["StudyLibrary"], operation_id="list_unfiled")

@@ -36,3 +36,4 @@
 | [024-link-record-only-course-to-existing-notebook](024-link-record-only-course-to-existing-notebook.md) | Draft | 只記錄的課程連結既有 Gemini Notebook（依檔名對來源、不重新上傳），以產生新產出；使用者決定暫停 | TASK-041 |
 | [025-robustness-backlog](025-robustness-backlog.md) | Draft | 穩定性待辦：筆記排程跨程序檔案鎖、notebooklm-py 升級把關、多本課本選資料夾、講次來源切換防護與「both」 | 盤點 2026-11-25 |
 | [026-pending-acceptance-and-manual-tests](026-pending-acceptance-and-manual-tests.md) | Draft | 尚待驗收項目與使用者實機測試步驟（整本書學習網頁、課本切割、額度續跑、完成通知、TASK-036） | TASK-036、TASK-040 |
+| [027-new-course-folders-and-textbook-watch](027-new-course-folders-and-textbook-watch.md) | Implemented | 偵測已建立但未加入的新課程資料夾（批次排程提示卡、HTTP、MCP）、加入時補建 01–05、watch 跟著課本章節（新章節加入講次不排程、整本課本只提示切割） | 使用者 2026-11-26 |

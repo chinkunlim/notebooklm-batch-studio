@@ -57,10 +57,23 @@ def _copy_pdfs_to_handouts(src: Path, handouts_dir: Path) -> int:
     return copied
 
 
+def _ensure_course_tree(folder: Path, config: AppConfig) -> None:
+    """Create the missing 01–05 folders of a course folder created or pasted as study/<term>/<course>/.
+
+    Existing files are never moved; deeper folders inside a course are left alone (SPEC-027).
+
+    Args:
+        folder: Folder inside `study/`.
+        config: Application config providing `study_root_dir` and `study_layout`.
+    """
+    if folder.resolve().parent.parent == config.study_root_dir.resolve():
+        config.study_layout.ensure_tree(folder)
+
+
 def place_course_folder_in_study(src: Path, config: AppConfig, metadata: dict[str, str]) -> Path:
     """Place an external folder into `DATA_DIR/study/<term>/<folder>/02 Handouts/` when metadata is set.
 
-    Folders already inside `config.study_root_dir` are returned untouched. External folders without
+    Folders inside `study/` stay in place (missing 01–05 are created, SPEC-027). External folders without
     `term`/`course_no` also pass through untouched to preserve legacy CLI/test behavior.
 
     Args:
@@ -75,6 +88,7 @@ def place_course_folder_in_study(src: Path, config: AppConfig, metadata: dict[st
         ValueError: When `term` is given without a resolvable `course_no`.
     """
     if is_within(src, config.study_root_dir):
+        _ensure_course_tree(src, config)
         return src
     term = (metadata.get("term") or "").strip().replace("_", "-")
     raw_no = (metadata.get("course_no") or "").strip()

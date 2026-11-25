@@ -208,6 +208,7 @@ async function confirmAddFolders() {
     await fetchStatus();
     await fetchCourses();
     await initStudyPortal();
+    if (typeof loadNewCourseFolders === 'function') await loadNewCourseFolders();  // SPEC-027
   } catch (e) {
     showToast('加入失敗：' + e.message, 'error');
   }

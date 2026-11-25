@@ -1,7 +1,8 @@
 """Course folder watcher: detects newly added lecture PDFs and triggers automatic processing.
 
-Monitors `DATA_DIR/input/courses/` recursively, ensures incoming files have finished
-copying, and invokes orchestrator callbacks to scan and enqueue new jobs.
+Monitors `DATA_DIR/study/` recursively, ensures incoming files have finished copying, and passes
+handouts (`02 Handouts`), new textbook chapters (`01 Materials/<book>/` marked folders) and whole
+books (top of `01 Materials`) to the entrypoint callback (SPEC-027).
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from watchdog.observers.api import BaseObserver
 
 from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
+from notebooklm_batch_studio.domain.textbook_sections import TEXTBOOK_MARKER
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +54,39 @@ def _wait_for_file_settled(file_path: Path, max_wait: float = 10.0, check_interv
     return file_path.exists() and file_path.stat().st_size > 0
 
 
+def watch_kind(course_dir: Path, pdf: Path, layout: StudyLayout = DEFAULT_LAYOUT) -> str | None:
+    """Classify a new PDF inside a course folder for the watcher (SPEC-027).
+
+    Args:
+        course_dir: Course study directory.
+        pdf: New PDF inside the course.
+        layout: Study category layout.
+
+    Returns:
+        `handout` (`02 Handouts`), `chapter` (a `.textbook.json` folder inside `01 Materials`),
+        `textbook` (top of `01 Materials`), or None for everything else.
+    """
+    try:
+        rel = pdf.relative_to(course_dir)
+    except ValueError:
+        return None
+    if len(rel.parts) < 2:
+        return None
+    role = layout.role_of(rel.parts[0])
+    if role == CategoryRole.HANDOUTS:
+        return "handout"
+    if role != CategoryRole.MATERIALS:
+        return None
+    if len(rel.parts) == 2:
+        return "textbook"
+    marked = len(rel.parts) == 3 and (course_dir / rel.parent / TEXTBOOK_MARKER).is_file()
+    return "chapter" if marked else None
+
+
 class CoursePdfEventHandler(FileSystemEventHandler):
     """File system event handler targeting course lecture PDFs."""
 
-    # Restricts triggers to HANDOUTS PDFs inside registered study courses.
+    # Restricts triggers to handouts, textbook chapters and whole books inside registered courses.
 
     def __init__(
         self,
@@ -114,7 +145,7 @@ class CoursePdfEventHandler(FileSystemEventHandler):
     def _process_event_path(self, target_path: Path) -> None:
         """Verify and forward detected PDF files.
 
-        Accepts PDFs inside a registered course's HANDOUTS category.
+        Accepts the PDFs `watch_kind` recognises inside a registered course.
 
         Args:
             target_path: File system path of the event.
@@ -131,13 +162,10 @@ class CoursePdfEventHandler(FileSystemEventHandler):
         if raw_course_dir is None:
             return
         course_dir = raw_course_dir.resolve()
-        try:
-            rel = resolved.relative_to(course_dir)
-        except ValueError:
+        kind = watch_kind(course_dir, resolved, self.layout)
+        if kind is None:
             return
-        if len(rel.parts) < 2 or self.layout.role_of(rel.parts[0]) != CategoryRole.HANDOUTS:
-            return
-        logger.info("Detected new handout PDF: %s in course %s", resolved.name, course_dir.name)
+        logger.info("Detected new %s PDF: %s in course %s", kind, resolved.name, course_dir.name)
         if _wait_for_file_settled(resolved):
             try:
                 self.on_pdf_detected(course_dir, resolved)

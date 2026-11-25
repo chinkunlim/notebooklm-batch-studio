@@ -138,6 +138,7 @@ async function dismissPendingTextbook(code, relativePath) {
   keys.add(`${code}|${relativePath}`);
   prefSave('textbookDismissed', JSON.stringify([...keys]));
   await loadPendingTextbooks();
+  await loadNewCourseFolders();
 }
 
 /**
@@ -193,8 +194,43 @@ async function loadPendingTextbooks() {
   }
 }
 
+/**
+ * Show a card on 批次排程 for every course folder created or pasted under study/<term>/ but not added yet
+ * (SPEC-027). The button opens the add-course wizard with the folder already picked; nothing is scheduled.
+ * @returns {Promise<void>}
+ */
+async function loadNewCourseFolders() {
+  const host = document.getElementById('newCourseFolderHost');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/study/new-course-folders');
+    if (!res.ok) return;
+    const skip = new Set(_dismissedTextbooks());
+    const rows = ((await res.json()).folders || []).filter(f => !skip.has(`newcourse|${f.path}`));
+    host.innerHTML = rows.map(f => `<article class="card" style="margin-bottom:12px"><div class="row" style="justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+      <div style="min-width:0"><b>偵測到新課程資料夾：${escHtml(f.folder)}</b>（${escHtml(f.term)}）<br>
+      <span class="small muted">${f.lecture_count} 份講義 PDF・還沒加入，加入後才會排程</span></div>
+      <div class="row" style="gap:8px"><button class="btn btn-primary btn-sm" onclick="openAddCourseForFolder(${jsAttr(f.path)})">加入課程…</button>
+      <button class="btn btn-ghost btn-sm" onclick="dismissPendingTextbook('newcourse', ${jsAttr(f.path)})">略過</button></div>
+    </div></article>`).join('');
+  } catch (e) {
+    console.warn('Could not check for new course folders:', e);
+  }
+}
+
+/**
+ * Open the add-course wizard with one folder already picked.
+ * @param {string} path Absolute course folder path
+ */
+function openAddCourseForFolder(path) {
+  openAddModal();
+  pickedFolders = [];
+  addPickedFolder(path);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   loadPendingTextbooks();
-  setInterval(loadPendingTextbooks, 60000);
+  loadNewCourseFolders();
+  setInterval(() => { loadPendingTextbooks(); loadNewCourseFolders(); }, 60000);
 });
 

@@ -285,7 +285,7 @@ class WatcherReverseImportScratchTests(unittest.TestCase):
         self.tmpdir.cleanup()
 
     def test_watcher_triggers_only_on_registered_course_handouts_pdf(self) -> None:
-        """Watcher accepts only 02 Handouts PDFs for registered courses; ignores Homework/Materials/專題."""
+        """Watcher forwards 02 Handouts PDFs and whole books in 01 Materials (SPEC-027); ignores the rest."""
         reg = self.cfg.study_root_dir / "115-1" / "CP__30000-團體諮商"
         for sub in ("01 Materials", "02 Handouts", "04 Homework"):
             (reg / sub).mkdir(parents=True, exist_ok=True)
@@ -314,7 +314,8 @@ class WatcherReverseImportScratchTests(unittest.TestCase):
             for f in (p_hw, p_mat, p_unreg, p_handout):
                 handler._process_event_path(f)
 
-        self.assertEqual(detected, [(reg.resolve(), p_handout.resolve())])
+        # A whole book at the top of 01 Materials is forwarded so watch can print the split hint (SPEC-027).
+        self.assertEqual(detected, [(reg.resolve(), p_mat.resolve()), (reg.resolve(), p_handout.resolve())])
 
     def test_reverse_import_writes_to_study_term_record_only(self) -> None:
         """ReverseImportService requires term, stores files in study/<term>/, sets RECORD_ONLY/ARCHIVED."""

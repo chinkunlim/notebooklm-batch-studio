@@ -28,10 +28,14 @@ from notebooklm_batch_studio.domain.models import CourseStatus, JobStatus, Profi
 from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.services.completion_notice import course_complete_hook
-from notebooklm_batch_studio.services.course_parser import scan_course_directory, uses_textbook_lectures
+from notebooklm_batch_studio.services.course_parser import (
+    keep_lecture_source,
+    scan_course_directory,
+    uses_textbook_lectures,
+)
 from notebooklm_batch_studio.services.notebook_login import LoginInProgressError
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
-from notebooklm_batch_studio.services.watcher import CourseWatcher
+from notebooklm_batch_studio.services.watcher import CourseWatcher, watch_kind
 from notebooklm_batch_studio.services.worker_pool import WorkerPool
 
 logger = logging.getLogger(__name__)
@@ -240,7 +244,54 @@ def _resolve_registered_study_dir(pdf_path: Path, env: _BatchEnv) -> Path | None
 
 
 def _on_pdf_detected(course_dir: Path, pdf_path: Path, env: _BatchEnv) -> None:
-    """Handle arrival of new lecture PDF file by registering and queuing.
+    """Handle a new PDF from `watch` according to where it landed (SPEC-027).
+
+    Whole books at the top of `01 Materials` only get a hint; new chapters in a textbook folder become
+    lectures without scheduling; `02 Handouts` PDFs are registered and scheduled as before.
+
+    Args:
+        course_dir: Course study directory path.
+        pdf_path: Newly stabilized PDF path.
+        env: Bundled engine, Gemini Notebook adapter, and config.
+    """
+    kind = watch_kind(course_dir, pdf_path, env.config.study_layout)
+    if kind == "textbook":
+        logger.info("Whole textbook detected by watch: %s (not split automatically)", pdf_path.name)
+        print(f"\n📚 偵測到課本：{pdf_path.name}。請到網頁「批次排程」按「預覽並切割」（不會自動切割）。")
+        return
+    if kind == "chapter":
+        _add_chapter_lectures(course_dir, pdf_path, env)
+        return
+    _register_handout(course_dir, pdf_path, env)
+
+
+def _add_chapter_lectures(course_dir: Path, pdf_path: Path, env: _BatchEnv) -> None:
+    """Rescan a textbook course so a new chapter becomes a lecture; nothing is scheduled (SPEC-027).
+
+    Args:
+        course_dir: Course study directory path.
+        pdf_path: New chapter PDF.
+        env: Bundled engine, Gemini Notebook adapter, and config.
+    """
+    layout = env.config.study_layout
+    with session_scope(env.engine) as session:
+        repo = CourseRepository(session)
+        existing = next((c for c in repo.list_courses() if c.study_dir == str(course_dir.resolve())), None)
+        if existing is None:
+            return
+        scanned = scan_course_directory(
+            course_dir, custom_code=existing.code, term=existing.term, layout=layout
+        )
+        course = keep_lecture_source(scanned, existing, layout)
+        repo.save_course(course)
+    added = len(course.lectures) - len(existing.lectures)
+    logger.info("Chapter %s synced for %s: %d new lectures", pdf_path.name, existing.code, added)
+    print(f"\n📖 偵測到新章節：{pdf_path.name}，已加入講次（新增 {added} 講）。")
+    print("   到網頁按「開始生成」才會產生產出。")
+
+
+def _register_handout(course_dir: Path, pdf_path: Path, env: _BatchEnv) -> None:
+    """Register a new `02 Handouts` PDF and queue its jobs (skipped for textbook courses, ISSUE-073).
 
     Args:
         course_dir: Course study directory path.
