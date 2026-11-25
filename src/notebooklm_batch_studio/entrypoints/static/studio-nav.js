@@ -137,6 +137,7 @@ function showView(view) {
   if (view === 'notesgen' && window.initNoteGenPanel) window.initNoteGenPanel();
   if (view === 'record' && window.loadLearningRecordView) window.loadLearningRecordView();
   if (view === 'custom' && window.loadSignInStatus) window.loadSignInStatus();
+  if (view === 'custom' && window.loadBackupsCard) window.loadBackupsCard();
   if (view === 'queue') {
     animateRings($('#view-queue'));
     if (!activeCourseCode && currentCoursesList.length) viewCourseDetail(currentCoursesList[0].code);

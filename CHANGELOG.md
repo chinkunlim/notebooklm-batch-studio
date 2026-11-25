@@ -10,6 +10,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(demo): add term grouping, record-only course, and adopted outputs to demo (by `@antigravity`)
 - feat(install): add one-command install.sh and update.sh with pre-migration DB backup (by `@claude-code`)
 - feat(study): web entry points for library registration, scratch filing and course display name (SPEC-016) (by `@claude-code`)
+- feat: note files browser, course-complete notification, versioned adoption, backup pruning (SPEC-017) (by `@claude-code`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

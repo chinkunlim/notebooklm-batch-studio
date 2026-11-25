@@ -22,11 +22,13 @@ from typing import Any
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
+from notebooklm_batch_studio.adapters.system_notify import send_notification
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.models import CourseStatus, JobStatus, ProfileName
 from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
+from notebooklm_batch_studio.services.completion_notice import course_complete_hook
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.watcher import CourseWatcher
@@ -182,6 +184,7 @@ async def _execute_batch_pipeline(
             await srv.setup_notebook_and_sources(code)
 
     pool = WorkerPool(lambda: _queue_session_provider(env.engine), srv.execute_job, concurrency=workers)
+    pool.on_course_complete = course_complete_hook(env.config, send_notification)
     if wait_quota:
         print("⏸ 額度用完時會等待重置，時間到自動繼續，全部完成才結束。")
     await pool.run_until_empty(wait_for_quota=wait_quota)

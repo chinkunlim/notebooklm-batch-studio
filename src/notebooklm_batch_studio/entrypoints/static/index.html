@@ -492,6 +492,7 @@
           <div class="card">
             <div class="card-head"><h2 class="h2">縫合後單章 .md 原稿</h2><span class="eyebrow">03 Notes/NoteStudio</span></div>
             <div id="ngChaptersList" class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+            <div id="ngOtherFiles" class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
             <div class="row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap">
               <button class="btn btn-soft" onclick="loadStitchedNoteContent()">讀取章節 .md</button>
               <button class="btn btn-soft" onclick="pushCurrentNoteToNotebook()">推回 Gemini Notebook</button>
@@ -886,6 +887,15 @@
             </div>
             <p class="small muted" style="margin-bottom:10px">僅檢查設定檔或設定目錄是否存在（不讀取 Cookie／Token 內容）。</p>
             <div id="signInStatusList" class="stack"></div>
+          </article>
+
+          <article class="card" id="backupsCard" style="grid-column:1/-1">
+            <div class="card-head">
+              <h2 class="h2">資料庫備份</h2>
+              <button type="button" class="btn btn-soft btn-sm" onclick="pruneOldBackups(5)">整理舊備份（保留最新 5 份）</button>
+            </div>
+            <p class="small muted" style="margin-bottom:10px">更新程式前會自動備份到 <code>DATA_DIR/backups/</code>。整理時舊備份會移到 <code>DATA_DIR/deleted/backups/</code>，不會刪除。</p>
+            <div id="backupsList" class="stack"></div>
           </article>
         </div>
       </section>

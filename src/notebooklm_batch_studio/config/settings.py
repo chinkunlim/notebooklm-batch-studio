@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from notebooklm_batch_studio.config.data_paths import MaintenancePathsMixin
 from notebooklm_batch_studio.config.study_layout import (
     DEFAULT_LAYOUT,
     StudyLayout,
@@ -71,7 +72,7 @@ def load_dotenv_file(path: Path) -> None:
 
 
 @dataclass(frozen=True)
-class AppConfig:
+class AppConfig(MaintenancePathsMixin):
     """Immutable application settings.
 
     Attributes:
@@ -86,6 +87,7 @@ class AppConfig:
         notebooklm_home: Folder holding Gemini Notebook credentials and session states.
         auto_start_queue: Start the job queue when the web service starts (`AUTO_START_QUEUE`,
             default true in `.env`; off for configs built directly, e.g. in tests).
+        notify_on_complete: macOS notification when a course's jobs all finish (`NOTIFY_ON_COMPLETE`).
         study_root_dir_override: Optional custom root for `<term>/<subject>/<category>` study folders.
         legacy_note_studio_dir: Optional whitelisted folder for standalone `note-studio` legacy
             imports (`LEGACY_NOTE_STUDIO_DIR`). Refs: ADR-013, ISSUE-045
@@ -112,6 +114,7 @@ class AppConfig:
     http_allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost")
     http_allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8768", "http://127.0.0.1:8080")
     auto_start_queue: bool = False
+    notify_on_complete: bool = False
     study_root_dir_override: Path | None = None
     legacy_note_studio_dir: Path | None = None
     library_email: str = ""
@@ -277,15 +280,6 @@ class AppConfig:
         return self.data_dir / "tmp"
 
     @property
-    def diagnostics_reports_dir(self) -> Path:
-        """Directory inside `DATA_DIR` for diagnostic JSON reports such as consolidation plans.
-
-        Returns:
-            `<data_dir>/diagnostics`.
-        """
-        return self.data_dir / "diagnostics"
-
-    @property
     def consolidate_lock_path(self) -> Path:
         """Return `<data_dir>/state/consolidate.lock` OS lock path (ADR-015)."""
         return self.state_dir / "consolidate.lock"
@@ -294,15 +288,6 @@ class AppConfig:
     def consolidate_pause_path(self) -> Path:
         """Return `<data_dir>/state/consolidate.pause` sentinel path (ADR-015)."""
         return self.state_dir / "consolidate.pause"
-
-    @property
-    def deleted_dir(self) -> Path:
-        """Recoverable trash folder for deleted course legacy artifacts.
-
-        Returns:
-            `<data_dir>/deleted`.
-        """
-        return self.data_dir / "deleted"
 
     @property
     def prompt_override_dir(self) -> Path:
@@ -466,6 +451,7 @@ def _core_settings(data_dir: Path) -> dict[str, Any]:
         "ollama_model": _env("OLLAMA_MODEL", "gemma4:latest"),
         "database_url": _env("DATABASE_URL") or f"sqlite:///{data_dir / 'db' / 'app.db'}",
         "auto_start_queue": _flag(_env("AUTO_START_QUEUE", "true")),
+        "notify_on_complete": _flag(_env("NOTIFY_ON_COMPLETE", "true")),
     }
 
 

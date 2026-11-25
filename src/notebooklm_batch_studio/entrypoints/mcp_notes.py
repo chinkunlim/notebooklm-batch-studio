@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from notebooklm_batch_studio.domain.note_pipeline import NoteBackend
 from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.services.notes.module_prompts import StepPromptContext
+from notebooklm_batch_studio.services.notes.note_files import list_note_files, read_note_file
 from notebooklm_batch_studio.services.notes.note_pipeline_service import (
     ChapterNoteRequest,
     NotePipelineService,
@@ -159,6 +160,44 @@ def _register_chapter_read_tools(mcp: MCPServer, service: NotePipelineService) -
             JSON string with `chapters` array.
         """
         return _json_or_error(lambda: {"chapters": service.list_chapters(course_key)}, indent=2)
+
+
+def _register_note_file_tools(mcp: MCPServer, service: NotePipelineService) -> None:
+    """Register read-only tools for every `.md` / `.pdf` in a course NoteStudio folder (Refs: SPEC-017).
+
+    Args:
+        mcp: MCPServer instance.
+        service: NotePipelineService instance.
+    """
+
+    @mcp.tool()
+    def notes_list_files(course_key: str) -> str:
+        """List overview, PDF and module-draft note files, not only stitched chapters.
+
+        Args:
+            course_key: Course identifier.
+
+        Returns:
+            JSON string with `files` array (`relative_path`, `kind`, `size`, `is_chapter`).
+        """
+        return _json_or_error(
+            lambda: {"files": list_note_files(service.paths.notes_course_dir(course_key))}, indent=2
+        )
+
+    @mcp.tool()
+    def notes_read_file(course_key: str, relative_path: str) -> str:
+        """Read one note file by its relative path (Markdown content; PDFs return their path).
+
+        Args:
+            course_key: Course identifier.
+            relative_path: Path returned by `notes_list_files`.
+
+        Returns:
+            JSON string with `relative_path`, `kind`, `path`, `content`.
+        """
+        return _json_or_error(
+            lambda: read_note_file(service.paths.notes_course_dir(course_key), relative_path)
+        )
 
 
 def _register_generate_tool(mcp: MCPServer, service: NotePipelineService) -> None:
@@ -320,6 +359,7 @@ def register_note_pipeline_tools(
     _register_prompt_tools(mcp, service)
     _register_status_tools(mcp, service)
     _register_chapter_read_tools(mcp, service)
+    _register_note_file_tools(mcp, service)
     _register_generate_tool(mcp, service)
     _register_pause_tool(mcp, service)
     _register_push_tool(mcp, service, upload_fn)

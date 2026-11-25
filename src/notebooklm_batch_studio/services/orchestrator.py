@@ -42,6 +42,7 @@ from notebooklm_batch_studio.services.reporter import CourseReporter
 from notebooklm_batch_studio.services.source_manager import CourseSourceMixin
 from notebooklm_batch_studio.services.sync_service import RemoteSyncService
 from notebooklm_batch_studio.services.worker_pool import (
+    CourseCompleteHook,
     QueueSessionProvider,
     WorkerPool,
     generate_jobs_for_course,
@@ -84,6 +85,7 @@ class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
         self.queue_provider: QueueSessionProvider = queue_provider or self._default_queue_provider
         self.ollama_client = ollama_client
         self.worker_pool: WorkerPool | None = None
+        self.course_complete_hook: CourseCompleteHook | None = None  # set by entrypoints (SPEC-017)
         self._is_queue_running = False
         self.course_settings = CourseSettingsService(course_repo, queue_repo, self.config)
 
@@ -370,9 +372,8 @@ class BatchStudioService(CourseOnboardingMixin, CourseSourceMixin):
         if loop.is_closed():
             return
         if self.worker_pool is None:
-            self.worker_pool = WorkerPool(
-                queue_provider=self.queue_provider, executor=self.execute_job, concurrency=2
-            )
+            self.worker_pool = WorkerPool(self.queue_provider, self.execute_job, concurrency=2)
+            self.worker_pool.on_course_complete = self.course_complete_hook
         if not self.worker_pool._running:
             loop.create_task(self.worker_pool.start())
             logger.info("WorkerPool background start scheduled.")

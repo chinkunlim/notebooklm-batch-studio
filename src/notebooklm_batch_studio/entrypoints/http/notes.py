@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
@@ -21,6 +22,7 @@ from notebooklm_batch_studio.services.notes.module_prompts import (
     ModulePromptError,
     StepPromptContext,
 )
+from notebooklm_batch_studio.services.notes.note_files import list_note_files, read_note_file
 from notebooklm_batch_studio.services.notes.note_pipeline_service import (
     ChapterNoteRequest,
     NotePipelineService,
@@ -303,6 +305,40 @@ def _resolve_course_notebook_id(request: Request, course_key: str) -> str:
     with factory() as session:
         course = CourseRepository(session).get_course(course_key)
         return (course.notebook_id or "") if course else ""
+
+
+@notes_router.get("/files/{course_key}")
+def list_course_note_files(course_key: str, request: Request) -> dict[str, Any]:
+    """List every `.md` / `.pdf` note file in the course NoteStudio folder (Refs: SPEC-017).
+
+    Args:
+        course_key: Course identifier.
+        request: Incoming HTTP request.
+
+    Returns:
+        Dictionary containing `files` list.
+    """
+    return _run_notes_call(
+        lambda: {"files": list_note_files(_service(request).paths.notes_course_dir(course_key))}
+    )
+
+
+@notes_router.get("/file/{course_key}", response_model=None)
+def get_course_note_file(course_key: str, path: str, request: Request) -> dict[str, Any] | FileResponse:
+    """Return a Markdown note as JSON, or stream a PDF note file (Refs: SPEC-017).
+
+    Args:
+        course_key: Course identifier.
+        path: File path relative to the NoteStudio folder.
+        request: Incoming HTTP request.
+
+    Returns:
+        `{relative_path, kind, path, content}` for Markdown, or the PDF file itself.
+    """
+    data = _run_notes_call(lambda: read_note_file(_service(request).paths.notes_course_dir(course_key), path))
+    if data["kind"] == "pdf":
+        return FileResponse(data["path"], media_type="application/pdf")
+    return data
 
 
 @notes_router.get("/chapters/{course_key}")

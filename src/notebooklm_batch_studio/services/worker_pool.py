@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 # Type alias for the job executor callback function
 JobExecutor = Callable[[ArtifactJob], Awaitable[str]]
+# Called once per course when it has no pending/running/quota-wait jobs left (Refs: SPEC-017)
+CourseCompleteHook = Callable[[str, dict[str, int]], None]
 QueueSessionProvider = Callable[[], ContextManager[QueueRepositoryProtocol]]
 
 
@@ -48,6 +50,7 @@ class WorkerPool:
         self._paused = False
         self._workers: list[asyncio.Task[None]] = []
         self._probe_task: asyncio.Task[None] | None = None
+        self.on_course_complete: CourseCompleteHook | None = None
 
     def pause(self) -> None:
         """Gracefully pause queue: running jobs finish, but no new jobs are claimed."""
@@ -140,6 +143,7 @@ class WorkerPool:
             with self.queue_provider() as repo:
                 repo.complete_job(job.id, output_file)
             logger.info("Worker %s completed job=%s output=%s", worker_id, job.id, output_file)
+            self._notify_if_course_finished(job.course_code)
 
         except NeedsReviewError as review:  # Refs: ISSUE-002
             logger.warning("Worker %s job=%s needs review: %s", worker_id, job.id, review)
@@ -163,6 +167,27 @@ class WorkerPool:
                 repo.fail_job(job.id, error_message=str(err))
             # Brief backoff avoids immediate tight-loop claims on transient failures (ISSUE-038).
             await asyncio.sleep(0.2)
+
+    def _notify_if_course_finished(self, course_code: str) -> None:
+        """Call `on_course_complete` when `course_code` has no pending, running or quota-wait jobs.
+
+        Args:
+            course_code: Course whose job just finished.
+        """
+        if self.on_course_complete is None:
+            return
+        try:
+            with self.queue_provider() as repo:
+                jobs = repo.list_jobs(course_code=course_code)
+            counts: dict[str, int] = {}
+            for j in jobs:
+                counts[j.status.value] = counts.get(j.status.value, 0) + 1
+            if any(counts.get(s.value) for s in (JobStatus.PENDING, JobStatus.RUNNING, JobStatus.QUOTA_WAIT)):
+                return
+            logger.info("Course %s finished all jobs: %s", course_code, counts)
+            self.on_course_complete(course_code, counts)
+        except Exception as exc:  # a notification must never break the queue
+            logger.warning("Course-complete hook failed for %s: %s", course_code, exc)
 
     async def _worker_loop(self, worker_id: str) -> None:
         """Main execution loop for an individual worker.

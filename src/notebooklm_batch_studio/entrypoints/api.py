@@ -34,6 +34,7 @@ from notebooklm_batch_studio.adapters.locks import RunLock
 from notebooklm_batch_studio.adapters.note_driver_factory import build_gemini_auth_service
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.ollama.client import OllamaClient
+from notebooklm_batch_studio.adapters.system_notify import send_notification
 from notebooklm_batch_studio.adapters.web_search import search_web_snippets
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
@@ -63,6 +64,7 @@ from notebooklm_batch_studio.entrypoints.http_middleware import (
 )
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.entrypoints.port_check import busy_port_message, port_is_free
+from notebooklm_batch_studio.services.completion_notice import course_complete_hook
 from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
 from notebooklm_batch_studio.services.literature.jobs import LiteratureJobRunner
@@ -441,6 +443,7 @@ def create_app(
         openapi_url="/openapi.json",
         lifespan=_build_lifespan(active_service, cfg),
     )
+    active_service.course_complete_hook = course_complete_hook(cfg, send_notification)  # SPEC-017
     _configure_app_state(app, cfg, (active_service, active_study, study_plan), shared_engine)
     _register_routes_and_middlewares(app, cfg)
     return app

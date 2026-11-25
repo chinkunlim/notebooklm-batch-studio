@@ -6,11 +6,13 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
 
 from notebooklm_batch_studio.domain.exceptions import AuthExpiredError, StudioError
 from notebooklm_batch_studio.entrypoints.schemas import StatusResponse
 from notebooklm_batch_studio.entrypoints.web_template import get_dashboard_html
 from notebooklm_batch_studio.services.auth_status import sign_in_status
+from notebooklm_batch_studio.services.backups import list_backups, prune_backups
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 
 system_router = APIRouter()
@@ -89,3 +91,40 @@ def get_sign_in_status_route(request: Request) -> dict[str, Any]:
     """
     rows = sign_in_status(request.app.state.config, request.app.state.gemini_auth)
     return {"sign_ins": rows}
+
+
+class PruneBackupsRequest(BaseModel):
+    """Body for pruning old database backups (Refs: SPEC-017)."""
+
+    keep: int = Field(5, description="Number of newest backups to keep (at least 1)")
+    dry_run: bool = Field(True, description="Only preview when True")
+
+
+@system_router.get("/api/system/backups", tags=["System"], operation_id="list_backups")
+def list_backups_route(request: Request) -> dict[str, Any]:
+    """List database backups in `DATA_DIR/backups/`, newest first.
+
+    Args:
+        request: Incoming HTTP request context.
+
+    Returns:
+        Dictionary containing `backups`.
+    """
+    return {"backups": list_backups(request.app.state.config)}
+
+
+@system_router.post("/api/system/backups/prune", tags=["System"], operation_id="prune_backups")
+def prune_backups_route(body: PruneBackupsRequest, request: Request) -> dict[str, Any]:
+    """Preview or move older backups into `DATA_DIR/deleted/backups/` (never deletes).
+
+    Args:
+        body: `keep` and `dry_run` options.
+        request: Incoming HTTP request context.
+
+    Returns:
+        Prune summary with `kept`, `to_move`, `moved`.
+    """
+    try:
+        return prune_backups(request.app.state.config, keep=body.keep, dry_run=body.dry_run)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

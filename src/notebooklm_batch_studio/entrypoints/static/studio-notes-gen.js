@@ -287,6 +287,7 @@ async function refreshNoteGenStatus() {
     banner.textContent = `課程 ${courseKey}：已記錄 ${count} 章${data.paused ? '（已請求暫停）' : ''}`;
   }
   await loadGeneratedChaptersList();
+  await loadOtherNoteFiles();
 }
 
 /**
@@ -312,6 +313,54 @@ async function loadGeneratedChaptersList() {
   } catch (err) {
     console.error('Failed to list chapters:', err);
   }
+}
+
+/**
+ * List the course's other NoteStudio files (overview, PDFs, module drafts) under the chapter pills (SPEC-017).
+ * @returns {Promise<void>}
+ */
+async function loadOtherNoteFiles() {
+  const courseKey = document.getElementById('ngCourseKey')?.value.trim();
+  const host = document.getElementById('ngOtherFiles');
+  if (!courseKey || !host) return;
+  try {
+    const res = await fetch(`/api/notes/files/${encodeURIComponent(courseKey)}`);
+    const data = await res.json();
+    const others = (data.files || []).filter((f) => !f.is_chapter);
+    host.innerHTML = others.length
+      ? `<div class="small muted" style="margin:4px 0">其他筆記檔案（${others.length}）</div>` +
+        others
+          .map(
+            (f) =>
+              `<button type="button" class="btn btn-ghost btn-sm" onclick="openOtherNoteFile(${jsAttr(f.relative_path)}, ${jsAttr(f.kind)})">${f.kind === 'pdf' ? 'PDF' : 'MD'}　${escHtml(f.relative_path)}</button>`,
+          )
+          .join('')
+      : '';
+  } catch (err) {
+    console.error('Failed to list note files:', err);
+  }
+}
+
+/**
+ * Show a Markdown note in the preview box, or open a PDF note in a new tab.
+ * @param {string} relPath Path relative to the NoteStudio folder
+ * @param {string} kind 'md' or 'pdf'
+ * @returns {Promise<void>}
+ */
+async function openOtherNoteFile(relPath, kind) {
+  const courseKey = document.getElementById('ngCourseKey')?.value.trim();
+  if (!courseKey) return;
+  const url = `/api/notes/file/${encodeURIComponent(courseKey)}?path=${encodeURIComponent(relPath)}`;
+  if (kind === 'pdf') {
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+  const res = await fetch(url);
+  const data = await res.json();
+  const pathEl = document.getElementById('ngNoteFilePath');
+  const box = document.getElementById('ngNoteContent');
+  if (pathEl) pathEl.textContent = res.ok ? data.path : (data.detail || '讀取失敗');
+  if (box) box.value = res.ok ? data.content || '' : '';
 }
 
 /**

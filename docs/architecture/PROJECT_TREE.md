@@ -284,6 +284,7 @@ notebooklm-batch-studio/
 │   │   ├── 014-study-library-and-learning-record.md
 │   │   ├── 015-adopt-existing-outputs.md
 │   │   ├── 016-study-library-web-management.md
+│   │   ├── 017-notes-files-notifications-versions-backups.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -398,9 +399,11 @@ notebooklm-batch-studio/
 │       │   ├── locks.py
 │       │   ├── note_driver_factory.py
 │       │   ├── private_dir.py
+│       │   ├── system_notify.py
 │       │   └── web_search.py
 │       ├── config/
 │       │   ├── __init__.py
+│       │   ├── data_paths.py
 │       │   ├── logging_setup.py
 │       │   ├── settings.py
 │       │   └── study_layout.py
@@ -747,6 +750,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_learning.py
 │       │   ├── mcp_literature.py
 │       │   ├── mcp_literature_notebook.py
+│       │   ├── mcp_maintenance.py
 │       │   ├── mcp_notes.py
 │       │   ├── mcp_preferences.py
 │       │   ├── mcp_qa_notes.py
@@ -787,6 +791,7 @@ notebooklm-batch-studio/
 │       │   │   ├── gemini_auth_service.py
 │       │   │   ├── module_composer.py
 │       │   │   ├── module_prompts.py
+│       │   │   ├── note_files.py
 │       │   │   ├── note_paths.py
 │       │   │   ├── note_pipeline_service.py
 │       │   │   ├── note_sync.py
@@ -796,6 +801,8 @@ notebooklm-batch-studio/
 │       │   ├── adopt_outputs.py
 │       │   ├── artifact_runner.py
 │       │   ├── auth_status.py
+│       │   ├── backups.py
+│       │   ├── completion_notice.py
 │       │   ├── course_display_name.py
 │       │   ├── course_lifecycle.py
 │       │   ├── course_onboarding.py
@@ -914,6 +921,7 @@ notebooklm-batch-studio/
 │   ├── test_selection_and_folders.py
 │   ├── test_services_and_cli.py
 │   ├── test_settings_paths.py
+│   ├── test_spec017_small_features.py
 │   ├── test_study_layout.py
 │   ├── test_study_library.py
 │   ├── test_study_library_api.py

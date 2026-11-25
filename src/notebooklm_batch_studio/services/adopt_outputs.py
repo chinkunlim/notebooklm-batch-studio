@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +26,8 @@ from notebooklm_batch_studio.services.quiz_runner import MOCK_EXAM_TYPES, QUIZ_T
 logger = logging.getLogger(__name__)
 
 _RE_LECTURE_DIR = re.compile(r"^(\d+)_")
+# `_vN` inserted by `domain.naming.versioned_name` before the extension or the next `_` (Refs: SPEC-017)
+_RE_VERSION = re.compile(r"_v(\d+)(?=[._])")
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,7 @@ class _MatchedArtifact:
     artifact_type: ArtifactType
     output_file: Path
     interactive_path: Path | None = None
+    version: int = 1
 
 
 def _collect_target_dirs(output_root: Path) -> list[tuple[int | None, Path]]:
@@ -205,7 +208,7 @@ def _match_reports(
         if name is None:
             continue
         claimed.add(name)
-        inter_name = f"{files[name].stem}_interactive.html"
+        inter_name = f"{Path(name).stem}_interactive.html"
         inter_path = files.get(inter_name)
         if inter_path is not None:
             claimed.add(inter_name)
@@ -253,13 +256,28 @@ def _match_simple_outputs(
             continue
         claimed.add(hit)
         if kind == "infographic":
-            _claim_infographic_devices(files, claimed, files[hit].stem)
+            _claim_infographic_devices(files, claimed, Path(hit).stem)
         matched.append(_MatchedArtifact(art_type, files[hit]))
     return matched
 
 
+def _split_version(name: str) -> tuple[int, str]:
+    """Split a regenerated file name into `(version, base_name)`.
+
+    Args:
+        name: File name such as `infographic_v2.png` or `quiz_1_v2_quiz.json`.
+
+    Returns:
+        `(N, name without _vN)` for N >= 2, else `(1, name)`.
+    """
+    match = _RE_VERSION.search(name)
+    if match is None or int(match.group(1)) < 2:
+        return 1, name
+    return int(match.group(1)), name[: match.start()] + name[match.end() :]
+
+
 def _scan_folder_artifacts(folder: Path, lecture_no: int | None) -> tuple[list[_MatchedArtifact], list[str]]:
-    """Match all known artifact deliverables in one folder and collect unmapped filenames.
+    """Match deliverables of every version in one folder and collect unmapped filenames.
 
     Args:
         folder: Directory path (`<NN>_<slug>` or `_course_synthesis`).
@@ -268,7 +286,31 @@ def _scan_folder_artifacts(folder: Path, lecture_no: int | None) -> tuple[list[_
     Returns:
         Tuple of `(matched_artifacts, unmapped_filenames)`.
     """
-    files = _list_visible_files(folder)
+    groups: dict[int, dict[str, Path]] = {}
+    for name, path in _list_visible_files(folder).items():
+        version, base = _split_version(name)
+        groups.setdefault(version, {})[base] = path
+    matched: list[_MatchedArtifact] = []
+    unmapped: list[str] = []
+    for version in sorted(groups):
+        found, rest = _match_file_group(groups[version], lecture_no)
+        matched.extend(replace(item, version=version) for item in found)
+        unmapped.extend(groups[version][base].name for base in rest)
+    return matched, unmapped
+
+
+def _match_file_group(
+    files: dict[str, Path], lecture_no: int | None
+) -> tuple[list[_MatchedArtifact], list[str]]:
+    """Match one version group (names already stripped of `_vN`) against the naming rules.
+
+    Args:
+        files: Base-name-to-path map for one version.
+        lecture_no: Integer lecture number, or None for `_course_synthesis`.
+
+    Returns:
+        Tuple of `(matched_artifacts, unmapped_base_names)`.
+    """
     claimed: set[str] = set()
     is_course = lecture_no is None
     matched: list[_MatchedArtifact] = []
@@ -302,7 +344,7 @@ def _make_adopted_job(course_code: str, lecture_no: int | None, item: _MatchedAr
         lecture_no=lecture_no,
         artifact_type=item.artifact_type,
         status=JobStatus.DONE,
-        version=1,
+        version=item.version,
         output_file=str(item.output_file),
         interactive_path=str(item.interactive_path) if item.interactive_path else None,
         source_origin="adopted",
@@ -325,6 +367,7 @@ def _match_row_dict(item: _MatchedArtifact, *, is_skip: bool) -> dict[str, Any]:
         "output_file": str(item.output_file),
         "interactive_path": str(item.interactive_path) if item.interactive_path else None,
         "status": "skip" if is_skip else "create",
+        "version": item.version,
     }
 
 
@@ -332,7 +375,7 @@ def _build_folder_plan(
     course_code: str,
     folder: Path,
     lecture_no: int | None,
-    existing_keys: set[tuple[int | None, ArtifactType]],
+    existing_keys: set[tuple[int | None, ArtifactType, int]],
 ) -> tuple[dict[str, Any], list[ArtifactJob], int]:
     """Scan one output directory and assemble preview rows and new `ArtifactJob` objects.
 
@@ -340,7 +383,7 @@ def _build_folder_plan(
         course_code: Target course identifier.
         folder: Subdirectory (`<NN>_<slug>` or `_course_synthesis`).
         lecture_no: Lecture sequence number or None for course synthesis.
-        existing_keys: Existing `(lecture_no, artifact_type)` pairs in DB.
+        existing_keys: Existing `(lecture_no, artifact_type, version)` triples in DB.
 
     Returns:
         Tuple of `(lecture_entry_dict, pending_new_jobs, skip_count)`.
@@ -350,7 +393,7 @@ def _build_folder_plan(
     rows: list[dict[str, Any]] = []
     skip_count = 0
     for item in matched:
-        is_skip = (lecture_no, item.artifact_type) in existing_keys
+        is_skip = (lecture_no, item.artifact_type, item.version) in existing_keys
         skip_count += int(is_skip)
         if not is_skip:
             new_jobs.append(_make_adopted_job(course_code, lecture_no, item))
@@ -392,7 +435,8 @@ class AdoptOutputsService:
             Tuple of `(lecture_entries, new_jobs, all_unmapped, skip_count)`.
         """
         existing_keys = {
-            (j.lecture_no, j.artifact_type) for j in self.queue_repo.list_jobs(course_code=course_code)
+            (j.lecture_no, j.artifact_type, j.version)
+            for j in self.queue_repo.list_jobs(course_code=course_code)
         }
         lectures_out: list[dict[str, Any]] = []
         all_unmapped: list[str] = []

@@ -197,3 +197,54 @@ async function openCourseDisplayNameFlow(code) {
     showToast('修改課程名稱失敗：' + e.message, 'error');
   }
 }
+
+/**
+ * Format a byte count as MB with one decimal.
+ * @param {number} bytes Size in bytes
+ * @returns {string} Human-readable size
+ */
+function _libMb(bytes) {
+  return `${((bytes || 0) / 1048576).toFixed(1)} MB`;
+}
+
+/**
+ * Render the database backup list in 設計與自訂 (SPEC-017).
+ * @returns {Promise<void>}
+ */
+async function loadBackupsCard() {
+  const host = document.getElementById('backupsList');
+  if (!host) return;
+  try {
+    const data = await _libJson('/api/system/backups', 'GET');
+    const rows = data.backups || [];
+    const total = rows.reduce((sum, b) => sum + (b.size_bytes || 0), 0);
+    host.innerHTML = rows.length
+      ? `<div class="small muted">共 ${rows.length} 份，${_libMb(total)}</div>` +
+        rows.map(b => `<div class="small num">${escHtml(b.name)}　${_libMb(b.size_bytes)}</div>`).join('')
+      : '<div class="small muted">目前沒有備份。</div>';
+  } catch (e) {
+    host.innerHTML = `<div class="small muted">${escHtml(e.message || '載入失敗')}</div>`;
+  }
+}
+
+/**
+ * Preview, confirm, then move backups older than the newest `keep` into deleted/backups/.
+ * @param {number} keep Number of newest backups to keep
+ * @returns {Promise<void>}
+ */
+async function pruneOldBackups(keep) {
+  try {
+    const preview = await _libJson('/api/system/backups/prune', 'POST', { keep, dry_run: true });
+    if (!(preview.to_move || []).length) { showToast(`目前不到 ${keep} 份以上，不需要整理`, 'info'); return; }
+    const msg = `保留最新 ${keep} 份，把 ${preview.to_move.length} 份舊備份移到：\n${preview.destination}\n\n${preview.to_move.join('\n')}\n\n只會搬移，不會刪除。`;
+    if (!(await askConfirm(msg, { okLabel: '移走舊備份' }))) return;
+    const done = await _libJson('/api/system/backups/prune', 'POST', { keep, dry_run: false });
+    showToast(`已移走 ${(done.moved || []).length} 份舊備份`, 'success');
+    await loadBackupsCard();
+  } catch (e) {
+    showToast('整理備份失敗：' + e.message, 'error');
+  }
+}
+
+window.loadBackupsCard = loadBackupsCard;
+

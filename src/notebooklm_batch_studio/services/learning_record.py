@@ -322,16 +322,8 @@ class LearningRecordService:
             for j in done_jobs
         ]
         stats = self._compute_stats(course, done_jobs, ns_files, now)
-        return CourseRecordView(
-            course.code,
-            course.name,
-            term,
-            course.status.value,
-            categories,
-            stats,
-            artifacts,
-            course.study_dir,
-        )
+        head = (course.code, course.name, term, course.status.value)
+        return CourseRecordView(*head, categories, stats, artifacts, course.study_dir)
 
     def _rel_artifact_path(self, output_file: str | None, study_dir: Path | None) -> str:
         """Compute clean relative artifact path without leaving `DATA_DIR`.
@@ -380,18 +372,9 @@ class LearningRecordService:
         if code in by_code:
             return
         cats, ns = self._collect_categories(child)
-        bucket["courses"].append(
-            CourseRecordView(
-                code,
-                info.name,
-                term_name,
-                "unregistered",
-                cats,
-                {**_STATS_ZERO, "notestudio_notes": ns},
-                [],
-                str(child),
-            )
-        )
+        stats = {**_STATS_ZERO, "notestudio_notes": ns}
+        view = CourseRecordView(code, info.name, term_name, "unregistered", cats, stats, [], str(child))
+        bucket["courses"].append(view)
 
     def _collect_unregistered_and_others(
         self,
