@@ -66,6 +66,25 @@ def _shortcut_response(config: AppConfig, root: Path) -> dict[str, Any]:
     return {"path": None, "parent": None, "pdf_count": 0, "folders": shortcuts}
 
 
+def _allowed_root(folder: Path, config: AppConfig, home: Path) -> Path | None:
+    """Return the closest allowed root containing `folder` (home, study or scratch), or None.
+
+    The study/scratch shortcuts must open even when DATA_DIR lives outside home (ISSUE-078);
+    "up" navigation stops at the returned root.
+
+    Args:
+        folder: Resolved folder to open.
+        config: Application configuration.
+        home: Resolved home (or test) root.
+
+    Returns:
+        The deepest allowed root that contains `folder`, or None when none does.
+    """
+    roots = [home, config.study_root_dir.resolve(), config.scratch_dir.resolve()]
+    allowed = [r for r in roots if folder.is_relative_to(r)]
+    return max(allowed, key=lambda r: len(r.parts)) if allowed else None
+
+
 def browse_folders(path: str | None, config: AppConfig, home: Path | None = None) -> dict[str, Any]:
     """List the sub-folders of a folder, or the starting shortcuts when no path is given.
 
@@ -87,12 +106,10 @@ def browse_folders(path: str | None, config: AppConfig, home: Path | None = None
         return _shortcut_response(config, root)
 
     folder = Path(path).expanduser().resolve()
-    # The study/scratch shortcuts must open even when DATA_DIR lives outside home (ISSUE-078).
-    roots = [root, config.study_root_dir.resolve(), config.scratch_dir.resolve()]
-    allowed = [r for r in roots if folder.is_relative_to(r)]
-    if not allowed or not folder.is_dir():
+    allowed = _allowed_root(folder, config, root)
+    if allowed is None or not folder.is_dir():
         raise ValueError(f"Folder not available: {path}")
-    root = max(allowed, key=lambda r: len(r.parts))  # going "up" stops at the closest allowed root
+    root = allowed
     try:
         children = sorted(
             (c for c in folder.iterdir() if c.is_dir() and not c.name.startswith(".")),
