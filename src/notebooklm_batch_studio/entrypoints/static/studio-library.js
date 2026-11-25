@@ -143,13 +143,13 @@ async function loadUnfiledCard() {
     const courseOpts = courses.map(c => `<option value="${escHtml(c.code)}">${escHtml(c.code)}　${escHtml(c.name)}</option>`).join('');
     const names = window.STUDY_CATEGORY_NAMES || {};
     const roleOpts = _LIB_ROLES.map(r => `<option value="${r}">${escHtml(names[r] || r)}</option>`).join('');
-    host.innerHTML = `<article class="card" style="margin-bottom:16px"><div class="card-head"><b>未歸檔檔案（scratch/）</b><span class="small muted">${items.length} 個</span></div>
+    host.innerHTML = `<details class="card" style="margin-bottom:16px"><summary class="card-head" style="cursor:pointer"><b>未歸檔檔案（scratch/）</b><span class="small muted">${items.length} 個・點開歸檔</span></summary>
       ${items.map((it, i) => `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
         <span class="small" style="min-width:0;flex:1;word-break:break-all">${escHtml(it.relative_path || it.name)}</span>
         <select id="unfCourse${i}" class="select">${courseOpts}</select>
         <select id="unfRole${i}" class="select">${roleOpts}</select>
         <button class="btn btn-soft btn-sm" onclick="fileLibraryItem(${jsAttr(it.path)}, ${i})">歸檔</button></div>`).join('')}
-    </article>`;
+    </details>`;
   } catch (e) {
     host.innerHTML = '';
     console.warn('Could not load unfiled items:', e);

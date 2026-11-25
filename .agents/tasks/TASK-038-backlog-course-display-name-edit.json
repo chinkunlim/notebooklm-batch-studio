@@ -1,16 +1,16 @@
 {
   "id": "TASK-038",
   "title": "Backlog: course display-name edit, NoteStudio extra files, completion notification, backup retention",
-  "status": "open",
-  "agent": "",
+  "status": "done",
+  "agent": "claude-code",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "",
-  "todo_items": "小功能待辦：(1) 修改課程顯示名稱（HTTP/MCP/網頁；目前只能直接改 DB，2026-11-25 已手動把 115-1_CP31000 改為 生涯諮商與實務）；(2) NoteStudio 非章節檔瀏覽：00_總覽與跨章整合筆記.md、學習筆記/PDF/*.pdf、章節/**/目前/（SPEC-015 §6 後續待辦 ②）；(3) 全部產出完成時 macOS 通知（SPEC-001 未實作）；(4) adopt_existing_outputs 反查 *_v2 等多版本產出；(5) DATA_DIR/backups 保留策略（例如只留最近 N 份，update.sh 備份後清理），刪除前須使用者確認。",
+  "done_items": "SPEC-016 display-name edit + SPEC-017 note-files browser, course-complete macOS notification, _vN versioned adoption, backup pruning (moves to deleted/backups). 529 tests, check 0 warnings.",
+  "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-25 04:34 UTC",
-  "updated_at": "2026-11-25 04:36 UTC",
+  "updated_at": "2026-11-25 05:13 UTC",
   "history": [
     {
       "timestamp": "2026-11-25 04:34 UTC",
@@ -21,6 +21,13 @@
       "timestamp": "2026-11-25 04:36 UTC",
       "action": "todo_recorded",
       "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-25 05:13 UTC",
+      "action": "done",
+      "agent": "claude-code",
+      "summary": "SPEC-016 display-name edit + SPEC-017 note-files browser, course-complete macOS notification, _vN versioned adoption, backup pruning (moves to deleted/backups). 529 tests, check 0 warnings."
     }
-  ]
+  ],
+  "summary": "SPEC-016 display-name edit + SPEC-017 note-files browser, course-complete macOS notification, _vN versioned adoption, backup pruning (moves to deleted/backups). 529 tests, check 0 warnings."
 }

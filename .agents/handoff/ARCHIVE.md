@@ -381,3 +381,15 @@
 ### [2026-11-24 02:13 UTC] 完成任務 `TASK-028` — Security hardening and code-review zero-violation cleanup (by `claude-code`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Security hardening (path traversal, prompt-injection XSS, CSP, MCP confirm, browser profile perms, library credentials), artifact study_dir 404 fix, zero code-review warnings, SPEC-013, ADR-013, ISSUE-045..051
+
+### [2026-11-24 02:20 UTC] 建立任務 `TASK-029`: Records audit, port source-project tests, full verification (by `claude-code`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-24 02:25 UTC] 完成任務 `TASK-029` — Records audit, port source-project tests, full verification (by `claude-code`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Records audit (gaps listed for Antigravity), ported 52 source-project tests (note-studio gemini adapters, quota parser, literature-fetch markdown/db) plus 13 new pipeline behavior tests, fixed ISSUE-052/055/056, recorded open ISSUE-053/054, full verification
+
+### [2026-11-24 05:43 UTC] 建立任務 `TASK-030`: Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

@@ -1,19 +1,19 @@
 {
   "id": "TASK-039",
   "title": "Wire study-library registration, archive/restore and scratch filing into the web UI (rule 13)",
-  "status": "open",
-  "agent": "",
+  "status": "done",
+  "agent": "claude-code",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [
     "src/notebooklm_batch_studio/entrypoints/static",
     "src/notebooklm_batch_studio/entrypoints/http/study_library.py"
   ],
-  "done_items": "",
-  "todo_items": "核心規則 13 缺口：下列功能只有 HTTP 與 MCP，網頁沒有入口——GET /api/study/library（掃描學習資料夾）、POST /api/study/library/register（批次登錄舊課 record-only）、POST /api/study/library/register-folder（非標準資料夾手動填課號）、GET /api/study/unfiled、POST /api/study/file、POST /api/study/unfile（scratch 歸檔）、POST /api/courses/{code}/archive 與 /restore（封存／還原，先封存才可刪除）。在網頁『學習紀錄』或課程進階工具加入對應介面，先預覽再確認；TDD，含瀏覽器驗證。",
+  "done_items": "SPEC-016: web entry points for registering past/non-standard course folders, scratch filing/unfiling, and course display-name edits (HTTP/MCP/web); browser-verified on real data.",
+  "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-25 04:35 UTC",
-  "updated_at": "2026-11-25 04:36 UTC",
+  "updated_at": "2026-11-25 05:13 UTC",
   "history": [
     {
       "timestamp": "2026-11-25 04:35 UTC",
@@ -24,6 +24,13 @@
       "timestamp": "2026-11-25 04:36 UTC",
       "action": "todo_recorded",
       "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-25 05:13 UTC",
+      "action": "done",
+      "agent": "claude-code",
+      "summary": "SPEC-016: web entry points for registering past/non-standard course folders, scratch filing/unfiling, and course display-name edits (HTTP/MCP/web); browser-verified on real data."
     }
-  ]
+  ],
+  "summary": "SPEC-016: web entry points for registering past/non-standard course folders, scratch filing/unfiling, and course display-name edits (HTTP/MCP/web); browser-verified on real data."
 }
