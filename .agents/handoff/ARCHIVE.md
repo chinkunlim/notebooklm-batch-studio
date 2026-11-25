@@ -397,3 +397,19 @@
 ### [2026-11-24 05:48 UTC] 完成任務 `TASK-030` — Close security hardening, HTTP 400, XSS, and MCP confirm gaps from Claude review (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Closed path-safety gaps (import_legacy, source_manager), notes HTTP 400 handling, frontend XSS/escHtml/URL guards, and unified MCP confirm format with synced specs
+
+### [2026-11-24 07:58 UTC] 建立任務 `TASK-031`: Resolve ISSUE-053: port Gemini Web auth service and 3-entrypoint login (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-24 08:02 UTC] 完成任務 `TASK-031` — Resolve ISSUE-053: port Gemini Web auth service and 3-entrypoint login (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Ported GeminiAuthService, ChromeGeminiLoginRuntime, HTTP/MCP/Web login entrypoints, and test_gemini_auth.py; updated browser_session.py error guidance (ISSUE-053)
+
+### [2026-11-24 08:02 UTC] 建立任務 `TASK-032`: Resolve ISSUE-054: close stale running literature jobs on startup (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-24 08:04 UTC] 完成任務 `TASK-032` — Resolve ISSUE-054: close stale running literature jobs on startup (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Closed stale running literature_jobs as failed on LiteratureJobRunner startup, handled BaseException in worker, and ported StaleJobTest (ISSUE-054)

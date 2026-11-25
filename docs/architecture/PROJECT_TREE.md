@@ -108,7 +108,10 @@ notebooklm-batch-studio/
 │   │   ├── TASK-037-textbook-chapters-as-lecture-sou.json
 │   │   ├── TASK-038-backlog-course-display-name-edit.json
 │   │   ├── TASK-039-wire-study-library-registration-.json
-│   │   └── TASK-040-learning-site-artifacts-per-lect.json
+│   │   ├── TASK-040-learning-site-artifacts-per-lect.json
+│   │   ├── TASK-041-link-115-1-cp30210-to-its-existi.json
+│   │   ├── TASK-042-investigate-blocked-playwright-s.json
+│   │   └── TASK-043-deprecate-migrate-study-layout-i.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -328,7 +331,8 @@ notebooklm-batch-studio/
 │   │   └── plans/
 │   │       ├── 2026-11-14-notebook-qa-notes-and-tag-system.md
 │   │       ├── 2026-11-24-study-library-and-learning-record.md
-│   │       └── 2026-11-25-learning-site-artifacts.md
+│   │       ├── 2026-11-25-learning-site-artifacts.md
+│   │       └── 2026-11-25-next-session-master-plan.md
 │   └── TEMPLATE_FEEDBACK.md
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
 │   ├── demo/

@@ -1,0 +1,26 @@
+{
+  "id": "TASK-042",
+  "title": "Investigate blocked Playwright sign-in and move it to real Chrome + CDP (decision D3)",
+  "status": "open",
+  "agent": "",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "見總計畫 §3 W3；先問使用者 D3（被擋的是哪一個登入）。",
+  "blockers": "",
+  "created_at": "2026-11-25 09:09 UTC",
+  "updated_at": "2026-11-25 09:09 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-25 09:09 UTC",
+      "action": "created",
+      "agent": "system"
+    },
+    {
+      "timestamp": "2026-11-25 09:09 UTC",
+      "action": "todo_recorded",
+      "agent": "claude-code"
+    }
+  ]
+}
