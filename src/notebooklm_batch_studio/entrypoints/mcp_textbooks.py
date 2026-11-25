@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.adapters.pdf_textbook import PypdfTextbookTools
 from notebooklm_batch_studio.config.settings import AppConfig
+from notebooklm_batch_studio.domain.models import CourseStatus
 from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
 from notebooklm_batch_studio.services.textbook_split import TextbookService
 
@@ -70,6 +71,37 @@ def _register_list_tool(mcp: MCPServer, run: Runner) -> None:
             JSON string with `textbooks`.
         """
         return run(lambda svc: {"textbooks": svc.list_textbooks(code)})
+
+
+def _register_pending_tool(mcp: MCPServer, run: Runner) -> None:
+    """Register `list_pending_textbooks` (Refs: SPEC-020).
+
+    Args:
+        mcp: MCPServer instance.
+        run: Service runner.
+    """
+
+    @mcp.tool()
+    def list_pending_textbooks() -> str:
+        """List unsplit textbooks in active courses' 01 Materials folders with chapter counts.
+
+        Returns:
+            JSON string with `pending`.
+        """
+
+        def scan(svc: TextbookService) -> dict[str, Any]:
+            """Collect pending textbooks for active courses.
+
+            Args:
+                svc: Textbook service.
+
+            Returns:
+                `{"pending": [...]}`.
+            """
+            codes = [c.code for c in svc.course_repo.list_courses(status=CourseStatus.ACTIVE)]  # type: ignore[attr-defined]
+            return {"pending": svc.pending_textbooks(codes)}
+
+        return run(scan)
 
 
 def _register_split_tool(mcp: MCPServer, run: Runner) -> None:
@@ -136,6 +168,7 @@ def register_textbook_tools(mcp: MCPServer, cfg: AppConfig, session_factory: Any
     """
     run = _make_runner(cfg, session_factory)
     _register_list_tool(mcp, run)
+    _register_pending_tool(mcp, run)
     _register_split_tool(mcp, run)
     _register_relocate_tool(mcp, run)
     logger.debug("Registered textbook MCP tools")

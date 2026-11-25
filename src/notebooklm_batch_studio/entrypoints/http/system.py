@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from notebooklm_batch_studio.domain.exceptions import AuthExpiredError, StudioError
+from notebooklm_batch_studio.domain.models import JobStatus
 from notebooklm_batch_studio.entrypoints.schemas import StatusResponse
 from notebooklm_batch_studio.entrypoints.web_template import get_dashboard_html
 from notebooklm_batch_studio.services.auth_status import sign_in_status
@@ -52,7 +53,25 @@ def get_status(request: Request) -> dict[str, Any]:
         "queue_running": service.is_queue_running(),
         "total_courses": len(courses),
         "queue_counts": counts,
+        "quota_resume_at": _quota_resume_at(service),
     }
+
+
+def _quota_resume_at(service: BatchStudioService) -> str | None:
+    """Earliest time a job waiting for Gemini Notebook quota will be retried (Refs: SPEC-020).
+
+    Args:
+        service: Orchestrator owning the queue repository.
+
+    Returns:
+        ISO timestamp, or None when nothing waits for quota.
+    """
+    waits = [
+        j.cooldown_until
+        for j in service.queue_repo.list_jobs(status=JobStatus.QUOTA_WAIT)
+        if j.cooldown_until
+    ]
+    return min(waits).isoformat() if waits else None
 
 
 @system_router.get("/api/notebooklm/quota", tags=["System"], operation_id="get_notebooklm_quota")

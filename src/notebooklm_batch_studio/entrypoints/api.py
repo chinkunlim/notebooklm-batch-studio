@@ -47,6 +47,7 @@ from notebooklm_batch_studio.entrypoints.http.learning import learning_router
 from notebooklm_batch_studio.entrypoints.http.literature import literature_router
 from notebooklm_batch_studio.entrypoints.http.literature_files import literature_files_router
 from notebooklm_batch_studio.entrypoints.http.literature_notebook import literature_notebook_router
+from notebooklm_batch_studio.entrypoints.http.note_schedule import note_schedule_router
 from notebooklm_batch_studio.entrypoints.http.notes import notes_router
 from notebooklm_batch_studio.entrypoints.http.plan import plan_router
 from notebooklm_batch_studio.entrypoints.http.preferences import preferences_router
@@ -64,6 +65,7 @@ from notebooklm_batch_studio.entrypoints.http_middleware import (
     SecurityHeadersMiddleware,
 )
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
+from notebooklm_batch_studio.entrypoints.note_runtime import build_note_scheduler
 from notebooklm_batch_studio.entrypoints.port_check import busy_port_message, port_is_free
 from notebooklm_batch_studio.services.completion_notice import course_complete_hook
 from notebooklm_batch_studio.services.font_service import FontService
@@ -216,10 +218,15 @@ def _build_lifespan(service: BatchStudioService, cfg: AppConfig) -> Callable[[Fa
         Yields:
             Control while the application serves requests.
         """
+        scheduler = getattr(_app.state, "note_scheduler", None)
         if cfg.auto_start_queue:
-            logger.info("AUTO_START_QUEUE is on: starting the job queue")
+            logger.info("AUTO_START_QUEUE is on: starting the job queue and the note schedule")
             service.start_queue()
+            if scheduler is not None:
+                scheduler.start()  # SPEC-020: approved Gemini chapters continue after restarts
         yield
+        if scheduler is not None:
+            scheduler.stop()
         if service.worker_pool is not None:
             await service.worker_pool.stop()
 
@@ -377,6 +384,7 @@ _API_ROUTERS = (
     gemini_auth_router,
     study_library_router,
     textbooks_router,
+    note_schedule_router,
 )
 
 
@@ -447,6 +455,7 @@ def create_app(
     )
     active_service.course_complete_hook = course_complete_hook(cfg, send_notification)  # SPEC-017
     _configure_app_state(app, cfg, (active_service, active_study, study_plan), shared_engine)
+    app.state.note_scheduler = build_note_scheduler(cfg, app.state.session_factory)
     _register_routes_and_middlewares(app, cfg)
     return app
 

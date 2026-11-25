@@ -29,6 +29,7 @@ from notebooklm_batch_studio.entrypoints.mcp_gemini_auth import register_gemini_
 from notebooklm_batch_studio.entrypoints.mcp_literature import LiteratureToolDeps, register_literature_tools
 from notebooklm_batch_studio.entrypoints.mcp_literature_notebook import register_literature_notebook_tools
 from notebooklm_batch_studio.entrypoints.mcp_maintenance import register_maintenance_tools
+from notebooklm_batch_studio.entrypoints.mcp_note_schedule import register_note_schedule_tools
 from notebooklm_batch_studio.entrypoints.mcp_notes import register_note_pipeline_tools
 from notebooklm_batch_studio.entrypoints.mcp_study_library import register_study_library_tools
 from notebooklm_batch_studio.entrypoints.mcp_textbooks import register_textbook_tools
@@ -146,4 +147,5 @@ def register_literature_and_note_tools(mcp: MCPServer, cfg: AppConfig, resolved:
     register_study_library_tools(mcp, cfg, session_factory)
     register_maintenance_tools(mcp, cfg)
     register_textbook_tools(mcp, cfg, session_factory)
+    register_note_schedule_tools(mcp, cfg, session_factory)
     logger.debug("Registered literature, note pipeline, Gemini auth, and study library MCP tools")

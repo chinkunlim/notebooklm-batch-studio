@@ -29,3 +29,4 @@
 | [017-notes-files-notifications-versions-backups](017-notes-files-notifications-versions-backups.md) | Implemented | NoteStudio 其他筆記檔瀏覽、課程全部產出完成 macOS 通知、`_vN` 多版本產出納管、資料庫備份整理（移到 deleted/，不刪除） | TASK-038 |
 | [018-textbook-split-and-lecture-source](018-textbook-split-and-lecture-source.md) | Implemented | 課本依書籤切割成章節 PDF（pypdf，移植 literature-parser）、`02 Handouts` 為空時以 `.textbook.json` 標記的章節資料夾為講次、把誤放講義資料夾的章節搬到 `01 Materials/<課本>/`（保留講次編號與來源） | TASK-037 |
 | [019-web-gap-fill-profile-resume-retention](019-web-gap-fill-profile-resume-retention.md) | Implemented | 網頁補齊：課程「變更產出模式…」、筆記生成「繼續」、Gemini 憑證保留天數；無效產出模式回 422 | 網頁整合盤點 |
+| [020-textbook-detect-note-schedule-quota-resume](020-textbook-detect-note-schedule-quota-resume.md) | Implemented | 課本放進 01 Materials 自動偵測並提示切割、Gemini 筆記背景排程（允許一次後依序生成）、Gemini 額度用完記下重置時間到點續跑、Gemini Notebook 佇列顯示預計繼續時間 | 使用者 2026-11-25 定案 |

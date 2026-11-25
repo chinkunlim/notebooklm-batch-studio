@@ -260,6 +260,50 @@ class TextbookService:
             _textbook_row(course_dir, pdf) for d in mat_dirs for pdf in sorted(d.iterdir()) if _is_pdf(pdf)
         ]
 
+    def pending_textbooks(self, codes: list[str]) -> list[dict[str, Any]]:
+        """Find textbooks in `01 Materials` that have not been split yet (Refs: SPEC-020).
+
+        Args:
+            codes: Course codes to inspect (courses without a study folder are skipped).
+
+        Returns:
+            `[{course_code, course_name, relative_path, chapters, existing, error}]`.
+        """
+        rows: list[dict[str, Any]] = []
+        for code in codes:
+            try:
+                course, course_dir = self._course(code)
+            except ValueError:
+                continue
+            for book in (b for b in self.list_textbooks(code) if not b["split"]):
+                rows.append(
+                    {"course_code": code, "course_name": course.name, **self._pending_row(course_dir, book)}
+                )
+        return rows
+
+    def _pending_row(self, course_dir: Path, book: dict[str, Any]) -> dict[str, Any]:
+        """Summarize one unsplit textbook: chapter count, chapters already on disk, or why it cannot split.
+
+        Args:
+            course_dir: Course study directory.
+            book: Row from `list_textbooks`.
+
+        Returns:
+            `{relative_path, chapters, existing, error}`.
+        """
+        pdf = course_dir / book["relative_path"]
+        try:
+            _, plan = self._plan(pdf, pdf.parent / pdf.stem)
+        except Exception as exc:  # unreadable PDF or no chapter bookmarks
+            return {"relative_path": book["relative_path"], "chapters": 0, "existing": 0, "error": str(exc)}
+        existing = sum(1 for _, status in plan if status == "exists")
+        return {
+            "relative_path": book["relative_path"],
+            "chapters": len(plan),
+            "existing": existing,
+            "error": "",
+        }
+
     def _resolve_textbook(self, course_dir: Path, relative_path: str) -> Path:
         """Validate that `relative_path` is a top-level PDF inside a materials folder.
 

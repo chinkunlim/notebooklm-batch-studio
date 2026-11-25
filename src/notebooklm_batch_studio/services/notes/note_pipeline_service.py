@@ -302,14 +302,18 @@ class NotePipelineService:
             exc: Pause or quota exception that stopped the run.
 
         Returns:
-            Result summary with `status` and `error`.
+            Result summary with `status`, `error`, and `resume_after` (ISO time Gemini expects quota back).
         """
         status = "paused" if isinstance(exc, GenerationPausedError) else "quota_wait"
+        resume = getattr(exc, "resume_after", None)  # parsed from Gemini's notice (Refs: SPEC-020, ISSUE-065)
         logger.info("Note generation %s/%s stopped: %s", request.course_key, request.chapter_id, status)
         self.state.update_chapter_state(
             request.course_key, request.chapter_id, {"status": status, "last_error": str(exc)}
         )
-        return {"status": status, "error": str(exc), "completed_steps": []}
+        out: dict[str, Any] = {"status": status, "error": str(exc), "completed_steps": []}
+        if isinstance(resume, datetime):
+            out["resume_after"] = resume.isoformat()
+        return out
 
     def _stitch_chapter(
         self, request: ChapterNoteRequest, module_dir: Path, stitched_path: Path, completed: list[str]

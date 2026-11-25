@@ -52,6 +52,9 @@ async function fetchStatus() {
       queue.textContent = `佇列閒置（已完成 ${counts.done || 0} 項）`;
       setQueueButtonsVisible(true, false, false);
     }
+    if (counts.quota_wait > 0 && data.quota_resume_at && typeof fmtResumeTime === 'function') {
+      queue.textContent += `・額度已滿，預計 ${fmtResumeTime(data.quota_resume_at)} 繼續`; // SPEC-020
+    }
     const digest = `${!!data.queue_running}:${counts.done || 0}:${counts.running || 0}:${counts.pending || 0}:${counts.quota_wait || 0}:${counts.failed || 0}`;
     await syncLiveCourseProgress(digest);
   } catch (e) {

@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.adapters.pdf_textbook import PypdfTextbookTools
 from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
+from notebooklm_batch_studio.domain.models import CourseStatus
 from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.services.course_folders import list_category_subfolders
 from notebooklm_batch_studio.services.textbook_split import TextbookService
@@ -129,3 +130,29 @@ def list_course_subfolders(code: str, category: str, request: Request) -> dict[s
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PathSafetyError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@textbooks_router.get("/api/textbooks/pending", operation_id="list_pending_textbooks")
+def list_pending_textbooks(request: Request) -> dict[str, Any]:
+    """List unsplit textbooks in active courses' 01 Materials folders (Refs: SPEC-020).
+
+    Args:
+        request: Incoming HTTP request.
+
+    Returns:
+        `{"pending": [...]}` with chapter counts or the reason a book cannot be split.
+    """
+
+    def scan(svc: TextbookService) -> list[dict[str, Any]]:
+        """Collect pending textbooks for every active course.
+
+        Args:
+            svc: Textbook service bound to the request session.
+
+        Returns:
+            Pending rows.
+        """
+        codes = [c.code for c in svc.course_repo.list_courses(status=CourseStatus.ACTIVE)]  # type: ignore[attr-defined]
+        return svc.pending_textbooks(codes)
+
+    return {"pending": _run(request, scan)}

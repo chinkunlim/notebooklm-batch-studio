@@ -92,6 +92,7 @@ class StatusResponse(BaseModel):
         queue_running: Whether active queue worker is running.
         total_courses: Total registered courses count.
         queue_counts: Summary of job counts across statuses.
+        quota_resume_at: Earliest quota reset among QUOTA_WAIT jobs (ISO), or None.
     """
 
     app_env: str = Field(..., description="Application environment name")
@@ -99,6 +100,9 @@ class StatusResponse(BaseModel):
     queue_running: bool = Field(..., description="Whether worker queue is currently executing")
     total_courses: int = Field(..., description="Total number of registered courses")
     queue_counts: dict[str, int] = Field(..., description="Job count per lifecycle status")
+    quota_resume_at: str | None = Field(
+        None, description="Earliest time a quota-blocked job resumes (ISO), or null (Refs: SPEC-020)"
+    )
 
 
 class CourseSummaryResponse(BaseModel):

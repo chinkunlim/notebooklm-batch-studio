@@ -39,3 +39,12 @@ class MaintenancePathsMixin:
             `<data_dir>/backups`.
         """
         return self.data_dir / "backups"
+
+    @property
+    def note_schedule_path(self) -> Path:
+        """Background Gemini note schedule written by `NoteScheduler` (Refs: SPEC-020).
+
+        Returns:
+            `<data_dir>/state/note_schedule.json`.
+        """
+        return self.data_dir / "state" / "note_schedule.json"

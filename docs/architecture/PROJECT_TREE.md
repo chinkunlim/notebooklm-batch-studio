@@ -287,6 +287,7 @@ notebooklm-batch-studio/
 │   │   ├── 017-notes-files-notifications-versions-backups.md
 │   │   ├── 018-textbook-split-and-lecture-source.md
 │   │   ├── 019-web-gap-fill-profile-resume-retention.md
+│   │   ├── 020-textbook-detect-note-schedule-quota-resume.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -446,6 +447,7 @@ notebooklm-batch-studio/
 │       │   │   ├── literature.py
 │       │   │   ├── literature_files.py
 │       │   │   ├── literature_notebook.py
+│       │   │   ├── note_schedule.py
 │       │   │   ├── notes.py
 │       │   │   ├── plan.py
 │       │   │   ├── preferences.py
@@ -720,6 +722,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-literature.js
 │       │   │   ├── studio-mindmap-designer.js
 │       │   │   ├── studio-nav.js
+│       │   │   ├── studio-note-schedule.js
 │       │   │   ├── studio-notes-gen.js
 │       │   │   ├── studio-notes-tab.js
 │       │   │   ├── studio-pencil.js
@@ -758,6 +761,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_literature.py
 │       │   ├── mcp_literature_notebook.py
 │       │   ├── mcp_maintenance.py
+│       │   ├── mcp_note_schedule.py
 │       │   ├── mcp_notes.py
 │       │   ├── mcp_preferences.py
 │       │   ├── mcp_qa_notes.py
@@ -767,6 +771,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_study_library.py
 │       │   ├── mcp_study_plan.py
 │       │   ├── mcp_textbooks.py
+│       │   ├── note_runtime.py
 │       │   ├── port_check.py
 │       │   ├── schemas.py
 │       │   └── web_template.py
@@ -802,6 +807,7 @@ notebooklm-batch-studio/
 │       │   │   ├── note_files.py
 │       │   │   ├── note_paths.py
 │       │   │   ├── note_pipeline_service.py
+│       │   │   ├── note_scheduler.py
 │       │   │   ├── note_sync.py
 │       │   │   ├── state_manager.py
 │       │   │   └── step_validator.py
@@ -890,6 +896,7 @@ notebooklm-batch-studio/
 │   ├── test_adopt_outputs.py
 │   ├── test_api_and_mcp.py
 │   ├── test_auth_status.py
+│   ├── test_auto_schedule.py
 │   ├── test_button_routes.py
 │   ├── test_converters.py
 │   ├── test_course_admin.py

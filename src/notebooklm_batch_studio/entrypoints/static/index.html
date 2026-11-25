@@ -460,6 +460,7 @@
             <button class="btn btn-soft" id="btnNoteGenRefresh" onclick="refreshNoteGenStatus()">重新整理</button>
           </div>
         </div>
+        <article class="card" id="noteScheduleCard" style="margin-bottom:16px"></article>
         <div class="card" style="margin-bottom:16px">
           <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
             <div><label class="small muted">選擇已註冊課程（自動帶入）</label><br><select id="ngCourseSelect" class="input" onchange="onNoteGenCourseSelect()" style="width:240px"><option value="">（手動填寫或暫存 scratch）</option></select></div>
@@ -525,6 +526,7 @@
             </details>
           </div>
         </div>
+        <div id="textbookPendingHost"></div>
         <div class="queue resizable" data-col-key="queue">
           <div class="card">
             <div class="card-head"><h2 class="h2">已註冊課程</h2><span class="eyebrow">點一門課查看與設定</span></div>
@@ -1187,6 +1189,7 @@
 <script src="/static/studio-record.js"></script>
 <script src="/static/studio-library.js"></script>
 <script src="/static/studio-pickers.js"></script>
+<script src="/static/studio-note-schedule.js"></script>
 <script src="/static/studio-textbook.js"></script>
 <script src="/static/studio-nav.js"></script>
 <script src="/static/studio-player.js"></script>
