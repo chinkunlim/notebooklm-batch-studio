@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 
 # "Chapter 7 Groups", "1 Introduction …", "2. Ethics" — but not "1.1 Compare …" or "2024 Update".
 _CHAPTER_RE = re.compile(r"^(?:chapter\s+)?(\d{1,3})(?!\d)(?!\.\d)(?:[\s.:\-–—]+(.*))?$", re.IGNORECASE)
-_UNSAFE_CHARS = re.compile(r'[/\\:*?"<>|]')
-_MAX_TITLE_CHARS = 150
+# Same rule as literature-parser `sanitize_filename`, so names match chapters split there earlier.
+_UNSAFE_CHARS = re.compile(r'[/\\:*?"<>|_,;&]+')
+_MAX_TITLE_CHARS = 120
+_MAX_TITLE_BYTES = 200
 # Marks a `01 Materials/<book>/` folder as split textbook chapters (lecture source; SPEC-018).
 TEXTBOOK_MARKER = ".textbook.json"
 
@@ -51,6 +53,28 @@ class PageRangeJob:
     bookmarks: list[OutlineEntry] = field(default_factory=list)
 
 
+def _clean_title(title: str) -> str:
+    """Make a chapter title safe for file names (literature-parser `sanitize_filename` rule).
+
+    Args:
+        title: Raw chapter title.
+
+    Returns:
+        Hyphen-separated title, at most 120 characters / 200 UTF-8 bytes, possibly empty.
+    """
+    name = re.sub(r"[\x00-\x1f\x7f]+", "", title)
+    name = re.sub(r"\s+", "-", _UNSAFE_CHARS.sub("-", name))
+    name = re.sub(r"-+", "-", name).strip("-").rstrip(". ")
+    if len(name) > _MAX_TITLE_CHARS:
+        cut = name[:_MAX_TITLE_CHARS]
+        if "-" in cut[_MAX_TITLE_CHARS // 2 :]:
+            cut = cut.rsplit("-", 1)[0]
+        name = cut.rstrip("- ")
+    while len(name.encode("utf-8")) > _MAX_TITLE_BYTES and len(name) > 10:
+        name = name[:-5].rstrip("- ")
+    return name
+
+
 def chapter_filename(number: int, title: str) -> str:
     """Build the `ChNN-Title.pdf` file name used for chapter PDFs.
 
@@ -59,10 +83,9 @@ def chapter_filename(number: int, title: str) -> str:
         title: Chapter title.
 
     Returns:
-        File name with spaces as `-` and filesystem-unsafe characters removed.
+        File name; the title part follows `_clean_title`.
     """
-    clean = re.sub(r"\s+", "-", _UNSAFE_CHARS.sub("", title).strip())
-    clean = re.sub(r"-{2,}", "-", clean).strip("-")[:_MAX_TITLE_CHARS].rstrip("-")
+    clean = _clean_title(title)
     return f"Ch{number:02d}-{clean}.pdf" if clean else f"Ch{number:02d}.pdf"
 
 

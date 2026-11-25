@@ -85,6 +85,10 @@ class SectionsTest(unittest.TestCase):
             chapter_filename(4, "Empowering Women’s Life Choices: An  Examination"),
             "Ch04-Empowering-Women’s-Life-Choices-An-Examination.pdf",
         )
+        self.assertEqual(
+            chapter_filename(16, "Using Information, Taking Action, and Developing Plans of Action"),
+            "Ch16-Using-Information-Taking-Action-and-Developing-Plans-of-Action.pdf",
+        )
         chapter_titled = [OutlineEntry(1, "Chapter 7 Groups", 1), OutlineEntry(1, "Chapter 8 Teams", 5)]
         self.assertEqual(
             [(s.number, s.end) for s in find_chapter_sections(chapter_titled, 9)], [(7, 4), (8, 9)]
