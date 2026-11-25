@@ -22,7 +22,7 @@
 
 ## 3. 修正或規避方式
 
-- 後端 `CourseSettingsService.regenerate` 開頭檢查 `course.profile == ProfileName.RECORD_ONLY`，若是則拋出 `ValueError`（HTTP 對應回傳 `422`）禁止排入新版本任務（`Refs: ISSUE-068`）。
+- 已於 `33e8321` 修正後端 `CourseSettingsService.regenerate` 開頭檢查 `course.profile == ProfileName.RECORD_ONLY`，若是則拋出 `ValueError`（HTTP 對應回傳 `422`）禁止排入新版本任務（`Refs: ISSUE-068`）。
 - 前端 `studio-batch.js` 於 `data.profile === 'record-only'` 時停用該課程的「重新生成」按鈕（附提示文字）並隱藏加排產出列（`Refs: ISSUE-068`）。
 
 ## 4. 防回歸

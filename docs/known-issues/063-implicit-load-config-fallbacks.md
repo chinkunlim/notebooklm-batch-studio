@@ -1,6 +1,6 @@
 # ISSUE-063：config 與 entrypoints 以外存在隱式 load_config() 後備與寫死 DATA_DIR 子路徑
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
 - **Agent**：`antigravity`
 - **任務**：`TASK-035`
@@ -19,8 +19,8 @@ adapters/ 與 services/ 有 8 處 load_config() 後備呼叫與 9 處寫死 data
 
 ## 3. 修正或規避方式
 
-計畫於 Task 4 集中路徑至 config/settings.py 並移除 entrypoints/config 以外所有 load_config() 後備。（相關程式碼註解加 `Refs: ISSUE-063`）
+已於 `7ed1352`（`config/settings.py` 與各 service/adapter 注入重構）及 `0b1f80f`（補上 `config.tmp_dir`）修正：`DATA_DIR` 所有子路徑統一由 `AppConfig` 提供，並移除 `entrypoints/` 與 `config/` 以外所有隱式 `load_config()` 後備。（`Refs: ISSUE-063`）
 
 ## 4. 防回歸
 
-待補：tests/test_settings_paths.py (Task 4)
+- `tests/test_settings_paths.py::{test_new_paths_within_data_dir_and_study_layout,test_no_hardcoded_data_dir_subpaths_outside_config,test_no_implicit_load_config_outside_entrypoints_and_config}`

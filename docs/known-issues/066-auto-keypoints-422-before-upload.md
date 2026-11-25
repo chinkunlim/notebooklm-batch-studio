@@ -19,7 +19,7 @@
 
 ## 3. 修正或規避方式
 
-於 `studio-reader.js::loadKeyPoints` 先從 `currentStudyCourse?.lectures` 尋找當前講次，僅當 `lec && lec.source_id` 存在時才自動呼叫 `generateKeyPoints(false, true)`；未上傳與 `record-only` 課程不再於載入時自動發送請求（使用者仍可於上傳完成後手動點擊產生）。（Refs: ISSUE-066）
+於 `2d371ac` 修改 `studio-reader.js::loadKeyPoints`，先從 `currentStudyCourse?.lectures` 尋找當前講次，僅當 `lec && lec.source_id` 存在時才自動呼叫 `generateKeyPoints(false, true)`；未上傳與 `record-only` 課程不再於載入時自動發送請求（使用者仍可於上傳完成後手動點擊產生）。（Refs: ISSUE-066）
 
 ## 4. 防回歸
 

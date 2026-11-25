@@ -1,7 +1,7 @@
 # SPEC-015：從既有產出檔建立產出紀錄（Adopt Existing Outputs）
 
-- **狀態**：Approved <!-- Draft | Approved | Implemented | Deprecated -->
-- **日期**：2026-11-25
+- **狀態**：Implemented <!-- Draft | Approved | Implemented | Deprecated -->
+- **日期**：2026-11-25（同日完成實作、真實資料套用與瀏覽器驗收）
 - **相關任務 / ADR**：SPEC-014 (Q6)
 
 ## 1. 目標
@@ -90,29 +90,29 @@
 
 ## 5. 驗收標準（Given / When / Then）
 
-- [ ] **場景 15a（資料夾與檔名規則對應及未對應清單）**
+- [x] **場景 15a（資料夾與檔名規則對應及未對應清單）**
   - **Given** 課程於 `03 Notes/NotebookLM/01_Introduction-to-Scientific-Research/` 放有真實 31 個產出檔（含 `115-1_L01_audio.m4a`、3 組測驗、閃卡、心智圖、資訊圖表與裝置版、讀書指南）加上不明檔案 `stray_notes.txt`，且 `_course_synthesis/` 含全課程報告、模擬考與心智圖
   - **When** 呼叫 `adopt_existing_outputs(..., code, dry_run=True)`
   - **Then** 正確對應講次 1（8 項產出類型）與全課程（3 項產出類型）、`stray_notes.txt` 列入 `unmapped_files` 不建立工作、`dry_run=True` 下資料庫 `artifact_jobs` 仍為 0
-  - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_dry_run_maps_real_filenames_course_synthesis_and_reports_unmapped`
+  - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_dry_run_maps_real_filenames_course_synthesis_and_reports_unmapped`（另於真實 `115-1_CP30210` 驗證 48 筆 `would_create`）
 
-- [ ] **場景 15b（`dry_run=False` 寫入、冪等跳過、不改檔與不連網）**
+- [x] **場景 15b（`dry_run=False` 寫入、冪等跳過、不改檔與不連網）**
   - **Given** `record-only` 課程第 1 講已有 1 筆手動建立的 `study_guide` 工作（`done`），磁碟含全套既有檔案
   - **When** 呼叫 `adopt_existing_outputs(..., code, dry_run=False)`
   - **Then** 其餘類型寫入 `status="done"`、`version=1`、`output_file`／`interactive_path` 指向既有檔案；已存在的 `study_guide` 跳過不覆寫；未呼叫 NotebookLM；`course.profile` 仍為 `record-only` 且檔案未異動；重跑第二次全部跳過（`created == 0`）
-  - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_apply_creates_done_jobs_skips_existing_and_preserves_record_only_and_files`
+  - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_apply_creates_done_jobs_skips_existing_and_preserves_record_only_and_files`（真實 `115-1_CP30210` 已建立 48 筆 `adopted` 紀錄，重跑 dry-run 回 `would_create: 0 / would_skip: 48`）
 
-- [ ] **場景 15c（學習紀錄計入、測驗可讀寫 `quiz_attempts`、佇列不重跑）**
+- [x] **場景 15c（學習紀錄計入、測驗可讀寫 `quiz_attempts`、佇列不重跑）**
   - **Given** `record-only` 課程已完成 `adopt_existing_outputs(..., dry_run=False)`
   - **When** 呼叫 `LearningRecordService.build()`、`GET /api/courses/{code}/lectures/1/quiz/quiz_1`、`POST /api/courses/{code}/study/quiz-attempts` 與 `QueueRepository.claim_next_job()`
   - **Then** 學習紀錄 `stats["artifacts_done"]` 計入已建工作數、測驗端點回 `200`、交卷回 `200` 並寫入 `quiz_attempts`、`claim_next_job()` 回傳 `None`
-  - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_adopted_outputs_update_learning_record_enable_quiz_attempts_and_stay_out_of_queue`
+  - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_adopted_outputs_update_learning_record_enable_quiz_attempts_and_stay_out_of_queue`（真實 `115-1_CP30210` 測驗 `GET` 200／30 題且瀏覽器可選題作答；實際 `POST quiz-attempts` 於隔離暫存 `DATA_DIR` 驗證 200，避免污染真實 `quiz_attempts`）
 
-- [ ] **場景 15d（HTTP、MCP `confirm` 防護與 Web UI 三入口）**
+- [x] **場景 15d（HTTP、MCP `confirm` 防護與 Web UI 三入口）**
   - **Given** 測試客戶端與全工具註冊器已掛載
   - **When** 呼叫 HTTP `POST /api/courses/{code}/adopt-outputs`（含未知課程 404 與 `dry_run` true/false）、MCP `adopt_existing_outputs`（`confirm=False` 拒答與 `confirm=True` 執行）及檢查前端靜態程式碼
-  - **Then** HTTP 與 MCP 行為正確、`confirm=False` 回傳 `{"confirmed": false, ...}`、前端包含先 dry-run 預覽再確認的「從既有檔案建立產出紀錄」流程
-  - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_http_mcp_and_web_ui_adopt_outputs_entrypoints`
+  - **Then** HTTP 與 MCP 行為正確、`confirm=False` 回傳 `{"confirmed": false, ...}`、前端包含先 dry-run 預覽再確認的「從既有檔案建立產出紀錄」流程（另見 `ISSUE-068` 停用 `record-only`「重新生成」）
+  - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::{test_http_mcp_and_web_ui_adopt_outputs_entrypoints,test_record_only_course_refuses_regenerate_and_disables_button}`（已於 `http://127.0.0.1:8768/` 實機瀏覽器驗證選單、dry-run 對話框與停用按鈕，0 console error）
 
 ## 6. 未決問題 / 後續待辦
 

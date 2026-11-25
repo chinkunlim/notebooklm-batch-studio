@@ -1,6 +1,6 @@
 # ISSUE-062：舊佈局 input/courses 與 output/courses 仍被多處讀寫
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
 - **Agent**：`antigravity`
 - **任務**：`TASK-035`
@@ -19,8 +19,8 @@ ADR-011 導入後僅遷移既有課程，未將所有服務層讀寫路徑全面
 
 ## 3. 修正或規避方式
 
-計畫於 Task 6 全面改為 <HANDOUTS>/_uploaded/、scratch/<kind>/ 與課程 study_dir 產出根目錄。（相關程式碼註解加 `Refs: ISSUE-062`）
+已於 `5770358` 全面修正：上傳 PDF 改存 `<HANDOUTS>/_uploaded/`（無 `study_dir` 時存 `scratch/uploads/`）、問答筆記未連結課程存 `scratch/notes/`、產出與報告皆走 `resolve_course_output_root`，靜態掃描確保除遷移與整併模組外不再寫入舊 `input/courses` 或 `output/courses`。（`Refs: ISSUE-062`）
 
 ## 4. 防回歸
 
-待補：tests/test_old_layout_retired.py::test_no_new_writes_to_old_layout (Task 6)
+- `tests/test_old_layout_retired.py::{test_uploads_land_in_handouts,test_no_new_writes_to_old_layout}`

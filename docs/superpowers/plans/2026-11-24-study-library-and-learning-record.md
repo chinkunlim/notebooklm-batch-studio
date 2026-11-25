@@ -450,17 +450,17 @@ def test_no_new_writes_to_old_layout(self):
 
 ### Task 16: 在使用者電腦上整併（每步需使用者確認）
 
-- [ ] **Step 1:** 請使用者確認 Q1–Q5（對照表、`midterm-submission` 歸屬、`deleted/` 政策）；檢查 `deleted/115-1-20261112-182701` 內容（`ls -R`、檔案類型統計），回報是否為被誤刪的 `心理學研究法` 資料，由使用者決定是否還原。
-- [ ] **Step 2:** 經使用者同意，在 `.env` 加 `LEGACY_NOTE_STUDIO_DIR=/Users/limchinkun/Desktop/projects-data/note-studio/output/courses`。
-- [ ] **Step 3:** `uv run notebooklm-batch-studio consolidate --dry-run …` → 貼出計畫表 → 使用者同意後 `--apply`；貼出結果。
-- [ ] **Step 4:** 使用者自行從備份複製 113-1～114-2 到 `DATA_DIR/study/`；`GET /api/study/library` 確認列出 → 使用者勾選 → `register(archive=True)`。
-- [ ] **Step 5:** 證據：`notebooklm-batch-studio status`、`GET /api/study/record` 學期數與課程數、NoteStudio 筆記數（應 ≥ 109）、`GET /api/system/sign-ins`、瀏覽器截圖。
+- [x] **Step 1:** 請使用者確認 Q1–Q5（對照表、`midterm-submission` 歸屬、`deleted/` 政策）；檢查 `deleted/115-1-20261112-182701` 內容（`ls -R`、檔案類型統計），回報是否為被誤刪的 `心理學研究法` 資料，由使用者決定是否還原。（已完成：344 MB / 186 檔）
+- [x] **Step 2:** 經使用者同意，在 `.env` 加 `LEGACY_NOTE_STUDIO_DIR=/Users/limchinkun/Desktop/projects-data/note-studio/output/courses`。
+- [x] **Step 3:** `uv run notebooklm-batch-studio consolidate --dry-run …` → 貼出計畫表 → 使用者同意後 `--apply`；貼出結果。（已完成 3 門課整併、186 檔複製還原，並由 SPEC-015 納管 `CP30210` 48 筆 `done`）
+- [ ] **Step 4:** 使用者自行從備份複製 113-1～114-2 到 `DATA_DIR/study/`；`GET /api/study/library` 確認列出 → 使用者勾選 → `register(archive=True)`。（`待實機`：待使用者從雲端備份複製過去學期資料夾後操作）
+- [x] **Step 5:** 證據：`notebooklm-batch-studio status`、`GET /api/study/record` 學期數與課程數、NoteStudio 筆記數（CP30210 6 章 / CP31000 11 章）、`GET /api/system/sign-ins`、瀏覽器驗證與 console 0 錯。
 
 ### Task 17: 收尾、文件、驗收
 
 **Files:** `docs/architecture/ARCHITECTURE.md`（新服務、資料流、§4 安全與資料位置）、`docs/specs/014-…`（勾選驗收）、`docs/specs/001-batch-generation.md`、`docs/specs/010-user-end-to-end-workflow.md`、`docs/standards/PROJECT_RULES.md`（再次核對）、`README.md`（更新方法：`git pull` → `uv sync` → `uv run alembic upgrade head` → `init-data` → 需要時 `consolidate --dry-run`；核心規則 14）、`scripts/demo/demo-data.js`（假資料加 `term`、`course_no`、`status`，展示學期分組與學習紀錄）
 
-- [ ] **Step 1:** 更新上述文件；`uv run python scripts/build_demo.py`
-- [ ] **Step 2:** `python3 scripts/agentctl.py check` 結束碼 0、`uv run python -m unittest discover -s tests -v` 全過、`python3 scripts/agentctl.py scan` 無新警告、`python3 .agents/skills/project-auditor/scripts/audit_project_integrity.py` 無新增 TODO
-- [ ] **Step 3:** Task 0 登錄的 known-issue 逐項改為 resolved 並填防回歸測試名稱；CHANGELOG 補 TASK-033、ISSUE-042..044；11 條「待實機」驗收項目列給使用者實機檢查
-- [ ] **Step 4:** `agentctl task done`、Commit；使用者說「收工」時依 `session-closeout` 建立對話紀錄（含今天兩段對話）；push 前徵得同意
+- [x] **Step 1:** 更新上述文件；`uv run python scripts/build_demo.py`
+- [x] **Step 2:** `python3 scripts/agentctl.py check` 結束碼 0、`uv run python -m unittest discover -s tests -v` 全過、`python3 scripts/agentctl.py scan` 無新警告、`python3 .agents/skills/project-auditor/scripts/audit_project_integrity.py` 無新增 TODO
+- [x] **Step 3:** Task 0 登錄的 known-issue 逐項改為 resolved 並填防回歸測試名稱；CHANGELOG 補 TASK-033、ISSUE-042..044（及 TASK-035、SPEC-014/015、ISSUE-058..068）；11 條＋新增「待實機」驗收項目列給使用者實機檢查
+- [x] **Step 4:** `agentctl task done`、Commit（本機，未推送；`session-closeout` 待使用者說「收工」時執行）

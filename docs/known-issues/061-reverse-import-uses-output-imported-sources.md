@@ -1,6 +1,6 @@
 # ISSUE-061：反向匯入筆記本仍存於 output/imported_sources 舊佈局
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
 - **Agent**：`antigravity`
 - **任務**：`TASK-035`
@@ -19,8 +19,8 @@ services/reverse_import.py 將匯入的筆記本來源與產出放進 output/imp
 
 ## 3. 修正或規避方式
 
-計畫於 Task 9（services/reverse_import.py、entrypoints/http/reverse_import.py、entrypoints/mcp_qa_notes.py）修正。（相關程式碼註解加 `Refs: ISSUE-061`）
+已於 `b13ba8f`（`services/reverse_import.py`、`entrypoints/http/reverse_import.py`、`entrypoints/mcp_qa_notes.py`）修正：反向匯入改為接收 `term`（預設當前學期）、落入 `study/<term>/<course>/` 並預設設定 `record-only` 屬性。（`Refs: ISSUE-061`）
 
 ## 4. 防回歸
 
-待補：tests/test_study_library.py (Task 9)
+- `tests/test_study_library.py::test_reverse_import_writes_to_study_term_record_only`

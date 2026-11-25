@@ -1,8 +1,8 @@
 # SPEC-001：批次生成（資料夾 → Notebook → 每份 PDF 的複習包）
 
-- **狀態**：Implemented (Phase 1, TASK-002, TASK-004)
+- **狀態**：Implemented (Phase 1, TASK-002, TASK-004；目錄與身分規則由 SPEC-014 / ADR-014 統一至 `DATA_DIR/study/<學期>/<課程>/02 Handouts` 與 `03 Notes/NotebookLM`)
 - **日期**：2026-10-21
-- **相關任務 / ADR**：ADR-001
+- **相關任務 / ADR**：ADR-001、ADR-014
 
 ## 1. 目標
 

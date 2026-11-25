@@ -24,7 +24,7 @@ Task 11 初版設計改代碼時只盤點了 11 張資料庫表與 `course.toml`
 
 ## 3. 修正或規避方式
 
-補齊 `course_lifecycle` / `course_identity_repo` 的後備輸出搬移、`needs_review/<old>_*` 改名並更新 `artifact_jobs.output_file` 前綴、改寫指向 `scratch/notes/<old>/` 的 `stitched_path`（不動 `study_dir` 路徑）、納入 dry-run 與失敗回滾，並阻擋筆記 `running` 狀態或持鎖文獻任務期間之改代碼（Refs: ISSUE-067）。
+已於 `6b61247` 補齊 `course_lifecycle` / `course_identity_repo` 的後備輸出搬移、`needs_review/<old>_*` 改名並更新 `artifact_jobs.output_file` 前綴、改寫指向 `scratch/notes/<old>/` 的 `stitched_path`（不動 `study_dir` 路徑）、納入 dry-run 與失敗回滾，並阻擋筆記 `running` 狀態或持鎖文獻任務期間之改代碼（Refs: ISSUE-067）。
 
 ## 4. 防回歸
 

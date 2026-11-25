@@ -1,6 +1,6 @@
 # ISSUE-058：課程代碼三規則不一致：CP__30000 解析碰撞為 CP
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
 - **Agent**：`antigravity`
 - **任務**：`TASK-035`
@@ -19,8 +19,10 @@ services/course_parser.py::parse_course_folder_name('CP__30000-團體諮商') �
 
 ## 3. 修正或規避方式
 
-計畫於 Task 2（domain/course_identity.py）、Task 11（安全改代碼）與 Task 16（現有資料整併）修正。（相關程式碼註解加 `Refs: ISSUE-058`）
+已於 `c480aba`（新增 `domain/course_identity.py` 解析校方 `__`/`_` 課號並組合 `<學期>_<課號>`）、`01e523d`（切換 `StudyLibraryService` 使用新解析器）、`28749bb`（安全改代碼）與 `b2178d1`（`consolidate` 整併舊代碼與資料夾名）修正。（`Refs: ISSUE-058`）
 
 ## 4. 防回歸
 
-待補：tests/test_course_identity.py 與 tests/test_study_library.py
+- `tests/test_course_identity.py`（`test_parses_school_course_folders`、`test_non_course_folders`、`test_codes`）
+- `tests/test_study_library.py::test_real_school_folder_names_yield_distinct_codes`
+- `tests/test_course_lifecycle.py::CourseArchiveAndRenameTests`

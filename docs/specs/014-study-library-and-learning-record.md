@@ -1,7 +1,7 @@
 # SPEC-014：學習資料庫統一與完整學習紀錄（Study Library & Learning Record）
 
-- **狀態**：Approved <!-- Draft | Approved | Implemented | Deprecated -->
-- **日期**：2026-11-24
+- **狀態**：Implemented <!-- Draft | Approved | Implemented | Deprecated -->
+- **日期**：2026-11-24（2026-11-25 驗收更新）
 - **相關任務 / ADR**：TASK-035 / ADR-014（部分修訂 ADR-011）
 
 ## 1. 目標
@@ -75,65 +75,65 @@
 ## 5. 驗收標準（BDD Given / When / Then 場景與對應測試）
 
 ### 5.1 課程身分與學期碼（Task 2）
-- [ ] **場景 1（校方課號解析保留完整課名）**
+- [x] **場景 1（校方課號解析保留完整課名）**
   - **Given** 資料夾名稱為 `CP__30000-團體諮商` 與 `YY__5061AA-體育 (三)_超慢跑 AA`
   - **When** 呼叫 `parse_course_folder`
   - **Then** 回傳 `CourseFolderInfo(course_no="CP30000", name="團體諮商", is_course=True)` 與 `CourseFolderInfo(course_no="YY5061AA", name="體育 (三)_超慢跑 AA", is_course=True)`
   - 對應測試：`tests/test_course_identity.py::test_parses_school_course_folders`
-- [ ] **場景 2（非課程資料夾不誤判）**
+- [x] **場景 2（非課程資料夾不誤判）**
   - **Given** 資料夾名稱為 `Course Outline`、`專題`、`115-1`、`.DS_Store`、`生涯諮商`
   - **When** 呼叫 `parse_course_folder`
   - **Then** 回傳 `is_course == False`
   - 對應測試：`tests/test_course_identity.py::test_non_course_folders`
-- [ ] **場景 3（跨學期代碼組合、拆解與標題安全）**
+- [x] **場景 3（跨學期代碼組合、拆解與標題安全）**
   - **Given** 同一課號 `CP30000` 於 `114-1` 與 `115-1` 修習，及非法字元 `CP/30000`
   - **When** 呼叫 `make_course_code`、`split_course_code`、`notebook_title`
   - **Then** 產生不同代碼 `114-1_CP30000` 與 `115-1_CP30000`、標題 `[CP30000] 團體諮商 (115-1)`，非法路徑拋出 `PathSafetyError`
   - 對應測試：`tests/test_course_identity.py::test_codes`
 
 ### 5.2 分類名稱、別名與角色（Task 3）
-- [ ] **場景 4（單複數別名合併、非 PDF 不當講次、課本不是講次）**
+- [x] **場景 4（單複數別名合併、非 PDF 不當講次、課本不是講次）**
   - **Given** 課程目錄內同時存在 `02 Handout/a.pdf`、`02 Handouts/sub/b.pdf`、`02 Handouts/c.pptx` 與 `01 Materials/textbook.pdf`
   - **When** 掃描課程目錄與查詢 `CategoryRole.HANDOUTS`
   - **Then** `category_dirs` 合併單複數資料夾；講次只包含 `a.pdf` 與 `b.pdf`（含相對路徑），課本與 `.pptx` 不成為講次
   - 對應測試：`tests/test_study_layout.py::test_singular_and_plural_handouts_merged`、`test_materials_are_not_lectures`
-- [ ] **場景 5（補齊目錄不重複建、自訂分類與無硬編碼檢查）**
+- [x] **場景 5（補齊目錄不重複建、自訂分類與無硬編碼檢查）**
   - **Given** 已有 `01 Material/` 資料夾；以及以 `STUDY_CATEGORIES` 傳入少於 5 個名稱
   - **When** 執行 `DEFAULT_LAYOUT.ensure_tree`、`layout_from_names` 與原始碼掃描
   - **Then** 不會另外建立重複的 `01 Materials/`；非法長度拋出 `ValueError`；`src/` 除 `study_layout.py` 外無殘留單數寫死分類字面
   - 對應測試：`tests/test_study_layout.py::test_ensure_tree_respects_alias`、`test_role_of_and_custom_names`、`test_no_hardcoded_category_literals_left`
 
 ### 5.3 路徑集中與環境隔離（Task 4）
-- [ ] **場景 6（集中 `DATA_DIR` 路徑與 `init-data` 冪等初始化）**
+- [x] **場景 6（集中 `DATA_DIR` 路徑與 `init-data` 冪等初始化）**
   - **Given** 一個空白 `tmp` 目錄建構 `AppConfig`
   - **When** 檢查所有路徑屬性、`scratch_kind_dir` 邊界與執行兩次 `init-data`
   - **Then** 新屬性皆位於 `data_dir` 內；非法種類（`../x`、`other`）拋出 `ValueError`；`src/` 除 `config/` 與 `entrypoints/` 外無 `load_config()` 與硬編碼子路徑；`study/` 與 5 個 `scratch/<kind>/` 皆存在
   - 對應測試：`tests/test_settings_paths.py`
 
 ### 5.4 資料庫欄位與舊佈局退場（Task 5 & Task 6）
-- [ ] **場景 7（資料庫 `status`/`course_no`、`record-only` 與舊文獻分類相容）**
+- [x] **場景 7（資料庫 `status`/`course_no`、`record-only` 與舊文獻分類相容）**
   - **Given** `status=ARCHIVED`、`course_no` 與 `profile=RECORD_ONLY` 的課程，及舊資料 `target_category="01 Material"`
   - **When** 寫入與查詢 `CourseRepository`、執行 `generate_jobs_for_course`
   - **Then** 可依 `status` 過濾、`RECORD_ONLY` 回傳空工作清單、舊 `"01 Material"` 對應 `CategoryRole.MATERIALS`
   - 對應測試：`tests/test_course_lifecycle.py`
-- [ ] **場景 8（閃卡隔離、上傳與瀏覽捷徑切換、不再寫入舊佈局）**
+- [x] **場景 8（閃卡隔離、上傳與瀏覽捷徑切換、不再寫入舊佈局）**
   - **Given** 兩門課程各自於 `study/` 有同編號講次閃卡；透過上傳 base64 PDF；呼叫 `browse_folders(None, cfg)`
   - **When** 查詢閃卡、儲存上傳 PDF、掃描原始碼
   - **Then** 閃卡只讀所屬課程不跨課；上傳落入 `<HANDOUTS>/_uploaded/`；捷徑前兩項為 `study_root_dir` 與 `scratch_dir`；除遷移／整併模組外無程式碼寫入 `courses_input_dir`／`courses_output_dir`
   - 對應測試：`tests/test_old_layout_retired.py`
 
 ### 5.5 學習庫掃描、本學期建課、監看、歸檔與生命週期（Task 7–11）
-- [ ] **場景 9（掃描學期樹並以 `record-only` 登錄舊課程，支援非標準資料夾）**
+- [x] **場景 9（掃描學期樹並以 `record-only` 登錄舊課程，支援非標準資料夾）**
   - **Given** `study/` 含 `113-1`、`115-1`（含 `CP__30000-團體諮商`、`Course Outline`、`專題`、`.docx`）
   - **When** 呼叫 `StudyLibraryService.scan()`、`register()`、`register_folder("115-1", "專題", "PROJ1151")`
   - **Then** 正確區分課程與 `others`；登錄後 `profile=RECORD_ONLY`、`status=ARCHIVED`、不產生工作；重複登錄略過；重修兩學期 `study_dir` 各自獨立
-  - 對應測試：`tests/test_study_library.py`
-- [ ] **場景 10（本學期外部資料夾落入 `study` 樹、課本選用與監看／反向匯入／歸檔）**
+  - 對應測試：`tests/test_study_library.py`（註：真實資料 `113-1`～`114-2` 多學期備份複製後實機大量登錄為`待實機`，由使用者複製舊學期資料夾後於頁面勾選驗證）
+- [x] **場景 10（本學期外部資料夾落入 `study` 樹、課本選用與監看／反向匯入／歸檔）**
   - **Given** 外部暫存資料夾加入課程、設定 `materials_as_source=False`、監看器收到新 PDF、反向匯入指定學期、執行 `FilingService.file/unfile`
   - **When** 執行對應服務
   - **Then** 外部 PDF 複製至 `study/<term>/<folder>/02 Handouts/`；課本不上傳；只有 `02 Handouts` PDF 觸發監看；歸檔防同名覆寫並阻擋越界路徑，撤銷歸檔回到 `scratch/unarchived/<code>/`
   - 對應測試：`tests/test_study_library.py`、`tests/test_filing.py`
-- [ ] **場景 11（封存／恢復、改代碼與安全刪除：Task 11 ＋ Google Classroom 生命週期）**
+- [x] **場景 11（封存／恢復、改代碼與安全刪除：Task 11 ＋ Google Classroom 生命週期）**
   - **Given（場景 11a：封存排除佇列、Today 與到期複習）** 一門 `active` 課程含有 `pending` 工作、到期複習卡與未完成學習步驟
   - **When** 呼叫 `CourseLifecycleService.archive(code)`，再呼叫 `CourseLifecycleService.restore(code)`
   - **Then** 封存後 `claim_next_job` 回傳 `None`、`count_by_status(runnable_only=True)` 排除該課、課程不出現在 `StudyPlanService.get_today()` 且 `due_reviews(code)` 回空陣列；恢復後 `claim_next_job`、`get_today()` 與 `due_reviews(code)` 皆重新出現該課
@@ -200,13 +200,13 @@
   - **Then** `--apply` 拒絕執行且磁碟與資料庫零異動；`CoursePdfEventHandler` 偵測 `consolidate.pause` 期間直接略過事件不呼叫 `on_pdf_detected`
   - 對應測試：`tests/test_legacy_consolidation.py`
 
-## 6. 未決問題（Task 16 動真實資料前須逐題請使用者確認）
+## 6. 未決問題（已於 Task 16 & SPEC-015 確認定案）
 
-| # | 問題 | 目前採行預設 |
+| # | 問題 | 使用者定案結果 |
 |---|---|---|
-| Q1 | `DATA_DIR/deleted/`（344 MB）保留政策 | 永久保留；僅提供盤點與經使用者 `confirm=True` 才執行的手動清理，不自動刪除 |
-| Q2 | `02 Handouts` 的 `.pptx`／`.docx` 處理方式 | 只列入學習紀錄與檔案清單，不自動轉檔、不上傳為講次來源 |
-| Q3 | 文獻 PDF 預設歸檔位置 | `01 Materials/Literature_Review`（透過 `CategoryRole.MATERIALS` 解析，不寫死字串） |
-| Q4 | `01 Materials`（課本）是否上傳為 NotebookLM 來源 | 預設不上傳；由課程設定勾選「課本作為整門課來源」（`materials_as_source`）控制 |
-| Q5 | 現有真實資料課程對照 | `115-1`（生涯諮商）→ `115-1_CP31000`（`CP__31000-生涯諮商與實務`）；`心理學研究法` → `CP__30210`；確認 `midterm-submission/` 歸屬與 `deleted/115-1-20261112-182701` 是否還原 |
-| Q6 | 從既有 `03 Notes/NotebookLM/` 重建 `artifact_jobs`（`done`） | 調查實測（2026-11-25 暫存資料夾）：現有 `StudyLibraryService.register` 與 `BatchStudioService.register_course_folder` 僅掃描 `02 Handouts/` 建立 `lectures`，**不會**依 `03 Notes/NotebookLM/<講次>/` 既有產出重建 `artifact_jobs`（`jobs == []`、`stats["artifacts_done"] == 0`、`GET /api/courses/<code>` 顯示 `study_state == "not_started"`；`LearningRecordService` 的 `categories` 檔案清單仍會列出該等檔案）。**待後續討論決定是否新增「從本地 NotebookLM 產出反向重建 done jobs 與講次對應」功能** |
+| Q1 | `DATA_DIR/deleted/`（344 MB）保留政策 | **已定案**：全部保留；還原內容一律用**複製**（不搬走原檔），手動清理才需 `confirm=True` |
+| Q2 | `02 Handouts` 的 `.pptx`／`.docx` 處理方式 | **已定案**：只列入學習紀錄與檔案清單，不轉檔、不上傳 |
+| Q3 | 文獻 PDF 預設歸檔位置 | **已定案**：`01 Materials/Literature_Review`（透過 `CategoryRole.MATERIALS` 解析，不寫死字串） |
+| Q4 | `01 Materials`（課本）是否上傳為 NotebookLM 來源 | **已定案**：預設不上傳；由課程設定勾選「課本作為整門課來源」（`materials_as_source`）控制 |
+| Q5 | 現有真實資料課程對照 | **已於 Task 16 完成整併**：`115-1_CP31000`（`CP__31000-生涯諮商與實務`）、`115-1_CP30210`（`CP__30210-心理學研究法`，自 `deleted/` 複製還原）、`115-1_GC68210`（`GC__68210-和 AI 一起寫程式`，納入 `05 Assignments/期中專題/`）與 `LEGACY_NOTE_STUDIO_DIR` 匯入 |
+| Q6 | 從既有 `03 Notes/NotebookLM/` 重建 `artifact_jobs`（`done`） | **已於 SPEC-015 實作定案**：新增 `AdoptOutputsService`（HTTP/MCP/UI 三入口，預設 `dry_run=True`）；已對真實 `115-1_CP30210` 建立 48 筆 `done`（`source_origin="adopted"`）工作 |

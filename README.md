@@ -49,18 +49,39 @@ OPENATHENS_DOMAIN=
 EBSCO_PROFILE=
 ```
 
-4. 安裝依賴與初始化資料夾（`uv sync` 到專案內 `.venv/`，並建立 `study/` 與 `scratch/` 結構）：
+4. 一鍵完成套件安裝、資料庫遷移與資料目錄初始化（建立 `study/` 與 5 個 `scratch/<kind>/`）：
 
 ```bash
 python3 scripts/agentctl.py setup --install
+uv run alembic upgrade head
 uv run notebooklm-batch-studio init-data
 ```
 
 資料目錄結構（位於專案資料夾外的 `DATA_DIR`）：
 - `DATA_DIR/study/<學期>/<課程資料夾>/<分類>/`：唯一課程資料夾（預設分類 `01 Materials`、`02 Handouts`、`03 Notes`、`04 Homework`、`05 Assignments`，可用 `.env` 的 `STUDY_CATEGORIES` 自訂；只有 `02 Handouts` 內的 PDF 會成為講次）。
 - `DATA_DIR/scratch/<種類>/`：未歸檔與撤銷歸檔暫存區（`literature`、`notes`、`outputs`、`uploads`、`unarchived`）。
+- 選用：若需從獨立版 `note-studio` 匯入舊筆記，可在 `.env` 設定 `LEGACY_NOTE_STUDIO_DIR=/path/to/note-studio/output/courses`。
 
-5. 登入 Gemini Notebook（會開啟瀏覽器，由你親自登入 Google 帳號一次；憑證保存於 `~/.config/notebooklm-batch-studio/`，權限 600）：
+### 2. 日常／後期平滑更新（核心規則 14）
+
+更新程式時會完整保留專案外的 `DATA_DIR`、`db/app.db` 學習紀錄與本機 `.env` 設定，不會覆蓋既有課程資料：
+
+```bash
+git pull
+uv sync
+uv run alembic upgrade head
+uv run notebooklm-batch-studio init-data
+```
+
+- 若本機還留有舊版 `input/courses`、`output/courses`、`midterm-submission` 或 `LEGACY_NOTE_STUDIO_DIR` 舊資料，先用 `--dry-run` 預覽整併計畫表，確認無誤後才加 `--apply`：
+
+```bash
+uv run notebooklm-batch-studio consolidate --dry-run
+```
+
+> 建議執行真實資料 `--apply` 前先停止 Web 伺服器，並將 `DATA_DIR/db/app.db` 備份至 `DATA_DIR/backups/`。
+
+### 3. 登入身分檢查與啟動 (Auth)
 
 ```bash
 uv run notebooklm-batch-studio login --browser
@@ -102,15 +123,28 @@ uv run notebooklm-batch-studio batch /path/to/BIO101 /path/to/CS101 --profile fu
 uv run notebooklm-batch-studio status
 ```
 
-### 3. 斷點續傳 (Resume)
+### 4. 檢查進度、舊資料整併 (`consolidate`) 與納管既有產出 (`adopt-outputs`)
 
-若因碰觸每日額度上限或中途暫停，重啟後執行續跑即可繼續未完成的工作：
+- **整併舊資料夾至 `study/`（預設 `--dry-run`，先檢查計畫表再套用）**：
 
 ```bash
-uv run notebooklm-batch-studio resume
+# 預覽將搬移／改名／合併的計畫（輸出報表到 DATA_DIR/diagnostics/，不改任何檔案與 DB）
+uv run notebooklm-batch-studio consolidate \
+  --folder 115-1/生涯諮商=CP__31000-生涯諮商與實務 \
+  --map 115-1=115-1_CP31000 \
+  --assign midterm-submission=115-1_GC68210:ASSIGNMENTS/期中專題 \
+  --restore 115-1-20261112-182701=115-1_CP30210:OUTPUTS
+
+# 核對無誤且 Web 伺服器已暫停後，正式套用（deleted/ 採複製不搬原檔，note-studio 略過 版本/ 與 layout/）
+uv run notebooklm-batch-studio consolidate ... --apply
 ```
 
-### 4. 目錄即時監看 (Watcher)
+- **從既有 `03 Notes/NotebookLM/` 建立產出紀錄（SPEC-015）**：
+  - 適用時機：整併或從 `deleted/` 複製還原既有產出後，將本機產出檔登錄為 `status=done`（`source_origin="adopted"`），不呼叫 Gemini Notebook、不改動檔案、不排入生成佇列。
+  - **Web UI**：批次排程 → 點選課程 → 進階工具 →「從既有檔案建立產出紀錄」（自動先顯示 `dry-run` 預覽數量與講次摘要，按確定才寫入）。
+  - **HTTP / MCP**：`POST /api/courses/{code}/adopt-outputs`（`{"dry_run": true}` / `false`）或 MCP 工具 `adopt_existing_outputs(code, dry_run=True, confirm=False)`。
+
+### 5. 目錄即時監看 (Watcher)
 
 監聽 `DATA_DIR/study/` 底下所有已登錄課程的 `02 Handouts/` 分類資料夾（含子資料夾；不需要也不接受路徑參數），當有新講義 PDF 存入且寫入完成時自動加入處理；`04 Homework/`、`01 Materials/` 與非課程資料夾不會觸發：
 
@@ -206,8 +240,8 @@ uv run python -m unittest discover -s tests -v
 - [`.agents/handoff/LATEST.md`](.agents/handoff/LATEST.md) — 即時交接看板與歷史記錄
 - [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) — 系統架構圖、五層依賴與核心流程
 - [`docs/architecture/PROJECT_TREE.md`](docs/architecture/PROJECT_TREE.md) — 完整目錄樹與檔案標記
-- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-014）
+- [`docs/specs/SPECS.md`](docs/specs/SPECS.md) — 需求規格書總表（SPEC-001 ~ SPEC-015）
 - [`docs/adr/DECISIONS.md`](docs/adr/DECISIONS.md) — 架構決策記錄庫（ADR-001 ~ ADR-014）
-- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-065）
+- [`docs/known-issues/KNOWN_ISSUES.md`](docs/known-issues/KNOWN_ISSUES.md) — 已知問題與踩坑排查庫（ISSUE-001 ~ ISSUE-068）
 - [`docs/standards/PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) — 本專案特有規則（領域名詞、埠號 8768、安全禁忌）
 - [`alembic/DB.md`](alembic/DB.md) — 資料庫模型遷移與 11 張實體資料表綱要指南 (SQLite / SQLAlchemy)

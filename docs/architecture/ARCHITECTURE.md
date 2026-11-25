@@ -18,7 +18,7 @@
 - **蘇格拉底式引導家教 (Socratic Tutor)**：連貫對話情境，引導思考而非直接餵答案。
 - **作答前信心評分**：比對「確定卻答錯」的認知盲點，提供深度警示與 AI 詳解。
 - **今日計畫與間隔複習**：動態排程「Today」研讀進度、考前倒數計時與 25 分鐘專注番茄鐘。
-- **統一學習目錄與學術文獻收集**（SPEC-012 / ADR-011）：以 `<STUDY_ROOT_DIR>/<term>/<subject>/01 Material .. 05 Assignments` 統一管理教材、文獻、Gemini Notebook 產出與 QA 筆記；整合 `literature-fetch` 核對與下載管線（Crossref / OpenAlex / OpenLibrary / 華藝 / EBSCO / OpenAthens Chrome）、`scratch/literature/` 暫存自動匯入、PDF.js 內嵌預覽、Excel 式多欄排序篩選，以及 Gemini `Literature Library` 總庫問答與 7 段式 Literature Review 自動續傳。
+- **統一學習目錄、跨學期身分與學習紀錄**（SPEC-012 / SPEC-014 / SPEC-015 / ADR-011 / ADR-014）：以 `<DATA_DIR>/study/<term>/<folder>/01 Materials .. 05 Assignments` 成為唯一課程資料結構（相容 `01 Material`/`02 Handout` 別名，名稱可由 `STUDY_CATEGORIES` 自訂），`<DATA_DIR>/scratch/<kind>/` 成為唯一未歸檔區；課程代碼採 `<學期>_<課號>`（例如 `115-1_CP31000`），過去學期支援以 `record-only`＋`archived` 一鍵掃描登錄或以 `adopt-outputs`（SPEC-015）反向納管既有 `03 Notes/NotebookLM/` 產出；整合 `literature-fetch` 核對與下載管線、`consolidate` 舊資料整併工具（含 `deleted/` 非破壞性複製還原與 `note-studio` 匯入），以及跨學期 Markdown／PDF 完整學習紀錄匯出。
 
 系統嚴格遵循單向五層架構（`entrypoints ➔ adapters ➔ services ➔ domain ➔ config`），所有資料與程式碼嚴格分離（儲存於 `DATA_DIR`），並提供三大操作入口：
 1. **CLI 命令列介面**：用於批次排程、目錄監看、狀態檢視與身分登入。
@@ -28,22 +28,23 @@
 ```mermaid
 flowchart TD
     subgraph Storage ["外部儲存層 (DATA_DIR / Config)"]
-        PDFs["input/courses/<br/>(講義 PDF)"]
-        DB[(db/app.db<br/>SQLite: 任務/版本/選單/測驗/錯題/進度/間隔複習/重點/家教)]
-        Out["output/courses/<br/>(產出物 MD / PDF / Audio / 裝置圖 / HTML)"]
-        Quarantine["needs_review/<br/>(題目不足之隔離區)"]
-        Creds["~/.config/<br/>(隔離登入憑證 600)"]
+        StudyTree["study/<學期>/<課程>/<分類>/<br/>(01 Materials .. 05 Assignments)"]
+        ScratchDir["scratch/<種類>/<br/>(literature / notes / outputs / uploads / unarchived)"]
+        DB[(db/app.db<br/>SQLite: 課程/講次/任務/作答/錯題/複習/重點/家教/文獻)]
+        Quarantine["needs_review/ · tmp/ · diagnostics/<br/>(隔離區 / PDF暫存 / 整併報表)"]
+        Creds["~/.config/ & state/<br/>(NotebookLM 600 / Gemini / 圖書館瀏覽器 700)"]
     end
 
     subgraph Entrypoints ["入口層 (Entrypoints)"]
-        CLI["CLI 命令列<br/>(cli.py)"]
-        WebUI["Web 儀表板 & 研讀工作台 & 閱讀器<br/>(FastAPI / HTML / JS / PDF.js)"]
-        API["REST API 子路由<br/>(courses / queue / artifacts / study / learning / plan / settings / system)"]
-        MCP["MCP Server 集群<br/>(Core / Course Settings / Job Prompts / Learning / Study Plan)"]
+        CLI["CLI 命令列<br/>(cli.py: batch / watch / init-data / consolidate / web)"]
+        WebUI["Web 儀表板 & 研讀工作室 & 學習紀錄<br/>(FastAPI / HTML / JS / PDF.js)"]
+        API["REST API 子路由<br/>(courses / study_library / queue / artifacts / study / learning / plan / notes / system)"]
+        MCP["MCP Server 集群<br/>(Core / StudyLibrary / CourseSettings / JobPrompts / Learning / StudyPlan / Notes)"]
     end
 
     subgraph Services ["業務邏輯層 (Services)"]
-        Orchestrator["批次協調服務<br/>(BatchStudioService)"]
+        Orchestrator["批次協調 & 生命週期<br/>(BatchStudio / CourseLifecycle / LegacyConsolidation)"]
+        StudyLib["學習庫與納管<br/>(StudyLibrary / Filing / AdoptOutputs / LearningRecord)"]
         ArtifactRunner["產出執行器<br/>(ArtifactRunner / 版本管理)"]
         StudyService["研讀追蹤服務<br/>(StudyTrackerService)"]
         LearningService["學習輔助服務<br/>(LearningService / 閱讀器重點 / 家教)"]
@@ -52,27 +53,30 @@ flowchart TD
         CourseSettings["產出設定管理<br/>(CourseSettingsService)"]
         FolderBrowser["資料夾瀏覽器<br/>(FolderBrowserService)"]
         QuotaPlanner["即時配額規劃<br/>(QuotaPlanner)"]
-        Parser["課程掃描器<br/>(CourseParser)"]
+        Parser["課程掃描與身分<br/>(CourseParser / course_identity / study_layout)"]
         WorkerPool["非同步工作池<br/>(WorkerPool)"]
         Converters["多格式轉檔器<br/>(Quiz / Cards / Map / PDF / Image / Anki / Report)"]
         Reporter["課程報告產出<br/>(CourseReporter)"]
-        Watcher["目錄監看器<br/>(CourseWatcher)"]
+        Watcher["目錄監看器<br/>(CourseWatcher: study/HANDOUTS)"]
     end
 
     subgraph Adapters ["適配器與外部服務 (Adapters)"]
         NLMAdapter["Gemini Notebook Client<br/>(notebooklm-py / Playwright)"]
-        Repo["SQLite Repository<br/>(Job / Course / Version / Selection)"]
+        Repo["SQLite Repository<br/>(Course / Queue / CourseIdentity / Version)"]
         StudyRepo["Study Repository<br/>(Attempt / Mistake)"]
         LearningRepo["Learning Repository<br/>(KeyPoint / TutorMessage)"]
         ReviewRepo["Review Repository<br/>(StudyProgress / ReviewItem / Explanation)"]
     end
 
     subgraph Domain ["領域模型 (Domain)"]
-        Models["實體: Course, Lecture, Job, Artifact, QuizAttempt, QuizMistake<br/>實體: StudyProgress, ReviewItem, KeyPoint, TutorMessage<br/>模型: MemoryModel, StudyPlan, NotebookLMProtocol<br/>輔助: Naming, UsageGuide, QuotaCost"]
+        Models["實體: Course(status/course_no), Lecture, Job, Quiz, Flashcard<br/>模型: course_identity, study_layout, path_safety, MemoryModel, StudyPlan<br/>輔助: Naming, UsageGuide, QuotaCost"]
     end
 
-    PDFs --> Parser
+    StudyTree --> Parser
+    StudyTree --> StudyLib
+    ScratchDir --> StudyLib
     CLI & WebUI & API & MCP --> Orchestrator
+    CLI & WebUI & API & MCP --> StudyLib
     WebUI & API & MCP --> StudyService
     WebUI & API & MCP --> LearningService
     WebUI & API & MCP --> StudyPlanService
@@ -87,15 +91,16 @@ flowchart TD
     StudyPlanService --> NLMAdapter
     NLMAdapter --> Creds
     ArtifactRunner --> Converters
-    Converters --> Out
+    Converters --> StudyTree
     Converters -. 檢驗失敗 .-> Quarantine
     Orchestrator --> Repo
+    StudyLib --> Repo
     StudyService --> StudyRepo
     LearningService --> LearningRepo
     StudyPlanService --> ReviewRepo
     Repo & StudyRepo & LearningRepo & ReviewRepo --> DB
     Orchestrator --> Reporter
-    Reporter --> Out
+    Reporter --> StudyTree
     Watcher --> Orchestrator
     Services --> Domain
     Adapters --> Domain
@@ -111,9 +116,10 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ### 2.1 入口層 (`entrypoints`)
 負責協調外部使用者與外部代理人的請求輸入，不包含業務規則：
-- `cli.py`：命令列工具入口，支援 `login`（檢查登入憑證；加 `--browser` 開瀏覽器由使用者親自登入）、`batch`（批次掃描建立）、`status`（即時進度總覽）、`resume`（中斷重試續跑）、`watch`（守護進程監控）與 `web`（啟動 Web 與 MCP 服務）。
+- `cli.py` & `cli_consolidate.py`：命令列工具入口，支援 `login`、`init-data`（冪等建立 `study/` 與 5 個 `scratch/<kind>/`）、`batch`、`status`、`resume`、`watch`（只監看 `study/` 下各課程 `02 Handouts/`）、`consolidate`（舊資料整併，預設 `--dry-run`）、`migrate-study-layout`、`literature` 與 `web`。
 - `api.py` 與 `entrypoints/http/`：FastAPI 應用程式，切分為職責分明的子路由：
-  - `courses.py`：課程列表、註冊掃描、講次清單。
+  - `courses.py`：課程列表（含 `term`/`course_no`/`status`/`profile`）、註冊掃描、講次清單。
+  - `study_library.py`：學習庫掃描與只登錄不生成 (`/api/study/library`、`/register`、`/register-folder`)、分類設定 (`/api/study/layout`)、`scratch/` 歸檔與撤銷歸檔 (`/api/study/unfiled`、`/file`、`/unfile`)、封存／恢復與改代碼 (`/api/courses/{code}/archive|restore|rename`)、既有產出納管 (`/api/courses/{code}/adopt-outputs`)、跨學期學習紀錄查詢與 Markdown/PDF 匯出 (`/api/study/record*`)、三組登入狀態 (`/api/system/sign-ins`)。
   - `queue.py`：工作佇列狀態、暫停/恢復（恢復時一併喚醒等待額度的工作）、單筆與整門課重試 (`POST /api/jobs/{id}/retry`、`POST /api/courses/{code}/jobs/retry-failed`)、Prompt 檢視與編輯 (`GET/POST /api/jobs/{id}/prompt`)。
   - `artifacts.py`：檔案安全下載、隔離區 (`needs_review`) 檢視與直接下載、Markdown / HTML 檢視器。
   - `study.py`：研讀工作台 API，包含測驗繳卷即時評分、錯題本查詢與複習掌握標記、Anki 間隔重複 CSV 匯出。
@@ -136,6 +142,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `studio-escape.js`：最先載入的 `escHtml()` 與 `jsAttr()`；所有 inline handler 的字串參數一律用 `jsAttr()`（ISSUE-046）。
   - 文獻頁：`studio-literature-ui.js`（下拉選單、PDF.js 預覽）、`studio-literature-rows.js`（表格列、歸檔選單、排序篩選）、`studio-literature-actions.js`（工作橫幅、Notebook 按鈕、新增與 APA 複製）、`studio-literature.js`（頁面狀態與事件）。
   - 筆記頁：`studio-notes-gen.js`（note-studio 生成面板）、`studio-notes-tab.js`（問答筆記）。
+  - 學習紀錄與生命週期：`studio-record.js`（依學期分組、封存隱藏/切換、動態分類名稱、跨學期學習紀錄檢視與匯出、改代碼、`adopt-outputs` dry-run 預覽與確認、三組登入狀態）。
   - `studio-focus.js`：番茄鐘（專注、短休息、長休息），計時收進側欄，習慣存在偏好。
   - 側欄是 `position: fixed` 貼齊視窗上下緣（ISSUE-031）；換頁是腳本控制的淡出 / 浮上（ISSUE-032）。
   - `vendor/pdfjs/`：內建 PDF.js 4.10.38 閱讀核心，完全離線運作。
@@ -149,7 +156,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `mcp_learning.py`：重點查詢、閱讀狀態與家教對話工具。
   - `mcp_study_plan.py`：研讀計畫與間隔複習工具。
   - `mcp_preferences.py` & `mcp_fonts.py`：網頁偏好讀寫重設與 Google Fonts 離線安裝工具。
-  - `mcp_extensions.py`：組裝文獻與筆記工具群，提供課程 `study_dir` / `source_dir` 查詢。
+  - `mcp_extensions.py`：組裝文獻、筆記與學習庫工具群，提供課程 `study_dir` / `source_dir` 查詢。
+  - `mcp_study_library.py`：學習庫掃描登錄、歸檔／撤銷歸檔、封存／恢復、改代碼（預設 `dry_run=True`）、學習紀錄與匯出、三組登入狀態及 `adopt_existing_outputs`（具 `confirm` 防護）。
   - `mcp_literature.py` & `mcp_literature_notebook.py`：文獻與 `Literature Library` 工具；會改資料者一律 `confirm=True`（ISSUE-048）。
   - `mcp_notes.py` & `mcp_gemini_auth.py`：note-studio 筆記工具（SPEC-013）與 Gemini Web 登入／憑證保留控制工具（`notes_gemini_*`，ISSUE-053）。
   - `mcp_confirm.py`：共用未確認安全守衛；全庫 57 支變更類 MCP 工具於 `confirm=False` 時統一回傳 `{"confirmed": false, "warning": ...}`（TASK-033）。
@@ -169,7 +177,7 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `downloads.py`：依照 `artifact_id` 精確下載遠端產出，處理語音 `.m4a` 與心智圖改名。
   - `quota.py`：查詢 Gemini Notebook 即時配額表與估算消耗。
 - `adapters/db/`：
-  - `repository.py` (`CourseRepository`) & `queue_repository.py` (`QueueRepository`)：使用 SQLAlchemy 管理課程、講次、工作佇列、客製產出選項 (`course_artifact_selections`) 與版本記錄 (`job_versions`)。
+  - `repository.py` (`CourseRepository`)、`queue_repository.py` (`QueueRepository`) & `course_identity_repo.py` (`CourseIdentityRepository`)：使用 SQLAlchemy 管理課程（含 `status`/`course_no`/`term`/`profile`）、講次、工作佇列（認領時排除 `archived` 課程）、客製產出選項 (`course_artifact_selections`)、版本記錄 (`job_versions`)，以及交易式跨 11 張表改代碼。
   - `study_repository.py` (`StudyRepository`)：管理學生測驗作答紀錄 (`quiz_attempts`) 與個人錯題本 (`quiz_mistakes`)。
   - `learning_repository.py` (`LearningRepository`)：管理講義 PDF 重點標註萃取 (`key_points`) 與蘇格拉底家教對話紀錄 (`tutor_messages`)。
   - `review_repository.py` (`ReviewRepository`)：管理研讀步驟進度 (`study_progress`)、艾賓浩斯間隔複習卡片 (`review_items`) 與 AI 題目詳解 (`explanations`)。
@@ -193,7 +201,12 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 - `course_settings.py` (`CourseSettingsService`) & `course_options.py`：管理每門課程的產出類型開關、跨課程複製與三層繼承風格設定，持久化至資料庫與 `course.toml`。
 - `font_service.py` (`FontService`) & `preferences_service.py` (`PreferencesService`)：管理離線字型安裝清單與跨頁面偏好存取。
 - `folder_browser.py` (`FolderBrowserService`)：提供本機安全目錄層級導航與 PDF 講義資料夾選取。
-- `course_parser.py`：依檔名結構排序並剖析課程目錄下的講義 PDF 與中繼資料。
+- `course_parser.py`：依檔名結構排序並剖析 `02 Handouts`（含別名與子資料夾）下的講義 PDF；自動排除 `01 Materials` 課本與 `.pptx`/`.docx`。
+- `study_library.py` (`StudyLibraryService`) & `filing.py` (`FilingService`)：掃描 `study/<學期>/` 樹區分標準課程與其他資料夾，以 `record-only`＋`archived` 一鍵登錄過去學期課程（支援手動填課號登錄非標準資料夾）；在 `scratch/<種類>/` 與課程 5 分類之間安全歸檔與撤銷歸檔（防同名覆寫與路徑越界）。
+- `course_lifecycle.py` (`CourseLifecycleService`) & `course_rename_files.py`：課程封存／恢復（Google Classroom 模式，未封存拒絕刪除，刪除只移資料庫不動 `study/`）、交易式安全改代碼（預設 `dry_run=True`；擋 `running` 工作、筆記執行中與文獻鎖；失敗時完整回滾 DB 與本機檔案）。
+- `adopt_outputs.py` (`AdoptOutputsService`)：掃描課程既有 `03 Notes/NotebookLM/` 產出並重用 `artifact_runner`/`quiz_runner`/`image_fitter`/`naming` 規則納管為 `done`（`source_origin="adopted"`），不連線 Gemini Notebook 且不改檔。
+- `learning_record.py` (`LearningRecordService`) & `auth_status.py` (`AuthStatusService`)：彙整跨學期完整學習紀錄（含封存、未登錄課程與 `others`）、讀書時間與記憶強度、匯出 Markdown 與 PDF（暫存寫入 `DATA_DIR/tmp/`）；唯讀檢視 NotebookLM、Gemini Web 與圖書館瀏覽器三組登入狀態。
+- `legacy_consolidation.py` & `legacy_consolidation_helpers.py`：一次性舊資料整併服務（預設 `dry-run`、獨占鎖檢查與 `consolidate.pause` 旗標、從 `deleted/` 複製還原、非 PDF 子資料夾盤點、`note-studio` 筆記匯入、寫入 `DATA_DIR/diagnostics/` 報表）。
 - `job_planner.py` & `job_views.py`：依課程 Profile 與自訂勾選規劃任務矩陣，並建置狀態視圖投影。
 - `worker_pool.py`：控管平行非同步任務排程、啟動時復原殘留 `RUNNING` 任務、額度封鎖恢復同步、冷卻期滿失敗任務自動恢復，並處理暫時性失敗退避重試。
 - `quota_planner.py`：讀取 Gemini Notebook 即時配額，於工作執行前進行嚴格預檢（額度不足自動轉入 `QUOTA_WAIT` 狀態，避免浪費重試次數），並支援 5 小時額度窗與每週額度評估。
@@ -213,15 +226,15 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 
 ### 2.4 領域模型層 (`domain`)
 純 Python 商業物件，無任何外部第三方相依：
-- 實體與值物件：`models.py` (`Course`, `Lecture`, `ArtifactJob`, `Artifact`, `Quiz`, `Question`, `Flashcard`, `MindMapNode`, `QuizAttempt`, `QuizMistake`, `JobVersion`)、`generation_options.py`（三層繼承選項規格與驗證）、`repositories.py`（儲存庫介面協定）。
+- 實體與值物件：`models.py` (`Course`, `Lecture`, `ArtifactJob`, `Artifact`, `Quiz`, `Question`, `Flashcard`, `MindMapNode`, `QuizAttempt`, `QuizMistake`, `JobVersion`, `CourseStatus`, `ProfileName`)、`generation_options.py`（三層繼承選項規格與驗證）、`repositories.py`（儲存庫介面協定）。
 - 學習與研讀模型：`memory_model.py`（艾賓浩斯記憶強度、半衰期衰減與掌握度等級計算）、`study_plan.py`（今日任務清單、考前倒數天數、間隔複習卡片）、`notebooklm_protocol.py`（定義 Gemini Notebook 通訊協定與資料介面）。
-- 路徑安全：`path_safety.py`（`validate_path_segment`、`ensure_within_roots`，ISSUE-045、ADR-013）；`study_hierarchy.py`（學習資料夾結構與 `resolve_course_output_root`）。
+- 路徑安全與學習目錄：`path_safety.py`（`validate_path_segment`、`ensure_within_roots`，ISSUE-045、ADR-013）；`course_identity.py`（校方課號與 `<學期>_<課號>` 解析、防碰撞筆記本標題）；`study_layout.py`（5 語意分類、單複數別名與 `STUDY_CATEGORIES`）；`study_hierarchy.py`（學習資料夾結構與 `resolve_course_output_root`）。
 - 輔助邏輯：`naming.py`（集中控管 Gemini Notebook 遠端標題與本機檔案命名法、版本號尾綴）、`usage_guide.py`（提供課程學習順序、複習規劃與配額解說）。
-- 業務列舉：`JobStatus`, `JobType`, `ArtifactType`, `DifficultyLevel`, `CourseProfile`。
+- 業務列舉：`JobStatus`, `JobType`, `ArtifactType`, `DifficultyLevel`, `CourseProfile`, `CourseStatus`。
 - 領域例外：`DomainError`, `NotebookLMError`, `QuotaExceededError`, `AuthExpiredError`。
 
 ### 2.5 設定與基礎設施層 (`config`)
-- `config.py`：單一來源讀取環境變數，解析 `DATA_DIR`、`HTTP_PORT`、`NOTEBOOKLM_HOME` 等全域設定。
+- `settings.py`（`config` 層唯一讀寫 `.env`）：集中定義並提供全部 `DATA_DIR` 子路徑（`study_root_dir`、`scratch_dir`、`tmp_dir`、`diagnostics_dir`、`notes_state_dir`、`gemini_profile_dir`、`literature_browser_profile_dir`、`consolidate_pause_file` 等）與 `STUDY_CATEGORIES`；`entrypoints/` 與 `config/` 以外禁止隱式 `load_config()`（ISSUE-063）。
 - `logging_setup.py`：設定結構化日誌格式、色彩支援、自動注入 Run ID，並將記錄輸出至 `DATA_DIR/logs/`。
 
 ---
@@ -229,9 +242,9 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 ## 3. 核心業務流程與資料流 (Core Workflows)
 
 ### 3.1 講義匯入與單一來源生成
-1. 使用者將講義放入 `DATA_DIR/input/courses/<CourseCode>/`，或透過 Web UI 目錄瀏覽器挑選加入。
-2. 系統解析講義檔名序號（例如 `01_細胞膜.pdf`, `02_酵素.pdf`）。
-3. 建立或重用 Gemini Notebook 遠端同名筆記本，並上傳所有來源（重註冊時自動保留既有 `source_id`，避免重複上傳）。
+1. 使用者將講義放入 `DATA_DIR/study/<學期>/<課程資料夾>/02 Handouts/`，或透過 Web UI 目錄瀏覽器挑選加入（若選擇外部暫存資料夾，系統依課號歸位至 `study/` 樹）。
+2. 系統解析講義檔名序號（例如 `01_細胞膜.pdf`, `02_酵素.pdf`），自動排除 `01 Materials` 課本與 `.pptx`/`.docx`（除非勾選 `materials_as_source` 將課本作為整門課來源）。
+3. 建立或重用 Gemini Notebook 遠端同名筆記本（標題 `[<課號>] <課名> (<學期>)`），並上傳所有來源（重註冊時自動保留既有 `source_id`，避免重複上傳）。
 4. **單一來源聚焦**：生成第 N 講的音訊與測驗時，只勾選第 N 份來源 ID（`source_ids=[source_id]`），確保產出專注於當次主題，不互相污染。
 
 ### 3.2 30 題階梯式測驗與品質隔離機制
@@ -290,13 +303,27 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
 5. **獨立版本探索歸檔 (`docs/design/`)**：
    - 包含 Version 1（經典排程）、Version 2（心流雙欄）、Version 3（奢華黑膠）、Version 4（九宮格矩陣與全RWD）自包含檔案與 `DESIGN.md`。
 
+### 3.10 統一學習目錄、歸檔與課程生命週期 (Study Library, Filing & Lifecycle, SPEC-014 / ADR-014)
+1. **學期樹與只登錄不生成**：`StudyLibraryService.scan()` 掃描 `DATA_DIR/study/<學期>/<資料夾>/`，以 `course_identity.parse_course_folder` 解析校方課號（如 `CP__30000-團體諮商` → `115-1_CP30000`），區分標準課程與非課程項目 (`others`，可透過 `register-folder` 手動填課號登錄)。過去學期課程一鍵登錄為 `profile="record-only"`、`status="archived"`，只建課程與講次紀錄，完全不排生成工作、不消耗遠端額度。
+2. **未歸檔區與安全歸檔**：`DATA_DIR/scratch/<種類>/`（`literature`、`notes`、`outputs`、`uploads`、`unarchived`）統一承接未歸檔與撤銷歸檔檔案；`FilingService.file` / `unfile` 驗證目標位於課程分類與 `scratch/unarchived/` 內，同名自動加 `-2` 不覆寫。
+3. **封存／恢復與安全刪除**：採 Google Classroom 模式（`active → archived → delete`）。封存課程自動被 `QueueRepository.claim_next_job`、`StudyPlanService.get_today` 與 `due_reviews` 排除；未封存課程禁止刪除（HTTP 409 / MCP `confirmed: false`）；刪除只移除資料庫紀錄（回報 8 張學習紀錄表移除筆數），**不動 `study/` 內任何檔案**（僅舊佈局 `output/courses/<code>` 與 `needs_review/<code>_*` 移至 `deleted/`）。
+4. **交易式安全改代碼**：`CourseLifecycleService.rename` 預設 `dry_run=True` 預覽影響範圍；偵測到 `running` 工作、筆記生成執行中、文獻程序鎖 (`literature_job.lock`) 或目標代碼已存在時拒絕執行。套用時於單一資料庫交易內同步更新 11 張表、`ui_preferences`，以及 `course.toml`、`notes_state`、`scratch/notes`、`QA_Notes`、`output/courses`、`needs_review`、`stitched_path`（僅重寫 `scratch/notes` 前綴），任一步失敗則完整回滾 DB 與還原所有檔案（ISSUE-067）。
+
+### 3.11 跨學期完整學習紀錄與匯出 (Learning Record, SPEC-014)
+1. `LearningRecordService.build(term=None)` 跨學期彙整已登錄、`archived` 與磁碟尚存的 `unregistered` 課程及 `others` 非課程項目，清點五分類檔案清單（只讀檔名與相對路徑、略過隱藏檔與跨界 symlink）、已完成產出、NoteStudio / 問答筆記、文獻、測驗與錯題統計，以及由學習紀錄計算的學習天數與記憶強度。
+2. 支援透過 HTTP (`GET /api/study/record/export?format=md|pdf`)、MCP (`export_learning_record`) 與網頁「學習紀錄」分頁（含動態分類中文標籤）檢視與匯出；PDF 匯出暫存檔嚴格寫於 `DATA_DIR/tmp/`（`config.tmp_dir`），回應完成後即清理。
+
+### 3.12 舊資料整併與既有產出納管 (`consolidate` & `adopt-outputs`, SPEC-015)
+1. **一次性舊資料整併**：`notebooklm-batch-studio consolidate` 預設 `--dry-run`（需本機埠號未被佔用且無背景鎖定，套用時建立 `consolidate.pause` 令監看器暫停），依使用者核准的對照表將 `input/courses` 講義、未對齊校名資料夾、單數分類別名（合併不覆寫）、`midterm-submission/` 與 `LEGACY_NOTE_STUDIO_DIR` 舊筆記安全整併進 `study/`，支援以 `--restore` 從 `deleted/` **複製**救回資料而不搬動原備份，並輸出可追溯報告至 `DATA_DIR/diagnostics/`。
+2. **既有產出反向納管（SPEC-015）**：針對還原或整併後磁碟已有 `03 Notes/NotebookLM/` 檔案的課程，`AdoptOutputsService.adopt_existing_outputs` 直接重用 `artifact_runner`、`quiz_runner`、`image_fitter` 與 `naming` 現有命名規則辨識講次與全課程產出（未能對應者列 `unmapped_files`），預設 `dry_run=True`，套用時寫入 `status="done"`、`version=1`、`source_origin="adopted"` 紀錄並跳過已存在項目，全程不呼叫 Gemini Notebook、不改動檔案。針對 `record-only` 且無筆記本的課程，`CourseSettingsService.regenerate` 與前端停用「重新生成」與加排產出列（ISSUE-068）。
+
 ---
 
 ## 4. 安全性與環境隔離 (Security & Isolation)
 
 1. **憑證安全與三組獨立登入**：不讀取亦不儲存使用者 Google 密碼；本機共隔離維護三組登入狀態——**NotebookLM**（`notebooklm_home`，預設 `~/.config/notebooklm-batch-studio`，權限 600）、**Gemini 網頁**（`<DATA_DIR>/state/gemini_profile`，note-studio CDP 登入）、與**文獻／圖書館瀏覽器**（`<DATA_DIR>/state/literature_browser_profile`）。總覽 API（`GET /api/system/sign-ins` / MCP `get_sign_in_status`）僅檢查檔案／資料夾存在性與 `check_auth_status(live_check=False)`，絕不讀取或回傳 Cookie／Token 內容。
 2. **服務綁定**：FastAPI 與 MCP 本機伺服器嚴格僅綁定 `127.0.0.1:8768`，並具備 Host Header 檢查機制，禁止對外網暴露。
-3. **路徑穿越防護**：產出物下載與檢視都限制在該課程的輸出根目錄（有 `study_dir` 時為 `<study_dir>/03 Notes/NotebookLM`，ISSUE-050）或 `needs_review` 隔離區內，課程代號本身也要通過 `validate_path_segment`；講義 PDF 閱讀器只提供已註冊講次的檔案，並檢查解析後的路徑必須位於該課程的講義資料夾內（否則回 403），且只讀不改。筆記管線的識別碼與呼叫端路徑只能落在 `DATA_DIR`、`STUDY_ROOT_DIR` 或課程登錄資料夾（ISSUE-045）；文獻 PDF 只從文獻資料夾提供（ISSUE-047）。
-4. **資料隔離**：原始講義、中繼資料、產出物與紀錄檔案全數集中於專案目錄外的 `DATA_DIR`，避免程式碼倉庫污染或敏感講義外流。
+3. **路徑穿越防護**：產出物下載與檢視都限制在該課程的輸出根目錄（有 `study_dir` 時為 `<study_dir>/03 Notes/NotebookLM`，ISSUE-050）或 `needs_review` 隔離區內，課程代號與歸檔目的地亦須通過 `validate_path_segment` 與 `ensure_within_roots`；講義 PDF 閱讀器只提供已註冊講次的檔案，並檢查解析後的路徑必須位於該課程的講義資料夾內（否則回 403），且只讀不改。筆記管線的識別碼與呼叫端路徑只能落在 `DATA_DIR`、`STUDY_ROOT_DIR` 或課程登錄資料夾（ISSUE-045）；文獻 PDF 只從文獻資料夾提供（ISSUE-047）；學習紀錄掃描略過指向 `DATA_DIR` 外的 symlink。
+4. **資料隔離與 `record-only` 防護**：原始講義、中繼資料、產出物、PDF 匯出暫存檔（`DATA_DIR/tmp/`）、整併診斷報告（`DATA_DIR/diagnostics/`）與紀錄檔案全數集中於專案目錄外的 `DATA_DIR`；課程刪除僅移除資料庫紀錄而不刪除 `study/` 檔案；`record-only` 課程禁止排入生成或重新生成（HTTP 422，ISSUE-068）。
 5. **不可信內容與提示注入（ADR-013、ISSUE-046）**：講義、文獻、網路研究來源與 Gemini 回覆一律視為資料。網頁端：原始 HTML 先跳脫、Markdown 連結只允許 http / https / mailto / 相對路徑、inline handler 參數用 `jsAttr()`、所有回應帶 Content-Security-Policy（`connect-src 'self'`、`object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'self'`）。MCP 端：會新增、搬移、上傳或花額度的工具一律需要 `confirm=True`。
 6. **瀏覽器設定檔與圖書館帳密（ADR-013）**：Chrome / Playwright 設定檔資料夾權限 700；Chrome 遠端除錯埠只綁 127.0.0.1。圖書館（OpenAthens）帳密只從 `.env` 的 `LIBRARY_EMAIL` / `LIBRARY_PASSWORD` 讀取（舊名 `USER_*` 相容），絕不存放 Google 密碼；學校網域 `OPENATHENS_DOMAIN` 與 `EBSCO_PROFILE` 由 `.env` 設定，程式碼不寫死。

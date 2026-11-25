@@ -9,14 +9,14 @@
 - **分類與講次**：標準五分類為 `01 Materials`（課本與文獻）、`02 Handouts`（老師教材）、`03 Notes`（AI 筆記與個人隨筆）、`04 Homework`（作業）、`05 Assignments`（報告），可用 `.env` 的 `STUDY_CATEGORIES` 自訂；讀取相容 `01 Material`/`02 Handout` 別名。**只有 `02 Handouts`（含子資料夾）內的 PDF 成為講次**，依檔名排序編號 `01, 02, …`；`01 Materials` 預設不上傳（僅勾選「課本作為整門課來源」時納入）。
 - **未歸檔區 (`scratch/`)**：`DATA_DIR/scratch/<種類>/`（`literature`、`notes`、`outputs`、`uploads`、`unarchived`）集中存放未歸檔或撤銷歸檔的檔案。
 - **產出**：audio (`.m4a`)、quiz（×3：1 基礎、2 理解、3 模擬考，各 30 題）、infographic、mind map、flashcards、study guide、concept explanation report；整門課另有模擬考與全課程 mind map。
-- **產出組合（profile）**：`full`、`quiz-only`、`exam-prep`（見 SPEC-001）以及不排程生成的 `record-only`（過去學期只登錄建立學習紀錄）。可於 Web 介面自由切換個別項目開關。
+- **產出組合（profile）**：`full`、`quiz-only`、`exam-prep`（見 SPEC-001）以及不排程生成的 `record-only`（過去學期只登錄建立學習紀錄；可透過 SPEC-015 `adopt_existing_outputs` 將既有的 `03 Notes/NotebookLM/` 檔納管為 `done` 工作，且禁止對無筆記本的 `record-only` 課程觸發 `regenerate`，ISSUE-068）。可於 Web 介面自由切換個別項目開關。
 - **版本化重新生成**：重新生成時不覆蓋舊檔案，Gemini Notebook 遠端標題後綴 `(v2)`，本機檔名後綴 `_v2`（歷史紀錄於 `job_versions`）。
 - **多裝置資訊圖表**：資訊圖表預設為直式，並由 `image_fitter` 同步輸出 A4 PDF、iPad Air 4 (2360x1640) 與 MacBook Pro 14 吋 (3024x1964) 規格。
 - **學生研讀工作台 (Study Portal)**：整合線上互動測驗、作答記錄 (`quiz_attempts`)、錯題本 (`quiz_mistakes`)、3D 閃卡、語音播放與 Anki CSV 間隔重複匯出。
 - **研讀計畫與間隔複習 (SPEC-007)**：每日「Today」學習任務排程、考前倒數天數動態調整、跨講混合複習、測驗題目之 Gemini Notebook AI 詳解快取 (`explanations`)。
 - **學習心理學與智慧閱讀 (SPEC-008)**：講義 PDF.js 離線閱讀器、Gemini Notebook 核心重點萃取與引文畫線定位、艾賓浩斯半衰期記憶強度計算（連續天數與掌握度熱圖）、作答信心評分（sure-but-wrong 認知盲點強烈警示）、蘇格拉底式引導家教 (`tutor_messages`)、25 分鐘番茄鐘專注計時。
 - **單一產出獨立設定 (SPEC-006)**：支援個別產出覆寫題目數（預設 30 題）、難度、語言、資訊圖表方向與風格、投影片格式（PDF/PPTX），採「全域預設 ➔ 課程設定 ➔ 講次覆寫」三層繼承。
-- **研讀工作室與外觀自訂 (SPEC-009，已實作 v05，ADR-008)**：左側圖示側欄四頁（研讀總覽、研讀工作室、弱點複習、批次排程），側欄底部是使用方法、專注模式、設計與自訂；唱盤播放該講真實語音摘要（黑膠 / 弦波 / 環形 / 聲譜，播放中離開研讀工作室會縮到側欄成迷你播放器）；工作台把講義與各產出物、AI 家教放在同一處，三種版面、四種排列、可調欄寬；五組配色＋日光 / 暗夜 / 自動與頭像，偏好存在瀏覽器（`v05.*`）。介面原型歸檔於 `docs/design/`，`version_05_claude_template.html` 是目前介面的設計依據。
+- **研讀工作室與外觀自訂 (SPEC-009，已實作 v05，ADR-008 / ADR-009)**：左側圖示側欄五頁（研讀總覽、研讀工作室、弱點複習、學習紀錄、批次排程），側欄底部是使用方法、專注模式、設計與自訂；唱盤播放該講真實語音摘要（黑膠 / 弦波 / 環形 / 聲譜，播放中離開研讀工作室會縮到側欄成迷你播放器）；工作台把講義與各產出物、AI 家教放在同一處，三種版面、四種排列、可調欄寬；五組配色＋日光 / 暗夜 / 自動、字型與頭像偏好保存於本機 SQLite `ui_preferences`（`/api/preferences`，ADR-009）。介面原型歸檔於 `docs/design/`，`version_05_claude_template.html` 是目前介面的設計依據。
 
 ## 2. 本專案特有的規則
 

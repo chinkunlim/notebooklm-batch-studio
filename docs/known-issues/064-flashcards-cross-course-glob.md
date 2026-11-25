@@ -1,6 +1,6 @@
 # ISSUE-064：閃卡後備搜尋跨課程 glob 可能讀到別門課的閃卡
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
 - **Agent**：`antigravity`
 - **任務**：`TASK-035`
@@ -19,8 +19,8 @@ StudyTrackerService 未查詢課程的 study_dir，便用雙層萬用字元掃�
 
 ## 3. 修正或規避方式
 
-計畫於 Task 6（services/study_service.py）移除跨課程 glob，改依課程自身的 study_dir 解析。（相關程式碼註解加 `Refs: ISSUE-064`）
+已於 `5770358`（`services/study_service.py`）移除跨課程 glob 搜尋，改為嚴格依該課程自身的 `study_dir`／輸出根目錄解析閃卡檔案。（`Refs: ISSUE-064`）
 
 ## 4. 防回歸
 
-待補：tests/test_old_layout_retired.py::test_flashcards_never_read_another_course (Task 6)
+- `tests/test_old_layout_retired.py::test_flashcards_never_read_another_course`

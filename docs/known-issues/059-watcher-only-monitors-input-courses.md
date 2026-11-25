@@ -1,6 +1,6 @@
 # ISSUE-059：檔案監看器只監看 input/courses，未監看 study 學期樹
 
-- **狀態**：🔴 未解決 (Open)
+- **狀態**：🟢 已根治 (Resolved)
 - **發現日期**：2026-11-24
 - **Agent**：`antigravity`
 - **任務**：`TASK-035`
@@ -19,8 +19,8 @@ entrypoints/cli.py watch 只監看 DATA_DIR/input/courses/，不會監看 study/
 
 ## 3. 修正或規避方式
 
-計畫於 Task 9（services/watcher.py、entrypoints/cli.py）修正，改監看 study_root_dir 並只觸發 HANDOUTS 角色 PDF。（相關程式碼註解加 `Refs: ISSUE-059`）
+已於 `b13ba8f`（`services/watcher.py`、`entrypoints/cli.py`）修正：`watch` 改為遞迴監看 `study_root_dir` 內已登錄課程之 `CategoryRole.HANDOUTS` 分類目錄 PDF，自動排除 `01 Materials`、`04 Homework` 與非課程資料夾。（`Refs: ISSUE-059`）
 
 ## 4. 防回歸
 
-待補：tests/test_study_library.py (Task 9)
+- `tests/test_study_library.py::test_watcher_triggers_only_on_registered_course_handouts_pdf`

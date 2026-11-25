@@ -1,8 +1,8 @@
 # SPEC-010：端到端使用者完整工作流程規格書 (End-to-End User Workflow & Journey)
 
-- **狀態**：Implemented
-- **日期**：2026-11-10（2026-11-14 更新）
-- **相關任務 / ADR**：TASK-001 ~ TASK-020 / ADR-001 ~ ADR-009 / ISSUE-034 ~ ISSUE-037
+- **狀態**：Implemented（統一目錄與封存刪除前保護由 SPEC-014 / ADR-014 接續：改以 `DATA_DIR/study/<學期>/<課程>/<分類>`、封存後才可刪除、不搬刪 `study/` 檔案、`record-only` 與 `adopt-outputs` 為準）
+- **日期**：2026-11-10（2026-11-25 附註對齊 SPEC-014）
+- **相關任務 / ADR**：TASK-001 ~ TASK-020, TASK-035 / ADR-001 ~ ADR-009, ADR-014 / ISSUE-034 ~ ISSUE-037, ISSUE-065 ~ ISSUE-068
 
 ---
 
