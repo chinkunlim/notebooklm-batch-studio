@@ -41,7 +41,7 @@
 ## 4. 介面 / API
 
 ### 4.1 Service
-- `adopt_existing_outputs(config: AppConfig, course_repo: CourseRepositoryProtocol, queue_repo: QueueRepositoryProtocol, code: str, dry_run: bool = True) -> dict[str, Any]`
+- `AdoptOutputsService(config, course_repo, queue_repo).adopt_existing_outputs(code, dry_run=True) -> dict[str, Any]`
   - 位置：`src/notebooklm_batch_studio/services/adopt_outputs.py`
   - 若課程不存在，拋出 `CourseNotFoundError`。
 
@@ -71,7 +71,7 @@
         }
       ],
       "unmapped_files": [],
-      "would_create": 10,
+      "would_create": 8,
       "would_skip": 0,
       "created": 0,
       "skipped": 0
@@ -93,7 +93,7 @@
 - [ ] **場景 15a（資料夾與檔名規則對應及未對應清單）**
   - **Given** 課程於 `03 Notes/NotebookLM/01_Introduction-to-Scientific-Research/` 放有真實 31 個產出檔（含 `115-1_L01_audio.m4a`、3 組測驗、閃卡、心智圖、資訊圖表與裝置版、讀書指南）加上不明檔案 `stray_notes.txt`，且 `_course_synthesis/` 含全課程報告、模擬考與心智圖
   - **When** 呼叫 `adopt_existing_outputs(..., code, dry_run=True)`
-  - **Then** 正確對應講次 1（10 項產出類型）與全課程（3 項產出類型）、`stray_notes.txt` 列入 `unmapped_files` 不建立工作、`dry_run=True` 下資料庫 `artifact_jobs` 仍為 0
+  - **Then** 正確對應講次 1（8 項產出類型）與全課程（3 項產出類型）、`stray_notes.txt` 列入 `unmapped_files` 不建立工作、`dry_run=True` 下資料庫 `artifact_jobs` 仍為 0
   - 對應測試：`tests/test_adopt_outputs.py::AdoptOutputsTests::test_dry_run_maps_real_filenames_course_synthesis_and_reports_unmapped`
 
 - [ ] **場景 15b（`dry_run=False` 寫入、冪等跳過、不改檔與不連網）**

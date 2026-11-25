@@ -782,6 +782,7 @@ notebooklm-batch-studio/
 │       │   │   ├── state_manager.py
 │       │   │   └── step_validator.py
 │       │   ├── __init__.py
+│       │   ├── adopt_outputs.py
 │       │   ├── artifact_runner.py
 │       │   ├── auth_status.py
 │       │   ├── course_lifecycle.py
@@ -857,6 +858,7 @@ notebooklm-batch-studio/
 │   │   └── test_tracker.py
 │   ├── __init__.py
 │   ├── dummy_client.py
+│   ├── test_adopt_outputs.py
 │   ├── test_api_and_mcp.py
 │   ├── test_auth_status.py
 │   ├── test_button_routes.py
