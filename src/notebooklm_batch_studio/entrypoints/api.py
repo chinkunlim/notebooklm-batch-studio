@@ -57,6 +57,7 @@ from notebooklm_batch_studio.entrypoints.http.settings import settings_router
 from notebooklm_batch_studio.entrypoints.http.study import study_router
 from notebooklm_batch_studio.entrypoints.http.study_library import study_library_router
 from notebooklm_batch_studio.entrypoints.http.system import system_router
+from notebooklm_batch_studio.entrypoints.http.textbooks import textbooks_router
 from notebooklm_batch_studio.entrypoints.http_middleware import (
     HostValidationMiddleware,
     NoCacheStaticFiles,
@@ -375,6 +376,7 @@ _API_ROUTERS = (
     notes_router,
     gemini_auth_router,
     study_library_router,
+    textbooks_router,
 )
 
 

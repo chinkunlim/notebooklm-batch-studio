@@ -19,6 +19,7 @@ from notebooklm_batch_studio.domain.course_identity import (
 from notebooklm_batch_studio.domain.models import Course, Lecture, ProfileName
 from notebooklm_batch_studio.domain.study_hierarchy import parse_term_subject
 from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
+from notebooklm_batch_studio.domain.textbook_sections import TEXTBOOK_MARKER
 
 logger = logging.getLogger(__name__)
 
@@ -120,14 +121,51 @@ def _find_candidate_pdfs(
     if not has_study_layout:
         return sorted(top_level, key=lambda item: item[2].lower())
 
-    candidates = list(top_level)
-    for cat_dir in layout.category_dirs(course_dir, CategoryRole.HANDOUTS):
-        for p in cat_dir.rglob("*"):
-            if _is_visible_pdf(p):
-                rel = str(p.relative_to(course_dir)).replace("\\", "/")
-                candidates.append((p, cat_dir.name, rel))
+    handouts = _role_pdfs(course_dir, layout.category_dirs(course_dir, CategoryRole.HANDOUTS), recursive=True)
+    if not handouts:  # Refs: SPEC-018 — textbook chapters are the lecture source when 02 Handouts is empty
+        handouts = _role_pdfs(course_dir, textbook_chapter_dirs(course_dir, layout), recursive=False)
+    candidates = top_level + handouts
     candidates.sort(key=lambda item: item[2].lower())
     return candidates
+
+
+def textbook_chapter_dirs(course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT) -> list[Path]:
+    """Return `01 Materials` subfolders marked with `.textbook.json` (split textbook chapters).
+
+    Args:
+        course_dir: Course study directory.
+        layout: Study category layout configuration.
+
+    Returns:
+        Marked chapter folders, sorted.
+    """
+    found = {
+        marker.parent
+        for mat_dir in layout.category_dirs(course_dir, CategoryRole.MATERIALS)
+        for marker in mat_dir.rglob(TEXTBOOK_MARKER)
+        if marker.is_file() and not marker.is_symlink()
+    }
+    return sorted(found)
+
+
+def _role_pdfs(course_dir: Path, folders: list[Path], recursive: bool) -> list[tuple[Path, str, str]]:
+    """List visible PDFs in `folders` as `(path, top-level category name, course-relative path)`.
+
+    Args:
+        course_dir: Course study directory.
+        folders: Folders to scan.
+        recursive: Whether to include subfolders.
+
+    Returns:
+        Candidate tuples.
+    """
+    out: list[tuple[Path, str, str]] = []
+    for folder in folders:
+        for p in folder.rglob("*") if recursive else folder.iterdir():
+            if _is_visible_pdf(p):
+                rel = p.relative_to(course_dir).as_posix()
+                out.append((p, rel.split("/", 1)[0], rel))
+    return out
 
 
 def _collect_unique_lectures(course_dir: Path, layout: StudyLayout = DEFAULT_LAYOUT) -> list[Lecture]:

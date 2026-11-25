@@ -350,6 +350,27 @@ class CourseRepository:
             self.session.flush()
             self.session.commit()
 
+    def update_lecture_location(self, code: str, lecture_no: int, category: str, relative_path: str) -> bool:
+        """Point a lecture at its moved PDF; number, hash and upload state stay (Refs: SPEC-018).
+
+        Args:
+            code: Course code.
+            lecture_no: Lecture number.
+            category: New top-level category folder name.
+            relative_path: New path relative to the course folder.
+
+        Returns:
+            True when a lecture row was updated.
+        """
+        stmt = select(LectureRecord).where(LectureRecord.course_code == code, LectureRecord.no == lecture_no)
+        record = self.session.scalars(stmt).first()
+        if record is None:
+            return False
+        record.category = category
+        record.relative_path = relative_path
+        self.session.commit()
+        return True
+
     def update_course_name(self, code: str, name: str) -> bool:
         """Change only a course's display name (Refs: SPEC-016).
 

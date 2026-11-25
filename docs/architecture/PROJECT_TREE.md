@@ -285,6 +285,7 @@ notebooklm-batch-studio/
 │   │   ├── 015-adopt-existing-outputs.md
 │   │   ├── 016-study-library-web-management.md
 │   │   ├── 017-notes-files-notifications-versions-backups.md
+│   │   ├── 018-textbook-split-and-lecture-source.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -398,6 +399,7 @@ notebooklm-batch-studio/
 │       │   ├── __init__.py
 │       │   ├── locks.py
 │       │   ├── note_driver_factory.py
+│       │   ├── pdf_textbook.py
 │       │   ├── private_dir.py
 │       │   ├── system_notify.py
 │       │   └── web_search.py
@@ -430,6 +432,7 @@ notebooklm-batch-studio/
 │       │   ├── study_hierarchy.py
 │       │   ├── study_layout.py
 │       │   ├── study_plan.py
+│       │   ├── textbook_sections.py
 │       │   └── usage_guide.py
 │       ├── entrypoints/
 │       │   ├── http/
@@ -451,7 +454,8 @@ notebooklm-batch-studio/
 │       │   │   ├── settings.py
 │       │   │   ├── study.py
 │       │   │   ├── study_library.py
-│       │   │   └── system.py
+│       │   │   ├── system.py
+│       │   │   └── textbooks.py
 │       │   ├── static/
 │       │   │   ├── vendor/
 │       │   │   │   ├── fonts/
@@ -731,6 +735,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-start.js
 │       │   │   ├── studio-study-extras.js
 │       │   │   ├── studio-study-panels.js
+│       │   │   ├── studio-textbook.js
 │       │   │   ├── studio-theme.css
 │       │   │   ├── studio-wizard.js
 │       │   │   ├── studio.css
@@ -759,6 +764,7 @@ notebooklm-batch-studio/
 │       │   ├── mcp_studio_tools.py
 │       │   ├── mcp_study_library.py
 │       │   ├── mcp_study_plan.py
+│       │   ├── mcp_textbooks.py
 │       │   ├── port_check.py
 │       │   ├── schemas.py
 │       │   └── web_template.py
@@ -839,6 +845,7 @@ notebooklm-batch-studio/
 │       │   ├── study_plan_service.py
 │       │   ├── study_service.py
 │       │   ├── sync_service.py
+│       │   ├── textbook_split.py
 │       │   ├── watcher.py
 │       │   └── worker_pool.py
 │       └── __init__.py
@@ -928,6 +935,7 @@ notebooklm-batch-studio/
 │   ├── test_study_library_web.py
 │   ├── test_study_plan.py
 │   ├── test_study_service.py
+│   ├── test_textbook_split.py
 │   └── test_versions_and_options.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明

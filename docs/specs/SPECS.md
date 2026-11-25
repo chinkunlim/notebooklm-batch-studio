@@ -27,3 +27,4 @@
 | [015-adopt-existing-outputs](015-adopt-existing-outputs.md) | Implemented | 從既有 `03 Notes/NotebookLM/` 產出檔建立 `done` 產出紀錄（重用既有命名規則、預設 dry-run、三入口、不動檔不連網） | SPEC-014 Q6 |
 | [016-study-library-web-management](016-study-library-web-management.md) | Implemented | 學習資料夾網頁管理：學習紀錄頁登錄舊課（record-only＋封存）、非標準資料夾手動登錄、scratch 歸檔／撤銷歸檔、修改課程顯示名稱（HTTP／MCP／網頁） | TASK-039, TASK-038 |
 | [017-notes-files-notifications-versions-backups](017-notes-files-notifications-versions-backups.md) | Implemented | NoteStudio 其他筆記檔瀏覽、課程全部產出完成 macOS 通知、`_vN` 多版本產出納管、資料庫備份整理（移到 deleted/，不刪除） | TASK-038 |
+| [018-textbook-split-and-lecture-source](018-textbook-split-and-lecture-source.md) | Implemented | 課本依書籤切割成章節 PDF（pypdf，移植 literature-parser）、`02 Handouts` 為空時以 `.textbook.json` 標記的章節資料夾為講次、把誤放講義資料夾的章節搬到 `01 Materials/<課本>/`（保留講次編號與來源） | TASK-037 |

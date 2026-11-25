@@ -14,6 +14,7 @@ from notebooklm_batch_studio.domain.models import (
     ProfileName,
 )
 from notebooklm_batch_studio.domain.study_layout import DEFAULT_LAYOUT, CategoryRole, StudyLayout
+from notebooklm_batch_studio.domain.textbook_sections import TEXTBOOK_MARKER
 from notebooklm_batch_studio.services.prompt_generator import PromptGenerator
 
 logger = logging.getLogger(__name__)
@@ -183,6 +184,8 @@ def list_material_source_pdfs(course: Course, layout: StudyLayout = DEFAULT_LAYO
     found: list[Path] = []
     for mat_dir in layout.category_dirs(course_dir, CategoryRole.MATERIALS):
         for pdf in sorted(mat_dir.rglob("*"), key=lambda p: str(p).lower()):
+            if (pdf.parent / TEXTBOOK_MARKER).is_file():  # split chapters duplicate the book (SPEC-018)
+                continue
             if pdf.is_file() and not pdf.name.startswith(".") and pdf.suffix.lower() == ".pdf":
                 found.append(pdf)
     return found
