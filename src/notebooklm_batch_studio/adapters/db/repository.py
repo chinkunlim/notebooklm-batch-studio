@@ -350,6 +350,24 @@ class CourseRepository:
             self.session.flush()
             self.session.commit()
 
+    def update_course_name(self, code: str, name: str) -> bool:
+        """Change only a course's display name (Refs: SPEC-016).
+
+        Args:
+            code: Course code.
+            name: New display name (already validated by the caller).
+
+        Returns:
+            True when the course exists and was updated.
+        """
+        record = self.session.get(CourseRecord, code)
+        if record is None:
+            return False
+        record.name = name
+        record.updated_at = utc_now()
+        self.session.commit()
+        return True
+
     def update_generation_options(self, code: str, options: GenerationOptions) -> None:
         """Store a course's Gemini Notebook generation options.
 

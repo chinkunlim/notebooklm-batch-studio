@@ -25,3 +25,4 @@
 | [013-note-studio-markdown-notes](013-note-studio-markdown-notes.md) | Implemented | note-studio 模組化學習筆記：7 模組提示詞、雙後端生成、單章 `.md` 縫合、推回來源與舊筆記匯入 | TASK-026, TASK-027, ADR-012 |
 | [014-study-library-and-learning-record](014-study-library-and-learning-record.md) | Implemented | 學習資料庫統一與完整學習紀錄：學期＋課號身分、複數分類與別名、scratch 歸檔、課程封存與安全改碼、跨學期紀錄匯出 | TASK-035, ADR-014 |
 | [015-adopt-existing-outputs](015-adopt-existing-outputs.md) | Implemented | 從既有 `03 Notes/NotebookLM/` 產出檔建立 `done` 產出紀錄（重用既有命名規則、預設 dry-run、三入口、不動檔不連網） | SPEC-014 Q6 |
+| [016-study-library-web-management](016-study-library-web-management.md) | Implemented | 學習資料夾網頁管理：學習紀錄頁登錄舊課（record-only＋封存）、非標準資料夾手動登錄、scratch 歸檔／撤銷歸檔、修改課程顯示名稱（HTTP／MCP／網頁） | TASK-039, TASK-038 |

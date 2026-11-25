@@ -18,6 +18,7 @@ from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.study_layout import CategoryRole
 from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
 from notebooklm_batch_studio.services.adopt_outputs import AdoptOutputsService
+from notebooklm_batch_studio.services.course_display_name import set_course_display_name as _set_display_name
 from notebooklm_batch_studio.services.course_lifecycle import CourseLifecycleService
 from notebooklm_batch_studio.services.filing import FilingService, FilingTarget
 from notebooklm_batch_studio.services.learning_record import LearningRecordService, RecordRepos
@@ -406,6 +407,35 @@ def _register_adopt_outputs_tool(mcp: MCPServer, cfg: AppConfig, session_factory
         return _dumps({"confirmed": True, **res})
 
 
+def _register_display_name_tool(mcp: MCPServer, session_factory: Any) -> None:
+    """Register `set_course_display_name` MCP tool with `confirm` guard (Refs: SPEC-016).
+
+    Args:
+        mcp: MCPServer instance.
+        session_factory: SQLAlchemy session factory.
+    """
+
+    @mcp.tool()
+    def set_course_display_name(code: str, name: str, confirm: bool = False) -> str:
+        """Change only a course's display name; code, subject, folder and notebook stay unchanged.
+
+        Args:
+            code: Registered course identifier.
+            name: New display name.
+            confirm: Must be True to proceed.
+
+        Returns:
+            JSON confirmation payload or `{code, name}`.
+        """
+        if not confirm:
+            return confirm_warning(
+                "Pass confirm=True to rename the course display name.", code=code, name=name
+            )
+        with session_factory() as db:
+            res = _set_display_name(CourseRepository(db), code, name)
+        return _dumps({"confirmed": True, **res})
+
+
 def register_study_library_tools(mcp: MCPServer, cfg: AppConfig, session_factory: Any) -> None:
     """Register all Task 13+ SPEC-015 MCP tools on `mcp`.
 
@@ -424,4 +454,5 @@ def register_study_library_tools(mcp: MCPServer, cfg: AppConfig, session_factory
     _register_archive_tool(mcp, cfg, session_factory)
     _register_rename_tool(mcp, cfg, session_factory)
     _register_adopt_outputs_tool(mcp, cfg, session_factory)
+    _register_display_name_tool(mcp, session_factory)
     logger.debug("Registered study library, filing, lifecycle, and adopt outputs MCP tools")

@@ -93,6 +93,7 @@ class CourseRecordView:
         categories: Category file inventories without reading file contents.
         stats: Learning statistics mapping.
         artifacts: Done artifact entries (`lecture_no`, `artifact_type`, `rel_path`).
+        study_dir: Absolute course folder (lets the web UI build file paths; Refs: SPEC-016).
     """
 
     code: str
@@ -102,6 +103,7 @@ class CourseRecordView:
     categories: list[CategoryFiles]
     stats: dict[str, int | float]
     artifacts: list[dict[str, str]]
+    study_dir: str = ""
 
 
 @dataclass(frozen=True)
@@ -321,7 +323,14 @@ class LearningRecordService:
         ]
         stats = self._compute_stats(course, done_jobs, ns_files, now)
         return CourseRecordView(
-            course.code, course.name, term, course.status.value, categories, stats, artifacts
+            course.code,
+            course.name,
+            term,
+            course.status.value,
+            categories,
+            stats,
+            artifacts,
+            course.study_dir,
         )
 
     def _rel_artifact_path(self, output_file: str | None, study_dir: Path | None) -> str:
@@ -373,7 +382,14 @@ class LearningRecordService:
         cats, ns = self._collect_categories(child)
         bucket["courses"].append(
             CourseRecordView(
-                code, info.name, term_name, "unregistered", cats, {**_STATS_ZERO, "notestudio_notes": ns}, []
+                code,
+                info.name,
+                term_name,
+                "unregistered",
+                cats,
+                {**_STATS_ZERO, "notestudio_notes": ns},
+                [],
+                str(child),
             )
         )
 

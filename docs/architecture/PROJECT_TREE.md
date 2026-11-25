@@ -283,6 +283,7 @@ notebooklm-batch-studio/
 │   │   ├── 013-note-studio-markdown-notes.md
 │   │   ├── 014-study-library-and-learning-record.md
 │   │   ├── 015-adopt-existing-outputs.md
+│   │   ├── 016-study-library-web-management.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -704,6 +705,7 @@ notebooklm-batch-studio/
 │       │   │   ├── studio-layout-tune.js
 │       │   │   ├── studio-learning.css
 │       │   │   ├── studio-learning.js
+│       │   │   ├── studio-library.js
 │       │   │   ├── studio-literature-actions.js
 │       │   │   ├── studio-literature-rows.js
 │       │   │   ├── studio-literature-ui.js
@@ -794,6 +796,7 @@ notebooklm-batch-studio/
 │       │   ├── adopt_outputs.py
 │       │   ├── artifact_runner.py
 │       │   ├── auth_status.py
+│       │   ├── course_display_name.py
 │       │   ├── course_lifecycle.py
 │       │   ├── course_onboarding.py
 │       │   ├── course_options.py
@@ -914,6 +917,7 @@ notebooklm-batch-studio/
 │   ├── test_study_layout.py
 │   ├── test_study_library.py
 │   ├── test_study_library_api.py
+│   ├── test_study_library_web.py
 │   ├── test_study_plan.py
 │   ├── test_study_service.py
 │   └── test_versions_and_options.py

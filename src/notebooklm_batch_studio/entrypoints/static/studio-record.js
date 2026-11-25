@@ -236,7 +236,8 @@ function _recordCourseHtml(course, layoutMap) {
   const badge = _STATUS_BADGE[course.status] || { text: course.status, cls: 'badge-neutral' };
   const s = course.stats || {};
   const cats = (course.categories || []).map(cat => {
-    const fileList = (cat.files || []).map(f => `<li class="small">${escHtml(f)}</li>`).join('');
+    const unfile = f => (typeof libraryUnfileButtonHtml === 'function' ? libraryUnfileButtonHtml(course, f) : '');
+    const fileList = (cat.files || []).map(f => `<li class="small">${escHtml(f)}${unfile(f)}</li>`).join('');
     const folderName = (layoutMap && layoutMap[cat.role]) || (window.STUDY_CATEGORY_NAMES && window.STUDY_CATEGORY_NAMES[cat.role]) || cat.role;
     const label = _formatCategoryLabel(cat.role, folderName);
     return `<details class="rec-cat"><summary>${escHtml(label)}（${(cat.files || []).length}）</summary><ul>${fileList}</ul></details>`;
@@ -256,6 +257,7 @@ function _recordCourseHtml(course, layoutMap) {
       <span>學習 ${s.study_days || 0} 天 / 約 ${s.study_minutes || 0} 分</span>
       <span>記憶強度 ${s.memory_strength_avg || 0}%</span>
     </div>
+    ${course.status === 'unregistered' && typeof libraryRegisterButtonsHtml === 'function' ? libraryRegisterButtonsHtml(course) : ''}
     ${cats || '<div class="small muted">尚無分類檔案</div>'}
   </article>`;
 }
@@ -271,6 +273,7 @@ async function loadLearningRecordView(term) {
   _syncRecordExportLinks(chosen);
   const host = document.getElementById('recordContent');
   if (!host) return;
+  if (typeof loadUnfiledCard === 'function') loadUnfiledCard();
   try {
     const url = chosen ? `/api/study/record?term=${encodeURIComponent(chosen)}` : '/api/study/record';
     const res = await fetch(url);
@@ -290,9 +293,8 @@ async function loadLearningRecordView(term) {
       return;
     }
     host.innerHTML = terms.map(t => {
-      const others = (t.others || []).length
-        ? `<div class="small muted" style="margin-top:6px">其他資料夾／檔案：${t.others.map(escHtml).join('、')}</div>`
-        : '';
+      const others = typeof libraryTermActionsHtml === 'function' ? libraryTermActionsHtml(t)
+        : ((t.others || []).length ? `<div class="small muted" style="margin-top:6px">其他資料夾／檔案：${t.others.map(escHtml).join('、')}</div>` : '');
       return `<section class="rec-term" style="margin-bottom:20px">
         <h2 class="h2" style="margin-bottom:10px">${escHtml(t.term)}</h2>
         ${(t.courses || []).map(c => _recordCourseHtml(c, layoutMap)).join('') || '<div class="small muted">此學期尚無課程</div>'}

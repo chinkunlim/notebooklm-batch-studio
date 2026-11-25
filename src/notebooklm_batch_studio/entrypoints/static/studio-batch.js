@@ -319,7 +319,8 @@ function courseActionsHtml(code, paused, status = 'active') {
   const archiveBtn = canDelete
     ? `<button class="btn btn-ghost" onclick="toggleCourseArchived(${jsAttr(code)}, false)">恢復課程（解除封存）</button>`
     : `<button class="btn btn-ghost" onclick="toggleCourseArchived(${jsAttr(code)}, true)">封存課程</button>`;
-  const renameBtn = `<button class="btn btn-ghost" onclick="openRenameCourseFlow(${jsAttr(code)})">更改課程代碼…</button>`;
+  const renameBtn = `<button class="btn btn-ghost" onclick="openCourseDisplayNameFlow(${jsAttr(code)})">修改課程名稱…</button>` +
+    `<button class="btn btn-ghost" onclick="openRenameCourseFlow(${jsAttr(code)})">更改課程代碼…</button>`;
   const deleteBtn = canDelete
     ? `<button class="btn btn-ghost" onclick="deleteCourse(${jsAttr(code)})" style="color:var(--danger)">刪除課程</button>`
     : `<button class="btn btn-ghost" disabled title="請先封存" style="color:var(--muted);opacity:.6;cursor:not-allowed">刪除課程（請先封存）</button>`;

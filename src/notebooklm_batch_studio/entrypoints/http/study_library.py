@@ -21,6 +21,7 @@ from notebooklm_batch_studio.domain.exceptions import CourseNotFoundError
 from notebooklm_batch_studio.domain.path_safety import PathSafetyError
 from notebooklm_batch_studio.domain.study_layout import CategoryRole
 from notebooklm_batch_studio.services.adopt_outputs import AdoptOutputsService
+from notebooklm_batch_studio.services.course_display_name import set_course_display_name
 from notebooklm_batch_studio.services.course_lifecycle import CourseLifecycleService
 from notebooklm_batch_studio.services.filing import FilingService, FilingTarget
 from notebooklm_batch_studio.services.learning_record import LearningRecordService, RecordRepos
@@ -66,6 +67,12 @@ class RenameCourseRequest(BaseModel):
 
     new_code: str = Field(..., description="Replacement course code")
     dry_run: bool = Field(True, description="Preview impact without changing DB or files when True")
+
+
+class CourseNameRequest(BaseModel):
+    """Body for changing a course's display name (Refs: SPEC-016)."""
+
+    name: str = Field(..., description="New display name; code, subject and folder stay unchanged")
 
 
 class AdoptOutputsRequest(BaseModel):
@@ -427,3 +434,26 @@ def export_learning_record(request: Request, term: str | None = None, format: st
             media_type="application/pdf",
             headers={"Content-Disposition": 'attachment; filename="learning-record.pdf"'},
         )
+
+
+@study_library_router.put(
+    "/api/courses/{code}/name", tags=["Courses"], operation_id="set_course_display_name"
+)
+def set_course_name(code: str, body: CourseNameRequest, request: Request) -> dict[str, str]:
+    """Change only a course's display name (Refs: SPEC-016).
+
+    Args:
+        code: Course identifier.
+        body: New display name payload.
+        request: Incoming HTTP request.
+
+    Returns:
+        `{"code", "name"}` of the updated course.
+    """
+    try:
+        with _session(request) as db:
+            return set_course_display_name(CourseRepository(db), code, body.name)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
