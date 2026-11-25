@@ -52,6 +52,8 @@ function toggleQaDrawer(forceOpen = null) {
   const drawer = document.getElementById('qaDrawer');
   if (!drawer) return;
   const shouldOpen = forceOpen === null ? !drawer.classList.contains('open') : Boolean(forceOpen);
+  // Hand focus back before hiding, so typing never lands in the hidden drawer (TASK-036 #6).
+  if (!shouldOpen && drawer.contains(document.activeElement)) document.getElementById('qaDrawerToggleBtn')?.focus();
   drawer.classList.toggle('open', shouldOpen);
   drawer.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
   if (shouldOpen) {
@@ -463,6 +465,7 @@ async function configureQaChatStyle() {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('qaDrawer')?.classList.contains('open') && !visibleOverlays().length) toggleQaDrawer(false);
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
     e.preventDefault();
     toggleQaDrawer();

@@ -20,10 +20,10 @@
 |---|---|---|---|---|
 | 1 | SPEC-015 測驗作答 | 網頁 → 研讀工作室 → 心理學研究法第 1 講「測驗 1・基礎」真的交一次卷 | `quiz_attempts` 新增一筆；學習紀錄的測驗次數／學習天數更新；答錯題進「弱點複習」；仍無法按「重新生成」 | ⬜ |
 | 2 | SPEC-009 手機版面 | iPhone 開網頁（或瀏覽器縮到 ≤ 680px）逐頁檢查 | 單欄重排、無橫向捲動、黑膠唱盤等比縮放 | 🟡 2026-11-25 Claude 以 375×812 模擬：home/study/queue/record/literature/custom 六頁 scrollWidth=375、無橫向溢出；真 iPhone 仍待你確認 |
-| 3 | SPEC-009 工作台工具 | 研讀工作室逐一點 11 張工具卡 | 面板展開、高度對齊、不跑版 | ⬜ |
+| 3 | SPEC-009 工作台工具 | 研讀工作室逐一點 11 張工具卡 | 面板展開、高度對齊、不跑版 | ✅ 2026-11-26 Claude 瀏覽器（生涯諮商第 1 講，雙欄版面）：12 張卡（含學習網頁）逐一點開，面板高度一致 726px、無橫向溢出、主控台 0 錯誤；375px 手機寬度 12 張都無橫向溢出。講義在雙欄版面顯示於左側卡片（設計如此） |
 | 4 | SPEC-002 匯入外部 App | `anki.csv` 匯入 Anki；`mindmap.opml` 匯入 XMind | 正反面與標籤正確；多層心智圖、中文無亂碼 | ⬜ |
 | 5 | SPEC-011 Obsidian 標籤 | 用 Obsidian 開 `03 Notes/QA_Notes/` | `#課程/…`、`#掌握度/…` 顯示為標籤樹 | ⬜ |
-| 6 | SPEC-011 提問抽屜 | `Cmd+J` 提問 → 存成問答筆記 → 展開大頁 | 抽屜開合順暢、筆記可篩選 | ⬜ |
+| 6 | SPEC-011 提問抽屜 | `Cmd+J` 提問 → 存成問答筆記 → 展開大頁 | 抽屜開合順暢、筆記可篩選 | 🟡 2026-11-26 Claude 瀏覽器：⌘J 開合、× 關閉正常；修正關閉後鍵盤焦點仍停在隱藏輸入框的問題（改回到「探索提問」按鈕），並加上 Esc 關閉（tests/test_qa_drawer_focus.py）。實際提問、存成問答筆記、展開大頁會呼叫 Gemini Notebook，留給你測 |
 | 7 | SPEC-003 Open WebUI | 掛 `http://127.0.0.1:8768/openapi.json`，問「生涯諮商與實務做到哪了」 | 模型呼叫課程 API 並正確回報完成度 | ⬜ |
 | 8 | 核心規則 14 更新流程 | 關掉伺服器後執行 `./scripts/update.sh --no-pull` | 依序：同步依賴 → 確認伺服器已停 → 備份到 `backups/db-<時間>/` → `alembic upgrade head` → `init-data`，全部成功 | ✅ 2026-11-25 Claude 實跑：exit 0，備份 `backups/db-20261125-131043/app.db`；伺服器開著時會拒絕執行（另測） |
 | 9 | SPEC-014 watch 監看 | `uv run notebooklm-batch-studio watch`，分別放 PDF 到 `02 Handouts/`、`01 Materials/`、`04 Homework/` | 只有 `02 Handouts/` 觸發排程 | ⬜ |

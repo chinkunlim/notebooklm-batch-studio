@@ -969,6 +969,7 @@ notebooklm-batch-studio/
 │   ├── test_path_pickers.py
 │   ├── test_port_check.py
 │   ├── test_preferences.py
+│   ├── test_qa_drawer_focus.py
 │   ├── test_qa_notes_api.py
 │   ├── test_qa_notes_db.py
 │   ├── test_qa_notes_service.py
