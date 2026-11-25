@@ -278,6 +278,7 @@ notebooklm-batch-studio/
 │   │   ├── 072-textbook-split-duplicates-relocated-chapters.md
 │   │   ├── 073-handout-replaces-textbook-lectures.md
 │   │   ├── 074-confirm-dialog-overflows-viewport.md
+│   │   ├── 075-note-schedule-cross-process-writes.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── specs/                              # [功能規格書] PRD / API Contract
@@ -958,9 +959,11 @@ notebooklm-batch-studio/
 │   ├── test_note_pipeline_behaviors.py
 │   ├── test_note_pipeline_phase1.py
 │   ├── test_note_pipeline_phase2.py
+│   ├── test_note_schedule_file_lock.py
 │   ├── test_notebook_chrome_login.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
+│   ├── test_notebooklm_py_pin.py
 │   ├── test_old_layout_retired.py
 │   ├── test_path_pickers.py
 │   ├── test_port_check.py

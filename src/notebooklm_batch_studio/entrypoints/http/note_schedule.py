@@ -5,13 +5,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.domain.models import Course
 from notebooklm_batch_studio.entrypoints.note_runtime import build_note_pipeline, build_note_scheduler
-from notebooklm_batch_studio.services.notes.note_scheduler import NoteScheduler
+from notebooklm_batch_studio.services.notes.note_scheduler import NoteScheduler, ScheduleBusyError
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,28 @@ class ScheduleRequest(BaseModel):
 
     course_key: str = Field(..., min_length=1, description="Course code")
     lecture_nos: list[int] = Field(..., min_length=1, description="Lecture numbers to generate")
+
+
+def register_note_schedule_errors(app: FastAPI) -> None:
+    """Answer 503 when the schedule file stays locked by another process (SPEC-025 R1).
+
+    Args:
+        app: FastAPI application.
+    """
+
+    async def busy(_request: Request, exc: Exception) -> JSONResponse:
+        """Turn ScheduleBusyError into 503.
+
+        Args:
+            _request: Incoming HTTP request.
+            exc: The ScheduleBusyError.
+
+        Returns:
+            503 response with a readable message.
+        """
+        return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+    app.add_exception_handler(ScheduleBusyError, busy)
 
 
 def _scheduler(request: Request) -> NoteScheduler:

@@ -48,7 +48,10 @@ from notebooklm_batch_studio.entrypoints.http.learning_site import learning_site
 from notebooklm_batch_studio.entrypoints.http.literature import literature_router
 from notebooklm_batch_studio.entrypoints.http.literature_files import literature_files_router
 from notebooklm_batch_studio.entrypoints.http.literature_notebook import literature_notebook_router
-from notebooklm_batch_studio.entrypoints.http.note_schedule import note_schedule_router
+from notebooklm_batch_studio.entrypoints.http.note_schedule import (
+    note_schedule_router,
+    register_note_schedule_errors,
+)
 from notebooklm_batch_studio.entrypoints.http.notebook_login import notebook_login_router
 from notebooklm_batch_studio.entrypoints.http.notes import notes_router
 from notebooklm_batch_studio.entrypoints.http.plan import plan_router
@@ -426,6 +429,7 @@ def _register_routes_and_middlewares(app: FastAPI, cfg: AppConfig) -> None:
     app.mount("/static", NoCacheStaticFiles(directory=Path(__file__).parent / "static"), name="static")
     for router in _API_ROUTERS:
         app.include_router(router)
+    register_note_schedule_errors(app)  # 503 when the schedule file is locked (SPEC-025 R1)
 
 
 def create_app(

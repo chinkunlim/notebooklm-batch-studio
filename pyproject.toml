@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "sqlalchemy>=2.0",
     "alembic>=1.13",
-    "notebooklm-py[browser]>=0.8.6",
+    "notebooklm-py[browser]==0.8.6",  # pinned: learning sites use its internal Studio API (PROJECT_RULES, SPEC-025 R2)
     "reportlab>=5.0.1",
     "pypdf>=6.21.1",
     "tomli>=2.5.0",

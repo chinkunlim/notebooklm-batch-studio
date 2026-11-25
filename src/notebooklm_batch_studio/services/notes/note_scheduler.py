@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import logging
 import os
 import threading
-from collections.abc import Callable
+import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Protocol
@@ -115,6 +118,10 @@ def _request_for(item: dict[str, Any]) -> ChapterNoteRequest:
     )
 
 
+class ScheduleBusyError(RuntimeError):
+    """Raised when another process holds the schedule file lock for too long (SPEC-025 R1)."""
+
+
 class NoteScheduler:
     """Persisted, single-worker queue of approved chapter-note jobs."""
 
@@ -135,8 +142,53 @@ class NoteScheduler:
         self.pipeline_factory = pipeline_factory
         self.clock = clock or (lambda: datetime.now(UTC))
         self._lock = threading.Lock()
+        # Web and MCP servers are separate processes sharing this file. Refs: SPEC-025 R1, ISSUE-075
+        self.lock_path = state_path.with_name(state_path.name + ".lock")
+        self.lock_timeout = 10.0
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+
+    @contextmanager
+    def _locked(self) -> Iterator[None]:
+        """Hold the in-process lock and the cross-process file lock together.
+
+        Yields:
+            Nothing; the schedule file may be read and written inside the block.
+
+        Raises:
+            ScheduleBusyError: When another process keeps the file lock past `lock_timeout`.
+        """
+        with self._lock:
+            self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+            fd = os.open(self.lock_path, os.O_RDWR | os.O_CREAT, 0o644)
+            try:
+                self._acquire(fd)
+                try:
+                    yield
+                finally:
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+            finally:
+                os.close(fd)
+
+    def _acquire(self, fd: int) -> None:
+        """Take the exclusive file lock, retrying until `lock_timeout`.
+
+        Args:
+            fd: Open descriptor of the lock file.
+
+        Raises:
+            ScheduleBusyError: When the lock is still held after `lock_timeout` seconds.
+        """
+        deadline = time.monotonic() + self.lock_timeout
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    logger.warning("Note schedule lock still held after %.1fs", self.lock_timeout)
+                    raise ScheduleBusyError("筆記排程忙碌中，請稍後再試") from None
+                time.sleep(0.05)
 
     def _load(self) -> dict[str, Any]:
         """Read the schedule file.
@@ -161,7 +213,7 @@ class NoteScheduler:
         os.replace(tmp, self.state_path)
 
     def _update(self, fn: Callable[[dict[str, Any]], Any]) -> Any:
-        """Load, mutate and save the schedule under the lock.
+        """Load, mutate and save the schedule under the in-process and file locks.
 
         Args:
             fn: Mutator receiving the document; its return value is passed through.
@@ -169,7 +221,7 @@ class NoteScheduler:
         Returns:
             Whatever `fn` returns.
         """
-        with self._lock:
+        with self._locked():
             data = self._load()
             result = fn(data)
             self._save(data)
@@ -212,7 +264,7 @@ class NoteScheduler:
         Returns:
             `{"paused", "running", "next_resume_at", "items"}`.
         """
-        with self._lock:
+        with self._locked():
             data = self._load()
         waits = sorted(
             i["resume_at"] for i in data["items"] if i["status"] == "quota_wait" and i.get("resume_at")

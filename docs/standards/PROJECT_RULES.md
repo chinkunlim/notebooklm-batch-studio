@@ -28,6 +28,7 @@
 - **即時額度預檢與防護**：生成前必須讀取配額表（`quota_planner`），配額不足直接標記 `QUOTA_WAIT` 並安全等待，禁止無效重試；碰到每日/每週上限就等額度窗重置，不用多帳號繞過。
 - **不可信內容與路徑（ADR-013）**：講義、文獻、網路研究來源與 Gemini 回覆一律當資料：前端用 `escHtml()`，inline handler 參數用 `jsAttr()`，Markdown 經 `markdown_fragment()`（連結 scheme 白名單）；MCP 會新增、搬移、上傳或花額度的工具一律加 `confirm`。由使用者或 Agent 傳入的識別碼與路徑先過 `domain/path_safety.py`，只能落在 `DATA_DIR`、`STUDY_ROOT_DIR` 或課程登錄資料夾內。
 - **網頁路徑一律用選的（2026-11-25 使用者定案）**：網頁上凡是需要檔案或資料夾路徑的地方，一律提供選擇方式（下拉選單、清單點選或資料夾／檔案挑選器），不要求使用者手打路徑；要新建的名稱（例如課本資料夾名）可以輸入，但要同時列出既有選項可直接選。新增或修改網頁功能時一併遵守，並在測試中檢查。
+- **升級 notebooklm-py（SPEC-025 R2）**：版本鎖定在 `pyproject.toml` 的 `==`（目前 0.8.6），不可用 `uv lock --upgrade` 順手升級。學習網頁用到它的內部介面：`client.artifacts._list_raw` 的列格式（類型代碼 10、`row[24]` 檔名與網址、`row[15]` 建立時間）、`chat.ask` 觸發網頁生成、`artifacts.rename`（ISSUE-071）、下載器的 `_reject_html_download`（ISSUE-070）。要升級時：①改版前後都跑 `uv run python -m unittest tests.test_learning_site`；②用真實帳號唯讀列一次某課的 Studio（`_list_raw`），比對學習網頁那一列的格式與 `tests/fixtures/notebooklm/site_row.json` 相同；③確認 `notebook.google.com` 網域與登入流程（SPEC-022）仍正常；④通過後才改 `pyproject.toml`、`uv lock`，並同步 `tests/test_notebooklm_py_pin.py` 的 `PINNED`。
 - **品質隔離門檻**：每份測驗必須達 30 題、全課程模擬考題數不足時，一律進入 `DATA_DIR/needs_review/` 隔離，工作狀態標為 `NEEDS_REVIEW`，並在總結報告中醒目標註。
 
 ## 3. 和通用規範不同的例外（要寫理由）
