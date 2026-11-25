@@ -31,9 +31,9 @@
 
 ## 5. 繼承自 `literature-fetch` 之架構決策對照（ADR-001 ~ ADR-008）
 
-> `TASK-025` 併入原獨立專案 `/Users/limchinkun/Desktop/projects/literature-fetch`；下表逐條對照原 `ADR-001 ~ ADR-008` 於本專案 `ADR-011` 及後續紀錄中之承接狀況：
+> `TASK-025` 併入原獨立專案 `~/Desktop/projects/literature-fetch`；下表逐條對照原 `ADR-001 ~ ADR-008` 於本專案 `ADR-011` 及後續紀錄中之承接狀況：
 
-| 原 `literature-fetch` ADR | 來源檔案 (`/Users/limchinkun/Desktop/projects/literature-fetch/docs/adr/...`) | `ADR-011` 涵蓋狀況與核心摘要 |
+| 原 `literature-fetch` ADR | 來源檔案 (`~/Desktop/projects/literature-fetch/docs/adr/...`) | `ADR-011` 涵蓋狀況與核心摘要 |
 |---|---|---|
 | **ADR-001** 文獻下載策略：開放取用優先、Chrome 走機構授權、不繞過驗證 | `001-literature-download-strategy.md` | 原 §1–3 未展開細節，**補摘要**：開放取用（arXiv/明列網址/OpenAlex）優先；需機構授權時以有頭 Chrome 走 OpenAthens（僅於 `*.openathens.net` 填寫 `.env` 之 `LIBRARY_EMAIL`/`LIBRARY_PASSWORD`，詳本專案 `ADR-013`），絕不繞過 Cloudflare/CAPTCHA；頁面內 `fetch()` 下載並以 `pypdf` 比對前幾頁標題（`adapters/literature/browser.py`、`services/literature/literature.py`）。 |
 | **ADR-002** APA 清單轉換：本地解析 + Crossref 核對 | `002-apa-list-conversion.md` | 原 §1–3 未展開細節，**補摘要**：由 `domain/literature/apa.py` 解析作者/年份/標題/DOI/arXiv，經 `services/literature/reference_builder.py` 與 `crossref.py` / `openalex.py` 核對（標題雙向吻合或主標題>=3關鍵字+同第一作者、年份差<=1、排除 dataset/peer-review）。 |

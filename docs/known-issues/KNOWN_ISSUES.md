@@ -84,4 +84,4 @@
 
 ## 跨專案整合既有預防紀錄（不需重複建檔）
 
-- **原 `literature-fetch ISSUE-006`（系統環境已有 `DATA_DIR` 如 `~/open-webui-data` 時蓋過本專案 `.env`）**：本專案已透過框架層與 `config/settings.py:41` 的 `PROJECT_FILE_WINS = ("DATA_DIR",)` + `load_dotenv_file()`（`config/settings.py:60-61` 直接寫入 `os.environ[key] = value` 強制以專案 `.env` 為主）根治；`python3 scripts/agentctl.py doctor` 實測顯示 `✅ 已忽略終端機的 DATA_DIR=/Users/limchinkun/open-webui-data（例如 Open WebUI 設定的），使用專案 .env 的設定`。
+- **原 `literature-fetch ISSUE-006`（系統環境已有 `DATA_DIR` 如 `~/open-webui-data` 時蓋過本專案 `.env`）**：本專案已透過框架層與 `config/settings.py:41` 的 `PROJECT_FILE_WINS = ("DATA_DIR",)` + `load_dotenv_file()`（`config/settings.py:60-61` 直接寫入 `os.environ[key] = value` 強制以專案 `.env` 為主）根治；`python3 scripts/agentctl.py doctor` 實測顯示 `✅ 已忽略終端機的 DATA_DIR=~/open-webui-data（例如 Open WebUI 設定的），使用專案 .env 的設定`。

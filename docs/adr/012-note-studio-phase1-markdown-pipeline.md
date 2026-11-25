@@ -51,7 +51,7 @@
 
 ### 5.3 不移植之 `note-studio` 模組與測試清單（不做）
 
-經比對 `/Users/limchinkun/Desktop/projects/note-studio/tests/test_*.py`（共 95 支測試檔）：
+經比對 `~/Desktop/projects/note-studio/tests/test_*.py`（共 95 支測試檔）：
 - **已移植（含 EQUIV 覆蓋）**：本專案 `tests/gemini/` 與 `tests/test_note_pipeline*.py` 已涵蓋 12 支測試檔（`tests/gemini/` 9 支，含 `TASK-031` 補齊之 `test_gemini_auth.py`；加上 `tests/test_note_pipeline_{behaviors,phase1,phase2}.py` 3 支，另見 `test_security_hardening.py`），覆蓋 Gemini Web session / CDP Chrome / selector / quota parser / baseline count / rename WARNING log / Gemini Auth / StepValidator / NotePipelineService。
 - **刻意不移植之模組與測試（約 86 支原檔；部分邏輯由 `test_note_pipeline_behaviors.py` 轉寫對齊本專案介面，其餘留待階段三或已由本專案既有架構取代）**：
   - **PDF 排版渲染與格式樣本引擎（階段三範疇）**：`compose` / `compose_chapter` / `compose_layout` / `chrome_renderer` / `pdf_assembler` / `tree_engine` / `tree_wrap` / `flowchart*` / `grid` / `alignment` / `align_apply` / `page_layout_js` / `callout_parser` / `chapter_parser` / `density_validator` / `note_linter` / `spec_audit` / `specimen` / `text_auditor` / `source_editor` / `source_rules` / `diagrams_service_and_api`。
@@ -62,7 +62,7 @@
 
 > 以下編號來自 `note-studio` 既有設計與除錯史；因階段一採取輕量併入（不複製獨立專案的歷史 ADR/ISSUE 流水號，避免與本專案 ADR-001~013 / ISSUE-001~056 衝突），統一於此附錄列出原始檔案路徑與處置方式（所有程式註解均已依 ISSUE-052 標明 `note-studio` 前綴）。
 
-| `note-studio` 編號 | 原專案文件路徑 (`/Users/limchinkun/Desktop/projects/note-studio/docs/...`) | 本專案處置 | 程式碼引用位置 |
+| `note-studio` 編號 | 原專案文件路徑 (`~/Desktop/projects/note-studio/docs/...`) | 本專案處置 | 程式碼引用位置 |
 |---|---|---|---|
 | **ADR-015** | `docs/adr/015-module-prompts-single-source-in-md.md` | 本 ADR §3.1 已完整吸納「獨立 `.md` 提示詞為唯一來源」設計，列於附錄對照 | `services/notes/module_prompts.py`（見 `SPEC-017`） |
 | **ADR-016** | `docs/adr/016-batch-auto-retry-selective-scheduling-and-preference-persistence.md` | 僅沿用分頁/章節後關閉分頁機制，批次排程未移植；列於附錄對照 | `adapters/gemini/web_driver.py:87` |

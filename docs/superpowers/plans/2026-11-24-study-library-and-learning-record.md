@@ -451,7 +451,7 @@ def test_no_new_writes_to_old_layout(self):
 ### Task 16: 在使用者電腦上整併（每步需使用者確認）
 
 - [x] **Step 1:** 請使用者確認 Q1–Q5（對照表、`midterm-submission` 歸屬、`deleted/` 政策）；檢查 `deleted/115-1-20261112-182701` 內容（`ls -R`、檔案類型統計），回報是否為被誤刪的 `心理學研究法` 資料，由使用者決定是否還原。（已完成：344 MB / 186 檔）
-- [x] **Step 2:** 經使用者同意，在 `.env` 加 `LEGACY_NOTE_STUDIO_DIR=/Users/limchinkun/Desktop/projects-data/note-studio/output/courses`。
+- [x] **Step 2:** 經使用者同意，在 `.env` 加 `LEGACY_NOTE_STUDIO_DIR=~/Desktop/projects-data/note-studio/output/courses`。
 - [x] **Step 3:** `uv run notebooklm-batch-studio consolidate --dry-run …` → 貼出計畫表 → 使用者同意後 `--apply`；貼出結果。（已完成 3 門課整併、186 檔複製還原，並由 SPEC-015 納管 `CP30210` 48 筆 `done`）
 - [ ] **Step 4:** 使用者自行從備份複製 113-1～114-2 到 `DATA_DIR/study/`；`GET /api/study/library` 確認列出 → 使用者勾選 → `register(archive=True)`。（`待實機`：待使用者從雲端備份複製過去學期資料夾後操作）
 - [x] **Step 5:** 證據：`notebooklm-batch-studio status`、`GET /api/study/record` 學期數與課程數、NoteStudio 筆記數（CP30210 6 章 / CP31000 11 章）、`GET /api/system/sign-ins`、瀏覽器驗證與 console 0 錯。
