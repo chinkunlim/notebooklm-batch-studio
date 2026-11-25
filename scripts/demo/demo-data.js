@@ -3,10 +3,11 @@
    lectures, quiz questions, flashcards and key points. The key-point quotes appear word for word in the
    generated lecture PDFs (scripts/build_demo.py), so the reader can highlight them. */
 
-/** The demo courses: code, name, exam date and lectures (topic, English PDF title, quiz bank, flashcards, key points). */
+/** The demo courses: code, term, courseNo, status, profile, name, examDate and lectures. */
 const DEMO_COURSES = [
   {
-    code: 'BIO101', name: '細胞與分子生物學', examInDays: 18,
+    code: '115-1_BIO101', term: '115-1', courseNo: 'BIO101', status: 'active', profile: 'full', sourceOrigin: 'auto',
+    name: '細胞與分子生物學', examInDays: 18,
     lectures: [
       {
         topic: '細胞的構造與功能', title: 'Cell Structure and Function',
@@ -97,7 +98,8 @@ const DEMO_COURSES = [
     ],
   },
   {
-    code: 'CHEM110', name: '普通化學', examInDays: null,
+    code: '115-1_CHEM110', term: '115-1', courseNo: 'CHEM110', status: 'active', profile: 'full', sourceOrigin: 'auto',
+    name: '普通化學', examInDays: null,
     lectures: [
       { topic: '原子結構', title: 'Atomic Structure', quiz: [['原子核由什麼組成？', ['質子與中子', '電子與質子', '只有中子', '電子與中子'], 0, '原子核含質子與中子。']], cards: [['同位素', '質子數相同、中子數不同']], points: [] },
       { topic: '化學鍵', title: 'Chemical Bonds', quiz: [['NaCl 的鍵結是？', ['共價鍵', '離子鍵', '金屬鍵', '氫鍵'], 1, '鈉與氯以離子鍵結合。']], cards: [['共價鍵', '原子共用電子對']], points: [] },
@@ -105,22 +107,41 @@ const DEMO_COURSES = [
       { topic: '酸鹼平衡', title: 'Acids and Bases', quiz: [['pH 7 的溶液是？', ['酸性', '中性', '鹼性', '無法判斷'], 1, '25 °C 時 pH 7 為中性。']], cards: [['緩衝溶液', '能抵抗 pH 變化的溶液']], points: [] },
     ],
   },
+  {
+    code: '114-2_PSY201', term: '114-2', courseNo: 'PSY201', status: 'archived', profile: 'record-only', sourceOrigin: 'adopted',
+    name: '發展心理學（舊學期示範）', examInDays: null,
+    lectures: [
+      {
+        topic: '認知發展階段論', title: 'Cognitive Development',
+        quiz: [['皮亞傑認為「物體恆存」概念主要出現在哪個階段？', ['感覺動作期', '前運思期', '具體運思期', '形式運思期'], 0, '嬰兒在感覺動作期後期逐步建立物體恆存概念。']],
+        cards: [['基模 (Schema)', '個體用來理解與組織世界經驗的認知架構'], ['調適 (Accommodation)', '修改既有基模以納入新經驗']],
+        points: [{ quote: 'Sensorimotor infants construct object permanence through action', page: 2, importance: 3, note: '感覺動作期的核心里程碑。' }],
+      },
+      {
+        topic: '依附理論與社會情緒', title: 'Attachment Theory',
+        quiz: [['艾因斯沃斯的陌生情境測驗主要評估嬰兒的什麼特質？', ['氣質類型', '依附安全感', '語言流暢度', '道德推理'], 1, '透過分離與重聚反應觀察安全型與焦慮/迴避型依附。']],
+        cards: [['安全基地', '照顧者提供探索環境時的情感支撐']],
+        points: [{ quote: 'Caregiver responsiveness shapes early attachment security', page: 2, importance: 3, note: '回應敏感度影響依附型態。' }],
+      },
+    ],
+  },
 ];
 
 /** Starting state so the demo looks lived-in: past quiz attempts, open mistakes, finished steps and study days. */
 const DEMO_SEED = {
   attempts: [
-    { course: 'BIO101', lecture: 1, variant: 'L01_quiz_1', score: 3, total: 4, daysAgo: 2 },
-    { course: 'BIO101', lecture: 1, variant: 'L01_quiz_2', score: 4, total: 4, daysAgo: 1 },
-    { course: 'BIO101', lecture: 2, variant: 'L02_quiz_1', score: 2, total: 4, daysAgo: 1 },
+    { course: '115-1_BIO101', lecture: 1, variant: 'L01_quiz_1', score: 3, total: 4, daysAgo: 2 },
+    { course: '115-1_BIO101', lecture: 1, variant: 'L01_quiz_2', score: 4, total: 4, daysAgo: 1 },
+    { course: '115-1_BIO101', lecture: 2, variant: 'L02_quiz_1', score: 2, total: 4, daysAgo: 1 },
+    { course: '114-2_PSY201', lecture: 1, variant: 'L01_quiz_1', score: 1, total: 1, daysAgo: 90 },
   ],
   mistakes: [
-    { course: 'BIO101', lecture: 2, q: 1, selected: 0, confidence: 'sure' },
-    { course: 'BIO101', lecture: 2, q: 3, selected: 0, confidence: null },
-    { course: 'BIO101', lecture: 1, q: 2, selected: 3, confidence: null },
+    { course: '115-1_BIO101', lecture: 2, q: 1, selected: 0, confidence: 'sure' },
+    { course: '115-1_BIO101', lecture: 2, q: 3, selected: 0, confidence: null },
+    { course: '115-1_BIO101', lecture: 1, q: 2, selected: 3, confidence: null },
   ],
-  steps: [['BIO101', 1, 'audio'], ['BIO101', 1, 'guide'], ['BIO101', 2, 'audio']],
+  steps: [['115-1_BIO101', 1, 'audio'], ['115-1_BIO101', 1, 'guide'], ['115-1_BIO101', 2, 'audio']],
   // study sessions per day for the last 28 days (oldest first); today is filled in by what you do
   activity: [0, 1, 2, 0, 1, 1, 0, 2, 3, 1, 0, 0, 1, 2, 2, 1, 0, 1, 3, 2, 1, 1, 0, 2, 2, 3, 1, 0],
-  due: [['BIO101', 1, 0, 1], ['BIO101', 1, 2, 2], ['BIO101', 2, 0, 1], ['BIO101', 2, 3, 3], ['BIO101', 3, 1, 1]],
+  due: [['115-1_BIO101', 1, 0, 1], ['115-1_BIO101', 1, 2, 2], ['115-1_BIO101', 2, 0, 1], ['115-1_BIO101', 2, 3, 3], ['115-1_BIO101', 3, 1, 1]],
 };

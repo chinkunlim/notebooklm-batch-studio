@@ -92,17 +92,19 @@ function demoJobs(c) {
     const quiz = /quiz|mock_exam/.test(type);
     const file = quiz ? `${prefix}_${type}_quiz.json` : `${prefix}_${type}.${EXT[type] || 'md'}`;
     jobs.push({ id: `${c.code}-${prefix}-${type}`, course_code: c.code, lecture_no: no, artifact_type: type, label: JOB_LABELS[type] || type, status, version: type === 'infographic' && no === 1 ? 2 : 1,
+      source_origin: c.sourceOrigin || 'auto',
       output_file: status === 'done' ? file : null, rel_path: status === 'done' ? file : null, style_options: type === 'quiz_3' && no === 2 ? '{"quiz_questions": 40}' : null,
       error_message: null, cooldown_until: status === 'quota_wait' ? new Date(Date.now() + 47 * 60000).toISOString() : null });
   };
   const n = c.lectures.length;
   c.lectures.forEach((lec, i) => {
-    const no = i + 1, last = no === n && c.code === 'BIO101';
+    const no = i + 1, last = no === n && c.code === '115-1_BIO101';
     ['audio', 'quiz_1', 'quiz_2', 'quiz_3', 'study_guide', 'reports_concept_explanation', 'reports_briefing', 'mind_map', 'infographic', 'flashcards', 'data_table'].forEach((t, k) => {
-      add(no, t, last ? (k === 0 ? 'running' : k < 3 ? 'pending' : 'quota_wait') : 'done');
+      const st = c.profile === 'record-only' ? 'done' : last ? (k === 0 ? 'running' : k < 3 ? 'pending' : 'quota_wait') : 'done';
+      add(no, t, st);
     });
     if (no <= 2) add(no, 'slide_deck', 'done');
-    if (no === 1 && c.code === 'BIO101') add(no, 'video', 'done');
+    if (no === 1 && c.code === '115-1_BIO101') add(no, 'video', 'done');
   });
   ['course_audio', 'course_mock_exam', 'course_mind_map', 'course_reports_study_guide'].forEach(t => add(null, t, 'done'));
   return jobs;
@@ -114,10 +116,12 @@ function demoJobs(c) {
  * @returns {object} Course with lectures and jobs
  */
 function demoCourseJson(c) {
+  const isRec = c.profile === 'record-only';
   return {
-    code: c.code, name: c.name, paused: false, notebook_id: `demo-${c.code}`,
+    code: c.code, term: c.term || '115-1', course_no: c.courseNo || c.code, status: c.status || 'active', profile: c.profile || 'full',
+    name: c.name, paused: false, notebook_id: isRec ? null : `demo-${c.code}`,
     exam_date: c.examInDays === null ? null : new Date(Date.now() + c.examInDays * DAY).toISOString().slice(0, 10),
-    lectures: c.lectures.map((l, i) => ({ no: i + 1, topic: l.topic, filename: `${demoPad(i + 1)}_${l.title.replace(/ /g, '-')}.pdf`, upload_status: 'ready', source_id: `src-${c.code}-${i + 1}` })),
+    lectures: c.lectures.map((l, i) => ({ no: i + 1, topic: l.topic, filename: `${demoPad(i + 1)}_${l.title.replace(/ /g, '-')}.pdf`, upload_status: isRec ? 'pending' : 'ready', source_id: isRec ? null : `src-${c.code}-${i + 1}` })),
     jobs: demoJobs(c),
   };
 }
@@ -362,6 +366,23 @@ function demoCourseRoute(code, rest, method, body, q) {
     demoNote('刪除雲端產出物');
     return demoJson({ course_code: code, deleted_artifact_id: decodeURIComponent(rest.slice(17)), affected_jobs: [] });
   }
+  if (rest === 'jobs/regenerate' && method === 'POST') {
+    if (c.profile === 'record-only') return demoJson({ detail: '此課程為 record-only 模式且未連結 Gemini Notebook，無法重新生成' }, 422);
+    demoNote('重新生成'); return demoJson({ ok: true, version: 2 });
+  }
+  if (rest === 'adopt-outputs' && method === 'POST') {
+    const doneCnt = demoJobs(c).filter(j => j.status === 'done').length;
+    return demoJson({
+      course_code: code, dry_run: body.dry_run !== false,
+      lectures: c.lectures.map((l, i) => ({ lecture_no: i + 1, folder: `${demoPad(i + 1)}_${l.title.replace(/ /g, '-')}`, matched: [{ artifact_type: 'quiz_1', status: 'skip' }], unmapped_files: [] })),
+      unmapped_files: [], would_create: 0, would_skip: doneCnt, created: 0, skipped: doneCnt,
+    });
+  }
+  if ((rest === 'archive' || rest === 'restore' || rest === 'rename') && method === 'POST') {
+    if (rest === 'rename' && body && body.dry_run !== false) return demoJson({ tables: { courses: 1, lectures: c.lectures.length }, files: { course_toml: 1 } });
+    demoNote(rest === 'rename' ? '更改課程代碼' : '變更封存狀態');
+    return demoJson({ ok: true, code });
+  }
   if (method === 'POST') { demoNote('這個動作'); return demoJson({ ok: true, notebook_id: 'demo', upload_status: 'ready', updated_jobs_count: 0, remote_artifacts_found: 0, synced_count: 0 }); }
   return demoJson({ detail: 'not in demo' }, 404);
 }
@@ -377,7 +398,7 @@ function demoCourseRoute(code, rest, method, body, q) {
  */
 function demoQaNotesRoute(code, rest, method, body, q) {
   const list = demoState.qaNotes || (demoState.qaNotes = [
-    { id: 'demo-n1', course_code: code === '*' ? 'BIO101' : code, lecture_no: 1, title: '細胞膜通透性重點', content_markdown: '## 重點\n磷脂質雙層具選擇性通透。', personal_memo: '必考圖表', tags: ['#課程/BIO101/L01', '#L01', '#類型/問答', '#掌握度/待加強', '#主題/細胞膜'], source_scene: 'chat_drawer', mastery_status: 'needs_review', is_uploaded_as_source: false, uploaded_source_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    { id: 'demo-n1', course_code: code === '*' ? '115-1_BIO101' : code, lecture_no: 1, title: '細胞膜通透性重點', content_markdown: '## 重點\n磷脂質雙層具選擇性通透。', personal_memo: '必考圖表', tags: ['#課程/BIO101/L01', '#L01', '#類型/問答', '#掌握度/待加強', '#主題/細胞膜'], source_scene: 'chat_drawer', mastery_status: 'needs_review', is_uploaded_as_source: false, uploaded_source_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
   ]);
   if (rest === 'qa/ask' && method === 'POST') return demoJson({ answer: `（示範回答）關於「${(body && body.question) || ''}」，講義重點在於結構與功能的對應關係。`, conversation_id: 'demo-conv-1', references: [{ source_id: 's1', citation_number: 1, cited_text: '講義第 3 頁重點摘要' }] });
   if (rest === 'qa/summarize' && method === 'POST') return demoJson({ title: '對話精華整理', markdown: '## 核心觀念\n- 示範摘要內容', tags: ['#類型/問答', '#掌握度/待加強'], conversation_id: 'demo-conv-1' });
@@ -407,6 +428,58 @@ function demoQaNotesRoute(code, rest, method, body, q) {
 }
 
 /**
+ * Build cross-term learning record payload for GET /api/study/record.
+ * @param {string|null} termFilter Optional semester filter
+ * @returns {object} Layout map and term-grouped course records
+ */
+function demoLearningRecord(termFilter) {
+  const layout = { materials: '01 Materials', handouts: '02 Handouts', notes: '03 Notes', homework: '04 Homework', assignments: '05 Assignments' };
+  const termsMap = new Map();
+  DEMO_COURSES.filter(c => !termFilter || (c.term || '115-1') === termFilter).forEach(c => {
+    const t = c.term || '115-1';
+    if (!termsMap.has(t)) termsMap.set(t, []);
+    const jobs = demoJobs(c), attempts = demoState.attempts.filter(a => a.course_code === c.code);
+    const best = attempts.length ? Math.max(...attempts.map(a => Math.round((a.score / a.total_questions) * 100))) : 0;
+    termsMap.get(t).push({
+      code: c.code, name: c.name, status: c.status || 'active',
+      stats: {
+        lectures: c.lectures.length, artifacts_done: jobs.filter(j => j.status === 'done').length,
+        quiz_attempts: attempts.length, quiz_best_score: best, mistakes_open: demoState.mistakes.filter(m => m.course_code === c.code && !m.is_resolved).length,
+        qa_notes: c.code === '115-1_BIO101' ? 1 : 0, literature: 0, study_days: c.profile === 'record-only' ? 1 : 12, study_minutes: c.profile === 'record-only' ? 40 : 320, memory_strength_avg: c.profile === 'record-only' ? 62 : 84,
+      },
+      categories: [
+        { role: 'handouts', files: c.lectures.map((l, i) => `${demoPad(i + 1)}_${l.title.replace(/ /g, '-')}.pdf`) },
+        { role: 'notes', files: c.profile === 'record-only' ? ['NoteStudio/ch01.md', 'local-outputs/01/study_guide.md'] : [] },
+      ].filter(cat => cat.files.length),
+    });
+  });
+  const terms = [...termsMap.entries()].map(([term, courses]) => ({ term, courses, others: term === '114-2' ? ['Course Outline/'] : [] }));
+  return { layout, terms };
+}
+
+/**
+ * Handle study library, layout, learning record, and sign-in overview endpoints.
+ * @param {string} path URL pathname
+ * @param {URLSearchParams} q Query parameters
+ * @returns {Response|null} Response or null if unmatched
+ */
+function demoStudyLibraryRoute(path, q) {
+  if (path === '/api/study/layout') return demoJson({ roles: ['materials', 'handouts', 'notes', 'homework', 'assignments'], names: demoLearningRecord(null).layout });
+  if (path === '/api/study/record') return demoJson(demoLearningRecord(q.get('term')));
+  if (path === '/api/study/record/export') { demoNote('匯出學習紀錄'); return demoJson({ ok: true }); }
+  if (path === '/api/study/library') return demoJson({ terms: demoLearningRecord(null).terms });
+  if (path === '/api/study/unfiled') return demoJson({ kind: q.get('kind') || 'all', files: [] });
+  if (path === '/api/system/sign-ins') {
+    return demoJson({ sign_ins: [
+      { name: 'Gemini Notebook (notebooklm-py)', state: 'ready', location: '~/.config/notebooklm-batch-studio', how_to_sign_in: '示範版已模擬連線就緒' },
+      { name: 'Gemini 網頁版（note-studio）', state: 'missing', location: 'DATA_DIR/state/gemini_profile', how_to_sign_in: '請於本機版點擊「登入 Gemini」' },
+      { name: '文獻／圖書館瀏覽器', state: 'missing', location: 'DATA_DIR/state/literature_browser_profile', how_to_sign_in: '請於本機版設定圖書館帳密' },
+    ] });
+  }
+  return null;
+}
+
+/**
  * Answer an /api/... request from the demo data.
  * @param {URL} url Request URL
  * @param {string} method HTTP method
@@ -415,6 +488,8 @@ function demoQaNotesRoute(code, rest, method, body, q) {
  */
 function demoRoute(url, method, body) {
   const path = url.pathname, q = url.searchParams;
+  const studyRes = demoStudyLibraryRoute(path, q);
+  if (studyRes) return studyRes;
   if (path === '/api/status') {
     const counts = { done: 0, running: 0, pending: 0, quota_wait: 0 };
     DEMO_COURSES.forEach(c => demoJobs(c).forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; }));
@@ -428,14 +503,10 @@ function demoRoute(url, method, body) {
       const jobs = demoJobs(c), counts = {};
       jobs.forEach(j => { counts[j.status] = (counts[j.status] || 0) + 1; });
       return {
-        code: c.code,
-        name: c.name,
-        lecture_count: c.lectures.length,
-        total_jobs: jobs.length,
-        counts,
-        notebook_id: `demo-${c.code}`,
-        paused: false,
-        study_state: c.code === 'BIO101' ? 'in_progress' : 'not_started',
+        code: c.code, term: c.term || '115-1', course_no: c.courseNo || c.code, status: c.status || 'active', profile: c.profile || 'full',
+        name: c.name, lecture_count: c.lectures.length, total_jobs: jobs.length, counts,
+        notebook_id: c.profile === 'record-only' ? null : `demo-${c.code}`,
+        paused: false, study_state: c.code === '115-1_BIO101' ? 'in_progress' : 'not_started',
       };
     }));
   }
@@ -450,10 +521,10 @@ function demoRoute(url, method, body) {
       { heading: '每一講的讀書順序', steps: ['聽語音摘要，掌握全貌。', '讀講義與重點畫線。', '做測驗，答錯的題目會收進弱點複習。', '翻學習卡，依間隔複習。'] },
     ] });
   }
-  if (path === '/api/naming-guide') return demoJson({ rules: ['檔名：<課程代號>_<講次>_<主題>_<類型>[_vN]', '重新生成不覆蓋舊檔，標題加 (v2)'], artifacts: Object.entries(JOB_LABELS).slice(0, 8).map(([t, l]) => ({ artifact_type: t, label: l, meaning: l, notebooklm_title: `[Ch01] ${l}`, local_files: `BIO101_01_細胞的構造與功能_${t}` })) });
+  if (path === '/api/naming-guide') return demoJson({ rules: ['檔名：<課程代號>_<講次>_<主題>_<類型>[_vN]', '重新生成不覆蓋舊檔，標題加 (v2)'], artifacts: Object.entries(JOB_LABELS).slice(0, 8).map(([t, l]) => ({ artifact_type: t, label: l, meaning: l, notebooklm_title: `[Ch01] ${l}`, local_files: `115-1_BIO101_01_細胞的構造與功能_${t}` })) });
   if (path === '/api/folders') {
     return demoJson(q.get('path') ? { path: q.get('path'), parent: '/示範', pdf_count: 6, folders: [] }
-      : { path: null, parent: null, pdf_count: 0, folders: [{ name: 'BIO101 細胞與分子生物學', path: '/示範/BIO101', pdf_count: 6 }, { name: 'CHEM110 普通化學', path: '/示範/CHEM110', pdf_count: 4 }] });
+      : { path: null, parent: null, pdf_count: 0, folders: [{ name: 'BIO__101-細胞與分子生物學', path: '/示範/study/115-1/BIO__101-細胞與分子生物學', pdf_count: 6 }, { name: 'CHEM__110-普通化學', path: '/示範/study/115-1/CHEM__110-普通化學', pdf_count: 4 }] });
   }
   let m = path.match(/^\/api\/jobs\/([^/]+)\/(options|prompt)$/);
   if (m) {

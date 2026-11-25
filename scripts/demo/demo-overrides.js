@@ -13,7 +13,7 @@ function demoPdf(code, no) {
   demoPdf.cache = demoPdf.cache || {};
   const key = `${code}|${no}`;
   if (!demoPdf.cache[key]) {
-    const b64 = (DEMO_PDFS[code] || {})[no] || (DEMO_PDFS.BIO101 || {})[1];
+    const b64 = (DEMO_PDFS[code] || {})[no] || (DEMO_PDFS['115-1_BIO101'] || {})[1];
     const bytes = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
     demoPdf.cache[key] = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
   }

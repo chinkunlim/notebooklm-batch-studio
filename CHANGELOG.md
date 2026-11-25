@@ -7,6 +7,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 
 ### Added
 - feat(study,api,mcp,ui): add `AdoptOutputsService` (`adopt_existing_outputs`), `POST /api/courses/{code}/adopt-outputs`, MCP tool with `confirm` guard, and dry-run-first Web UI preview flow to adopt existing local `03 Notes/NotebookLM/` deliverables as `done` jobs without Gemini Notebook calls or file edits; applied to `115-1_CP30210` (48 done jobs) (SPEC-015, by `@antigravity`)
+- feat(demo): add term grouping, record-only course, and adopted outputs to demo (by `@antigravity`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
