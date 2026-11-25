@@ -844,6 +844,7 @@ notebooklm-batch-studio/
 │       │   ├── job_views.py
 │       │   ├── learning_record.py
 │       │   ├── learning_service.py
+│       │   ├── learning_site_prompt.py
 │       │   ├── legacy_consolidation.py
 │       │   ├── legacy_consolidation_ops.py
 │       │   ├── legacy_consolidation_planner.py

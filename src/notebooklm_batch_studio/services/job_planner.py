@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 from notebooklm_batch_studio.domain.models import (
+    LEARNING_SITE_TYPES,
     ArtifactJob,
     ArtifactType,
     Course,
@@ -102,6 +103,28 @@ def _parse_artifact_names(names: list[str], label: str) -> list[ArtifactType]:
     return parsed
 
 
+def _blueprint_or_none(
+    prompt_gen: PromptGenerator, art_type: ArtifactType, topic: str, course: Course
+) -> str | None:
+    """Return the generic blueprint prompt for a job, or None for learning sites.
+
+    Learning sites render their own fixed prompt (SPEC-021); a stored blueprint would be appended
+    to it as 補充要求, so site jobs get no custom prompt.
+
+    Args:
+        prompt_gen: Prompt blueprint generator.
+        art_type: Artifact type of the job.
+        topic: Lecture topic or course-wide scope text.
+        course: Course the job belongs to.
+
+    Returns:
+        Blueprint prompt text, or None for learning-site types.
+    """
+    if art_type in LEARNING_SITE_TYPES:
+        return None
+    return prompt_gen.get_base_blueprint_prompt(art_type, topic, course.name, course.language)
+
+
 def _generate_granular_jobs(course: Course, prompt_gen: PromptGenerator) -> list[ArtifactJob]:
     """Generate jobs from explicit per-chapter and course-wide artifact selections.
 
@@ -117,12 +140,12 @@ def _generate_granular_jobs(course: Course, prompt_gen: PromptGenerator) -> list
     jobs: list[ArtifactJob] = []
     for lec in course.lectures:
         for art_type in chapter_types:
-            p = prompt_gen.get_base_blueprint_prompt(art_type, lec.topic, course.name, course.language)
+            p = _blueprint_or_none(prompt_gen, art_type, lec.topic, course)
             jobs.append(_make_job(course.code, lec.no, art_type, custom_prompt=p))
 
     course_scope = f"{course.code} 全範圍整合"
     for course_art in course_types:
-        p = prompt_gen.get_base_blueprint_prompt(course_art, course_scope, course.name, course.language)
+        p = _blueprint_or_none(prompt_gen, course_art, course_scope, course)
         jobs.append(_make_job(course.code, None, course_art, custom_prompt=p))
 
     logger.info(
