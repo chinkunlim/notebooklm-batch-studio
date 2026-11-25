@@ -233,6 +233,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs(spec): record open question on reconstructing artifact_jobs from existing NotebookLM outputs (by `@antigravity`)
 - docs(spec): add SPEC-015 for adopting existing NotebookLM outputs (by `@antigravity`)
 - docs(closeout): update architecture, README, specs, known issues, and CHANGELOG (by `@antigravity`)
+- docs(prompts): add Gemini Notebook learning-site prompt (make me a site) (by `@claude-code`)
 
 ### Testing
 - test(literature): port literature-fetch unit tests, fixtures, known issues (`ISSUE-041`, `ISSUE-042`, `ISSUE-043`, `ISSUE-044`; commit `e57a452`), and docs (by `@antigravity`)

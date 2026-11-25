@@ -152,16 +152,18 @@ notebooklm-batch-studio/
 │   └── script.py.mako
 ├── assets/
 │   └── prompts/
-│       └── modular_specs/
-│           ├── 01_mindmap_spec.md
-│           ├── 02_outline_spec.md
-│           ├── 03_qec_spec.md
-│           ├── 04_cornell_spec.md
-│           ├── 05_matrix_spec.md
-│           ├── 06_feynman_spec.md
-│           ├── 07_quiz_spec.md
-│           ├── 08_supplement_spec.md
-│           └── MODULAR_SPECS.md
+│       ├── modular_specs/
+│       │   ├── 01_mindmap_spec.md
+│       │   ├── 02_outline_spec.md
+│       │   ├── 03_qec_spec.md
+│       │   ├── 04_cornell_spec.md
+│       │   ├── 05_matrix_spec.md
+│       │   ├── 06_feynman_spec.md
+│       │   ├── 07_quiz_spec.md
+│       │   ├── 08_supplement_spec.md
+│       │   └── MODULAR_SPECS.md
+│       └── notebook_site/
+│           └── learning_site.md
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
 │   │   ├── 001-notebooklm-access.md
