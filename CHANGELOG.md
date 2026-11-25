@@ -17,6 +17,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat: textbook detection card, background Gemini note schedule, quota resume at reset time (SPEC-020) (by `@claude-code`)
 - feat(types): add learning_site and course_learning_site artifact types (SPEC-021 Task 1) (by `@claude-code`)
 - feat(site): render learning-site prompts from the bundled template (SPEC-021 Task 2) (by `@claude-code`)
+- feat(adapter): request, poll and download Gemini Notebook learning sites (SPEC-021 Task 3) (by `@claude-code`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)

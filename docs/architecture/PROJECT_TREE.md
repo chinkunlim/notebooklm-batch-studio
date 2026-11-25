@@ -403,6 +403,7 @@ notebooklm-batch-studio/
 │       │   │   ├── downloads.py
 │       │   │   ├── errors.py
 │       │   │   ├── generation.py
+│       │   │   ├── learning_sites.py
 │       │   │   ├── note_driver.py
 │       │   │   └── quota.py
 │       │   ├── ollama/
@@ -432,6 +433,7 @@ notebooklm-batch-studio/
 │       │   ├── course_identity.py
 │       │   ├── exceptions.py
 │       │   ├── generation_options.py
+│       │   ├── learning_site.py
 │       │   ├── memory_model.py
 │       │   ├── models.py
 │       │   ├── naming.py

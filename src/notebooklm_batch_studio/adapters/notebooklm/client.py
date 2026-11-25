@@ -27,13 +27,16 @@ from notebooklm_batch_studio.adapters.notebooklm.errors import (
 from notebooklm_batch_studio.adapters.notebooklm.errors import (
     build_language_instruction as build_language_instruction,
 )
+from notebooklm_batch_studio.adapters.notebooklm.learning_sites import LearningSiteMixin
 from notebooklm_batch_studio.adapters.notebooklm.quota import retry_after_from_usage, usage_to_dict
 from notebooklm_batch_studio.config.settings import AppConfig
 
 logger = logging.getLogger(__name__)
 
 
-class NotebookLMAdapter(ArtifactOperationsMixin, ArtifactDownloadsMixin, NotebookLMRemoteAdminMixin):
+class NotebookLMAdapter(
+    ArtifactOperationsMixin, ArtifactDownloadsMixin, NotebookLMRemoteAdminMixin, LearningSiteMixin
+):
     """Adapter implementing NotebookLMClientProtocol using official notebooklm-py client.
 
     Every `generate_*` passes the course output language, checks the returned status, waits for
