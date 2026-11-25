@@ -7,10 +7,10 @@
   "handed_off_to": "",
   "paths": [],
   "done_items": "",
-  "todo_items": "見總計畫 §3 W3；先問使用者 D3（被擋的是哪一個登入）。",
+  "todo_items": "D3 已回覆（2026-11-25）：兩個都被擋——①Gemini Notebook 登入（notebooklm-py login 用 Playwright 開的瀏覽器被 Google 拒絕）②文獻下載遇到 Cloudflare 機器人檢查時，人工勾選後仍一直循環（ISSUE-043）。使用者希望改用真的 Chrome。方向：登入改「獨立 Chrome 資料夾登入 → 經 CDP 匯出 cookie 成 storage_state」（或 notebooklm-py 的 --browser-cookies）；文獻瀏覽器改 chrome_session.ensure_chrome + connect_over_cdp。先寫 SPEC 再 TDD；待使用者同意開工。",
   "blockers": "",
   "created_at": "2026-11-25 09:09 UTC",
-  "updated_at": "2026-11-25 09:09 UTC",
+  "updated_at": "2026-11-25 14:07 UTC",
   "history": [
     {
       "timestamp": "2026-11-25 09:09 UTC",
@@ -19,6 +19,11 @@
     },
     {
       "timestamp": "2026-11-25 09:09 UTC",
+      "action": "todo_recorded",
+      "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-25 14:07 UTC",
       "action": "todo_recorded",
       "agent": "claude-code"
     }
