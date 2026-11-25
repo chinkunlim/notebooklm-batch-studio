@@ -105,3 +105,23 @@
 - **pypdf 7 改了 API**（`compress_identical_objects` 參數、`add_outline_item` 關鍵字參數）；專案目前鎖 6.21.1。
 - **record-only 課程沒有 `notebook_id`**：任何要呼叫 Gemini Notebook 的功能都要先檢查（ISSUE-068）。
 - **真實資料**：改資料庫或搬檔前一律先備份（`update.sh` 的備份片段可重用）、先 dry-run、再取得使用者同意。
+
+## 5. 補充：仔細檢查後補上的遺漏項目
+
+- **待補紀錄（核心規則 4，開工後先做）**：
+  - 新增 known-issue：notebooklm-py 的 `_reject_html_download` 會把 HTML 產出誤判為登入頁而拒絕下載（學習網頁必須自行下載）；狀態「已規避」，對應 SPEC-021 Task 3。
+  - `docs/TEMPLATE_FEEDBACK.md` 記一筆：code-review-guard 把 CSS 的 `#id` 選擇器當成「刪除註解」誤報。
+- **TASK-036 清單第 1 節的整理工作**（不在表格裡，容易漏）：關閉舊對話（舊 MCP 程序）、用平常方式啟動伺服器、刪除空的 `DATA_DIR/output/`（0 個檔案、資料庫沒有指向它，使用者尚未決定）、整理 `backups/`。
+- **尚未實測**：
+  - 學習網頁提示詞 **B 版（整本書）** 只寫好、沒在真實 Gemini Notebook 跑過；W1 驗收時要各跑一次 A、B（耗額度，先問）。
+  - `./scripts/install.sh` 全新安裝流程沒有從頭跑過（只驗證過 `update.sh`）；在暫存資料夾的乾淨 clone 測，**不要**讓它寫到真實 `.env`／`DATA_DIR`。
+  - 課本偵測卡片、Gemini 額度到點續跑、完成通知（見 W5）。
+- **已知限制（列入對應規格的未決問題）**：
+  - 筆記排程的 `note_schedule.json` 只有程序內鎖；網頁伺服器與 MCP 程序同時寫入時可能遺失更新（機率低）。
+  - SPEC-018：同一門課同時用講義與課本章節當講次（「both」）尚未支援。
+  - SPEC-021 不做：同步使用者在 Gemini Notebook 網頁上手動做的網頁（`sync_service`）。
+  - 依賴 notebooklm-py 私有 API `_list_raw` 與原始列位置 `row[24]`；升級套件前先跑 `tests/test_learning_site.py`。
+  - 生涯諮商與實務 Ch01：現有檔案 20 頁、書籤偵測為 18 頁（p.23–40）；切割整本時會略過現有 Ch01，若要用書籤版需使用者決定。
+  - `python3` 預設是用 `uv python install --default`（實驗性選項）設定的。
+- **已更正的文件**：SPEC-015 §6 兩項已由 SPEC-017 完成；SPEC-018 真實資料驗收已勾選（2026-11-25 套用）。
+- **收工流程尚未執行**：`.agents/conversations/` 的本次對話紀錄要由 `agentctl closeout` 產生（使用者說「收工」時執行，會推送）。

@@ -45,7 +45,7 @@
 - [x] **場景 18d**：搬移既有章節保留講次編號與來源、更新路徑、目的地衝突時停止。（`test_relocate_handouts_keeps_lecture_numbers_and_sources`）
 - [x] **場景 18e**：`materials_as_source` 排除章節資料夾。（`test_material_sources_exclude_marked_chapter_folders`）
 - [x] **場景 18f**：HTTP、MCP（confirm）、網頁入口。（`test_textbook_entrypoints_http_mcp_and_web`）
-- [ ] **真實資料**：兩門課只跑 dry-run，等使用者確認後才套用。
+- [x] **真實資料**：2026-11-25 使用者同意後套用（備份 `backups/db-20261125-132103`）：生涯諮商與實務 10 個、心理學研究法 6 個章節 PDF 搬到 `01 Materials/<課本>/`，講次編號、來源與 142 筆產出不變，重新掃描與資料庫一致。整本課本切割尚未在真實資料執行（使用者需先放入整本 PDF）。
 
 ## 6. 未決問題
 
