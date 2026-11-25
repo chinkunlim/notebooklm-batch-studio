@@ -7,8 +7,10 @@ import logging
 
 from mcp.server.mcpserver import MCPServer
 
+from notebooklm_batch_studio.adapters.notebooklm.chrome_login import build_notebook_login_service
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.services.auth_status import sign_in_status
+from notebooklm_batch_studio.services.notebook_login import LoginInProgressError
 from notebooklm_batch_studio.services.notes.gemini_auth_service import GeminiAuthService
 
 logger = logging.getLogger(__name__)
@@ -121,6 +123,34 @@ def _register_sign_in_overview_tool(mcp: MCPServer, config: AppConfig, auth: Gem
         return json.dumps({"sign_ins": sign_in_status(config, auth)}, ensure_ascii=False, indent=2)
 
 
+def _register_notebook_login_tool(mcp: MCPServer, config: AppConfig) -> None:
+    """Register `notebooklm_login`: real-Chrome Gemini Notebook sign-in (Refs: SPEC-022).
+
+    Args:
+        mcp: MCPServer instance.
+        config: Application configuration.
+    """
+    service = build_notebook_login_service(config)
+
+    @mcp.tool()
+    def notebooklm_login(timeout_seconds: int = 300, confirm: bool = False) -> str:
+        """Open real Chrome so the user signs in to Gemini Notebook personally (requires confirm=True).
+
+        Args:
+            timeout_seconds: Longest wait for the user to finish signing in.
+            confirm: Must be True to open Chrome on the desktop.
+
+        Returns:
+            JSON string with `status` and `message` (never cookies), or a confirmation warning.
+        """
+        if not confirm:
+            return _confirm_prompt("Pass confirm=True to open Chrome for Gemini Notebook sign-in.")
+        try:
+            return json.dumps(service.login(timeout_seconds), ensure_ascii=False, indent=2)
+        except LoginInProgressError as exc:
+            return json.dumps({"status": "in_progress", "message": str(exc)}, ensure_ascii=False)
+
+
 def register_gemini_auth_tools(
     mcp: MCPServer, auth: GeminiAuthService, config: AppConfig | None = None
 ) -> None:
@@ -135,4 +165,5 @@ def register_gemini_auth_tools(
     _register_login_and_logout_tools(mcp, auth)
     if config is not None:
         _register_sign_in_overview_tool(mcp, config, auth)
+        _register_notebook_login_tool(mcp, config)
     logger.debug("Registered Gemini Web auth MCP tools")

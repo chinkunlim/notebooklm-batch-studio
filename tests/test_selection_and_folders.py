@@ -91,21 +91,25 @@ class QuizBatchTitleTest(unittest.IsolatedAsyncioTestCase):
 class BrowserLoginTest(unittest.TestCase):
     """`login --browser` runs notebooklm's own login; the program never handles the password."""
 
-    def test_browser_flag_runs_notebooklm_login(self) -> None:
-        """The notebooklm CLI is called with --storage pointing at the credential file."""
+    def test_browser_flag_signs_in_with_real_chrome(self) -> None:
+        """`login --browser` opens real Chrome via the sign-in service, not `notebooklm login` (SPEC-022)."""
         with tempfile.TemporaryDirectory() as tmp_name:
             cfg = AppConfig(
                 data_dir=Path(tmp_name), notebooklm_home=Path(tmp_name) / "cfg", log_to_file=False
             )
+            service = mock.Mock(login=mock.Mock(return_value={"status": "signed_in", "message": "ok"}))
             with (
                 mock.patch("notebooklm_batch_studio.entrypoints.cli.load_config", return_value=cfg),
-                mock.patch("notebooklm_batch_studio.entrypoints.cli.subprocess.call", return_value=0) as call,
+                mock.patch(
+                    "notebooklm_batch_studio.entrypoints.cli.build_notebook_login_service",
+                    return_value=service,
+                ),
+                mock.patch("subprocess.call") as call,
                 mock.patch("builtins.print"),
             ):
                 main(["login", "--browser"])
-            args = call.call_args.args[0]
-            self.assertEqual(args[1:3], ["login", "--storage"])
-            self.assertTrue(args[0].endswith("notebooklm"))
+            call.assert_not_called()
+            service.login.assert_called_once_with(300)
 
 
 class ArtifactSelectionTest(Fixture):

@@ -39,7 +39,13 @@ def _is_valid_auth_cookie(cookie: dict[str, Any], current_ts: float) -> bool:
 
 
 class ChromeGeminiLoginRuntime:
-    """Real-Chrome login adapter implementing `GeminiLoginRuntimeProtocol`."""
+    """Real-Chrome login adapter implementing `GeminiLoginRuntimeProtocol`.
+
+    Subclasses change `start_url` and `tab_prefix` to sign in to another Google app (SPEC-022).
+    """
+
+    start_url: str = chrome_session.LOGIN_URL
+    tab_prefix: str = "https://gemini.google.com/"
 
     def __init__(self, profile_dir: Path, chrome_path: str) -> None:
         """Initialize the login runtime.
@@ -164,7 +170,7 @@ class ChromeGeminiLoginRuntime:
         Returns:
             True if signed in and saved.
         """
-        if not any(u.startswith("https://gemini.google.com/") for u in urls):
+        if not any(u.startswith(self.tab_prefix) for u in urls):
             return False
         time.sleep(2.0)
         try:
@@ -198,7 +204,7 @@ class ChromeGeminiLoginRuntime:
         return False
 
     def run_browser_login(self, storage_state_path: Path, timeout_seconds: int) -> None:
-        """Open real Google Chrome on the Gemini login URL and wait for sign-in completion.
+        """Open real Google Chrome on `start_url` and wait for sign-in completion.
 
         Args:
             storage_state_path: Destination `storage_state.json` path.
@@ -208,11 +214,11 @@ class ChromeGeminiLoginRuntime:
         launch = chrome_session.ChromeLaunch(
             chrome_path=self.chrome_path,
             user_data_dir=self.chrome_user_data_dir(),
-            start_url=chrome_session.LOGIN_URL,
+            start_url=self.start_url,
         )
         already_running = chrome_session.running_port(launch.user_data_dir) is not None
         port = chrome_session.ensure_chrome(launch)
         if already_running:
-            chrome_session.open_tab(port, chrome_session.LOGIN_URL)
+            chrome_session.open_tab(port, self.start_url)
         logger.info("Chrome window opened on port %d, waiting for user login...", port)
         self.wait_for_login_completion(port, storage_state_path, timeout_seconds)

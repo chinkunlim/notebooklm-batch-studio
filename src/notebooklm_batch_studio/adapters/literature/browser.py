@@ -1,4 +1,7 @@
-"""Publisher PDF fetcher that drives the installed Google Chrome through Playwright (ADR-001).
+"""Publisher PDF fetcher that drives the installed Google Chrome (ADR-001, SPEC-022).
+
+Chrome is started normally on its own profile and Playwright only attaches over CDP; a Chrome that
+Playwright launches itself is flagged as automated, and Cloudflare kept re-asking (ISSUE-043).
 
 Route: `https://go.openathens.net/redirector/<domain>?url=https://doi.org/<doi>`. On campus the
 redirector forwards straight to the publisher (IP access); off campus it shows the OpenAthens
@@ -17,10 +20,12 @@ from pathlib import Path
 from types import TracebackType
 from urllib.parse import quote, urlparse
 
-from playwright.sync_api import BrowserContext, Page, Playwright, sync_playwright
+from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
 from playwright.sync_api import Error as PlaywrightError
 
+from notebooklm_batch_studio.adapters.gemini import chrome_session
 from notebooklm_batch_studio.adapters.private_dir import ensure_private_dir
+from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.literature.literature import (
     NeedsUserError,
     Reference,
@@ -141,34 +146,38 @@ class BrowserPublisherFetcher:
         self._login = login
         self._wait = wait_seconds
         self._pw: Playwright | None = None
+        self._browser: Browser | None = None
         self._ctx: BrowserContext | None = None
+        self.chrome_path = AppConfig.chrome_path  # the factory sets `config.chrome_path`
 
     def __enter__(self) -> BrowserPublisherFetcher:
-        """Start Chrome with the persistent profile.
+        """Start real Chrome on the persistent profile (same folder as before, sign-ins kept) and attach.
 
         Returns:
             This fetcher.
         """
         ensure_private_dir(self._profile_dir)
+        launch = chrome_session.ChromeLaunch(self.chrome_path, self._profile_dir, start_url="about:blank")
+        port = chrome_session.ensure_chrome(launch)
         self._pw = sync_playwright().start()
-        self._ctx = self._pw.chromium.launch_persistent_context(
-            str(self._profile_dir), channel="chrome", headless=False, accept_downloads=True
-        )
-        logger.info("browser started profile=%s", self._profile_dir)
+        self._browser = self._pw.chromium.connect_over_cdp(chrome_session.cdp_endpoint(port))
+        self._ctx = self._browser.contexts[0]
+        logger.info("browser attached over CDP port=%d profile=%s", port, self._profile_dir)
         return self
 
     def __exit__(
         self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: TracebackType | None
     ) -> None:
-        """Close Chrome.
+        """Close Chrome and detach.
 
         Args:
             exc_type: Exception class, if any.
             exc: Exception, if any.
             tb: Traceback, if any.
         """
-        if self._ctx is not None:
-            self._ctx.close()
+        if self._browser is not None:
+            chrome_session.quit_chrome(self._browser)
+            self._browser.close()  # only disconnects; quit_chrome closed Chrome itself
         if self._pw is not None:
             self._pw.stop()
         logger.info("browser closed")

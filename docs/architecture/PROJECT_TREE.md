@@ -186,6 +186,7 @@ notebooklm-batch-studio/
 │   │   ├── 014-course-identity-and-study-layout.md
 │   │   ├── 015-consolidation-exclusive-guard.md
 │   │   ├── 016-untrusted-learning-site-html.md
+│   │   ├── 017-real-chrome-for-notebook-and-library.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -407,6 +408,7 @@ notebooklm-batch-studio/
 │       │   │   └── tracker_md.py
 │       │   ├── notebooklm/
 │       │   │   ├── __init__.py
+│       │   │   ├── chrome_login.py
 │       │   │   ├── client.py
 │       │   │   ├── client_artifacts.py
 │       │   │   ├── client_remote_admin.py
@@ -471,6 +473,7 @@ notebooklm-batch-studio/
 │       │   │   ├── literature_files.py
 │       │   │   ├── literature_notebook.py
 │       │   │   ├── note_schedule.py
+│       │   │   ├── notebook_login.py
 │       │   │   ├── notes.py
 │       │   │   ├── plan.py
 │       │   │   ├── preferences.py
@@ -864,6 +867,7 @@ notebooklm-batch-studio/
 │       │   ├── legacy_consolidation.py
 │       │   ├── legacy_consolidation_ops.py
 │       │   ├── legacy_consolidation_planner.py
+│       │   ├── notebook_login.py
 │       │   ├── orchestrator.py
 │       │   ├── preferences_service.py
 │       │   ├── prompt_generator.py
@@ -949,10 +953,12 @@ notebooklm-batch-studio/
 │   ├── test_lecture_source_guard.py
 │   ├── test_legacy_consolidation.py
 │   ├── test_literature_and_hierarchy.py
+│   ├── test_literature_chrome_cdp.py
 │   ├── test_needs_review_and_ollama.py
 │   ├── test_note_pipeline_behaviors.py
 │   ├── test_note_pipeline_phase1.py
 │   ├── test_note_pipeline_phase2.py
+│   ├── test_notebook_chrome_login.py
 │   ├── test_notebooklm_adapter.py
 │   ├── test_notebooklm_generation.py
 │   ├── test_old_layout_retired.py

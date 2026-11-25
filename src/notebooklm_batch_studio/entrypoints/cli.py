@@ -10,8 +10,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
-import subprocess
-import sys
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -21,6 +19,7 @@ from typing import Any
 
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository, QueueRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
+from notebooklm_batch_studio.adapters.notebooklm.chrome_login import build_notebook_login_service
 from notebooklm_batch_studio.adapters.notebooklm.client import NotebookLMAdapter
 from notebooklm_batch_studio.adapters.system_notify import send_notification
 from notebooklm_batch_studio.config.logging_setup import setup_logging
@@ -30,6 +29,7 @@ from notebooklm_batch_studio.domain.path_safety import is_within
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
 from notebooklm_batch_studio.services.completion_notice import course_complete_hook
 from notebooklm_batch_studio.services.course_parser import scan_course_directory, uses_textbook_lectures
+from notebooklm_batch_studio.services.notebook_login import LoginInProgressError
 from notebooklm_batch_studio.services.orchestrator import BatchStudioService
 from notebooklm_batch_studio.services.watcher import CourseWatcher
 from notebooklm_batch_studio.services.worker_pool import WorkerPool
@@ -38,23 +38,27 @@ logger = logging.getLogger(__name__)
 
 
 def _browser_login(config: AppConfig, storage_path: Path) -> int:
-    """Open a browser so the user signs in to Google personally; notebooklm-py saves the session.
+    """Open real Chrome so the user signs in to Google personally; the session is saved once verified.
 
-    The program never sees or stores the password: the user types it in the browser window and
-    notebooklm-py only writes the resulting session cookies to `storage_path` (ADR-002).
+    Uses Chrome started normally on its own profile instead of notebooklm-py's Playwright browser,
+    which Google refuses (SPEC-022). The program never sees or stores the password (ADR-002).
 
     Args:
-        config: Application configuration (credential folder).
-        storage_path: Where notebooklm-py stores the session state.
+        config: Application configuration.
+        storage_path: Where the queue reads the session (shown to the user).
 
     Returns:
-        Exit code of the notebooklm login command.
+        0 when signed in, 1 otherwise.
     """
-    notebooklm_cli = Path(sys.executable).with_name("notebooklm")
-    print(f"🌐 開啟瀏覽器登入 Gemini Notebook，請在視窗中親自登入 Google。憑證會存到：{storage_path}")
-    logger.info("Starting browser login, storage=%s", storage_path)
-    # load_config() already exported NOTEBOOKLM_HOME, so the child process inherits it.
-    return subprocess.call([str(notebooklm_cli), "login", "--storage", str(storage_path)])
+    print(f"🌐 已開啟 Chrome，請在視窗中親自登入 Google（最多等 5 分鐘）。憑證會存到：{storage_path}")
+    logger.info("Starting Chrome sign-in for Gemini Notebook")
+    try:
+        result = build_notebook_login_service(config).login(300)
+    except LoginInProgressError as exc:
+        print(f"⏳ {exc}")
+        return 1
+    print(("✅ " if result["status"] == "signed_in" else "❌ ") + result["message"])
+    return 0 if result["status"] == "signed_in" else 1
 
 
 def _handle_login(config: AppConfig, browser: bool = False) -> int:

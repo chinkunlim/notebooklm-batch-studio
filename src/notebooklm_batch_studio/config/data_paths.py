@@ -48,3 +48,12 @@ class MaintenancePathsMixin:
             `<data_dir>/state/note_schedule.json`.
         """
         return self.data_dir / "state" / "note_schedule.json"
+
+    @property
+    def notebooklm_chrome_profile_dir(self) -> Path:
+        """Own Chrome profile used to sign in to Gemini Notebook in real Chrome (Refs: SPEC-022).
+
+        Returns:
+            `<data_dir>/state/notebooklm_chrome_profile`.
+        """
+        return self.data_dir / "state" / "notebooklm_chrome_profile"

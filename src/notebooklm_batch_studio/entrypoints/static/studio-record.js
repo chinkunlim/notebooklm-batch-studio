@@ -307,6 +307,29 @@ async function loadLearningRecordView(term) {
 }
 
 /**
+ * Open real Chrome for Gemini Notebook sign-in and refresh the status list when it finishes (SPEC-022).
+ * @param {HTMLButtonElement} btn The 登入 button (disabled while Chrome waits)
+ * @returns {Promise<void>}
+ */
+async function startNotebookLogin(btn) {
+  btn.disabled = true;
+  showToast('已開啟 Chrome，請在視窗中親自登入 Google（最多等 5 分鐘）', 'info', 8000);
+  try {
+    const res = await fetch('/api/notebooklm/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timeout_seconds: 300 }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '登入失敗');
+    showToast(data.message, data.status === 'signed_in' ? 'success' : 'error', 7000);
+  } catch (e) {
+    showToast('登入失敗：' + e.message, 'error', 7000);
+  } finally {
+    btn.disabled = false;
+    await loadSignInStatus();
+  }
+}
+
+/**
  * Fetch and display the read-only three-profile sign-in status list inside `#signInStatusList`.
  * @returns {Promise<void>}
  */
@@ -330,6 +353,7 @@ async function loadSignInStatus() {
           <div class="small muted num" style="word-break:break-all">${escHtml(item.location)}</div>
           <div class="small muted">${escHtml(item.how_to_sign_in)}</div>
         </div>
+        ${item.login_route ? '<button class="btn btn-primary btn-sm" onclick="startNotebookLogin(this)">登入</button>' : ''}
       </div>`;
     }).join('') || '<div class="small muted">尚無登入設定項目。</div>';
   } catch (e) {

@@ -1,8 +1,8 @@
 # SPEC-022：Gemini Notebook 登入與文獻瀏覽器改用真的 Chrome
 
-- **狀態**：Draft <!-- Draft | Approved | Implemented | Deprecated -->
+- **狀態**：Implemented（實機驗收待使用者：Google 登入、Cloudflare 網站）<!-- Draft | Approved | Implemented | Deprecated -->
 - **日期**：2026-11-25
-- **相關任務 / ADR**：TASK-042（決策 D3）／ISSUE-043／ADR-011（文獻下載不繞過機器人檢查）／ISSUE-053（Gemini 網頁版已改真 Chrome）
+- **相關任務 / ADR**：TASK-042（決策 D3）／ISSUE-043／ADR-011（文獻下載不繞過機器人檢查）／ADR-017（本決策）／ISSUE-053（Gemini 網頁版已改真 Chrome）
 
 ## 1. 目標
 
@@ -25,7 +25,7 @@
 ## 3. 需求
 
 - **必須 (Must)**：
-  1. **Gemini Notebook 登入改真 Chrome**：新增服務，以 `ChromeLaunch(chrome_path, user_data_dir, start_url="https://notebooklm.google.com/")` 啟動 Chrome（`ensure_chrome`），輪詢分頁網址；分頁到 `notebooklm.google.com` 且有有效的 Google 登入 cookie（重用 `auth_runtime._is_valid_auth_cookie` 的判斷）時，以 CDP 短暫連線，用 `context.storage_state(path=…)` 存到 notebooklm-py 使用的路徑（現行 `adapter.storage_path`），權限 600，然後斷線。
+  1. **Gemini Notebook 登入改真 Chrome**：新增服務，以 `ChromeLaunch(chrome_path, user_data_dir, start_url="https://notebook.google.com/")` 啟動 Chrome（`ensure_chrome`），輪詢分頁網址；分頁到 `notebook.google.com` 且有有效的 Google 登入 cookie（重用 `auth_runtime._is_valid_auth_cookie` 的判斷）時，以 CDP 短暫連線，用 `context.storage_state(path=…)` 存到 notebooklm-py 使用的路徑（現行 `adapter.storage_path`），權限 600，然後斷線。
   2. 存完後用 notebooklm-py 做一次即時驗證（現行 `check_auth_status(live_check=True)`），失敗就回報「登入未完成」，不要覆蓋原本有效的檔案（先寫到暫存檔，驗證通過才取代）。
   3. 三個入口一起接（核心規則 13）：CLI `login --browser` 改走新流程；HTTP `POST /api/notebooklm/login`（新路由，回傳進度或結果）；MCP 工具 `notebooklm_login(timeout_seconds, confirm)`，`confirm=False` 時只回說明。網頁「設計與自訂 → 登入狀態」的 Gemini Notebook 卡片加「登入」按鈕。
   4. **文獻瀏覽器改真 Chrome**：`BrowserPublisherFetcher.__enter__` 改為 `ensure_chrome(ChromeLaunch(..., user_data_dir=chrome_user_data_dir(profile_dir), start_url="about:blank"))`＋`sync_playwright().chromium.connect_over_cdp(cdp_endpoint(port))`，使用 `browser.contexts[0]`；`__exit__` 只斷開 CDP 連線並依設定決定是否關閉 Chrome（預設關閉，與現在一致）。
@@ -56,18 +56,20 @@
 
 ## 5. 驗收標準
 
-- [ ] Given 沒有有效憑證，When 執行登入並在（假的）CDP 端點回報 `notebooklm.google.com` 分頁與有效 cookie，Then 寫出 `storage_state.json`（權限 600）並回 `signed_in`。（單元測試，假 CDP）
-- [ ] Given 登入逾時，When 時間到仍沒有登入分頁，Then 回 `timeout`，原本的 `storage_state.json` 內容不變。
-- [ ] Given 新存的憑證即時驗證失敗，Then 不取代原檔、回報「登入未完成」。
-- [ ] Given 已有登入流程進行中，When 再呼叫 HTTP 登入，Then 回 409。
-- [ ] Given MCP `confirm=False`，Then 不啟動 Chrome，只回說明。
-- [ ] Given 文獻瀏覽器啟動，Then 呼叫 `ensure_chrome` 與 `connect_over_cdp`，不再呼叫 `launch_persistent_context`。（單元測試，以假物件記錄呼叫）
-- [ ] Given 遇到機器人檢查且 `wait_seconds=0`，Then 拋 `NeedsUserError`，程式沒有任何點擊或填寫。
+- [x] Given 沒有有效憑證，When 執行登入並在（假的）CDP 端點回報 `notebook.google.com` 分頁與有效 cookie，Then 寫出 `storage_state.json`（權限 600）並回 `signed_in`。（單元測試，假 CDP）
+- [x] Given 登入逾時，When 時間到仍沒有登入分頁，Then 回 `timeout`，原本的 `storage_state.json` 內容不變。
+- [x] Given 新存的憑證即時驗證失敗，Then 不取代原檔、回報「登入未完成」。
+- [x] Given 已有登入流程進行中，When 再呼叫 HTTP 登入，Then 回 409。
+- [x] Given MCP `confirm=False`，Then 不啟動 Chrome，只回說明。
+- [x] Given 文獻瀏覽器啟動，Then 呼叫 `ensure_chrome` 與 `connect_over_cdp`，不再呼叫 `launch_persistent_context`。（單元測試，以假物件記錄呼叫）
+- [x] Given 遇到機器人檢查且 `wait_seconds=0`，Then 拋 `NeedsUserError`，程式沒有任何點擊或填寫。
 - [ ] 實機（使用者）：真 Chrome 登入 Gemini Notebook 成功，佇列可跑一件工作；文獻下載遇 Cloudflare 時勾選一次即通過（記錄網站名稱與結果；不通過就更新 ISSUE-043）。
-- [ ] `agentctl check` 0 警告；ADR 已寫；README 與 SPEC-003 的入口表已更新。
+- [x] `agentctl check` 0 警告；ADR 已寫；README 與 SPEC-003 的入口表已更新。
+
+實作紀錄（2026-11-25）：`tests/test_notebook_chrome_login.py`（13 項）、`tests/test_literature_chrome_cdp.py`（2 項）。用暫存資料夾實測文獻瀏覽器：真 Chrome 啟動、CDP 連線、`navigator.webdriver=false`、結束後 Chrome 關閉。實作時發現 Gemini Notebook 網域已改為 `notebook.google.com`（舊網域只轉址），登入偵測改看新網域。
 
 ## 6. 未決問題
 
-1. Gemini Notebook 與 Gemini 筆記要共用同一個 Chrome 資料夾嗎？共用只要登入一次，但兩個功能同時要用 Chrome 時會共用同一個視窗。建議共用。
-2. CDP 接上的 Chrome 下載檔案的行為：`_download` 用 Playwright 的下載事件，接上既有 Chrome 時下載位置可能是 Chrome 預設的「下載」資料夾。實作第一步先做小實驗確認；必要時用 CDP `Browser.setDownloadBehavior` 指定到暫存資料夾。
-3. 文獻下載完成後要不要保留 Chrome 開著（下次更快、也保留 Cloudflare 的通過狀態）？預設關閉，可設定。
+1. ~~共用 Chrome 資料夾~~：決定**不共用**（Gemini 筆記可能以無頭模式佔用同一個 Chrome，登入視窗會看不到），Gemini Notebook 用 `DATA_DIR/state/notebooklm_chrome_profile`（ADR-017）。
+2. ~~下載位置~~：文獻下載是在頁面內 `fetch()` 取得 PDF 內容，不使用瀏覽器下載，不受影響。
+3. 文獻下載完成後要不要保留 Chrome 開著：目前結束即關閉（與原本相同）；若實測 Cloudflare 每次都要重驗，再考慮保留。

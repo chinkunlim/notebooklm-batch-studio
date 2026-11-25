@@ -23,6 +23,7 @@
 | A2 | 整本課本放進 `01 Materials/` 自動偵測並切割（SPEC-018/020、ISSUE-072 修正後） | 使用者 | 待測（TASK-036 #19） |
 | A3 | Gemini 額度用完後到點自動繼續（SPEC-020） | Agent 觀察 | 等真的遇到額度上限 |
 | A4 | 課程全部產出完成的 macOS 通知（SPEC-017） | 使用者 | 等下一次跑完一門課（TASK-036 #20） |
+| A6 | 真 Chrome 登入 Gemini Notebook 與文獻 Cloudflare 網站（SPEC-022） | 使用者 | 待測 |
 | A5 | TASK-036 清單其他項目（#1–#7、#9、#10、#12–#16、#21） | 使用者 | 待測 |
 
 ## 4. 測試步驟
@@ -52,6 +53,12 @@
 
 1. 下次某門課所有產出跑完時，macOS 右上角跳出「課程 … 全部產出完成（N 項）」。
 2. 沒跳出時，檢查「系統設定 → 通知」是否允許終端機／App 的通知，並把 `DATA_DIR/logs/` 中 `course complete` 相關的 log 貼給 Agent。
+
+### A6 真 Chrome 登入與文獻下載（SPEC-022）
+
+1. 網頁「設計與自訂 → 登入狀態」，Gemini Notebook 那一列按「登入」→ 跳出 Chrome（新的、乾淨的視窗）→ 在裡面登入 Google → 自動關閉，網頁顯示「已登入 Gemini Notebook」，狀態「就緒」。
+2. 若 Google 仍顯示「這個瀏覽器可能不安全」，截圖給 Agent（記入 ISSUE）。
+3. 文獻頁對之前會一直循環的網站（如 worktribe）的文獻按「下載」，遇到 Cloudflare 勾選一次。通過：PDF 下載成功；不通過：記錄網站名稱與畫面。
 
 ### A5 TASK-036 其他項目
 

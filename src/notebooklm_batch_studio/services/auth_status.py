@@ -86,14 +86,16 @@ def sign_in_status(config: AppConfig, gemini_auth: GeminiAuthStatusProtocol) -> 
         gemini_auth: Configured Gemini Web auth service.
 
     Returns:
-        Three-item list of dictionaries `{name, location, state, how_to_sign_in}`.
+        Three-item list of dictionaries `{name, location, state, how_to_sign_in}`; rows that can
+        sign in from the web also carry `login_route`.
     """
     rows = [
         {
             "name": "NotebookLM",
             "location": str(config.notebooklm_home),
             "state": _notebooklm_state(config.notebooklm_home),
-            "how_to_sign_in": "執行 uv run notebooklm-batch-studio login --browser 完成 Google 登入",
+            "how_to_sign_in": "按「登入」開啟 Chrome 親自登入 Google（或 CLI：login --browser）",
+            "login_route": "/api/notebooklm/login",  # SPEC-022: real Chrome, not Playwright
         },
         {
             "name": "Gemini 網頁",

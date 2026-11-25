@@ -51,7 +51,10 @@ class AuthStatusOverviewTests(unittest.TestCase):
         rows_missing = sign_in_status(self.cfg, gemini_auth)
         self.assertEqual(len(rows_missing), 3)
         for r in rows_missing:
-            self.assertEqual(set(r.keys()), {"name", "location", "state", "how_to_sign_in"})
+            self.assertLessEqual({"name", "location", "state", "how_to_sign_in"}, set(r.keys()))
+            self.assertLessEqual(
+                set(r.keys()), {"name", "location", "state", "how_to_sign_in", "login_route"}
+            )
             self.assertEqual(r["state"], "missing")
 
         # 2. Populate NotebookLM & library files containing fake secret tokens + Gemini ready

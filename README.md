@@ -84,6 +84,8 @@ uv run notebooklm-batch-studio consolidate --dry-run
 uv run notebooklm-batch-studio login --browser
 ```
 
+會開啟一個真的 Chrome（獨立資料夾 `<DATA_DIR>/state/notebooklm_chrome_profile`），請在視窗中親自登入 Google；程式確認 Gemini Notebook 接受這次登入後才存檔，不會覆蓋原本可用的登入（SPEC-022、ADR-017）。也可在網頁「設計與自訂 → 登入狀態」按「登入」，或用 HTTP `POST /api/notebooklm/login`、MCP `notebooklm_login(confirm=True)`。
+
 之後可用下列指令確認憑證是否存在且有效（只檢查，不會開瀏覽器）：
 
 ```bash
@@ -91,9 +93,9 @@ uv run notebooklm-batch-studio login
 ```
 
 系統共管理三組獨立的本機登入設定（可於 Web UI「設計與自訂」、HTTP `GET /api/system/sign-ins` 或 MCP `get_sign_in_status` 唯讀檢視狀態，不會讀取 Cookie 或 Token 明文）：
-- **NotebookLM**：`~/.config/notebooklm-batch-studio`（`notebooklm_home`，由 `login --browser` 建立）
+- **NotebookLM**：`~/.config/notebooklm-batch-studio`（`notebooklm_home`，由 `login --browser` 或網頁「登入」按鈕以真 Chrome 建立）
 - **Gemini 網頁（note-studio）**：`<DATA_DIR>/state/gemini_profile`（於網頁「筆記生成 → 登入 Gemini」或 `/api/notes/gemini/login` 建立）
-- **文獻／圖書館瀏覽器**：`<DATA_DIR>/state/literature_browser_profile`（配合 `.env` 的 `LIBRARY_EMAIL` / `LIBRARY_PASSWORD`，下載需認證 PDF 時由瀏覽器建立）
+- **文獻／圖書館瀏覽器**：`<DATA_DIR>/state/literature_browser_profile`（配合 `.env` 的 `LIBRARY_EMAIL` / `LIBRARY_PASSWORD`，下載需認證 PDF 時由瀏覽器建立；以真 Chrome＋CDP 執行，不帶自動化標記，ADR-017）
 
 ---
 

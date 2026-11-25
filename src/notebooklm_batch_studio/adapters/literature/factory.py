@@ -98,6 +98,7 @@ class AdapterLiteratureRuntime:
                 (self.config.library_email, self.config.library_password),
                 wait,
             )
+            browser.chrome_path = self.config.chrome_path  # SPEC-022: real Chrome + CDP
             stack.enter_context(browser)
         resolvers: list[WorkResolver] = [CrossrefResolver(client), OpenAlexResolver(client)]
         if browser is not None:
