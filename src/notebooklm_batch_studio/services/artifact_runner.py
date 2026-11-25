@@ -10,9 +10,12 @@ import json
 import logging
 import tempfile
 from pathlib import Path
+from typing import cast
 
 from notebooklm_batch_studio.config.settings import AppConfig
+from notebooklm_batch_studio.domain.learning_site import LearningSiteClientProtocol
 from notebooklm_batch_studio.domain.models import (
+    LEARNING_SITE_TYPES,
     ArtifactJob,
     ArtifactType,
     Course,
@@ -41,6 +44,7 @@ from notebooklm_batch_studio.services.converters.mindmap_converter import (
     to_markdown as mindmap_to_markdown,
 )
 from notebooklm_batch_studio.services.converters.report_converter import report_to_html
+from notebooklm_batch_studio.services.learning_site_runner import LearningSiteRunner
 from notebooklm_batch_studio.services.quiz_runner import (
     MOCK_EXAM_TYPES as MOCK_EXAM_TYPES,
 )
@@ -111,6 +115,8 @@ class ArtifactRunner:
         self.quiz_runner = QuizRunner(
             notebooklm_client, self.config.needs_review_dir, self.rename_after_generation
         )
+        # The real adapter also implements the learning-site protocol (SPEC-021)
+        self.site_runner = LearningSiteRunner(cast(LearningSiteClientProtocol, notebooklm_client))
 
     async def rename_after_generation(
         self, job: ArtifactJob, course: Course, nb_id: str, artifact_ids: list[str]
@@ -175,6 +181,9 @@ class ArtifactRunner:
             Primary output path and the artifact / note ids (recorded on the job, ADR-005).
         """
         art_type = job.artifact_type
+        if art_type in LEARNING_SITE_TYPES:
+            # Sites keep the title Gemini Notebook gave them: no Studio rename (SPEC-021)
+            return await self.site_runner.process(job, course, target)
         if art_type in (ArtifactType.AUDIO, ArtifactType.COURSE_AUDIO):
             result = await self._process_audio(job, course, target)
         elif art_type in QUIZ_TYPES:

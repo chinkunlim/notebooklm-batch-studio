@@ -9,23 +9,27 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
 import httpx
 
 from notebooklm_batch_studio.adapters.notebooklm.learning_sites import LearningSiteMixin
-from notebooklm_batch_studio.domain.exceptions import AuthExpiredError
+from notebooklm_batch_studio.domain.exceptions import AuthExpiredError, QuotaExceededError
 from notebooklm_batch_studio.domain.learning_site import SiteRow, parse_site_row
 from notebooklm_batch_studio.domain.models import (
+    ArtifactJob,
     ArtifactType,
     Course,
     Lecture,
     get_artifact_english_title,
 )
 from notebooklm_batch_studio.domain.naming import label_for
-from notebooklm_batch_studio.services.artifact_runner import SIMPLE_OUTPUTS
+from notebooklm_batch_studio.services.artifact_runner import SIMPLE_OUTPUTS, ArtifactRunner
 from notebooklm_batch_studio.services.course_settings import COURSE_TYPES
 from notebooklm_batch_studio.services.job_planner import generate_jobs_for_course
 from notebooklm_batch_studio.services.learning_site_prompt import render_site_prompt
+from notebooklm_batch_studio.services.learning_site_runner import APPEAR_SECONDS, LearningSiteRunner
+from notebooklm_batch_studio.services.quiz_runner import JobTarget
 from notebooklm_batch_studio.services.quota_planner import action_kind_for
 
 logger = logging.getLogger(__name__)
@@ -233,6 +237,184 @@ class AdapterTest(unittest.IsolatedAsyncioTestCase):
         self.assertIs(adapter.site_lock("nb1"), adapter.site_lock("nb1"))
         self.assertIsNot(adapter.site_lock("nb1"), adapter.site_lock("nb2"))
         self.assertIsInstance(adapter.site_lock("nb1"), asyncio.Lock)
+
+
+class _FakeSiteClient:
+    """Scripted LearningSiteClientProtocol: each list call returns the next scripted listing."""
+
+    def __init__(self, listings: list[list[SiteRow]], answer: str = "已為您送出生成請求") -> None:
+        """Store the scripted listings and chat answer.
+
+        Args:
+            listings: Studio listings returned in order (the last one repeats).
+            answer: Chat answer returned by request_site.
+        """
+        self.listings = listings
+        self.answer = answer
+        self.requests: list[tuple[str, str, list[str]]] = []
+        self.downloads: list[tuple[str, str]] = []
+        self.locks: dict[str, asyncio.Lock] = {}
+
+    async def list_site_rows(self, notebook_id: str) -> list[SiteRow]:
+        """Return the next scripted listing.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            Site rows.
+        """
+        return self.listings.pop(0) if len(self.listings) > 1 else self.listings[0]
+
+    async def request_site(self, notebook_id: str, prompt: str, source_ids: list[str]) -> str:
+        """Record the request.
+
+        Args:
+            notebook_id: Notebook identifier.
+            prompt: Prompt text.
+            source_ids: Ticked sources.
+
+        Returns:
+            The scripted answer.
+        """
+        self.requests.append((notebook_id, prompt, source_ids))
+        return self.answer
+
+    async def download_site(self, row: SiteRow, output_path: str) -> None:
+        """Record the download and write a stub file.
+
+        Args:
+            row: Site row.
+            output_path: Destination.
+        """
+        self.downloads.append((row.id, output_path))
+        Path(output_path).write_text("<!doctype html>", encoding="utf-8")
+
+    def site_lock(self, notebook_id: str) -> asyncio.Lock:
+        """Return a per-notebook lock.
+
+        Args:
+            notebook_id: Notebook identifier.
+
+        Returns:
+            Lock.
+        """
+        return self.locks.setdefault(notebook_id, asyncio.Lock())
+
+
+def _row(site_id: str, status: int, created: float = 1.0, url: str = "https://x.google.com/d") -> SiteRow:
+    """Build a SiteRow for runner tests.
+
+    Args:
+        site_id: Studio id.
+        status: Raw status.
+        created: Creation time.
+        url: Download URL.
+
+    Returns:
+        SiteRow.
+    """
+    return SiteRow(id=site_id, title="t", status=status, created=created, filename="a.html", download_url=url)
+
+
+class RunnerTest(unittest.IsolatedAsyncioTestCase):
+    """Task 4: request → wait for a new Studio site → wait until done → download."""
+
+    def setUp(self) -> None:
+        """Create a temp output folder, a fake clock and a lecture-1 site job."""
+        self.tmp = tempfile.TemporaryDirectory()
+        self.target = JobTarget(nb_id="nb1", source_ids=["src-1"], out_dir=Path(self.tmp.name))
+        self.now = 0.0
+        self.job = ArtifactJob(
+            id="j1",
+            course_code=COURSE.code,
+            lecture_no=1,
+            artifact_type=ArtifactType.LEARNING_SITE,
+            version=2,
+        )
+
+    def tearDown(self) -> None:
+        """Remove the temp folder."""
+        self.tmp.cleanup()
+
+    def _clock(self) -> float:
+        """Fake monotonic clock.
+
+        Returns:
+            Current fake time.
+        """
+        return self.now
+
+    async def _sleep(self, seconds: float) -> None:
+        """Advance the fake clock instead of sleeping.
+
+        Args:
+            seconds: Time to advance.
+        """
+        self.now += seconds
+
+    def _runner(self, client: _FakeSiteClient) -> LearningSiteRunner:
+        """Build a runner on the fake clock.
+
+        Args:
+            client: Fake site client.
+
+        Returns:
+            LearningSiteRunner.
+        """
+        return LearningSiteRunner(client, clock=self._clock, sleep=self._sleep)
+
+    async def test_downloads_new_site_to_versioned_file(self) -> None:
+        """The new site (not the old one) is awaited until done and saved as learning_site_v2.html."""
+        old = _row("old", 3)
+        client = _FakeSiteClient([[old], [old], [old, _row("new", 2, 5.0)], [old, _row("new", 3, 5.0)]])
+        path, ids = await self._runner(client).process(self.job, COURSE, self.target)
+        self.assertEqual(Path(path), self.target.out_dir / "learning_site_v2.html")
+        self.assertEqual(ids, ["new"])
+        self.assertEqual(client.downloads, [("new", path)])
+        nb_id, prompt, sources = client.requests[0]
+        self.assertEqual((nb_id, sources), ("nb1", ["src-1"]))
+        self.assertTrue(prompt.startswith("make me a site"))
+
+    async def test_course_site_uses_course_file_name(self) -> None:
+        """A whole-book job is saved as course_learning_site.html."""
+        job = replace(self.job, lecture_no=None, artifact_type=ArtifactType.COURSE_LEARNING_SITE, version=1)
+        client = _FakeSiteClient([[], [_row("new", 3)]])
+        path, _ = await self._runner(client).process(job, COURSE, self.target)
+        self.assertEqual(Path(path).name, "course_learning_site.html")
+        self.assertIn("整本書的互動學習網頁", client.requests[0][1])
+
+    async def test_no_new_site_with_quota_words_raises_quota(self) -> None:
+        """No new site within APPEAR_SECONDS and a quota-like answer → QuotaExceededError."""
+        client = _FakeSiteClient([[_row("old", 3)]], answer="目前已達使用上限，請稍後再試")
+        with self.assertRaises(QuotaExceededError):
+            await self._runner(client).process(self.job, COURSE, self.target)
+        self.assertGreaterEqual(self.now, APPEAR_SECONDS)
+        self.assertEqual(client.downloads, [])
+
+    async def test_no_new_site_raises_generation_error(self) -> None:
+        """No new site and any other answer → RuntimeError carrying the answer."""
+        client = _FakeSiteClient([[]], answer="我無法建立網站")
+        with self.assertRaises(RuntimeError) as ctx:
+            await self._runner(client).process(self.job, COURSE, self.target)
+        self.assertIn("我無法建立網站", str(ctx.exception))
+
+    async def test_failed_status_raises(self) -> None:
+        """A new site that ends in a failure status → RuntimeError, nothing downloaded."""
+        client = _FakeSiteClient([[], [_row("new", 2)], [_row("new", 4)]])
+        with self.assertRaises(RuntimeError):
+            await self._runner(client).process(self.job, COURSE, self.target)
+        self.assertEqual(client.downloads, [])
+
+    async def test_artifact_runner_dispatches_and_skips_rename(self) -> None:
+        """ArtifactRunner sends site jobs to its site runner and does not rename the Studio item."""
+        client = _FakeSiteClient([[], [_row("new", 3)]])
+        client.rename_artifact = mock.AsyncMock()  # type: ignore[attr-defined]
+        runner = ArtifactRunner(client, mock.Mock())  # type: ignore[arg-type]
+        runner.site_runner = self._runner(client)
+        path, ids = await runner.process_job_with_ids(self.job, COURSE, self.target)
+        self.assertEqual((Path(path).name, ids), ("learning_site_v2.html", ["new"]))
+        client.rename_artifact.assert_not_called()  # type: ignore[attr-defined]
 
 
 if __name__ == "__main__":

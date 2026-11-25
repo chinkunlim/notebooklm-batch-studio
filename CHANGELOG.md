@@ -18,6 +18,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - feat(types): add learning_site and course_learning_site artifact types (SPEC-021 Task 1) (by `@claude-code`)
 - feat(site): render learning-site prompts from the bundled template (SPEC-021 Task 2) (by `@claude-code`)
 - feat(adapter): request, poll and download Gemini Notebook learning sites (SPEC-021 Task 3) (by `@claude-code`)
+- feat(site): queue learning-site jobs through LearningSiteRunner (SPEC-021 Task 4) (by `@claude-code`)
 
 ### Changed
 - style: wrap a long usage guide line (by `@claude-code`)
