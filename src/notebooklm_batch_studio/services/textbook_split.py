@@ -136,6 +136,26 @@ def _is_pdf(path: Path) -> bool:
     return path.is_file() and not path.name.startswith(".") and path.suffix.lower() == ".pdf"
 
 
+def _chapter_folder(pdf: Path) -> Path:
+    """Pick the chapter folder a whole-book PDF splits into. Refs: ISSUE-072
+
+    The book's own `<stem>/` folder when it exists; otherwise the course's only marked chapter folder
+    (chapters moved from `02 Handouts` live under the book's real title, which rarely matches the PDF
+    file name), so existing chapters are kept instead of duplicated as new lectures.
+
+    Args:
+        pdf: Textbook PDF in a materials folder.
+
+    Returns:
+        Chapter folder path (may not exist yet).
+    """
+    own = pdf.parent / pdf.stem
+    if own.is_dir():
+        return own
+    marked = [d for d in pdf.parent.iterdir() if d.is_dir() and (d / TEXTBOOK_MARKER).is_file()]
+    return marked[0] if len(marked) == 1 else own
+
+
 def _textbook_row(course_dir: Path, pdf: Path) -> dict[str, Any]:
     """Describe one textbook PDF and its chapter folder.
 
@@ -146,7 +166,7 @@ def _textbook_row(course_dir: Path, pdf: Path) -> dict[str, Any]:
     Returns:
         `{relative_path, chapters_folder, split}`.
     """
-    out = pdf.parent / pdf.stem
+    out = _chapter_folder(pdf)
     return {
         "relative_path": pdf.relative_to(course_dir).as_posix(),
         "chapters_folder": out.relative_to(course_dir).as_posix(),
@@ -261,7 +281,7 @@ class TextbookService:
         ]
 
     def pending_textbooks(self, codes: list[str]) -> list[dict[str, Any]]:
-        """Find textbooks in `01 Materials` that have not been split yet (Refs: SPEC-020).
+        """Find textbooks in `01 Materials` with chapters not split yet (Refs: SPEC-020, ISSUE-072).
 
         Args:
             codes: Course codes to inspect (courses without a study folder are skipped).
@@ -275,10 +295,13 @@ class TextbookService:
                 course, course_dir = self._course(code)
             except ValueError:
                 continue
-            for book in (b for b in self.list_textbooks(code) if not b["split"]):
-                rows.append(
-                    {"course_code": code, "course_name": course.name, **self._pending_row(course_dir, book)}
-                )
+            for book in self.list_textbooks(code):
+                row = self._pending_row(course_dir, book)
+                pdf = course_dir / book["relative_path"]
+                own_split = (pdf.parent / pdf.stem / TEXTBOOK_MARKER).is_file()
+                # A marked folder may still miss chapters (only some were moved from 02 Handouts).
+                if row["chapters"] > row["existing"] or (row["error"] and not own_split):
+                    rows.append({"course_code": code, "course_name": course.name, **row})
         return rows
 
     def _pending_row(self, course_dir: Path, book: dict[str, Any]) -> dict[str, Any]:
@@ -293,7 +316,7 @@ class TextbookService:
         """
         pdf = course_dir / book["relative_path"]
         try:
-            _, plan = self._plan(pdf, pdf.parent / pdf.stem)
+            _, plan = self._plan(pdf, _chapter_folder(pdf))
         except Exception as exc:  # unreadable PDF or no chapter bookmarks
             return {"relative_path": book["relative_path"], "chapters": 0, "existing": 0, "error": str(exc)}
         existing = sum(1 for _, status in plan if status == "exists")
@@ -358,7 +381,7 @@ class TextbookService:
         """
         course, course_dir = self._course(code)
         pdf = self._resolve_textbook(course_dir, relative_path)
-        out_dir = pdf.parent / pdf.stem
+        out_dir = _chapter_folder(pdf)
         entries, plan = self._plan(pdf, out_dir)
         if not dry_run:
             self._write_chapters(pdf, out_dir, entries, plan)

@@ -24,7 +24,7 @@
 ## 3. 需求
 
 - **必須 (Must)**：
-  1. **課本偵測**：`TextbookService.pending_textbooks(codes)` 列出各修課中課程 `01 Materials` 頂層、尚未切割（章節資料夾沒有 `.textbook.json`）的 PDF，附章數與已存在章數；沒有章節書籤時附錯誤說明。HTTP `GET /api/textbooks/pending`；MCP `list_pending_textbooks`；網頁批次排程頁頂部卡片（每 60 秒更新），「預覽並切割」直接對該本開啟 SPEC-018 預覽，「略過」記在本機偏好 `textbookDismissed`。
+  1. **課本偵測**：`TextbookService.pending_textbooks(codes)` 列出各修課中課程 `01 Materials` 頂層、還有章節沒切出來的 PDF（2026-11-25 改，ISSUE-072：原本只看章節資料夾有沒有 `.textbook.json`，已搬入部分章節的課本因此不會出現），附章數與已存在章數；沒有章節書籤時附錯誤說明。HTTP `GET /api/textbooks/pending`；MCP `list_pending_textbooks`；網頁批次排程頁頂部卡片（每 60 秒更新），「預覽並切割」直接對該本開啟 SPEC-018 預覽，「略過」記在本機偏好 `textbookDismissed`。
   2. **筆記排程**：`NoteScheduler` 以 `DATA_DIR/state/note_schedule.json` 保存排程（原子寫入）。每項：課程、章節、標題、PDF、來源 ID、筆記本 ID、狀態（`pending`／`running`／`quota_wait`／`done`／`failed`）、`resume_at`、`completed_steps`、`last_error`。同一章已在排程中不重複加入。
   3. **背景執行**：網頁服務啟動時（`AUTO_START_QUEUE` 開啟）啟動背景執行緒，依加入順序一次跑一章；伺服器重啟時 `running` 改回 `pending`。排程可暫停／繼續（暫停不中斷正在生成的模組，下一章前停止）。
   4. **Gemini 額度續跑**：`run_chapter` 因額度停止時回傳 `resume_after`（Gemini 提示解析的時間；沒有時預設 1 小時後）；該章標 `quota_wait` 並記下 `resume_at` 與已完成模組；有任何一章在等待額度時，其他章也不開始（同一個 Gemini 帳號）。時間到只重跑未完成的模組（`steps_override`），再縫合成整章。

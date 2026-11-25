@@ -24,7 +24,7 @@
   1. **章節偵測（domain，純計算）**：`find_chapter_sections(entries, total_pages)`。書籤標題符合「`Chapter N …`」或「`N …`」（排除 `1.1` 這類小節編號）的項目視為章節；有多層大綱（例如 Part → Chapter）時，選符合數量最多的那一層；每章結束頁 = 下一個同層或更上層書籤的前一頁，最後一章到全書最後一頁。找不到章節時回傳空清單。
   2. **檔名**：`ChNN-標題.pdf`，標題空白換成 `-`，移除 `/ \ : * ? " < > |`，連續 `-` 合併（與現有 `Ch01-Introduction-to-Scientific-Research.pdf` 一致）。
   3. **切割（adapter：pypdf）**：讀書籤與頁數；把頁碼範圍寫成新 PDF，並保留該章範圍內的子書籤（頁碼改為章內頁碼）。
-  4. **切割服務**：`list_textbooks(code)` 列出 `01 Materials`（含別名 `01 Material`）頂層的 PDF；`split_textbook(code, relative_path, dry_run=True)` 預覽或寫出到 `01 Materials/<PDF 檔名主體>/`。同一資料夾已有 `ChNN-` 開頭的檔案就跳過該章，不覆寫；寫入 `.textbook.json`（來源檔名與章節清單）；原始整本 PDF 不動；沒有章節書籤時回錯誤「找不到章節書籤」。套用後同步課程講次。
+  4. **切割服務**：`list_textbooks(code)` 列出 `01 Materials`（含別名 `01 Material`）頂層的 PDF；`split_textbook(code, relative_path, dry_run=True)` 預覽或寫出到 `01 Materials/<PDF 檔名主體>/`；該資料夾不存在而課程只有一個已標記的章節資料夾時，改寫到那個資料夾（2026-11-25 補，ISSUE-072：搬移過的章節用課本書名當資料夾，和整本 PDF 檔名通常不同）。同一資料夾已有 `ChNN-` 開頭的檔案就跳過該章，不覆寫；寫入 `.textbook.json`（來源檔名與章節清單）；原始整本 PDF 不動；沒有章節書籤時回錯誤「找不到章節書籤」。套用後同步課程講次。
   5. **講次來源規則**：`course_parser` 先掃 `02 Handouts`；沒有 PDF 時，改掃 `01 Materials` 中有 `.textbook.json` 的子資料夾。`Literature_Review/` 等沒有標記的資料夾永遠不當講次。
   6. **課本當整門課來源（`materials_as_source`）**：上傳 `01 Materials` 時排除有 `.textbook.json` 的章節資料夾，避免整本與各章重複上傳。
   7. **搬移既有章節**：`relocate_handouts(code, book_folder, dry_run=True)` 把該課程 `02 Handouts` 中屬於講次的 PDF 搬到 `01 Materials/<book_folder>/`，寫 `.textbook.json`；講次只更新 `category` 與 `relative_path`，`no`、`sha256`、`source_id`、`upload_status` 不變；目的地已有同名檔時停止並回錯誤，不覆寫。

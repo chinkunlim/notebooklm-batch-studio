@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import tempfile
@@ -168,6 +169,72 @@ class TextbookServiceTest(unittest.TestCase):
             TextbookService bound to the course repository and pypdf tools.
         """
         return TextbookService(self.cfg, CourseRepository(session), PypdfTextbookTools())  # type: ignore[arg-type]
+
+    def _existing_chapters(self, folder: str) -> None:
+        """Store chapters 1–2 as already-uploaded lectures in a marked chapter folder (real courses' state).
+
+        Args:
+            folder: Chapter folder name under `01 Materials`.
+        """
+        out = self.materials / folder
+        lectures = []
+        for no, name in ((1, "Ch01-Introduction-to-Scientific-Research.pdf"), (2, "Ch02-Old-Title.pdf")):
+            make_book(out / name, no + 1, [])
+            lectures.append(
+                Lecture(
+                    no=no,
+                    topic=name,
+                    filename=name,
+                    sha256=hashlib.sha256((out / name).read_bytes()).hexdigest(),
+                    source_id=f"src-{no}",
+                    upload_status="uploaded",
+                    category="01 Materials",
+                    relative_path=f"01 Materials/{folder}/{name}",
+                )
+            )
+        (out / ".textbook.json").write_text(json.dumps({"source": "", "chapters": []}), encoding="utf-8")
+        self._save_course(lectures)
+
+    def _assert_one_lecture_per_chapter(self, session: object, folder: str) -> None:
+        """Lectures are 1, 2, 3 in `folder`; the uploaded ones keep their sources.
+
+        Args:
+            session: SQLAlchemy session.
+            folder: Expected chapter folder name.
+        """
+        course = CourseRepository(session).get_course(CODE)  # type: ignore[arg-type]
+        assert course is not None
+        self.assertEqual([lec.no for lec in course.lectures], [1, 2, 3])
+        self.assertEqual([lec.source_id for lec in course.lectures], ["src-1", "src-2", None])
+        self.assertTrue(all(f"01 Materials/{folder}/" in lec.relative_path for lec in course.lectures))
+
+    def test_whole_book_named_like_chapter_folder_is_detected(self) -> None:
+        """A whole book whose chapter folder exists but lacks chapters still shows on the card. SPEC-020"""
+        self._existing_chapters("Research Methods")
+        with self.session_factory() as session:
+            svc = self._service(session)
+            pending = svc.pending_textbooks([CODE])
+            self.assertEqual([(r["chapters"], r["existing"]) for r in pending], [(3, 2)])
+            svc.split_textbook(CODE, "01 Materials/Research Methods.pdf", dry_run=False)
+            self._assert_one_lecture_per_chapter(session, "Research Methods")
+            self.assertEqual(svc.pending_textbooks([CODE]), [])
+
+    def test_whole_book_with_other_name_fills_the_existing_chapter_folder(self) -> None:
+        """A whole book named unlike the course's only chapter folder splits into that folder. SPEC-018"""
+        self._existing_chapters("Research Methods, Design, and Analysis 13th ed")
+        with self.session_factory() as session:
+            svc = self._service(session)
+            pending = svc.pending_textbooks([CODE])
+            self.assertEqual([(r["chapters"], r["existing"]) for r in pending], [(3, 2)])
+            rel = "01 Materials/Research Methods.pdf"
+            preview = svc.split_textbook(CODE, rel)
+            self.assertEqual(
+                preview["output_dir"], "01 Materials/Research Methods, Design, and Analysis 13th ed"
+            )
+            self.assertEqual([c["status"] for c in preview["chapters"]], ["exists", "exists", "create"])
+            svc.split_textbook(CODE, rel, dry_run=False)
+            self.assertFalse((self.materials / "Research Methods").exists())
+            self._assert_one_lecture_per_chapter(session, "Research Methods, Design, and Analysis 13th ed")
 
     def test_split_textbook_preview_apply_rerun_and_lectures(self) -> None:
         """Preview writes nothing; apply writes chapters + marker; chapters become lectures; rerun skips."""

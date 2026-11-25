@@ -231,7 +231,8 @@ class WebEntrypointsTest(unittest.TestCase):
         make_book(mats / "Book" / "Ch01-Intro.pdf", 1, [])
         make_book(mats / "Scan.pdf", 2, [])
         make_book(mats / "Done.pdf", 3, [(1, "1 A", 1), (1, "2 B", 2)])
-        (mats / "Done").mkdir()
+        make_book(mats / "Done" / "Ch01-A.pdf", 1, [])
+        make_book(mats / "Done" / "Ch02-B.pdf", 1, [])
         (mats / "Done" / ".textbook.json").write_text("{}", encoding="utf-8")
         with self.session_factory() as session:
             CourseRepository(session).save_course(_course(self.course_dir))
