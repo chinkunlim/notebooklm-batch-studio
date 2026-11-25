@@ -134,6 +134,8 @@ def update_course_profile(code: str, req: UpdateProfileRequest, request: Request
         return service.set_course_profile(code, req.profile)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:  # unknown profile name (Refs: SPEC-019)
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @courses_router.post("/api/courses/{code}/setup", tags=["Courses"], operation_id="setup_course_notebook")

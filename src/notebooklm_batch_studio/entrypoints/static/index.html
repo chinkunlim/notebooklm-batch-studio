@@ -452,8 +452,11 @@
             <span id="ngGeminiAuthBadge" class="small muted" aria-live="polite">Gemini 網頁版：檢查中…</span>
             <button class="btn btn-soft" id="btnGeminiLogin" onclick="startGeminiWebLogin()">啟動 Gemini 登入視窗</button>
             <button class="btn btn-ghost btn-sm" id="btnGeminiLogout" onclick="logoutGeminiWeb()">登出 Gemini</button>
+            <label class="small muted" title="0 = 跟隨 Google 到期日">憑證保留 <input id="ngRetentionDays" class="input" type="number" min="0" max="3650" style="width:72px"> 天</label>
+            <button class="btn btn-ghost btn-sm" id="btnGeminiRetention" onclick="saveGeminiRetention()">儲存</button>
             <button class="btn btn-primary" id="btnNoteGenStart" onclick="startNoteChapterGeneration()">生成章節 .md</button>
             <button class="btn btn-soft" id="btnNoteGenPause" onclick="pauseNoteGeneration()">暫停</button>
+            <button class="btn btn-soft" id="btnNoteGenResume" onclick="resumeNoteGeneration()">繼續</button>
             <button class="btn btn-soft" id="btnNoteGenRefresh" onclick="refreshNoteGenStatus()">重新整理</button>
           </div>
         </div>

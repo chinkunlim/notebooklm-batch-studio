@@ -248,3 +248,37 @@ async function pruneOldBackups(keep) {
 
 window.loadBackupsCard = loadBackupsCard;
 
+const _PROFILE_CHOICES = [
+  ['full', '完整產出'],
+  ['quiz-only', '只做測驗'],
+  ['exam-prep', '考前衝刺'],
+  ['record-only', '只記錄、不產生'],
+];
+
+/**
+ * Change a course's output mode after a confirmation that explains queued jobs and quota (SPEC-019).
+ * @param {string} code Course code
+ * @returns {Promise<void>}
+ */
+async function openCourseProfileFlow(code) {
+  const course = ((typeof currentCoursesList !== 'undefined' && currentCoursesList) || []).find(c => c.code === code);
+  const current = course && course.profile ? course.profile : '';
+  const list = _PROFILE_CHOICES.map(([v, label], i) => `${i + 1}. ${label}${v === current ? '（目前）' : ''}`).join('\n');
+  const pick = window.prompt(`「${code}」要改成哪種產出模式？輸入編號：\n\n${list}`, '');
+  const choice = _PROFILE_CHOICES[Number(pick) - 1];
+  if (!choice || choice[0] === current) return;
+  const [profile, label] = choice;
+  const warn = profile === 'record-only'
+    ? '之後不會再為這門課產生新內容；已完成的產出都會保留。'
+    : '會依這個模式排入尚未產生的工作；課程若沒有暫停，佇列會開始生成並使用 Gemini Notebook 額度。';
+  if (!(await askConfirm(`把「${code}」改成「${label}」？\n\n${warn}`, { okLabel: `改成${label}` }))) return;
+  try {
+    const data = await _libJson(`/api/courses/${encodeURIComponent(code)}/profile`, 'POST', { profile });
+    showToast(`已改成「${label}」，新排入 ${data.new_jobs_enqueued || 0} 項工作`, 'success', 6000);
+    await _libRefresh();
+    if (typeof viewCourseDetail === 'function') await viewCourseDetail(code, true);
+  } catch (e) {
+    showToast('變更產出模式失敗：' + e.message, 'error');
+  }
+}
+

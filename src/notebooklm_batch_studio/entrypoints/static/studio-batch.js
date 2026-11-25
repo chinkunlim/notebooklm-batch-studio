@@ -330,6 +330,7 @@ function courseActionsHtml(code, paused, status = 'active') {
     `<details class="more-menu"><summary class="btn btn-ghost btn-sm">進階工具</summary><div class="menu">
       <button class="btn btn-ghost" onclick="syncFromNotebookLM(${jsAttr(code)})">從 Gemini Notebook 同步網頁上做的產出</button>
       <button class="btn btn-ghost" onclick="openAdoptOutputsFlow(${jsAttr(code)})">從既有檔案建立產出紀錄</button>
+      <button class="btn btn-ghost" onclick="openCourseProfileFlow(${jsAttr(code)})">變更產出模式…</button>
       <button class="btn btn-ghost" onclick="openTextbookSplitFlow(${jsAttr(code)})">課本切割…</button>
       <button class="btn btn-ghost" onclick="openRelocateHandoutsFlow(${jsAttr(code)})">把講義資料夾的課本章節移到 01 Materials…</button>
       <button class="btn btn-ghost" onclick="refinePrompts(${jsAttr(code)})">用本機模型潤飾 Prompt</button>

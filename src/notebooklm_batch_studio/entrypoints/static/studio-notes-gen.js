@@ -43,6 +43,8 @@ async function refreshGeminiAuthStatus(liveCheck = false) {
     badge.textContent = data.logged_in
       ? `Gemini 網頁版：已登入 (${data.cookie_count || 0} cookies)`
       : 'Gemini 網頁版：未登入';
+    const days = document.getElementById('ngRetentionDays');
+    if (days && Number.isInteger(data.retention_days) && document.activeElement !== days) days.value = data.retention_days;
   } catch (err) {
     console.error('Failed to check Gemini Web auth status:', err);
     badge.textContent = 'Gemini 網頁版：狀態未知';
@@ -270,6 +272,44 @@ async function pauseNoteGeneration() {
   if (!courseKey) return;
   await fetch(`/api/notes/pause/${encodeURIComponent(courseKey)}`, { method: 'POST' });
   await refreshNoteGenStatus();
+}
+
+/**
+ * Clear the pause request so note generation for the active course can continue (SPEC-019).
+ * @returns {Promise<void>}
+ */
+async function resumeNoteGeneration() {
+  const courseKey = document.getElementById('ngCourseKey')?.value.trim();
+  if (!courseKey) return;
+  await fetch(`/api/notes/resume/${encodeURIComponent(courseKey)}`, { method: 'POST' });
+  await refreshNoteGenStatus();
+}
+
+/**
+ * Save how many days the local Gemini Web sign-in is kept (0 = follow Google's expiry; SPEC-019).
+ * @returns {Promise<void>}
+ */
+async function saveGeminiRetention() {
+  const input = document.getElementById('ngRetentionDays');
+  const banner = document.getElementById('ngStatusBanner');
+  const days = Number(input?.value);
+  if (!Number.isInteger(days) || days < 0 || days > 3650) {
+    if (banner) banner.textContent = '保留天數需為 0–3650 的整數（0 = 跟隨 Google 到期日）';
+    return;
+  }
+  try {
+    const res = await fetch('/api/notes/gemini/retention', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ retention_days: days, confirm: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    if (banner) banner.textContent = `已儲存：Gemini 憑證保留 ${days} 天`;
+    await refreshGeminiAuthStatus(false);
+  } catch (err) {
+    if (banner) banner.textContent = `儲存保留天數失敗：${err.message}`;
+  }
 }
 
 /**

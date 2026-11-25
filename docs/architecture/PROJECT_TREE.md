@@ -286,6 +286,7 @@ notebooklm-batch-studio/
 │   │   ├── 016-study-library-web-management.md
 │   │   ├── 017-notes-files-notifications-versions-backups.md
 │   │   ├── 018-textbook-split-and-lecture-source.md
+│   │   ├── 019-web-gap-fill-profile-resume-retention.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -936,7 +937,8 @@ notebooklm-batch-studio/
 │   ├── test_study_plan.py
 │   ├── test_study_service.py
 │   ├── test_textbook_split.py
-│   └── test_versions_and_options.py
+│   ├── test_versions_and_options.py
+│   └── test_web_gap_fill.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取
