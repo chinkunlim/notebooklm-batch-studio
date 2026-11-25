@@ -218,6 +218,7 @@ All notable changes to **notebooklm-batch-studio** are documented here
 - docs: add SPEC-014 and ADR-014, update project rules for study library (by `@antigravity`)
 - docs(plan): correct handoff warning from Task 2 to Task 7 for real CP__ folders (by `@antigravity`)
 - docs(spec): record open question on reconstructing artifact_jobs from existing NotebookLM outputs (by `@antigravity`)
+- docs(spec): add SPEC-015 for adopting existing NotebookLM outputs (by `@antigravity`)
 
 ### Testing
 - test(literature): port literature-fetch unit tests, fixtures, known issues (`ISSUE-041`, `ISSUE-042`, `ISSUE-043`, `ISSUE-044`; commit `e57a452`), and docs (by `@antigravity`)

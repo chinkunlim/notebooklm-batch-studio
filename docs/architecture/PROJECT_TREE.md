@@ -275,6 +275,7 @@ notebooklm-batch-studio/
 │   │   ├── 012-literature-fetch-and-study-hierarchy.md
 │   │   ├── 013-note-studio-markdown-notes.md
 │   │   ├── 014-study-library-and-learning-record.md
+│   │   ├── 015-adopt-existing-outputs.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
