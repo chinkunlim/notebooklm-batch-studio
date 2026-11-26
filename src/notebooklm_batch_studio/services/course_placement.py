@@ -11,7 +11,7 @@ from typing import Any
 
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.config.study_layout import CategoryRole
-from notebooklm_batch_studio.domain.course_identity import make_course_code, parse_course_folder
+from notebooklm_batch_studio.domain.course_identity import TERM_PATTERN, make_course_code, parse_course_folder
 from notebooklm_batch_studio.domain.models import Course, ProfileName
 from notebooklm_batch_studio.domain.path_safety import ensure_within_roots, is_within, validate_path_segment
 from notebooklm_batch_studio.domain.repositories import NotebookLMClientProtocol
@@ -112,6 +112,34 @@ def place_course_folder_in_study(src: Path, config: AppConfig, metadata: dict[st
     return target_dir
 
 
+def _in_study_code(folder: Path, config: AppConfig, meta: dict[str, str]) -> str | None:
+    """Course code for a non-school-named folder under study/<term>/, from the course number typed in.
+
+    The folder keeps its name (e.g. 「專題製作」); its code becomes `<term>_<course_no>` (SPEC-028).
+
+    Args:
+        folder: Course folder (already placed).
+        config: Application config.
+        meta: `term`, `course_no`, `course_name` from the wizard.
+
+    Returns:
+        The code, or None for school-named folders and folders outside study/<term>/.
+
+    Raises:
+        ValueError: When such a folder is added without a course number.
+    """
+    resolved = folder.resolve()
+    in_term = resolved.parent.parent == config.study_root_dir.resolve() and TERM_PATTERN.match(
+        resolved.parent.name
+    )
+    if not in_term or parse_course_folder(resolved.name).is_course:
+        return None
+    clean_no = re.sub(r"[^A-Za-z0-9]", "", meta.get("course_no", "")).upper()
+    if not clean_no:
+        raise ValueError(f"「{resolved.name}」沒有課號，請在加入課程時填寫課號（例如 CP30000）")
+    return make_course_code(resolved.parent.name, clean_no)
+
+
 def prepare_course_for_registration(
     raw_path: str, prof_enum: ProfileName, opts: dict[str, Any], config: AppConfig
 ) -> Course:
@@ -129,7 +157,14 @@ def prepare_course_for_registration(
     path = Path(raw_path).expanduser().resolve()
     meta = {k: str(opts.get(k) or "") for k in ("term", "course_no", "course_name")}
     target_path = place_course_folder_in_study(path, config, meta)
-    scanned = scan_course_directory(target_path, term=meta["term"], layout=config.study_layout)
+    code = _in_study_code(target_path, config, meta)
+    scanned = scan_course_directory(
+        target_path, custom_code=code, term=meta["term"], layout=config.study_layout
+    )
+    if code:
+        scanned = dataclasses.replace(
+            scanned, name=meta["course_name"] or target_path.name, course_no=code.split("_")[-1]
+        )
     return dataclasses.replace(
         scanned,
         profile=prof_enum,

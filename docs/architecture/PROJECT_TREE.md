@@ -313,6 +313,7 @@ notebooklm-batch-studio/
 │   │   ├── 025-robustness-backlog.md
 │   │   ├── 026-pending-acceptance-and-manual-tests.md
 │   │   ├── 027-new-course-folders-and-textbook-watch.md
+│   │   ├── 028-auto-detect-term-subjects-and-fill-folders.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -783,6 +784,8 @@ notebooklm-batch-studio/
 │       │   ├── cli.py
 │       │   ├── cli_consolidate.py
 │       │   ├── cli_literature.py
+│       │   ├── cli_watch.py
+│       │   ├── folder_sync.py
 │       │   ├── http_middleware.py
 │       │   ├── mcp_confirm.py
 │       │   ├── mcp_course_settings.py
@@ -936,6 +939,7 @@ notebooklm-batch-studio/
 │   ├── test_api_and_mcp.py
 │   ├── test_auth_status.py
 │   ├── test_auto_schedule.py
+│   ├── test_auto_study_folders.py
 │   ├── test_button_routes.py
 │   ├── test_confirm_dialog_scroll.py
 │   ├── test_converters.py

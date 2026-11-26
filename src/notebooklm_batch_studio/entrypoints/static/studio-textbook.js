@@ -195,8 +195,9 @@ async function loadPendingTextbooks() {
 }
 
 /**
- * Show a card on 批次排程 for every course folder created or pasted under study/<term>/ but not added yet
- * (SPEC-027). The button opens the add-course wizard with the folder already picked; nothing is scheduled.
+ * Show a card on 批次排程 for every subject folder created or pasted under study/<term>/ but not added yet
+ * (SPEC-027/028; folders without a course number say 需要課號 → typed in the wizard). The button opens the
+ * add-course wizard with the folder already picked; nothing is scheduled.
  * @returns {Promise<void>}
  */
 async function loadNewCourseFolders() {
@@ -209,7 +210,7 @@ async function loadNewCourseFolders() {
     const rows = ((await res.json()).folders || []).filter(f => !skip.has(`newcourse|${f.path}`));
     host.innerHTML = rows.map(f => `<article class="card" style="margin-bottom:12px"><div class="row" style="justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
       <div style="min-width:0"><b>偵測到新課程資料夾：${escHtml(f.folder)}</b>（${escHtml(f.term)}）<br>
-      <span class="small muted">${f.lecture_count} 份講義 PDF・還沒加入，加入後才會排程</span></div>
+      <span class="small muted">${f.lecture_count} 份講義 PDF・${f.needs_course_no ? '需要課號（加入時填寫）・' : ''}還沒加入，加入後才會排程</span></div>
       <div class="row" style="gap:8px"><button class="btn btn-primary btn-sm" onclick="openAddCourseForFolder(${jsAttr(f.path)})">加入課程…</button>
       <button class="btn btn-ghost btn-sm" onclick="dismissPendingTextbook('newcourse', ${jsAttr(f.path)})">略過</button></div>
     </div></article>`).join('');

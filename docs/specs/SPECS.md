@@ -37,3 +37,4 @@
 | [025-robustness-backlog](025-robustness-backlog.md) | Draft | 穩定性待辦：筆記排程跨程序檔案鎖、notebooklm-py 升級把關、多本課本選資料夾、講次來源切換防護與「both」 | 盤點 2026-11-25 |
 | [026-pending-acceptance-and-manual-tests](026-pending-acceptance-and-manual-tests.md) | Draft | 尚待驗收項目與使用者實機測試步驟（整本書學習網頁、課本切割、額度續跑、完成通知、TASK-036） | TASK-036、TASK-040 |
 | [027-new-course-folders-and-textbook-watch](027-new-course-folders-and-textbook-watch.md) | Implemented | 偵測已建立但未加入的新課程資料夾（批次排程提示卡、HTTP、MCP）、加入時補建 01–05、watch 跟著課本章節（新章節加入講次不排程、整本課本只提示切割） | 使用者 2026-11-26 |
+| [028-auto-detect-term-subjects-and-fill-folders](028-auto-detect-term-subjects-and-fill-folders.md) | Implemented | study/ 新資料夾自動判斷學期、列出科目（含沒有課號的資料夾，加入時填課號）、每 60 秒自動補齊 01–05（網頁伺服器與 watch） | 使用者 2026-11-26 |
