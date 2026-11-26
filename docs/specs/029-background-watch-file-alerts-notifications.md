@@ -54,6 +54,9 @@
 
 實作紀錄（2026-11-26）：`services/lecture_files.py`、`services/study_alerts.py`、`entrypoints/folder_sync.py`（`build_pass`）、`entrypoints/web_watch.py`（`start_web_watcher`、`start_background`）、`entrypoints/mcp_study_alerts.py`、`config.study_alerts_path`、`WATCH_IN_WEB`；`tests/test_background_alerts.py`（11 項）。測試時發現 macOS 可能在監看啟動後補送「啟動前剛建立的檔案」的 created 事件：處理方式與新檔相同（重新掃描、已存在的工作不重複排入），無害；測試改為等第 3 講本身出現。
 
+
+實機驗收（2026-11-26）：重啟網頁伺服器後監看與背景檢查都啟動；使用者確認收到「偵測到新課程資料夾：專題製作（115-2）」通知，`state/notified.json` 只記一筆，講義檢查 0 個問題。
+
 ## 6. 未決問題
 
 - 無。
