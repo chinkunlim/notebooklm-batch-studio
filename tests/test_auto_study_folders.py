@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import pypdf
@@ -17,7 +18,7 @@ from notebooklm_batch_studio.adapters.db.base import Base
 from notebooklm_batch_studio.adapters.db.repository import CourseRepository
 from notebooklm_batch_studio.adapters.db.session import create_db_engine, session_scope
 from notebooklm_batch_studio.config.settings import AppConfig
-from notebooklm_batch_studio.domain.models import ProfileName
+from notebooklm_batch_studio.domain.models import CourseStatus, ProfileName
 from notebooklm_batch_studio.entrypoints.api import create_app
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.services.course_parser import scan_course_directory
@@ -112,16 +113,27 @@ class AutoFoldersTest(unittest.TestCase):
         self.assertEqual(by_folder["CP__40000-新課"]["course_no"], "CP40000")
 
     def test_leaves_other_places_alone(self) -> None:
-        """Registered courses, older terms and non-term folders are not touched."""
+        """Older unregistered terms and non-term folders are not touched."""
         old = self.study / "114-2" / "舊科目"
         old.mkdir(parents=True)
         odd = self.study / "雜項" / "某資料夾"
         odd.mkdir(parents=True)
-        before = dirs(self.registered)
         self._sync()
         self.assertEqual(dirs(old), [])
         self.assertEqual(dirs(odd), [])
-        self.assertEqual(dirs(self.registered), before)
+
+    def test_registered_active_courses_are_filled_archived_are_not(self) -> None:
+        """Registered, not archived courses also get their missing 01–05; archived ones stay as they are."""
+        self.assertEqual(dirs(self.registered), ["02 Handouts"])
+        archived = self.study / "113-1" / "CP__10000-舊課"
+        write_pdf(archived / "02 Handouts" / "x.pdf")
+        with session_scope(self.engine) as session:
+            course = scan_course_directory(archived, custom_code="113-1_CP10000", term="113-1")
+            CourseRepository(session).save_course(replace(course, status=CourseStatus.ARCHIVED))
+        self._sync()
+        self.assertEqual(dirs(self.registered), CATEGORIES)
+        self.assertTrue((self.registered / "02 Handouts" / "a.pdf").is_file())
+        self.assertEqual(dirs(archived), ["02 Handouts"])
 
     def test_loop_runs_now_and_stops(self) -> None:
         """The background loop runs at start, repeats, and stops cleanly."""

@@ -110,7 +110,9 @@ def find_new_course_folders(config: AppConfig, course_repo: CourseRepositoryProt
 
 
 def sync_new_study_folders(config: AppConfig, course_repo: CourseRepositoryProtocol) -> list[dict[str, Any]]:
-    """Find new subject folders and create their missing 01–05 folders (never moves or renames files).
+    """Fill in missing 01–05 for new subject folders and for registered, not archived courses.
+
+    Never moves, renames or deletes files.
 
     Args:
         config: Application configuration.
@@ -120,15 +122,48 @@ def sync_new_study_folders(config: AppConfig, course_repo: CourseRepositoryProto
         The found subjects, each with `created`: category folders made in this pass.
     """
     found = find_new_course_folders(config, course_repo)
-    layout = config.study_layout
     for row in found:
-        folder = Path(row["path"])
-        before = {p.name for p in folder.iterdir() if p.is_dir()}
-        layout.ensure_tree(folder)
-        row["created"] = sorted({p.name for p in folder.iterdir() if p.is_dir()} - before)
-        if row["created"]:
-            logger.info("Created %s in %s", ", ".join(row["created"]), folder)
+        row["created"] = _fill(Path(row["path"]), config)
+    for folder in _registered_course_dirs(config, course_repo):
+        _fill(folder, config)
     return found
+
+
+def _fill(folder: Path, config: AppConfig) -> list[str]:
+    """Create the missing category folders of one course folder.
+
+    Args:
+        folder: Course folder.
+        config: Application configuration (layout).
+
+    Returns:
+        Names of the folders created.
+    """
+    before = {p.name for p in folder.iterdir() if p.is_dir()}
+    config.study_layout.ensure_tree(folder)
+    created = sorted({p.name for p in folder.iterdir() if p.is_dir()} - before)
+    if created:
+        logger.info("Created %s in %s", ", ".join(created), folder)
+    return created
+
+
+def _registered_course_dirs(config: AppConfig, course_repo: CourseRepositoryProtocol) -> list[Path]:
+    """Folders of registered, not archived courses that live at study/<term>/<course>/ (user 2026-11-26).
+
+    Args:
+        config: Application configuration.
+        course_repo: Course repository.
+
+    Returns:
+        Existing course folders to fill.
+    """
+    root = config.study_root_dir.resolve()
+    dirs = [
+        Path(c.study_dir).resolve()
+        for c in course_repo.list_courses()
+        if c.status != CourseStatus.ARCHIVED and c.study_dir
+    ]
+    return [d for d in dirs if d.is_dir() and d.parent.parent == root]
 
 
 class FolderSyncLoop:

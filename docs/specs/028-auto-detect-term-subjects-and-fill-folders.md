@@ -21,7 +21,7 @@
 - **必須 (Must)**：
   1. **學期判斷**：`study/` 底下名稱符合學期格式（例如 `115-2`，`TERM_PATTERN`）的資料夾是學期；其他名稱忽略。
   2. **科目判斷**：學期資料夾裡每個未登錄、非隱藏的子資料夾都是科目；學校格式（`課號代碼__數字-課名`）帶出課號與課名，其他名稱（如「專題製作」）課名＝資料夾名、課號留空並標示 `needs_course_no`。只處理目前學期以後（SPEC-027 規則）。
-  3. **自動補齊**：對上述每個科目資料夾補建缺少的 01–05（`StudyLayout.ensure_tree`；已有別名不重建）；不搬動、不改名、不刪除任何檔案；不處理已登錄課程、舊學期、學期資料夾以外的位置。
+  3. **自動補齊**：對上述每個科目資料夾補建缺少的 01–05（`StudyLayout.ensure_tree`；已有別名不重建）；不搬動、不改名、不刪除任何檔案；不處理舊學期未登錄資料夾與學期資料夾以外的位置。**2026-11-26 使用者追加**：已登錄、未封存的課程（資料夾在 `study/<學期>/<課程>/`）也一起補齊；已封存的課程不動。
   4. **何時執行**：網頁伺服器啟動時跑一次、之後每 60 秒一次（背景執行緒，不論佇列是否啟動）；`watch` 執行時也每 60 秒一次。不呼叫 Gemini Notebook、不登錄、不排程。
   5. **加入沒有課號的科目**：精靈填的課號用於 `study/<學期>/` 內非學校格式的資料夾，課程代碼為 `<學期>_<課號>`，資料夾名稱不變；課名欄位有填就用。這類資料夾沒填課號時拒絕加入並說明。
   6. 三入口：`GET /api/study/new-course-folders` 與 MCP `list_new_course_folders` 回傳 `needs_course_no`、`created`；網頁卡片顯示「需要課號」並在精靈預填學期與課名。
@@ -44,7 +44,7 @@
 - [x] Given 精靈加入「專題製作」並填課號 `XX10000`，Then 課程代碼 `115-2_XX10000`、名稱「專題製作」、資料夾名稱不變；沒填課號時回錯誤。
 - [x] 網頁卡片顯示「需要課號」；HTTP、MCP 回傳新欄位。
 
-實作紀錄（2026-11-26）：`services/new_course_folders.py`（`sync_new_study_folders`、`FolderSyncLoop`）、`entrypoints/folder_sync.py`（網頁伺服器 lifespan 與 `watch` 共用）、`course_placement._in_study_code`；`watch` 相關程式從 `cli.py` 拆到 `entrypoints/cli_watch.py`（檔案行數上限）。`tests/test_auto_study_folders.py`（6 項）。
+實作紀錄（2026-11-26）：`services/new_course_folders.py`（`sync_new_study_folders`、`FolderSyncLoop`）、`entrypoints/folder_sync.py`（網頁伺服器 lifespan 與 `watch` 共用）、`course_placement._in_study_code`；`watch` 相關程式從 `cli.py` 拆到 `entrypoints/cli_watch.py`（檔案行數上限）。`tests/test_auto_study_folders.py`（7 項）。
 
 ## 6. 未決問題
 
