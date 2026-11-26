@@ -2,15 +2,15 @@
   "id": "TASK-043",
   "title": "Deprecate migrate-study-layout in favour of consolidate (decision D5)",
   "status": "done",
-  "agent": "",
+  "agent": "claude-code",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "使用者 2026-11-26 同意停用（D5）。HTTP 回 410（deprecated）、移除 MCP 工具、刪除 study_migration 服務與 repository；ADR-018；tests/test_migrate_study_layout_retired.py。",
+  "done_items": "SPEC-023: migrate-study-layout retired (HTTP 410, MCP tool and service removed, ADR-018) after user approval on 2026-11-26.",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-25 09:09 UTC",
-  "updated_at": "2026-11-25 14:07 UTC",
+  "updated_at": "2026-11-26 01:02 UTC",
   "history": [
     {
       "timestamp": "2026-11-25 09:09 UTC",
@@ -26,6 +26,13 @@
       "timestamp": "2026-11-25 14:07 UTC",
       "action": "todo_recorded",
       "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-26 01:02 UTC",
+      "action": "done",
+      "agent": "claude-code",
+      "summary": "SPEC-023: migrate-study-layout retired (HTTP 410, MCP tool and service removed, ADR-018) after user approval on 2026-11-26."
     }
-  ]
+  ],
+  "summary": "SPEC-023: migrate-study-layout retired (HTTP 410, MCP tool and service removed, ADR-018) after user approval on 2026-11-26."
 }

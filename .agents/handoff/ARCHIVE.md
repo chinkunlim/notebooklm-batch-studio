@@ -417,3 +417,11 @@
 ### [2026-11-24 08:04 UTC] 建立任務 `TASK-033`: Audit records, unify MCP confirm format, and document cross-repo decisions (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-24 08:18 UTC] 完成任務 `TASK-033` — Audit records, unify MCP confirm format, and document cross-repo decisions (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Audited SPEC/ADR/ISSUE/TASK/CHANGELOG traceability with verifiable command/git/line evidence, mapped note-studio & literature-fetch cross-repo refs, documented StepValidator/calculate_outline_words/unported tests decisions, unified all 25 mutating MCP confirm=False payloads via mcp_confirm.py, and verified SPEC acceptance criteria.
+
+### [2026-11-24 08:56 UTC] 建立任務 `TASK-034`: Fix ISSUE-054 regression: guard literature stale-job cleanup with RunLock (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

@@ -2,15 +2,15 @@
   "id": "TASK-042",
   "title": "Investigate blocked Playwright sign-in and move it to real Chrome + CDP (decision D3)",
   "status": "done",
-  "agent": "",
+  "agent": "claude-code",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "SPEC-022 已實作（2026-11-25）：Gemini Notebook 登入改真 Chrome（CLI／HTTP／MCP／網頁按鈕，驗證通過才取代憑證）、文獻瀏覽器改真 Chrome＋CDP；ADR-017；暫存資料夾實測 navigator.webdriver=false。 使用者 2026-11-26 實機驗收通過：登入自動完成；文獻 Cloudflare 勾選一次即通過（ISSUE-043 已根治）。",
+  "done_items": "SPEC-022: Gemini Notebook sign-in and literature browser run in real Chrome over CDP (ADR-017); user verified sign-in and Cloudflare pass on 2026-11-26; ISSUE-043 resolved.",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-25 09:09 UTC",
-  "updated_at": "2026-11-25 14:07 UTC",
+  "updated_at": "2026-11-26 01:02 UTC",
   "history": [
     {
       "timestamp": "2026-11-25 09:09 UTC",
@@ -26,6 +26,13 @@
       "timestamp": "2026-11-25 14:07 UTC",
       "action": "todo_recorded",
       "agent": "claude-code"
+    },
+    {
+      "timestamp": "2026-11-26 01:02 UTC",
+      "action": "done",
+      "agent": "claude-code",
+      "summary": "SPEC-022: Gemini Notebook sign-in and literature browser run in real Chrome over CDP (ADR-017); user verified sign-in and Cloudflare pass on 2026-11-26; ISSUE-043 resolved."
     }
-  ]
+  ],
+  "summary": "SPEC-022: Gemini Notebook sign-in and literature browser run in real Chrome over CDP (ADR-017); user verified sign-in and Cloudflare pass on 2026-11-26; ISSUE-043 resolved."
 }
