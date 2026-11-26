@@ -57,3 +57,12 @@ class MaintenancePathsMixin:
             `<data_dir>/state/notebooklm_chrome_profile`.
         """
         return self.data_dir / "state" / "notebooklm_chrome_profile"
+
+    @property
+    def study_alerts_path(self) -> Path:
+        """Keys of study/ alerts already sent as macOS notifications (Refs: SPEC-029).
+
+        Returns:
+            `<data_dir>/state/notified.json`.
+        """
+        return self.data_dir / "state" / "notified.json"

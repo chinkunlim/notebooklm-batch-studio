@@ -38,3 +38,4 @@
 | [026-pending-acceptance-and-manual-tests](026-pending-acceptance-and-manual-tests.md) | Draft | 尚待驗收項目與使用者實機測試步驟（整本書學習網頁、課本切割、額度續跑、完成通知、TASK-036） | TASK-036、TASK-040 |
 | [027-new-course-folders-and-textbook-watch](027-new-course-folders-and-textbook-watch.md) | Implemented | 偵測已建立但未加入的新課程資料夾（批次排程提示卡、HTTP、MCP）、加入時補建 01–05、watch 跟著課本章節（新章節加入講次不排程、整本課本只提示切割） | 使用者 2026-11-26 |
 | [028-auto-detect-term-subjects-and-fill-folders](028-auto-detect-term-subjects-and-fill-folders.md) | Implemented | study/ 新資料夾自動判斷學期、列出科目（含沒有課號的資料夾，加入時填課號）、每 60 秒自動補齊 01–05（網頁伺服器與 watch） | 使用者 2026-11-26 |
+| [029-background-watch-file-alerts-notifications](029-background-watch-file-alerts-notifications.md) | Implemented | 網頁伺服器內建監看（WATCH_IN_WEB）、講義遺失／更新提醒（卡片、HTTP、MCP）、文獻每分鐘自動加入、新資料夾／整本課本／講義問題的 macOS 通知（每項一次） | 使用者 2026-11-26 |

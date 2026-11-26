@@ -314,6 +314,7 @@ notebooklm-batch-studio/
 │   │   ├── 026-pending-acceptance-and-manual-tests.md
 │   │   ├── 027-new-course-folders-and-textbook-watch.md
 │   │   ├── 028-auto-detect-term-subjects-and-fill-folders.md
+│   │   ├── 029-background-watch-file-alerts-notifications.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -804,13 +805,15 @@ notebooklm-batch-studio/
 │       │   ├── mcp_remote_admin.py
 │       │   ├── mcp_server.py
 │       │   ├── mcp_studio_tools.py
+│       │   ├── mcp_study_alerts.py
 │       │   ├── mcp_study_library.py
 │       │   ├── mcp_study_plan.py
 │       │   ├── mcp_textbooks.py
 │       │   ├── note_runtime.py
 │       │   ├── port_check.py
 │       │   ├── schemas.py
-│       │   └── web_template.py
+│       │   ├── web_template.py
+│       │   └── web_watch.py
 │       ├── services/
 │       │   ├── converters/
 │       │   │   ├── __init__.py
@@ -872,6 +875,7 @@ notebooklm-batch-studio/
 │       │   ├── learning_service.py
 │       │   ├── learning_site_prompt.py
 │       │   ├── learning_site_runner.py
+│       │   ├── lecture_files.py
 │       │   ├── legacy_consolidation.py
 │       │   ├── legacy_consolidation_ops.py
 │       │   ├── legacy_consolidation_planner.py
@@ -889,6 +893,7 @@ notebooklm-batch-studio/
 │       │   ├── reporter.py
 │       │   ├── reverse_import.py
 │       │   ├── source_manager.py
+│       │   ├── study_alerts.py
 │       │   ├── study_library.py
 │       │   ├── study_plan_service.py
 │       │   ├── study_service.py
@@ -940,6 +945,7 @@ notebooklm-batch-studio/
 │   ├── test_auth_status.py
 │   ├── test_auto_schedule.py
 │   ├── test_auto_study_folders.py
+│   ├── test_background_alerts.py
 │   ├── test_button_routes.py
 │   ├── test_confirm_dialog_scroll.py
 │   ├── test_converters.py

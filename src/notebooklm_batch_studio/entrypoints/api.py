@@ -39,7 +39,6 @@ from notebooklm_batch_studio.adapters.web_search import search_web_snippets
 from notebooklm_batch_studio.config.logging_setup import setup_logging
 from notebooklm_batch_studio.config.settings import AppConfig, load_config
 from notebooklm_batch_studio.domain.repositories import QueueRepositoryProtocol
-from notebooklm_batch_studio.entrypoints.folder_sync import start_folder_sync
 from notebooklm_batch_studio.entrypoints.http.artifacts import artifacts_router
 from notebooklm_batch_studio.entrypoints.http.courses import courses_router
 from notebooklm_batch_studio.entrypoints.http.fonts import fonts_router
@@ -73,6 +72,7 @@ from notebooklm_batch_studio.entrypoints.http_middleware import (
 from notebooklm_batch_studio.entrypoints.mcp_server import build_mcp_server
 from notebooklm_batch_studio.entrypoints.note_runtime import build_note_scheduler
 from notebooklm_batch_studio.entrypoints.port_check import busy_port_message, port_is_free
+from notebooklm_batch_studio.entrypoints.web_watch import start_background
 from notebooklm_batch_studio.services.completion_notice import course_complete_hook
 from notebooklm_batch_studio.services.font_service import FontService
 from notebooklm_batch_studio.services.learning_service import LearningService
@@ -224,16 +224,14 @@ def _build_lifespan(service: BatchStudioService, cfg: AppConfig) -> Callable[[Fa
             Control while the application serves requests.
         """
         scheduler = getattr(_app.state, "note_scheduler", None)
-        folder_sync = start_folder_sync(
-            cfg, _app.state.session_factory
-        )  # SPEC-028: fill 01–05 for new subjects
+        stop_background = start_background(_app, cfg)  # SPEC-028/029
         if cfg.auto_start_queue:
             logger.info("AUTO_START_QUEUE is on: starting the job queue and the note schedule")
             service.start_queue()
             if scheduler is not None:
                 scheduler.start()  # SPEC-020: approved Gemini chapters continue after restarts
         yield
-        folder_sync.stop()
+        stop_background()
         if scheduler is not None:
             scheduler.stop()
         if service.worker_pool is not None:

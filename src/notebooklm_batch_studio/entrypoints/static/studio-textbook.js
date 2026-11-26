@@ -139,6 +139,7 @@ async function dismissPendingTextbook(code, relativePath) {
   prefSave('textbookDismissed', JSON.stringify([...keys]));
   await loadPendingTextbooks();
   await loadNewCourseFolders();
+  await loadLectureFileIssues();
 }
 
 /**
@@ -229,9 +230,47 @@ function openAddCourseForFolder(path) {
   addPickedFolder(path);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * Show a card on 批次排程 for each lecture PDF that went missing or changed (SPEC-029, read-only).
+ * A dismissed change comes back when the file changes again (the key includes its new hash).
+ * @returns {Promise<void>}
+ */
+async function loadLectureFileIssues() {
+  const host = document.getElementById('lectureIssueHost');
+  if (!host) return;
+  try {
+    const res = await fetch('/api/study/lecture-file-issues');
+    if (!res.ok) return;
+    const skip = new Set(_dismissedTextbooks());
+    const key = i => `${i.course_code}|${i.issue}:${i.lecture_no}:${i.sha256}`;
+    const rows = ((await res.json()).issues || []).filter(i => !skip.has(key(i)));
+    host.innerHTML = rows.map(i => {
+      const title = i.issue === 'missing' ? '講義遺失' : '講義已更新';
+      const hint = i.issue === 'missing'
+        ? '這個講次的 PDF 找不到了（被刪除或改名）。放回原位、或改回原檔名即可。'
+        : '同檔名但內容不同；Gemini Notebook 裡還是舊版，需要時再重新上傳與重新產生。';
+      return `<article class="card" style="margin-bottom:12px"><div class="row" style="justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+        <div style="min-width:0"><b>${title}：第 ${i.lecture_no} 講 ${escHtml(i.filename)}</b>（${escHtml(i.course_name)}）<br>
+        <span class="small muted">${escHtml(i.relative_path)}・${hint}</span></div>
+        <button class="btn btn-ghost btn-sm" onclick="dismissPendingTextbook(${jsAttr(i.course_code)}, ${jsAttr(`${i.issue}:${i.lecture_no}:${i.sha256}`)})">知道了</button>
+      </div></article>`;
+    }).join('');
+  } catch (e) {
+    console.warn('Could not check lecture files:', e);
+  }
+}
+
+/**
+ * Refresh every 批次排程 notice card: textbooks, new course folders, lecture file issues.
+ */
+function refreshStudyNoticeCards() {
   loadPendingTextbooks();
   loadNewCourseFolders();
-  setInterval(() => { loadPendingTextbooks(); loadNewCourseFolders(); }, 60000);
+  loadLectureFileIssues();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  refreshStudyNoticeCards();
+  setInterval(refreshStudyNoticeCards, 60000);
 });
 

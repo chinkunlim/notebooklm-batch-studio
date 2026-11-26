@@ -220,6 +220,8 @@ entrypoints ➔ adapters ➔ services ➔ domain ➔ config
   - `anki_exporter.py`：匯出 Anki 專用 CSV 牌組格式，包含標籤與自訂欄位。
 - `reporter.py`：為每門課程產生整體的 `summary.md` 與可離線瀏覽的 `summary.html`。
 - `watcher.py`：監看檔案系統變更，`watch_kind` 依位置分類新 PDF（講義／課本章節／整本課本），寫入完成後交給 CLI 處理（SPEC-027）。
+- `lecture_files.py`：檢查講次 PDF 是否遺失或內容變更（雜湊依大小與修改時間快取，SPEC-029）。
+- `study_alerts.py`：新課程資料夾、整本課本、講義遺失／更新的 macOS 通知，每項只發一次（`state/notified.json`，SPEC-029）。
 - `new_course_folders.py`：列出目前學期以後、已建立但還沒加入的科目資料夾（含沒有課號者），並由 `FolderSyncLoop` 每 60 秒補齊 01–05（SPEC-027／028；網頁伺服器與 `watch` 經 `entrypoints/folder_sync.py` 啟動）。
 - `literature/`：`manager.py`（新增、辨識、下載）＋ `archive.py`（歸檔、退回、自動登錄 PDF）＋ `export.py`（APA 7、報告、序列化），共用 `manager_base.py`；`jobs.py` 背景工作與啟動殘留工作清理（受 `RunLock` 跨程序鎖定保護，ISSUE-054 / ISSUE-057）；`notebook_service.py` 文獻筆記本與 Literature Review（SPEC-012）。
 - `notes/`：note-studio 管線（SPEC-013）：`note_pipeline_service.py`（步驟執行、縫合、封存）、`note_paths.py`（資料夾位置與路徑安全檢查，ISSUE-045）、`gemini_auth_service.py`（Gemini Web 登入與憑證管理，ISSUE-053）、`module_prompts.py`、`step_validator.py`、`chapter_normalizer.py`、`module_composer.py`、`note_sync.py`、`state_manager.py`。

@@ -17,6 +17,7 @@ from notebooklm_batch_studio.adapters.db.study_repository import StudyRepository
 from notebooklm_batch_studio.config.settings import AppConfig
 from notebooklm_batch_studio.domain.study_layout import CategoryRole
 from notebooklm_batch_studio.entrypoints.mcp_confirm import confirm_warning
+from notebooklm_batch_studio.entrypoints.mcp_study_alerts import register_lecture_file_tool
 from notebooklm_batch_studio.services.adopt_outputs import AdoptOutputsService
 from notebooklm_batch_studio.services.course_display_name import set_course_display_name as _set_display_name
 from notebooklm_batch_studio.services.course_lifecycle import CourseLifecycleService
@@ -470,6 +471,7 @@ def register_study_library_tools(mcp: MCPServer, cfg: AppConfig, session_factory
     _register_layout_tool(mcp, cfg)
     _register_scan_tools(mcp, cfg, session_factory)
     _register_new_folders_tool(mcp, cfg, session_factory)
+    register_lecture_file_tool(mcp, session_factory)  # SPEC-029
     _register_record_tools(mcp, cfg, session_factory)
     _register_past_courses_tool(mcp, cfg, session_factory)
     _register_study_folder_tool(mcp, cfg, session_factory)

@@ -87,7 +87,9 @@ class AppConfig(MaintenancePathsMixin):
         notebooklm_home: Folder holding Gemini Notebook credentials and session states.
         auto_start_queue: Start the job queue when the web service starts (`AUTO_START_QUEUE`,
             default true in `.env`; off for configs built directly, e.g. in tests).
-        notify_on_complete: macOS notification when a course's jobs all finish (`NOTIFY_ON_COMPLETE`).
+        notify_on_complete: macOS notifications: course finished, new folders/books, lecture PDF issues
+            (`NOTIFY_ON_COMPLETE`).
+        watch_in_web: The web server also watches study/ like `watch` (`WATCH_IN_WEB`, SPEC-029).
         study_root_dir_override: Optional custom root for `<term>/<subject>/<category>` study folders.
         legacy_note_studio_dir: Optional whitelisted folder for standalone `note-studio` legacy
             imports (`LEGACY_NOTE_STUDIO_DIR`). Refs: ADR-013, ISSUE-045
@@ -115,6 +117,7 @@ class AppConfig(MaintenancePathsMixin):
     http_allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8768", "http://127.0.0.1:8080")
     auto_start_queue: bool = False
     notify_on_complete: bool = False
+    watch_in_web: bool = False
     study_root_dir_override: Path | None = None
     legacy_note_studio_dir: Path | None = None
     library_email: str = ""
@@ -452,6 +455,7 @@ def _core_settings(data_dir: Path) -> dict[str, Any]:
         "database_url": _env("DATABASE_URL") or f"sqlite:///{data_dir / 'db' / 'app.db'}",
         "auto_start_queue": _flag(_env("AUTO_START_QUEUE", "true")),
         "notify_on_complete": _flag(_env("NOTIFY_ON_COMPLETE", "true")),
+        "watch_in_web": _flag(_env("WATCH_IN_WEB", "true")),
     }
 
 

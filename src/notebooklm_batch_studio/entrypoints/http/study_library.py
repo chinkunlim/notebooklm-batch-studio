@@ -25,6 +25,7 @@ from notebooklm_batch_studio.services.course_display_name import set_course_disp
 from notebooklm_batch_studio.services.course_lifecycle import CourseLifecycleService
 from notebooklm_batch_studio.services.filing import FilingService, FilingTarget
 from notebooklm_batch_studio.services.learning_record import LearningRecordService, RecordRepos
+from notebooklm_batch_studio.services.lecture_files import LectureFileChecker
 from notebooklm_batch_studio.services.new_course_folders import find_new_course_folders
 from notebooklm_batch_studio.services.study_library import StudyLibraryService
 
@@ -230,6 +231,24 @@ def list_new_course_folders(request: Request) -> dict[str, Any]:
     """
     with _session(request) as db:
         return {"folders": find_new_course_folders(request.app.state.config, CourseRepository(db))}
+
+
+@study_library_router.get(
+    "/api/study/lecture-file-issues", tags=["StudyLibrary"], operation_id="list_lecture_file_issues"
+)
+def list_lecture_file_issues(request: Request) -> dict[str, Any]:
+    """List lecture PDFs that went missing or changed since they were registered (SPEC-029, read-only).
+
+    Args:
+        request: Incoming HTTP request.
+
+    Returns:
+        `{"issues": [{course_code, course_name, lecture_no, filename, relative_path, issue, sha256}]}`.
+    """
+    checker = getattr(request.app.state, "lecture_checker", None) or LectureFileChecker()
+    request.app.state.lecture_checker = checker  # keeps the hash cache between polls
+    with _session(request) as db:
+        return {"issues": checker.issues(CourseRepository(db).list_courses())}
 
 
 @study_library_router.get("/api/study/unfiled", tags=["StudyLibrary"], operation_id="list_unfiled")
